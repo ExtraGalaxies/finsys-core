@@ -4,11 +4,11 @@
   "description": "Convert unified form configurations into Zod schemas, React Hook Form defaults, and SurveyJS JSON",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TODO/finsys-core.git"
+    "url": "https://github.com/ExtraGalaxies/finsys-core.git"
   },
-  "homepage": "https://github.com/TODO/finsys-core#readme",
+  "homepage": "https://github.com/ExtraGalaxies/finsys-core#readme",
   "bugs": {
-    "url": "https://github.com/TODO/finsys-core/issues"
+    "url": "https://github.com/ExtraGalaxies/finsys-core/issues"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

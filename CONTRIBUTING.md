@@ -6,7 +6,7 @@ Thank you for your interest in contributing! Here's how to get started.
 
 ```bash
 # Clone the repository
-git clone https://github.com/TODO/finsys-core.git
+git clone https://github.com/ExtraGalaxies/finsys-core.git
 cd finsys-core
 
 # Install dependencies

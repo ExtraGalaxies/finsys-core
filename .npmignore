@@ -1,6 +1,7 @@
 src/
-*.test.ts
-*.test.js
+**/*.test.ts
+**/*.test.js
+**/*.test.d.ts
 .github/
 coverage/
 tsconfig.json

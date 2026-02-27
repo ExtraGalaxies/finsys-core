@@ -30,7 +30,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && cp -R src/schema dist/schema",
+    "build": "tsc && cp src/schema/unified-form.schema.json dist/schema/unified-form.schema.json",
     "dev": "tsc --watch",
     "test": "vitest run",
     "lint": "tsc --noEmit",

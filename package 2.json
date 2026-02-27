@@ -1,0 +1,60 @@
+{
+  "name": "@extragalaxies/finsys-core",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ExtraGalaxies/lead-gen-ui.git",
+    "directory": "packages/finsys-core"
+  },
+  "description": "Borrower-side utilities for finsys integration - survey generation and API wrappers",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./schema": {
+      "import": "./dist/schema/unified-form.schema.json"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc && cp -R src/schema dist/schema",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build",
+    "link:setup": "npm run build && npm link",
+    "link:verify": "npm ls -g --depth=0 | grep @lead-gen"
+  },
+  "peerDependencies": {
+    "survey-core": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "survey-core": "^2.5.6",
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.18"
+  },
+  "keywords": [
+    "lead-gen",
+    "finsys",
+    "surveyjs",
+    "borrower",
+    "form-generator"
+  ],
+  "license": "Apache-2.0",
+  "private": false,
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "zod": "^4.3.5"
+  }
+}

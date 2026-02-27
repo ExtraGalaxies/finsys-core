@@ -1,0 +1,10 @@
+src/
+*.test.ts
+*.test.js
+.github/
+coverage/
+tsconfig.json
+vitest.config.ts
+.gitignore
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md

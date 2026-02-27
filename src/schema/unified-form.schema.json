@@ -1,0 +1,266 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Unified Form Configuration Schema",
+  "description": "A unified schema combining field definitions and page layout configuration for multi-step forms.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to this JSON schema file"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of the schema format (e.g., 'v2.0.0' or '2.0.0')"
+    },
+    "displayName": {
+      "type": "string",
+      "description": "The human-readable name of the loan product or form"
+    },
+    "templateIcon": {
+      "type": "string",
+      "description": "Icon identifier or path for the form template (used in FinSys editor)"
+    },
+    "categories": {
+      "type": "array",
+      "description": "Category definitions for field organization and grouping",
+      "items": {
+        "$ref": "#/definitions/category"
+      }
+    },
+    "fields": {
+      "type": "object",
+      "description": "Master field definitions keyed by field name",
+      "additionalProperties": {
+        "$ref": "#/definitions/fieldData"
+      }
+    },
+    "pages": {
+      "type": "array",
+      "description": "Ordered list of pages in the form wizard. Optional for FinSys editor mode.",
+      "items": {
+        "$ref": "#/definitions/pageConfig"
+      }
+    }
+  },
+  "required": ["categories", "fields", "pages"],
+  "definitions": {
+    "category": {
+      "type": "object",
+      "description": "A category for grouping related form fields",
+      "properties": {
+        "id": { 
+          "type": "string",
+          "description": "Unique identifier for the category (string)" 
+        },
+        "name": { "type": "string", "description": "Display name for the category heading" }
+      },
+      "required": ["id", "name"]
+    },
+    "choice": {
+      "type": "object",
+      "description": "A selectable option for dropdown or radiogroup fields",
+      "properties": {
+        "value": { "type": "string", "description": "Value submitted when this choice is selected" },
+        "text": { "type": "string", "description": "Display text for this choice" }
+      },
+      "required": ["value", "text"]
+    },
+    "validator": {
+      "type": "object",
+      "description": "Validation rule for a form field",
+      "properties": {
+        "type": { 
+          "type": "string",
+          "enum": ["regex", "email", "numeric", "text", "expression", "answercount", "custom"],
+          "description": "Type of validation to perform"
+        },
+        "text": { "type": "string", "description": "Error message to display on validation failure" },
+        "regex": { "type": "string", "description": "Regular expression pattern (for type=regex)" },
+        "minValue": { "type": "number", "description": "Minimum numeric value (for type=numeric)" },
+        "maxValue": { "type": "number", "description": "Maximum numeric value (for type=numeric)" },
+        "minLength": { "type": "integer", "description": "Minimum text length (for type=text)" },
+        "maxLength": { "type": "integer", "description": "Maximum text length (for type=text)" },
+        "minCount": { "type": "integer", "description": "Minimum selection count (for type=answercount)" },
+        "maxCount": { "type": "integer", "description": "Maximum selection count (for type=answercount)" },
+        "expression": { "type": "string", "description": "SurveyJS expression for custom validation" },
+        "validator": { "type": "string", "description": "Name of the custom validator function (for type=custom)" }
+      },
+      "required": ["type"]
+    },
+    "fieldData": {
+      "type": "object",
+      "description": "Definition of a form field",
+      "properties": {
+        "name": { 
+          "type": "string", 
+          "description": "Field name (optional in fields{} since it's the key, required in arrays)"
+        },
+        "displayName": { 
+          "type": "string",
+          "description": "Human-readable label for the field"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "number", "email", "file", "dropdown", "checkbox", "boolean", "comment", "radiogroup", "range", "html", "slider"],
+          "description": "Field type determining rendering and behavior"
+        },
+        "inputType": { 
+          "type": "string", 
+          "enum": ["text", "number", "tel", "date", "email", "password", "url"],
+          "description": "HTML input type override for text fields" 
+        },
+        "category": { 
+          "type": "string",
+          "description": "Category ID this field belongs to (string to match category.id)" 
+        },
+        "categoryId": { 
+          "type": "integer",
+          "description": "Legacy integer category ID (deprecated, prefer 'category')"
+        },
+        "maxLength": { "type": ["integer", "string"], "description": "Maximum character length" },
+        "min": { "type": ["integer", "string"], "description": "Minimum value for numeric/slider fields" },
+        "max": { "type": ["integer", "string"], "description": "Maximum value for numeric/slider fields" },
+        "step": { "type": "number", "description": "Step increment for slider/range fields" },
+        "html": { "type": "string", "description": "HTML content for type=html fields" },
+        "choices": {
+          "type": "array",
+          "description": "Options for dropdown or radiogroup fields",
+          "items": { "$ref": "#/definitions/choice" }
+        },
+        "validators": {
+          "type": "array",
+          "description": "Validation rules to apply to this field",
+          "items": { "$ref": "#/definitions/validator" }
+        },
+        "visible": { 
+          "type": "boolean", 
+          "default": true,
+          "description": "Whether the field is visible"
+        },
+        "visibleIf": { 
+          "type": "string", 
+          "description": "SurveyJS expression for conditional visibility" 
+        },
+        "required": { 
+          "type": "boolean",
+          "description": "Whether the field is required for form submission"
+        },
+        "isRequired": { 
+          "type": "boolean", 
+          "description": "Alias for 'required' (SurveyJS compatibility)" 
+        },
+        "placeholder": { 
+          "type": "string",
+          "description": "Placeholder text shown in empty field"
+        },
+        "defaultValue": { 
+          "type": ["string", "number", "boolean", "array"],
+          "description": "Default value for the field"
+        },
+        "readOnly": { 
+          "type": "boolean",
+          "description": "Whether the field is read-only"
+        },
+        "startWithNewLine": { 
+          "type": "boolean",
+          "default": true,
+          "description": "If false, field appears on same line as previous field" 
+        },
+        "enableIf": { 
+          "type": "string", 
+          "description": "SurveyJS expression for conditional enable/disable" 
+        },
+        "titleLocation": { 
+          "type": "string", 
+          "enum": ["default", "top", "bottom", "left", "hidden"],
+          "description": "Position of the field label"
+        },
+        "ihs_column_names": {
+          "type": "array",
+          "description": "FinSys IHS column mappings for file fields (used for data extraction)",
+          "items": { "type": "string" }
+        },
+        "requiredForEvaluation": { 
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this field is required for loan evaluation (FinSys specific)"
+        }
+      },
+      "required": ["type"]
+    },
+    "fieldReference": {
+      "description": "Reference to a field in a page, supporting simple refs, refs with overrides, or inline definitions",
+      "oneOf": [
+        { 
+          "type": "string", 
+          "description": "Simple field name reference to a field defined in 'fields'" 
+        },
+        {
+          "type": "object",
+          "description": "Field reference with optional property overrides",
+          "properties": {
+            "ref": { "type": "string", "description": "Reference to field name in 'fields' object" },
+            "displayName": { "type": "string", "description": "Override display name for this page" },
+            "type": { "type": "string", "description": "Override field type for this usage" },
+            "defaultValue": { "type": ["string", "number", "boolean", "array"] },
+            "readOnly": { "type": "boolean" },
+            "visible": { "type": "boolean" },
+            "visibleIf": { "type": "string" },
+            "required": { "type": "boolean" },
+            "min": { "type": ["integer", "string"] },
+            "max": { "type": ["integer", "string"] },
+            "choices": { "type": "array", "items": { "$ref": "#/definitions/choice" } }
+          },
+          "required": ["ref"]
+        },
+        {
+          "type": "object",
+          "description": "Inline field definition (page-specific field not in master 'fields')",
+          "properties": {
+            "definition": { 
+              "allOf": [
+                { "$ref": "#/definitions/fieldData" },
+                { 
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" }
+                  },
+                  "required": ["name"]
+                }
+              ]
+            }
+          },
+          "required": ["definition"]
+        }
+      ]
+    },
+    "pageConfig": {
+      "type": "object",
+      "description": "Configuration for a single page/step in the form wizard",
+      "properties": {
+        "id": { "type": "string", "description": "Unique page identifier" },
+        "title": { "type": "string", "description": "Page title displayed to user" },
+        "description": { "type": "string", "description": "Optional page description or instructions" },
+        "showTOC": { "type": "boolean", "default": false, "description": "Show table of contents" },
+        "showProgressBar": { "type": "boolean", "default": false, "description": "Show progress indicator" },
+        "showCategoryHeadings": { 
+          "type": "boolean", 
+          "default": false,
+          "description": "Render category names as section headings when category changes between fields"
+        },
+        "layout": { 
+          "type": "string", 
+          "enum": ["default", "grid", "vertical"],
+          "description": "Layout mode for the page"
+        },
+        "fields": {
+          "type": "array",
+          "description": "Ordered list of field references to display on this page",
+          "items": { "$ref": "#/definitions/fieldReference" }
+        }
+      },
+      "required": ["id", "fields"]
+    }
+  }
+}

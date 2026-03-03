@@ -1,0 +1,7353 @@
+{
+  "schemaVersion": "v2.0.0",
+  "categories": [
+    {
+      "id": "1",
+      "name": "Basic Information"
+    },
+    {
+      "id": "2",
+      "name": "Personal Information"
+    },
+    {
+      "id": "3",
+      "name": "Company Information"
+    },
+    {
+      "id": "4",
+      "name": "Financial Information"
+    },
+    {
+      "id": "5",
+      "name": "Employment Information"
+    },
+    {
+      "id": "6",
+      "name": "Consent and Legal Agreements"
+    },
+    {
+      "id": "7",
+      "name": "Address Information"
+    },
+    {
+      "id": "8",
+      "name": "Contact Information"
+    },
+    {
+      "id": "9",
+      "name": "Declarations"
+    },
+    {
+      "id": "10",
+      "name": "Account Information"
+    },
+    {
+      "id": "11",
+      "name": "Loan Information"
+    },
+    {
+      "id": "12",
+      "name": "Vehicle Information"
+    },
+    {
+      "id": "13",
+      "name": "Document Upload"
+    }
+  ],
+  "fields": [
+    {
+      "name": "fullName",
+      "displayName": "Full Name",
+      "placeholder": "E.g. John Doe",
+      "type": "text",
+      "maxLength": 80,
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please make sure the name doesn't include extra spaces, numbers, or invalid symbols",
+          "regex": "^[A-Za-z'-]+(?:\\s[A-Za-z'-]+)*\\s?[A-Za-z'-]+$"
+        }
+      ],
+      "category": "1"
+    },
+    {
+      "name": "email",
+      "displayName": "Email",
+      "placeholder": "E.g. johndoe@example.com",
+      "type": "text",
+      "inputType": "email",
+      "maxLength": 65,
+      "validators": [
+        {
+          "type": "email",
+          "text": "Value must be a valid email"
+        }
+      ],
+      "category": "1"
+    },
+    {
+      "name": "mobilePhoneNoAreaCode",
+      "displayName": "Mobile Phone Number Area Code",
+      "type": "text",
+      "inputType": "number",
+      "category": "1"
+    },
+    {
+      "name": "mobilePhoneNo",
+      "displayName": "Mobile Phone Number",
+      "placeholder": "Mobile Phone Number",
+      "type": "text",
+      "inputType": "tel",
+      "maxLength": 12,
+      "validators": [
+        {
+          "type": "regex",
+          "text": "A valid Malaysia phone number is required.",
+          "regex": "^(011[0-9]{8}|01[2346789][0-9]{7}|[2-9][0-9]{0,8})$"
+        }
+      ],
+      "category": "1"
+    },
+    {
+      "type": "text",
+      "name": "idNumber",
+      "title": "ID Number",
+      "placeholder": "E.g. 700513065143",
+      "isRequired": true,
+      "displayName": "IC Number",
+      "maxLength": 25,
+      "inputType": "text",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^\\d{12}$",
+          "text": "Please enter exactly 12 digits numbers"
+        },
+        {
+          "type": "regex",
+          "regex": "^(\\d{2})(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])\\d{6}$",
+          "text": "First 6 digits must be valid birth year (00-99), month (01-12), and day (01-31)"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "dateOfBirth",
+      "displayName": "Date of Birth",
+      "type": "text",
+      "inputType": "date",
+      "visible": false,
+      "category": "2"
+    },
+    {
+      "name": "companyName",
+      "displayName": "Company Name",
+      "type": "text",
+      "category": "3"
+    },
+    {
+      "name": "companyRegNo",
+      "displayName": "Company Registration Number",
+      "type": "text",
+      "category": "3"
+    },
+    {
+      "name": "natureOfBusiness",
+      "displayName": "Nature of Business",
+      "placeholder": "Select your Nature of Business",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "Manufacturing",
+          "text": "Manufacturing"
+        },
+        {
+          "value": "Services",
+          "text": "Services"
+        },
+        {
+          "value": "Others",
+          "text": "Others"
+        }
+      ],
+      "maxLength": 80,
+      "category": "3"
+    },
+    {
+      "name": "officeFacilityType",
+      "displayName": "Office Facility Type",
+      "placeholder": "Select your facility type",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "Owned",
+          "text": "Owned"
+        },
+        {
+          "value": "Rented",
+          "text": "Rented"
+        }
+      ],
+      "maxLength": 80,
+      "category": "3"
+    },
+    {
+      "name": "companySize",
+      "displayName": "Company Size",
+      "placeholder": "Select your company size",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "selfEmplyed",
+          "text": "Self-employed"
+        },
+        {
+          "value": "1-10",
+          "text": "1-10"
+        },
+        {
+          "value": "11-20",
+          "text": "11-20"
+        },
+        {
+          "value": "21-30",
+          "text": "21-30"
+        },
+        {
+          "value": "31-50",
+          "text": "31-50"
+        },
+        {
+          "value": "51-100",
+          "text": "51-100"
+        },
+        {
+          "value": "101-500",
+          "text": "101-500"
+        },
+        {
+          "value": "500+",
+          "text": "500+"
+        }
+      ],
+      "category": "3"
+    },
+    {
+      "name": "facilityAddress",
+      "displayName": "Facility Address",
+      "type": "text",
+      "category": "3"
+    },
+    {
+      "name": "companyEntityType",
+      "displayName": "Company Entity Type",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "Branch office",
+          "text": "Branch office"
+        },
+        {
+          "value": "Company Limited by guarantee",
+          "text": "Company Limited by guarantee"
+        },
+        {
+          "value": "Enterprise or Sole Proprietorship",
+          "text": "Enterprise or Sole Proprietorship"
+        },
+        {
+          "value": "Foreign Companies",
+          "text": "Foreign Companies"
+        },
+        {
+          "value": "Limited Liability Partnership",
+          "text": "Limited Liability Partnership"
+        },
+        {
+          "value": "Partnership",
+          "text": "Partnership"
+        },
+        {
+          "value": "Private Limited Company (Sdn. Bhd.)",
+          "text": "Private Limited Company (Sdn. Bhd.)"
+        },
+        {
+          "value": "Public Limited Company (Bhd.)",
+          "text": "Public Limited Company (Bhd.)"
+        },
+        {
+          "value": "Proprietorship/ Partnership",
+          "text": "Proprietorship/ Partnership"
+        }
+      ],
+      "category": "3"
+    },
+    {
+      "name": "tnbTariff",
+      "displayName": "TNB Tariff",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "B",
+          "text": "B"
+        },
+        {
+          "value": "C1",
+          "text": "C1"
+        },
+        {
+          "value": "C2",
+          "text": "C2"
+        },
+        {
+          "value": "D",
+          "text": "D"
+        },
+        {
+          "value": "E1",
+          "text": "E1"
+        },
+        {
+          "value": "E2",
+          "text": "E2"
+        },
+        {
+          "value": "E3",
+          "text": "E3"
+        },
+        {
+          "value": "H",
+          "text": "H"
+        },
+        {
+          "value": "H1",
+          "text": "H1"
+        },
+        {
+          "value": "H2",
+          "text": "H2"
+        }
+      ],
+      "category": "4"
+    },
+    {
+      "name": "avgMaximumDemand",
+      "displayName": "Average Maximum Demand",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "ctRatio",
+      "displayName": "CT Ratio",
+      "type": "text",
+      "category": "4"
+    },
+    {
+      "name": "buildingType",
+      "displayName": "Building Type",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "Warehouse/Factory",
+          "text": "Warehouse/Factory"
+        },
+        {
+          "value": "Office building/Shoplot",
+          "text": "Office building/Shoplot"
+        },
+        {
+          "value": "Shopping Mall/Complex",
+          "text": "Shopping Mall/Complex"
+        },
+        {
+          "value": "School",
+          "text": "School"
+        },
+        {
+          "value": "Other",
+          "text": "Other"
+        }
+      ],
+      "category": "3"
+    },
+    {
+      "name": "tnbBills",
+      "displayName": "TNB Bills",
+      "type": "text",
+      "inputType": "number",
+      "category": "2"
+    },
+    {
+      "name": "financingSelection",
+      "displayName": "Financing Selection",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "Loan",
+          "text": "Loan"
+        },
+        {
+          "value": "Leasing",
+          "text": "Leasing"
+        },
+        {
+          "value": "Extended Terms",
+          "text": "Extended Terms"
+        }
+      ],
+      "category": "4"
+    },
+    {
+      "name": "businessSector",
+      "displayName": "Business Sector",
+      "type": "text",
+      "category": "5"
+    },
+    {
+      "name": "companyBackground",
+      "displayName": "Company Background",
+      "type": "text",
+      "category": "3"
+    },
+    {
+      "name": "isApplication",
+      "displayName": "Is Application",
+      "type": "boolean",
+      "category": "6"
+    },
+    {
+      "name": "isReview",
+      "displayName": "Is Review",
+      "type": "boolean",
+      "category": "6"
+    },
+    {
+      "name": "addressLine1",
+      "displayName": "Address Line 1",
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "addressLine2",
+      "displayName": "Address Line 2",
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "addressLine3",
+      "displayName": "Address Line 3",
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "addressType",
+      "displayName": "Address Type",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "P",
+          "text": "Permanent"
+        },
+        {
+          "value": "O",
+          "text": "Office"
+        },
+        {
+          "value": "R",
+          "text": "Residence"
+        }
+      ],
+      "category": "7"
+    },
+    {
+      "name": "city",
+      "displayName": "City",
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "country",
+      "displayName": "Country",
+      "type": "dropdown",
+      "titleLocation": "hidden",
+      "placeholder": "Country",
+      "choices": [
+        {
+          "text": "Afghanistan",
+          "value": "AFG"
+        },
+        {
+          "text": "Angola",
+          "value": "ANG"
+        },
+        {
+          "text": "Albania",
+          "value": "ALB"
+        },
+        {
+          "text": "Andorra",
+          "value": "AND"
+        },
+        {
+          "text": "United Arab Emirates",
+          "value": "UAE"
+        },
+        {
+          "text": "Argentina",
+          "value": "ARG"
+        },
+        {
+          "text": "Armenia",
+          "value": "ARM"
+        },
+        {
+          "text": "Antigua and Barbuda",
+          "value": "ANT"
+        },
+        {
+          "text": "Australia",
+          "value": "AUS"
+        },
+        {
+          "text": "Austria",
+          "value": "AUT"
+        },
+        {
+          "text": "Azerbaijan",
+          "value": "AZE"
+        },
+        {
+          "text": "Burundi",
+          "value": "BDI"
+        },
+        {
+          "text": "Belgium",
+          "value": "BEL"
+        },
+        {
+          "text": "Benin",
+          "value": "BEN"
+        },
+        {
+          "text": "Burkina Faso",
+          "value": "BFA"
+        },
+        {
+          "text": "Bangladesh",
+          "value": "BGD"
+        },
+        {
+          "text": "Bulgaria",
+          "value": "BUL"
+        },
+        {
+          "text": "Bahrain",
+          "value": "BRN"
+        },
+        {
+          "text": "Bahamas",
+          "value": "BAH"
+        },
+        {
+          "text": "Bosnia and Herzegovina",
+          "value": "BIH"
+        },
+        {
+          "text": "Belarus",
+          "value": "BLR"
+        },
+        {
+          "text": "Belize",
+          "value": "BIZ"
+        },
+        {
+          "text": "Bolivia",
+          "value": "BOL"
+        },
+        {
+          "text": "Brazil",
+          "value": "BRA"
+        },
+        {
+          "text": "Barbados",
+          "value": "BAR"
+        },
+        {
+          "text": "Brunei",
+          "value": "BRU"
+        },
+        {
+          "text": "Bhutan",
+          "value": "BHU"
+        },
+        {
+          "text": "Botswana",
+          "value": "BOT"
+        },
+        {
+          "text": "Central African Republic",
+          "value": "CAF"
+        },
+        {
+          "text": "Canada",
+          "value": "CAN"
+        },
+        {
+          "text": "Switzerland",
+          "value": "CHE"
+        },
+        {
+          "text": "Chile",
+          "value": "CHI"
+        },
+        {
+          "text": "China",
+          "value": "CHN"
+        },
+        {
+          "text": "Ivory Coast",
+          "value": "CIV"
+        },
+        {
+          "text": "Cameroon",
+          "value": "CMR"
+        },
+        {
+          "text": "DR Congo",
+          "value": "COD"
+        },
+        {
+          "text": "Republic of the Congo",
+          "value": "CGO"
+        },
+        {
+          "text": "Colombia",
+          "value": "COL"
+        },
+        {
+          "text": "Comoros",
+          "value": "COM"
+        },
+        {
+          "text": "Cape Verde",
+          "value": "CPV"
+        },
+        {
+          "text": "Costa Rica",
+          "value": "CRC"
+        },
+        {
+          "text": "Cuba",
+          "value": "CUB"
+        },
+        {
+          "text": "Cyprus",
+          "value": "CYP"
+        },
+        {
+          "text": "Czechia",
+          "value": "CZE"
+        },
+        {
+          "text": "Germany",
+          "value": "DEU"
+        },
+        {
+          "text": "Djibouti",
+          "value": "DJI"
+        },
+        {
+          "text": "Dominica",
+          "value": "DMA"
+        },
+        {
+          "text": "Denmark",
+          "value": "DEN"
+        },
+        {
+          "text": "Dominican Republic",
+          "value": "DOM"
+        },
+        {
+          "text": "Algeria",
+          "value": "ALG"
+        },
+        {
+          "text": "Ecuador",
+          "value": "ECU"
+        },
+        {
+          "text": "Egypt",
+          "value": "EGY"
+        },
+        {
+          "text": "Eritrea",
+          "value": "ERI"
+        },
+        {
+          "text": "Spain",
+          "value": "ESP"
+        },
+        {
+          "text": "Estonia",
+          "value": "EST"
+        },
+        {
+          "text": "Ethiopia",
+          "value": "ETH"
+        },
+        {
+          "text": "Finland",
+          "value": "FIN"
+        },
+        {
+          "text": "Fiji",
+          "value": "FIJ"
+        },
+        {
+          "text": "France",
+          "value": "FRA"
+        },
+        {
+          "text": "Micronesia",
+          "value": "FSM"
+        },
+        {
+          "text": "Gabon",
+          "value": "GAB"
+        },
+        {
+          "text": "United Kingdom",
+          "value": "GBR"
+        },
+        {
+          "text": "Georgia",
+          "value": "GEO"
+        },
+        {
+          "text": "Ghana",
+          "value": "GHA"
+        },
+        {
+          "text": "Guinea",
+          "value": "GUI"
+        },
+        {
+          "text": "Gambia",
+          "value": "GAM"
+        },
+        {
+          "text": "Equatorial Guinea",
+          "value": "GEQ"
+        },
+        {
+          "text": "Greece",
+          "value": "GRE"
+        },
+        {
+          "text": "Grenada",
+          "value": "GRN"
+        },
+        {
+          "text": "Guatemala",
+          "value": "GUA"
+        },
+        {
+          "text": "Guyana",
+          "value": "GUY"
+        },
+        {
+          "text": "Honduras",
+          "value": "HON"
+        },
+        {
+          "text": "Croatia",
+          "value": "CRO"
+        },
+        {
+          "text": "Haiti",
+          "value": "HAI"
+        },
+        {
+          "text": "Hungary",
+          "value": "HUN"
+        },
+        {
+          "text": "Indonesia",
+          "value": "INA"
+        },
+        {
+          "text": "India",
+          "value": "IND"
+        },
+        {
+          "text": "Ireland",
+          "value": "IRL"
+        },
+        {
+          "text": "Iran",
+          "value": "IRI"
+        },
+        {
+          "text": "Iraq",
+          "value": "IRQ"
+        },
+        {
+          "text": "Iceland",
+          "value": "ISL"
+        },
+        {
+          "text": "Israel",
+          "value": "ISR"
+        },
+        {
+          "text": "Italy",
+          "value": "ITA"
+        },
+        {
+          "text": "Jamaica",
+          "value": "JAM"
+        },
+        {
+          "text": "Jordan",
+          "value": "JOR"
+        },
+        {
+          "text": "Japan",
+          "value": "JPN"
+        },
+        {
+          "text": "Kazakhstan",
+          "value": "KAZ"
+        },
+        {
+          "text": "Kenya",
+          "value": "KEN"
+        },
+        {
+          "text": "Kyrgyzstan",
+          "value": "KGZ"
+        },
+        {
+          "text": "Cambodia",
+          "value": "KHM"
+        },
+        {
+          "text": "Kiribati",
+          "value": "KIR"
+        },
+        {
+          "text": "Saint Kitts and Nevis",
+          "value": "SKN"
+        },
+        {
+          "text": "South Korea",
+          "value": "KOR"
+        },
+        {
+          "text": "Kuwait",
+          "value": "KUW"
+        },
+        {
+          "text": "Laos",
+          "value": "LAO"
+        },
+        {
+          "text": "Lebanon",
+          "value": "LIB"
+        },
+        {
+          "text": "Liberia",
+          "value": "LBR"
+        },
+        {
+          "text": "Libya",
+          "value": "LBA"
+        },
+        {
+          "text": "Saint Lucia",
+          "value": "LCA"
+        },
+        {
+          "text": "Liechtenstein",
+          "value": "LIE"
+        },
+        {
+          "text": "Sri Lanka",
+          "value": "SRI"
+        },
+        {
+          "text": "Lesotho",
+          "value": "LES"
+        },
+        {
+          "text": "Lithuania",
+          "value": "LTU"
+        },
+        {
+          "text": "Luxembourg",
+          "value": "LUX"
+        },
+        {
+          "text": "Latvia",
+          "value": "LAT"
+        },
+        {
+          "text": "Morocco",
+          "value": "MAR"
+        },
+        {
+          "text": "Monaco",
+          "value": "MON"
+        },
+        {
+          "text": "Moldova",
+          "value": "MDA"
+        },
+        {
+          "text": "Madagascar",
+          "value": "MAD"
+        },
+        {
+          "text": "Maldives",
+          "value": "MDV"
+        },
+        {
+          "text": "Mexico",
+          "value": "MEX"
+        },
+        {
+          "text": "Marshall Islands",
+          "value": "MHL"
+        },
+        {
+          "text": "North Macedonia",
+          "value": "MKD"
+        },
+        {
+          "text": "Mali",
+          "value": "MLI"
+        },
+        {
+          "text": "Malta",
+          "value": "MLT"
+        },
+        {
+          "text": "Myanmar",
+          "value": "MYA"
+        },
+        {
+          "text": "Montenegro",
+          "value": "MNE"
+        },
+        {
+          "text": "Mongolia",
+          "value": "MGL"
+        },
+        {
+          "text": "Mozambique",
+          "value": "MOZ"
+        },
+        {
+          "text": "Mauritania",
+          "value": "MTN"
+        },
+        {
+          "text": "Mauritius",
+          "value": "MRI"
+        },
+        {
+          "text": "Malawi",
+          "value": "MAW"
+        },
+        {
+          "text": "Malaysia",
+          "value": "MAS"
+        },
+        {
+          "text": "Namibia",
+          "value": "NAM"
+        },
+        {
+          "text": "Niger",
+          "value": "NIG"
+        },
+        {
+          "text": "Nigeria",
+          "value": "NGR"
+        },
+        {
+          "text": "Nicaragua",
+          "value": "NCA"
+        },
+        {
+          "text": "Netherlands",
+          "value": "NED"
+        },
+        {
+          "text": "Norway",
+          "value": "NOR"
+        },
+        {
+          "text": "Nepal",
+          "value": "NEP"
+        },
+        {
+          "text": "Nauru",
+          "value": "NRU"
+        },
+        {
+          "text": "New Zealand",
+          "value": "NZL"
+        },
+        {
+          "text": "Oman",
+          "value": "OMA"
+        },
+        {
+          "text": "Pakistan",
+          "value": "PAK"
+        },
+        {
+          "text": "Panama",
+          "value": "PAN"
+        },
+        {
+          "text": "Peru",
+          "value": "PER"
+        },
+        {
+          "text": "Philippines",
+          "value": "PHI"
+        },
+        {
+          "text": "Palau",
+          "value": "PLW"
+        },
+        {
+          "text": "Papua New Guinea",
+          "value": "PNG"
+        },
+        {
+          "text": "Poland",
+          "value": "POL"
+        },
+        {
+          "text": "North Korea",
+          "value": "PRK"
+        },
+        {
+          "text": "Portugal",
+          "value": "POR"
+        },
+        {
+          "text": "Paraguay",
+          "value": "PAR"
+        },
+        {
+          "text": "Qatar",
+          "value": "QAT"
+        },
+        {
+          "text": "Romania",
+          "value": "ROU"
+        },
+        {
+          "text": "Russia",
+          "value": "RUS"
+        },
+        {
+          "text": "Rwanda",
+          "value": "RWA"
+        },
+        {
+          "text": "Saudi Arabia",
+          "value": "KSA"
+        },
+        {
+          "text": "Sudan",
+          "value": "SUD"
+        },
+        {
+          "text": "Senegal",
+          "value": "SEN"
+        },
+        {
+          "text": "Singapore",
+          "value": "SIN"
+        },
+        {
+          "text": "Solomon Islands",
+          "value": "SOL"
+        },
+        {
+          "text": "Sierra Leone",
+          "value": "SLE"
+        },
+        {
+          "text": "El Salvador",
+          "value": "ESA"
+        },
+        {
+          "text": "San Marino",
+          "value": "SMR"
+        },
+        {
+          "text": "Somalia",
+          "value": "SOM"
+        },
+        {
+          "text": "Serbia",
+          "value": "SRB"
+        },
+        {
+          "text": "São Tomé and Príncipe",
+          "value": "STP"
+        },
+        {
+          "text": "Suriname",
+          "value": "SUR"
+        },
+        {
+          "text": "Slovakia",
+          "value": "SVK"
+        },
+        {
+          "text": "Slovenia",
+          "value": "SLO"
+        },
+        {
+          "text": "Sweden",
+          "value": "SWE"
+        },
+        {
+          "text": "Eswatini",
+          "value": "SWZ"
+        },
+        {
+          "text": "Seychelles",
+          "value": "SEY"
+        },
+        {
+          "text": "Syria",
+          "value": "SYR"
+        },
+        {
+          "text": "Chad",
+          "value": "CHA"
+        },
+        {
+          "text": "Togo",
+          "value": "TOG"
+        },
+        {
+          "text": "Thailand",
+          "value": "THA"
+        },
+        {
+          "text": "Tajikistan",
+          "value": "TJK"
+        },
+        {
+          "text": "Turkmenistan",
+          "value": "TKM"
+        },
+        {
+          "text": "Timor-Leste",
+          "value": "TLS"
+        },
+        {
+          "text": "Tonga",
+          "value": "TGA"
+        },
+        {
+          "text": "Trinidad and Tobago",
+          "value": "TTO"
+        },
+        {
+          "text": "Tunisia",
+          "value": "TUN"
+        },
+        {
+          "text": "Turkey",
+          "value": "TUR"
+        },
+        {
+          "text": "Tuvalu",
+          "value": "TUV"
+        },
+        {
+          "text": "Tanzania",
+          "value": "TAN"
+        },
+        {
+          "text": "Uganda",
+          "value": "UGA"
+        },
+        {
+          "text": "Ukraine",
+          "value": "UKR"
+        },
+        {
+          "text": "Uruguay",
+          "value": "URU"
+        },
+        {
+          "text": "United States",
+          "value": "USA"
+        },
+        {
+          "text": "Uzbekistan",
+          "value": "UZB"
+        },
+        {
+          "text": "Saint Vincent and the Grenadines",
+          "value": "VIN"
+        },
+        {
+          "text": "Venezuela",
+          "value": "VEN"
+        },
+        {
+          "text": "Vietnam",
+          "value": "VIE"
+        },
+        {
+          "text": "Vanuatu",
+          "value": "VAN"
+        },
+        {
+          "text": "Samoa",
+          "value": "SAM"
+        },
+        {
+          "text": "Yemen",
+          "value": "YEM"
+        },
+        {
+          "text": "South Africa",
+          "value": "RSA"
+        },
+        {
+          "text": "Zambia",
+          "value": "ZAM"
+        },
+        {
+          "text": "Zimbabwe",
+          "value": "ZIM"
+        }
+      ],
+      "category": "7"
+    },
+    {
+      "name": "durationInCurrentResidenceMth",
+      "displayName": "Duration in Current Residence (Months)",
+      "placeholder": "Duration in Current Residence (Months)",
+      "startWithNewLine": false,
+      "type": "text",
+      "maxLength": 2,
+      "min": 0,
+      "max": 11,
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^([0-9]|10|11)$",
+          "text": "Value must be a number between 0-11."
+        }
+      ],
+      "inputType": "number",
+      "category": "7"
+    },
+    {
+      "name": "durationInCurrentResidenceYr",
+      "displayName": "Duration in Current Residence (Years)",
+      "placeholder": "Duration in Current Residence (Years)",
+      "type": "text",
+      "maxLength": 2,
+      "min": 0,
+      "max": 99,
+      "inputType": "number",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^([0-9]|[1-9][0-9])$",
+          "text": "Value must be a number between 0-99."
+        }
+      ],
+      "category": "7"
+    },
+    {
+      "name": "officePhoneNo",
+      "displayName": "Employer Phone Number",
+      "placeholder": "Employer Phone Number",
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "type": "text",
+      "maxLength": 12,
+      "validators": [
+        {
+          "type": "regex",
+          "text": "The phone number must be a valid Malaysian number",
+          "regex": "^(011[0-9]{8}|(60[4-7]|004|005|006|007|009|609|012|013|014|016|017|019)[0-9]{7})$"
+        }
+      ],
+      "inputType": "tel",
+      "category": "5"
+    },
+    {
+      "name": "officePhoneNoAreaCode",
+      "displayName": "Office Phone Number Area Code",
+      "type": "text",
+      "inputType": "number",
+      "category": "8"
+    },
+    {
+      "name": "postcode",
+      "displayName": "Postcode",
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "state",
+      "displayName": "Permanent State",
+      "placeholder": "Select State Of The Permanenet Address",
+      "startWithNewLine": false,
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "A",
+          "text": "PERAK"
+        },
+        {
+          "value": "B",
+          "text": "SELANGOR"
+        },
+        {
+          "value": "C",
+          "text": "PAHANG"
+        },
+        {
+          "value": "D",
+          "text": "KELANTAN"
+        },
+        {
+          "value": "J",
+          "text": "JOHOR"
+        },
+        {
+          "value": "K",
+          "text": "KEDAH"
+        },
+        {
+          "value": "L",
+          "text": "WP LABUAN"
+        },
+        {
+          "value": "M",
+          "text": "MELAKA"
+        },
+        {
+          "value": "N",
+          "text": "NEGERI SEMBILAN"
+        },
+        {
+          "value": "P",
+          "text": "PULAU PINANG"
+        },
+        {
+          "value": "Q",
+          "text": "SARAWAK"
+        },
+        {
+          "value": "R",
+          "text": "PERLIS"
+        },
+        {
+          "value": "S",
+          "text": "SABAH"
+        },
+        {
+          "value": "T",
+          "text": "TERENGGANU"
+        },
+        {
+          "value": "U",
+          "text": "WP PUTRAJAYA"
+        },
+        {
+          "value": "W",
+          "text": "WP KUALA LUMPUR"
+        }
+      ],
+      "category": "7"
+    },
+    {
+      "name": "residenceAddress",
+      "displayName": "Residence address same as permanent address?",
+      "type": "boolean",
+      "defaultValue": false,
+      "requiredForEvaluation": false,
+      "category": "7"
+    },
+    {
+      "name": "officestate",
+      "displayName": "Employer State",
+      "startWithNewLine": false,
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "placeholder": "Select State Of The Employer Address",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "A",
+          "text": "PERAK"
+        },
+        {
+          "value": "B",
+          "text": "SELANGOR"
+        },
+        {
+          "value": "C",
+          "text": "PAHANG"
+        },
+        {
+          "value": "D",
+          "text": "KELANTAN"
+        },
+        {
+          "value": "J",
+          "text": "JOHOR"
+        },
+        {
+          "value": "K",
+          "text": "KEDAH"
+        },
+        {
+          "value": "L",
+          "text": "WP LABUAN"
+        },
+        {
+          "value": "M",
+          "text": "MELAKA"
+        },
+        {
+          "value": "N",
+          "text": "NEGERI SEMBILAN"
+        },
+        {
+          "value": "P",
+          "text": "PULAU PINANG"
+        },
+        {
+          "value": "Q",
+          "text": "SARAWAK"
+        },
+        {
+          "value": "R",
+          "text": "PERLIS"
+        },
+        {
+          "value": "S",
+          "text": "SABAH"
+        },
+        {
+          "value": "T",
+          "text": "TERENGGANU"
+        },
+        {
+          "value": "U",
+          "text": "WP PUTRAJAYA"
+        },
+        {
+          "value": "W",
+          "text": "WP KUALA LUMPUR"
+        }
+      ],
+      "category": "5"
+    },
+    {
+      "type": "text",
+      "name": "age",
+      "title": "Age",
+      "isRequired": true,
+      "displayName": "Age",
+      "visible": false,
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a valid whole number age between 21 and 55.",
+          "regex": "^(2[1-9]|[3-4][0-9]|55)$"
+        }
+      ],
+      "defaultValue": "21",
+      "category": "2"
+    },
+    {
+      "name": "consentCrossSelling",
+      "displayName": "Consent Cross-Selling, Consent to Obtain Information from CTOS and Disclosure of Information",
+      "type": "boolean",
+      "validators": [
+        {
+          "type": "expression",
+          "expression": "{consentCrossSelling} = true",
+          "text": "You must provide consent to Consent Cross-Selling."
+        }
+      ],
+      "defaultValue": false,
+      "showTitle": true,
+      "category": "9"
+    },
+    {
+      "type": "text",
+      "name": "consentObtainInfoFromCtos",
+      "displayName": "Consent to Obtain Information from CTOS",
+      "defaultValue": "yes",
+      "showTitle": true,
+      "visible": false,
+      "category": "9"
+    },
+    {
+      "name": "dateJoined",
+      "displayName": "Date Joined",
+      "placeholder": "Date Joined",
+      "startWithNewLine": false,
+      "type": "text",
+      "maxLength": 10,
+      "inputType": "date",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^\\d{4}-\\d{2}-\\d{2}$",
+          "text": "Date must be in YYYY-MM-DD format"
+        },
+        {
+          "type": "custom",
+          "validator": "validateNotFutureDate",
+          "text": "Date of joining cannot be in the future"
+        }
+      ],
+      "category": "5"
+    },
+    {
+      "name": "disclosureOfInformation",
+      "displayName": "Disclosure of Information",
+      "type": "text",
+      "defaultValue": "yes",
+      "showTitle": true,
+      "visible": false,
+      "category": "9"
+    },
+    {
+      "name": "educationLevel",
+      "displayName": "Education Level",
+      "placeholder": "Highest Education Level",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "01",
+          "text": "Primary"
+        },
+        {
+          "value": "02",
+          "text": "Secondary/High school"
+        },
+        {
+          "value": "03",
+          "text": "College graduate-certificate/Diploma holder"
+        },
+        {
+          "value": "04",
+          "text": "University Degree/Associate Degree"
+        },
+        {
+          "value": "05",
+          "text": "Master Degree"
+        },
+        {
+          "value": "06",
+          "text": "Doctorate"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "emerContactTelNo1",
+      "displayName": "Emergency Contact Telephone Number 1",
+      "startWithNewLine": false,
+      "placeholder": "Emergency Contact Telephone Number 1",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "A valid Malaysia phone number is required.",
+          "regex": "^((60[4-79]|0[4-79])[0-9]{7}|011[0-9]{8}|01[2346789][0-9]{7})$"
+        }
+      ],
+      "type": "text",
+      "maxLength": 18,
+      "inputType": "tel",
+      "category": "8"
+    },
+    {
+      "name": "emerContactTelNo1AreaCode",
+      "displayName": "Emergency Contact Telephone Number 1 Area Code",
+      "type": "text",
+      "inputType": "number",
+      "category": "8"
+    },
+    {
+      "name": "emergencyContactName",
+      "displayName": "Emergency Contact Name",
+      "placeholder": "Emergency Contact Name",
+      "type": "text",
+      "maxLength": 40,
+      "category": "8"
+    },
+    {
+      "name": "employerName",
+      "displayName": "Employer Name",
+      "placeholder": "Employer Name",
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "type": "text",
+      "maxLength": 40,
+      "category": "5"
+    },
+    {
+      "name": "employmentSector",
+      "displayName": "Employment Sector",
+      "placeholder": "Select Employment Sector",
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "0010",
+          "text": "Accounting"
+        },
+        {
+          "value": "0020",
+          "text": "Actuarial / Statistic"
+        },
+        {
+          "value": "0030",
+          "text": "Advertising / Marketing / PR"
+        },
+        {
+          "value": "0040",
+          "text": "Aerospace"
+        },
+        {
+          "value": "0050",
+          "text": "Agricultural / Chemicals / Forest Products"
+        },
+        {
+          "value": "0060",
+          "text": "Architecture"
+        },
+        {
+          "value": "0070",
+          "text": "Automotive / Manufacturing / Production"
+        },
+        {
+          "value": "0080",
+          "text": "Aviation"
+        },
+        {
+          "value": "0090",
+          "text": "Buying / Retail"
+        },
+        {
+          "value": "0100",
+          "text": "Computers / Electronics"
+        },
+        {
+          "value": "0110",
+          "text": "Construction"
+        },
+        {
+          "value": "0120",
+          "text": "Creative / Graphics"
+        },
+        {
+          "value": "0130",
+          "text": "Customer Service"
+        },
+        {
+          "value": "0140",
+          "text": "Education (includes students) / Training"
+        },
+        {
+          "value": "0150",
+          "text": "Energy / Mining"
+        },
+        {
+          "value": "0160",
+          "text": "Engineering"
+        },
+        {
+          "value": "0170",
+          "text": "Finance / Banking / Insurance"
+        },
+        {
+          "value": "0180",
+          "text": "Freight / Shipping"
+        },
+        {
+          "value": "0190",
+          "text": "Government / Military / Public Service"
+        },
+        {
+          "value": "0200",
+          "text": "Recreation / Hospitality / Sports"
+        },
+        {
+          "value": "0210",
+          "text": "Hotel / Food"
+        },
+        {
+          "value": "0220",
+          "text": "Human Resources"
+        },
+        {
+          "value": "0230",
+          "text": "Investment"
+        },
+        {
+          "value": "0240",
+          "text": "Journalist / Editor"
+        },
+        {
+          "value": "0250",
+          "text": "Media / Publishing"
+        },
+        {
+          "value": "0260",
+          "text": "Medical / Health Services"
+        },
+        {
+          "value": "0270",
+          "text": "Non-Profit Organization"
+        },
+        {
+          "value": "0280",
+          "text": "Geology"
+        },
+        {
+          "value": "0290",
+          "text": "Pharmaceuticals"
+        },
+        {
+          "value": "0300",
+          "text": "Real Estate"
+        },
+        {
+          "value": "0310",
+          "text": "Administrative and Support Service Activities"
+        },
+        {
+          "value": "0320",
+          "text": "Social Services"
+        },
+        {
+          "value": "0330",
+          "text": "Telecommunications / Networking"
+        },
+        {
+          "value": "0340",
+          "text": "Travel"
+        },
+        {
+          "value": "0350",
+          "text": "Transportation"
+        },
+        {
+          "value": "0360",
+          "text": "Entertainment / Arts"
+        },
+        {
+          "value": "0370",
+          "text": "Electricity, Gas, Steam and Air Conditioning Supply"
+        },
+        {
+          "value": "0380",
+          "text": "Water Supply; Sewerage, Waste Management and Remediation Activities"
+        },
+        {
+          "value": "0390",
+          "text": "Activities of Households as Employers; Undifferentiated Goods and Services Producing Activities of Households for Own Use"
+        },
+        {
+          "value": "0400",
+          "text": "Activities of Extraterritorial Organisations and Bodies"
+        },
+        {
+          "value": "0410",
+          "text": "Unemployed/ Outside Labour Force"
+        },
+        {
+          "value": "0420",
+          "text": "Other Service Activities"
+        },
+        {
+          "value": "0430",
+          "text": "Legal Services"
+        },
+        {
+          "value": "0440",
+          "text": "Research & Experimental Development Services"
+        },
+        {
+          "value": "0450",
+          "text": "Other Professional, Scientific and Technical Activities"
+        }
+      ],
+      "category": "5"
+    },
+    {
+      "name": "employmentStatus",
+      "displayName": "Employment Status",
+      "placeholder": "Select Employment Status",
+      "startWithNewLine": false,
+      "visibleIf": "{employmentType} anyof ['01', '08', '09']",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "CON",
+          "text": "Contract"
+        },
+        {
+          "value": "FRL",
+          "text": "Freelance"
+        },
+        {
+          "value": "OTH",
+          "text": "Others"
+        },
+        {
+          "value": "PER",
+          "text": "Permanent"
+        },
+        {
+          "value": "PRT",
+          "text": "Part Time"
+        },
+        {
+          "value": "TMP",
+          "text": "Temporary"
+        },
+        {
+          "value": "UPROB",
+          "text": "Under Probation"
+        }
+      ],
+      "category": "5"
+    },
+    {
+      "name": "employmentType",
+      "displayName": "Employment Type",
+      "placeholder": "Select Employment Type",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "01",
+          "text": "Private Employee"
+        },
+        {
+          "value": "02",
+          "text": "Employer"
+        },
+        {
+          "value": "03",
+          "text": "Housewife"
+        },
+        {
+          "value": "04",
+          "text": "Retired"
+        },
+        {
+          "value": "05",
+          "text": "Student"
+        },
+        {
+          "value": "06",
+          "text": "Unemployed"
+        },
+        {
+          "value": "07",
+          "text": "Self-employed/Own Account Worker"
+        },
+        {
+          "value": "08",
+          "text": "Government Employee"
+        },
+        {
+          "value": "09",
+          "text": "Reporting Entity Employee"
+        },
+        {
+          "value": "10",
+          "text": "Unpaid Family Worker"
+        }
+      ],
+      "category": "5"
+    },
+    {
+      "name": "gender",
+      "displayName": "Gender",
+      "placeholder": "Select Gender",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "M",
+          "text": "Male"
+        },
+        {
+          "value": "F",
+          "text": "Female"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "idType",
+      "displayName": "ID Type",
+      "type": "dropdown",
+      "defaultValue": "MyKad",
+      "choices": [
+        {
+          "value": "MK",
+          "text": "MyKad"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "lengthOfServiceMonth",
+      "displayName": "Length of Service (Months)",
+      "type": "text",
+      "inputType": "number",
+      "category": "5"
+    },
+    {
+      "name": "lengthOfServiceYear",
+      "displayName": "Length of Service (Years)",
+      "type": "text",
+      "inputType": "number",
+      "category": "5"
+    },
+    {
+      "name": "mailingBillingAddressInd",
+      "displayName": "Preferred Mailing Address",
+      "placeholder": "Select Preferred Mailing Address",
+      "startWithNewLine": false,
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "O",
+          "text": "Office"
+        },
+        {
+          "value": "R",
+          "text": "Residence"
+        }
+      ],
+      "category": "7"
+    },
+    {
+      "name": "maritalStatus",
+      "displayName": "Marital Status",
+      "placeholder": "Select Marital Status",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "S",
+          "text": "Single"
+        },
+        {
+          "value": "M",
+          "text": "Married"
+        },
+        {
+          "value": "W",
+          "text": "Widowed"
+        },
+        {
+          "value": "D",
+          "text": "Divorced"
+        },
+        {
+          "value": "E",
+          "text": "Separated"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "monthlyGrossIncome",
+      "displayName": "Monthly Gross Income",
+      "placeholder": "E.g. 6000",
+      "visibleIf": "{employmentType} anyof ['01', '07', '08', '09', '10']",
+      "type": "text",
+      "maxLength": 15,
+      "inputType": "number",
+      "min": 2000,
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^\\d+(\\.\\d+)?$",
+          "text": "Please enter a valid non-negative number."
+        },
+        {
+          "type": "expression",
+          "expression": "{monthlyGrossIncome} >= 2000",
+          "text": "Income must be at least RM 2000."
+        }
+      ],
+      "category": "4"
+    },
+    {
+      "name": "monthlyNetIncome",
+      "displayName": "Monthly Net Income",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "nationality",
+      "displayName": "Nationality",
+      "type": "text",
+      "category": "2"
+    },
+    {
+      "name": "noOfDependants",
+      "displayName": "Number of Dependants",
+      "placeholder": "Number Of Dependants",
+      "type": "text",
+      "startWithNewLine": false,
+      "maxLength": 3,
+      "inputType": "number",
+      "min": 0,
+      "max": 99,
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a valid whole number between 0 and 99.",
+          "regex": "^[0-9][0-9]?$"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "occupation",
+      "displayName": "Occupation",
+      "placeholder": "Select Occupation",
+      "startWithNewLine": false,
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "001",
+          "text": "Accountant"
+        },
+        {
+          "value": "005",
+          "text": "Army Officer"
+        },
+        {
+          "value": "007",
+          "text": "Assistant Director"
+        },
+        {
+          "value": "008",
+          "text": "Assistant Manager"
+        },
+        {
+          "value": "009",
+          "text": "Auditor"
+        },
+        {
+          "value": "010",
+          "text": "Baker"
+        },
+        {
+          "value": "011",
+          "text": "Beautician"
+        },
+        {
+          "value": "012",
+          "text": "Broker"
+        },
+        {
+          "value": "013",
+          "text": "Business Partner"
+        },
+        {
+          "value": "014",
+          "text": "Businessman/Businesswoman"
+        },
+        {
+          "value": "015",
+          "text": "Carpenter"
+        },
+        {
+          "value": "016",
+          "text": "Cashier"
+        },
+        {
+          "value": "017",
+          "text": "CEO"
+        },
+        {
+          "value": "018",
+          "text": "Chairman"
+        },
+        {
+          "value": "019",
+          "text": "Chief Accountant"
+        },
+        {
+          "value": "020",
+          "text": "Chief Auditor"
+        },
+        {
+          "value": "022",
+          "text": "Co-Director"
+        },
+        {
+          "value": "023",
+          "text": "Consultant"
+        },
+        {
+          "value": "024",
+          "text": "Contractor"
+        },
+        {
+          "value": "025",
+          "text": "Financial Controller"
+        },
+        {
+          "value": "026",
+          "text": "Coordinator"
+        },
+        {
+          "value": "027",
+          "text": "Copywriter"
+        },
+        {
+          "value": "028",
+          "text": "Dealer/Distributor"
+        },
+        {
+          "value": "029",
+          "text": "Dentist"
+        },
+        {
+          "value": "031",
+          "text": "Despatch"
+        },
+        {
+          "value": "032",
+          "text": "Detective"
+        },
+        {
+          "value": "034",
+          "text": "Diplomat"
+        },
+        {
+          "value": "035",
+          "text": "Director"
+        },
+        {
+          "value": "036",
+          "text": "Doctor"
+        },
+        {
+          "value": "038",
+          "text": "Electrician"
+        },
+        {
+          "value": "040",
+          "text": "Executive"
+        },
+        {
+          "value": "041",
+          "text": "Executive Director"
+        },
+        {
+          "value": "042",
+          "text": "Exporter"
+        },
+        {
+          "value": "043",
+          "text": "Farmer"
+        },
+        {
+          "value": "044",
+          "text": "Foreman"
+        },
+        {
+          "value": "045",
+          "text": "Gardener"
+        },
+        {
+          "value": "046",
+          "text": "General Manager"
+        },
+        {
+          "value": "047",
+          "text": "Goldsmith"
+        },
+        {
+          "value": "048",
+          "text": "Hairdresser"
+        },
+        {
+          "value": "049",
+          "text": "Hawker"
+        },
+        {
+          "value": "050",
+          "text": "Housewife"
+        },
+        {
+          "value": "051",
+          "text": "Homemaker"
+        },
+        {
+          "value": "053",
+          "text": "Investor"
+        },
+        {
+          "value": "054",
+          "text": "Jeweller"
+        },
+        {
+          "value": "055",
+          "text": "Judge"
+        },
+        {
+          "value": "057",
+          "text": "Lawyer/Barrister/Solicitor"
+        },
+        {
+          "value": "058",
+          "text": "Lender"
+        },
+        {
+          "value": "060",
+          "text": "Managing Director"
+        },
+        {
+          "value": "061",
+          "text": "Manufacturer"
+        },
+        {
+          "value": "063",
+          "text": "Money Lender"
+        },
+        {
+          "value": "064",
+          "text": "Money-Changer"
+        },
+        {
+          "value": "068",
+          "text": "Owner/Co-Owner"
+        },
+        {
+          "value": "070",
+          "text": "Partner"
+        },
+        {
+          "value": "071",
+          "text": "Pastor"
+        },
+        {
+          "value": "072",
+          "text": "Physician"
+        },
+        {
+          "value": "073",
+          "text": "Plumber"
+        },
+        {
+          "value": "075",
+          "text": "Principal"
+        },
+        {
+          "value": "076",
+          "text": "Programmer"
+        },
+        {
+          "value": "077",
+          "text": "Quantity Surveyor"
+        },
+        {
+          "value": "078",
+          "text": "Remiser"
+        },
+        {
+          "value": "079",
+          "text": "Retailer"
+        },
+        {
+          "value": "080",
+          "text": "Retiree"
+        },
+        {
+          "value": "082",
+          "text": "Secretary"
+        },
+        {
+          "value": "083",
+          "text": "Self-Employed"
+        },
+        {
+          "value": "084",
+          "text": "Smallholder"
+        },
+        {
+          "value": "085",
+          "text": "Stockbroker"
+        },
+        {
+          "value": "086",
+          "text": "Store-Keeper"
+        },
+        {
+          "value": "087",
+          "text": "Student"
+        },
+        {
+          "value": "088",
+          "text": "Sub-contractor"
+        },
+        {
+          "value": "090",
+          "text": "Supplier"
+        },
+        {
+          "value": "091",
+          "text": "Tailor/Dressmaker"
+        },
+        {
+          "value": "094",
+          "text": "Tourist Guide"
+        },
+        {
+          "value": "095",
+          "text": "Trader"
+        },
+        {
+          "value": "096",
+          "text": "Valuer"
+        },
+        {
+          "value": "097",
+          "text": "Vice President"
+        },
+        {
+          "value": "098",
+          "text": "Waiter/Waitress"
+        },
+        {
+          "value": "099",
+          "text": "Welder"
+        },
+        {
+          "value": "100",
+          "text": "Wholesaler"
+        },
+        {
+          "value": "101",
+          "text": "Fisherman"
+        },
+        {
+          "value": "102",
+          "text": "Grocer"
+        },
+        {
+          "value": "104",
+          "text": "Unemployed"
+        },
+        {
+          "value": "105",
+          "text": "Babysitter"
+        },
+        {
+          "value": "107",
+          "text": "Sole Proprietor"
+        },
+        {
+          "value": "108",
+          "text": "Politician"
+        },
+        {
+          "value": "109",
+          "text": "Actor"
+        },
+        {
+          "value": "110",
+          "text": "Adjusters"
+        },
+        {
+          "value": "111",
+          "text": "Air Hostess"
+        },
+        {
+          "value": "112",
+          "text": "Aquaculture"
+        },
+        {
+          "value": "115",
+          "text": "Athlete"
+        },
+        {
+          "value": "116",
+          "text": "Auctioneer"
+        },
+        {
+          "value": "117",
+          "text": "Author"
+        },
+        {
+          "value": "118",
+          "text": "Bell Boy"
+        },
+        {
+          "value": "119",
+          "text": "Biographer"
+        },
+        {
+          "value": "120",
+          "text": "Butcher"
+        },
+        {
+          "value": "121",
+          "text": "Catering"
+        },
+        {
+          "value": "122",
+          "text": "Chargeman"
+        },
+        {
+          "value": "123",
+          "text": "Chemist, Physicist"
+        },
+        {
+          "value": "124",
+          "text": "Choreographer/Dancer"
+        },
+        {
+          "value": "125",
+          "text": "Circus Performer"
+        },
+        {
+          "value": "126",
+          "text": "Civil Servant"
+        },
+        {
+          "value": "127",
+          "text": "Clergy"
+        },
+        {
+          "value": "128",
+          "text": "Coach"
+        },
+        {
+          "value": "129",
+          "text": "Composer"
+        },
+        {
+          "value": "130",
+          "text": "Decorator"
+        },
+        {
+          "value": "131",
+          "text": "Direct Sales"
+        },
+        {
+          "value": "132",
+          "text": "Economist"
+        },
+        {
+          "value": "133",
+          "text": "Editor"
+        },
+        {
+          "value": "135",
+          "text": "Fireman"
+        },
+        {
+          "value": "136",
+          "text": "Fishmonger"
+        },
+        {
+          "value": "137",
+          "text": "Florist"
+        },
+        {
+          "value": "138",
+          "text": "Forestry"
+        },
+        {
+          "value": "139",
+          "text": "Freight Forwarding Services"
+        },
+        {
+          "value": "140",
+          "text": "General Worker"
+        },
+        {
+          "value": "142",
+          "text": "Hunter"
+        },
+        {
+          "value": "143",
+          "text": "Journalist"
+        },
+        {
+          "value": "144",
+          "text": "Launderer/Dry Cleaner"
+        },
+        {
+          "value": "145",
+          "text": "Librarian/Curator"
+        },
+        {
+          "value": "146",
+          "text": "Locksmith"
+        },
+        {
+          "value": "147",
+          "text": "Magician"
+        },
+        {
+          "value": "149",
+          "text": "Model"
+        },
+        {
+          "value": "150",
+          "text": "Newscaster"
+        },
+        {
+          "value": "151",
+          "text": "NGO Staff/Volunteer"
+        },
+        {
+          "value": "152",
+          "text": "Nursery Worker & Gardener"
+        },
+        {
+          "value": "154",
+          "text": "Pharmacist"
+        },
+        {
+          "value": "155",
+          "text": "Photographer"
+        },
+        {
+          "value": "156",
+          "text": "Postman"
+        },
+        {
+          "value": "157",
+          "text": "Priest/Nun"
+        },
+        {
+          "value": "158",
+          "text": "Promoter"
+        },
+        {
+          "value": "159",
+          "text": "Proof Reader"
+        },
+        {
+          "value": "160",
+          "text": "Psychiatrist"
+        },
+        {
+          "value": "161",
+          "text": "Psychologist"
+        },
+        {
+          "value": "162",
+          "text": "Sailor"
+        },
+        {
+          "value": "163",
+          "text": "Security/Bodyguard"
+        },
+        {
+          "value": "164",
+          "text": "Shop Assistant"
+        },
+        {
+          "value": "165",
+          "text": "Singer"
+        },
+        {
+          "value": "166",
+          "text": "Social Worker"
+        },
+        {
+          "value": "168",
+          "text": "Town Planner"
+        },
+        {
+          "value": "169",
+          "text": "Translator/Interpreter"
+        },
+        {
+          "value": "170",
+          "text": "Upholsterer"
+        },
+        {
+          "value": "171",
+          "text": "Warden"
+        },
+        {
+          "value": "172",
+          "text": "Bank Officer"
+        },
+        {
+          "value": "175",
+          "text": "Astronaut/Astronomer/Astrologer"
+        },
+        {
+          "value": "176",
+          "text": "President"
+        },
+        {
+          "value": "200",
+          "text": "Production and Manufacturing Managers"
+        },
+        {
+          "value": "201",
+          "text": "Hospitality, Retail and Other Services Managers"
+        },
+        {
+          "value": "202",
+          "text": "Information and Communications Technology Managers"
+        },
+        {
+          "value": "203",
+          "text": "Services Managers"
+        },
+        {
+          "value": "204",
+          "text": "Meteorologists and Seismologists"
+        },
+        {
+          "value": "205",
+          "text": "Geologists and Geophysicists"
+        },
+        {
+          "value": "206",
+          "text": "Farming, Forestry and Fisheries Advisers"
+        },
+        {
+          "value": "207",
+          "text": "Other Life Science Professionals"
+        },
+        {
+          "value": "208",
+          "text": "Landscape Architects"
+        },
+        {
+          "value": "209",
+          "text": "Product and Garment Designers"
+        },
+        {
+          "value": "210",
+          "text": "Graphic and Multimedia Designers"
+        },
+        {
+          "value": "211",
+          "text": "Ships Engineers"
+        },
+        {
+          "value": "212",
+          "text": "Aircraft Pilots and Related Professionals"
+        },
+        {
+          "value": "213",
+          "text": "Other Ship, Aircraft and Train/Locomotive Controllers"
+        },
+        {
+          "value": "214",
+          "text": "University and Higher Education Teachers"
+        },
+        {
+          "value": "215",
+          "text": "Vocational Education Teachers"
+        },
+        {
+          "value": "216",
+          "text": "Secondary Education Teachers"
+        },
+        {
+          "value": "217",
+          "text": "Primary School and Early Childhood Teachers"
+        },
+        {
+          "value": "218",
+          "text": "Music, Arts and Performing Arts Teachers"
+        },
+        {
+          "value": "219",
+          "text": "Language Teachers"
+        },
+        {
+          "value": "220",
+          "text": "Technology Skill and Technical Trainers"
+        },
+        {
+          "value": "221",
+          "text": "System Analysts"
+        },
+        {
+          "value": "222",
+          "text": "Web and Multimedia Developers"
+        },
+        {
+          "value": "223",
+          "text": "Software and Applications Developers and Analysts n.e.c."
+        },
+        {
+          "value": "224",
+          "text": "Database Designers and Administrators"
+        },
+        {
+          "value": "225",
+          "text": "Information Technology System Administrators"
+        },
+        {
+          "value": "226",
+          "text": "Other Database and Network Professionals"
+        },
+        {
+          "value": "227",
+          "text": "Legal Professionals n.e.c."
+        },
+        {
+          "value": "228",
+          "text": "Sociologists, Anthropologists and Related Professionals"
+        },
+        {
+          "value": "229",
+          "text": "Philosophers, Historians and Political Scientists"
+        },
+        {
+          "value": "230",
+          "text": "Film, Stage and Related Directors and Producers"
+        },
+        {
+          "value": "231",
+          "text": "Animals Keepers and Trainers"
+        },
+        {
+          "value": "232",
+          "text": "Professional Customs and Border Inspectors"
+        },
+        {
+          "value": "233",
+          "text": "Professional Taxation and Excise Officials"
+        },
+        {
+          "value": "234",
+          "text": "Professional Government Social Benefits Officials"
+        },
+        {
+          "value": "235",
+          "text": "Professional Government Licensing Officials"
+        },
+        {
+          "value": "236",
+          "text": "Professional Civil Defence Officials"
+        },
+        {
+          "value": "237",
+          "text": "Physical and Engineering Science Technicians"
+        },
+        {
+          "value": "238",
+          "text": "Mining, Manufacturing and Construction Supervisors"
+        },
+        {
+          "value": "239",
+          "text": "Process Control Technicians"
+        },
+        {
+          "value": "240",
+          "text": "Life Science Technicians and Related Associate Professionals"
+        },
+        {
+          "value": "241",
+          "text": "Ship, Aircraft and Train Technicians"
+        },
+        {
+          "value": "242",
+          "text": "Nuclear Science Associate Professionals"
+        },
+        {
+          "value": "243",
+          "text": "Medical and Pharmaceutical Technicians"
+        },
+        {
+          "value": "244",
+          "text": "Traditional and Complementary Medicine Associate Professionals"
+        },
+        {
+          "value": "245",
+          "text": "Veterinary Technicians and Assistants"
+        },
+        {
+          "value": "246",
+          "text": "Dental Assistants and Therapists"
+        },
+        {
+          "value": "247",
+          "text": "Medical Records and Health Information Technicians"
+        },
+        {
+          "value": "248",
+          "text": "Dispensing Opticians"
+        },
+        {
+          "value": "249",
+          "text": "Physiotherapy Technicians and Assistants"
+        },
+        {
+          "value": "250",
+          "text": "Medical Assistants"
+        },
+        {
+          "value": "251",
+          "text": "Health Associate Professionals Not Elsewhere Classified"
+        },
+        {
+          "value": "252",
+          "text": "Statistical, Mathematical and Actuarial Associate Professionals"
+        },
+        {
+          "value": "253",
+          "text": "Insurance Agent"
+        },
+        {
+          "value": "254",
+          "text": "Commercial Sales Agent"
+        },
+        {
+          "value": "255",
+          "text": "Buyers"
+        },
+        {
+          "value": "256",
+          "text": "Administrative Associate Professionals"
+        },
+        {
+          "value": "257",
+          "text": "Administrative and Executive Secretaries"
+        },
+        {
+          "value": "258",
+          "text": "Other Administrative and Specialized Associate Professionals"
+        },
+        {
+          "value": "259",
+          "text": "Legal Associate Professionals"
+        },
+        {
+          "value": "260",
+          "text": "Social and Religious Associate Professionals"
+        },
+        {
+          "value": "261",
+          "text": "Fitness and Recreation Instructors and Program Leaders"
+        },
+        {
+          "value": "262",
+          "text": "Gallery, Museum and Library Technicians"
+        },
+        {
+          "value": "263",
+          "text": "Cultural Associate Professionals"
+        },
+        {
+          "value": "264",
+          "text": "Artistic and Cultural Associate Professionals Not Elsewhere Classified"
+        },
+        {
+          "value": "265",
+          "text": "Customs and Border Inspector Associate Professionals"
+        },
+        {
+          "value": "266",
+          "text": "Taxation and Excise Official Associate Professionals"
+        },
+        {
+          "value": "267",
+          "text": "Government Social Benefit Official Associate Professionals"
+        },
+        {
+          "value": "268",
+          "text": "Government Licensing Official Associate Professionals"
+        },
+        {
+          "value": "269",
+          "text": "Civil Defence Associate Professionals"
+        },
+        {
+          "value": "270",
+          "text": "General Office Clerks"
+        },
+        {
+          "value": "271",
+          "text": "Data Entry Clerks"
+        },
+        {
+          "value": "272",
+          "text": "Bank Tellers and Related Clerks"
+        },
+        {
+          "value": "273",
+          "text": "Travel Consultants and Related Clerks"
+        },
+        {
+          "value": "274",
+          "text": "Contact/Call Centre Information Clerks"
+        },
+        {
+          "value": "275",
+          "text": "Telephone Switchboard Operators"
+        },
+        {
+          "value": "276",
+          "text": "Receptionists"
+        },
+        {
+          "value": "277",
+          "text": "Enquiry Clerks"
+        },
+        {
+          "value": "278",
+          "text": "Numerical and Material Recording Clerks"
+        },
+        {
+          "value": "279",
+          "text": "Transport Conductors"
+        },
+        {
+          "value": "280",
+          "text": "Cooks"
+        },
+        {
+          "value": "281",
+          "text": "Building and Housekeeping Supervisors"
+        },
+        {
+          "value": "282",
+          "text": "Street Food Salespersons"
+        },
+        {
+          "value": "283",
+          "text": "Sales Demonstrators"
+        },
+        {
+          "value": "284",
+          "text": "Teachers Aide"
+        },
+        {
+          "value": "285",
+          "text": "Personal Care Workers in Health Services Not Elsewhere Classified"
+        },
+        {
+          "value": "286",
+          "text": "Immigration/Custom Officers and Assistants"
+        },
+        {
+          "value": "287",
+          "text": "Protective Services Workers n.e.c."
+        },
+        {
+          "value": "288",
+          "text": "Livestock and Dairy Producers"
+        },
+        {
+          "value": "289",
+          "text": "Animal Producers and Related Workers Not Elsewhere Classified"
+        },
+        {
+          "value": "290",
+          "text": "Mixed Crop and Animal Producers"
+        },
+        {
+          "value": "291",
+          "text": "Subsistence Farmers, Fishermen, Hunters and Gatherers"
+        },
+        {
+          "value": "292",
+          "text": "House Builders"
+        },
+        {
+          "value": "293",
+          "text": "Air Conditioning and Refrigeration Mechanics"
+        },
+        {
+          "value": "294",
+          "text": "Other Building Finishers and Related Trades Workers"
+        },
+        {
+          "value": "295",
+          "text": "Spray Painters and Varnishers"
+        },
+        {
+          "value": "296",
+          "text": "Building Structure Cleaners"
+        },
+        {
+          "value": "297",
+          "text": "Metal Moulders and Coremakers"
+        },
+        {
+          "value": "298",
+          "text": "Other Sheet and Structural Metal Workers, Moulders, Welders and Related Workers"
+        },
+        {
+          "value": "299",
+          "text": "Metal Working Machine Tool Setters and Operators"
+        },
+        {
+          "value": "300",
+          "text": "Aircraft Engine Mechanics and Repairers"
+        },
+        {
+          "value": "301",
+          "text": "Agricultural and Industrial Machinery Mechanics and Repairers"
+        },
+        {
+          "value": "302",
+          "text": "Bicycle and Related Repairers"
+        },
+        {
+          "value": "303",
+          "text": "Machinery Mechanics and Repairers Not Elsewhere Classified"
+        },
+        {
+          "value": "304",
+          "text": "Sign Writers, Decorative Painters, Engravers and Etchers"
+        },
+        {
+          "value": "305",
+          "text": "Pre-press Workers"
+        },
+        {
+          "value": "306",
+          "text": "Other Printing Trades Workers"
+        },
+        {
+          "value": "307",
+          "text": "Electrical Mechanics and Fitters"
+        },
+        {
+          "value": "308",
+          "text": "Electronics Mechanics and Servicers"
+        },
+        {
+          "value": "309",
+          "text": "Information and Communications Technology Installers and Services"
+        },
+        {
+          "value": "310",
+          "text": "Other Food Processing and Related Trades Workers"
+        },
+        {
+          "value": "311",
+          "text": "Woodworking-Machine Tool Setters and Operators"
+        },
+        {
+          "value": "312",
+          "text": "Other Wood Treaters, Cabinet-Makers and Related Trades Workers"
+        },
+        {
+          "value": "313",
+          "text": "Other Garment and Related Trades Workers"
+        },
+        {
+          "value": "314",
+          "text": "Other Craft and Related Workers"
+        },
+        {
+          "value": "315",
+          "text": "Stationary Plant and Machine Operators"
+        },
+        {
+          "value": "316",
+          "text": "Mechanical Machinery Assemblers"
+        },
+        {
+          "value": "317",
+          "text": "Assemblers Not Elsewhere Classified"
+        },
+        {
+          "value": "318",
+          "text": "Machine-Tool Setter-Operators"
+        },
+        {
+          "value": "319",
+          "text": "Locomotive Engine Drivers"
+        },
+        {
+          "value": "320",
+          "text": "Railway Brake, Signal and Switch Operators"
+        },
+        {
+          "value": "321",
+          "text": "Heavy Truck and Bus Drivers"
+        },
+        {
+          "value": "322",
+          "text": "Mobile Plant Operators"
+        },
+        {
+          "value": "323",
+          "text": "Mining and Construction Labourers"
+        },
+        {
+          "value": "324",
+          "text": "Hand and Pedal Vehicle Drivers"
+        },
+        {
+          "value": "325",
+          "text": "Animal-Drawn Machinery and Vehicle Drivers"
+        },
+        {
+          "value": "326",
+          "text": "Transport and Storage Labourers"
+        },
+        {
+          "value": "327",
+          "text": "Shelf Fillers"
+        },
+        {
+          "value": "328",
+          "text": "Food Preparation Assistant"
+        },
+        {
+          "value": "329",
+          "text": "Street and Related Sales and Services Workers"
+        },
+        {
+          "value": "330",
+          "text": "Refuse Workers and Other Elementary Workers"
+        },
+        {
+          "value": "331",
+          "text": "Nursing and Midwifery Associate Professionals"
+        },
+        {
+          "value": "332",
+          "text": "Police Officers - Protective Service Workers"
+        },
+        {
+          "value": "333",
+          "text": "Other Outside Labour Force"
+        },
+        {
+          "value": "334",
+          "text": "Financial and Investment Advisers"
+        },
+        {
+          "value": "335",
+          "text": "Business Services Agent"
+        },
+        {
+          "value": "336",
+          "text": "Health Care Assistants"
+        },
+        {
+          "value": "337",
+          "text": "Other Clerical Support Workers"
+        },
+        {
+          "value": "338",
+          "text": "Interior Designers and Decorators"
+        },
+        {
+          "value": "339",
+          "text": "Software Developers"
+        },
+        {
+          "value": "340",
+          "text": "Car, Van and Motorcycle Drivers"
+        },
+        {
+          "value": "341",
+          "text": "Engineering Professionals (including Electrotechnology)"
+        },
+        {
+          "value": "342",
+          "text": "Driving Instructors"
+        },
+        {
+          "value": "343",
+          "text": "Manufacturing Labourers"
+        },
+        {
+          "value": "344",
+          "text": "Administrative and Commercial Managers"
+        },
+        {
+          "value": "345",
+          "text": "Motor Vehicle Mechanics and Repairers"
+        },
+        {
+          "value": "346",
+          "text": "Nursing and Midwifery Professionals"
+        },
+        {
+          "value": "347",
+          "text": "Typist and Word Processor Operators"
+        },
+        {
+          "value": "348",
+          "text": "Painters and Related Workers"
+        },
+        {
+          "value": "349",
+          "text": "Police Officers"
+        },
+        {
+          "value": "350",
+          "text": "Stall and Market Salespersons"
+        },
+        {
+          "value": "351",
+          "text": "Shop Supervisors"
+        },
+        {
+          "value": "352",
+          "text": "Other Teaching Professionals"
+        },
+        {
+          "value": "353",
+          "text": "Information and Communications Technicians"
+        },
+        {
+          "value": "354",
+          "text": "Ships Deck Officers and Pilots"
+        },
+        {
+          "value": "355",
+          "text": "Chefs"
+        },
+        {
+          "value": "356",
+          "text": "Building Architects"
+        },
+        {
+          "value": "357",
+          "text": "Visual Artists"
+        },
+        {
+          "value": "358",
+          "text": "Creative and Performing Artists n.e.c."
+        },
+        {
+          "value": "359",
+          "text": "Regulatory Government Professionals Not Elsewhere Classified"
+        },
+        {
+          "value": "360",
+          "text": "Cleaners and Helpers"
+        },
+        {
+          "value": "361",
+          "text": "Optometrists and Ophthalmic Opticians"
+        },
+        {
+          "value": "362",
+          "text": "Mathematicians, Actuaries and Statisticians"
+        },
+        {
+          "value": "363",
+          "text": "Financial Analysts"
+        },
+        {
+          "value": "364",
+          "text": "Administrative Professional"
+        },
+        {
+          "value": "365",
+          "text": "Other Legislators and Senior Officials"
+        },
+        {
+          "value": "366",
+          "text": "Personal Assistant"
+        }
+      ],
+      "category": "5"
+    },
+    {
+      "name": "preferredLanguage",
+      "displayName": "Preferred Language",
+      "placeholder": "Select Preferred Language",
+      "startWithNewLine": false,
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "01",
+          "text": "English"
+        },
+        {
+          "value": " 02",
+          "text": "Bahasa"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "race",
+      "displayName": "Race",
+      "placeholder": "Select Race",
+      "type": "dropdown",
+      "startWithNewLine": false,
+      "choices": [
+        {
+          "value": "01",
+          "text": "Malaysian - Chinese"
+        },
+        {
+          "value": "02",
+          "text": "Malaysian - Bumiputra - Malay"
+        },
+        {
+          "value": "03",
+          "text": "Malaysian - Bumiputra - Non Malay"
+        },
+        {
+          "value": "04",
+          "text": "Malaysian - Indian"
+        },
+        {
+          "value": "05",
+          "text": "Malaysian - Other Race"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "relationshiptoContactName",
+      "displayName": "Relationship to Contact Name",
+      "type": "dropdown",
+      "placeholder": "Relationship to contact Name",
+      "choices": [
+        {
+          "value": "07",
+          "text": "Father"
+        },
+        {
+          "value": "08",
+          "text": "Mother"
+        },
+        {
+          "value": "09",
+          "text": "Brother"
+        },
+        {
+          "value": "10",
+          "text": "Sister"
+        },
+        {
+          "value": "11",
+          "text": "Spouse"
+        },
+        {
+          "value": "12",
+          "text": "Son"
+        },
+        {
+          "value": "13",
+          "text": "Daughter"
+        },
+        {
+          "value": "14",
+          "text": "Uncle"
+        },
+        {
+          "value": "15",
+          "text": "Aunt"
+        },
+        {
+          "value": "40",
+          "text": "Relative"
+        }
+      ],
+      "category": "8"
+    },
+    {
+      "name": "residenceType",
+      "displayName": "Residence Type",
+      "placeholder": "Residence Type",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "PL0001",
+          "text": "Own Property"
+        },
+        {
+          "value": "PL0002",
+          "text": "Mortgaged"
+        },
+        {
+          "value": "PL0003",
+          "text": "Employers"
+        },
+        {
+          "value": "PL0004",
+          "text": "Rented"
+        },
+        {
+          "value": "PL0005",
+          "text": "Parents"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "salutation",
+      "displayName": "Salutation",
+      "placeholder": "Select Salutation",
+      "startWithNewLine": false,
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "002",
+          "text": "CIK"
+        },
+        {
+          "value": "004",
+          "text": "DATIN"
+        },
+        {
+          "value": "009",
+          "text": "Datin Seri"
+        },
+        {
+          "value": "011",
+          "text": "DATO`"
+        },
+        {
+          "value": "018",
+          "text": "DATO SERI"
+        },
+        {
+          "value": "023",
+          "text": "DATUK"
+        },
+        {
+          "value": "028",
+          "text": "DOCTOR"
+        },
+        {
+          "value": "033",
+          "text": "ENCIK"
+        },
+        {
+          "value": "043",
+          "text": "DYTM"
+        },
+        {
+          "value": "053",
+          "text": "MADAM"
+        },
+        {
+          "value": "061",
+          "text": "MISS"
+        },
+        {
+          "value": "062",
+          "text": "MR"
+        },
+        {
+          "value": "072",
+          "text": "PUAN"
+        },
+        {
+          "value": "075",
+          "text": "PUAN SRI"
+        },
+        {
+          "value": "079",
+          "text": "TAN SRI"
+        },
+        {
+          "value": "090",
+          "text": "Toh Puan"
+        },
+        {
+          "value": "102",
+          "text": "YAM"
+        },
+        {
+          "value": "151",
+          "text": "DATO SRI"
+        },
+        {
+          "value": "157",
+          "text": "TYT TUN DATUK SERI PANGLIMA"
+        },
+        {
+          "value": "158",
+          "text": "Ms"
+        },
+        {
+          "value": "159",
+          "text": "KDYTM"
+        }
+      ],
+      "category": "2"
+    },
+    {
+      "name": "sourceOfWealth",
+      "displayName": "Source of Wealth",
+      "placeholder": "Source of Wealth",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "01",
+          "text": "Accumulated Saving"
+        },
+        {
+          "value": "02",
+          "text": "Employment income"
+        },
+        {
+          "value": "03",
+          "text": "Inheritance"
+        },
+        {
+          "value": "04",
+          "text": "Trust Fund"
+        },
+        {
+          "value": "05",
+          "text": "Retirement Income"
+        },
+        {
+          "value": "06",
+          "text": "EPF"
+        },
+        {
+          "value": "07",
+          "text": "Disposal of Assets/Shares"
+        },
+        {
+          "value": "08",
+          "text": "Insurance Maturity/Surrender"
+        },
+        {
+          "value": "09",
+          "text": "Return on investment"
+        },
+        {
+          "value": "10",
+          "text": "Legal Settlement"
+        },
+        {
+          "value": "11",
+          "text": "Income from own business"
+        }
+      ],
+      "category": "4"
+    },
+    {
+      "name": "statementType",
+      "displayName": "Statement Type",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "E",
+          "text": "Email"
+        },
+        {
+          "value": "R",
+          "text": "RHB Now"
+        }
+      ],
+      "category": "10"
+    },
+    {
+      "name": "subEmploymentSector",
+      "displayName": "Sub Employment Sector",
+      "placeholder": "Select Sub Employment Sector",
+      "startWithNewLine": false,
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "0011",
+          "text": "Accounting"
+        },
+        {
+          "value": "0021",
+          "text": "Actuarial / Statistic"
+        },
+        {
+          "value": "0031",
+          "text": "Advertising"
+        },
+        {
+          "value": "0032",
+          "text": "Public Relations"
+        },
+        {
+          "value": "0041",
+          "text": "Aerospace"
+        },
+        {
+          "value": "0051",
+          "text": "Agricultural / Chemicals / Forest Products"
+        },
+        {
+          "value": "0052",
+          "text": "Support activities to agriculture and post-harvest crops activities"
+        },
+        {
+          "value": "0053",
+          "text": "Growing paddy, sugar cane, vegetables and melons, roots, tubers, perennial crops"
+        },
+        {
+          "value": "0054",
+          "text": "Raising of animals"
+        },
+        {
+          "value": "0055",
+          "text": "Mixed farming"
+        },
+        {
+          "value": "0056",
+          "text": "Fishing / aquaculture"
+        },
+        {
+          "value": "0057",
+          "text": "Plantation (e.g. oil palm, rubber tree, cocoa, coconut etc.)"
+        },
+        {
+          "value": "0058",
+          "text": "Silviculture and forestry activities"
+        },
+        {
+          "value": "0059",
+          "text": "Veterinary activities"
+        },
+        {
+          "value": "0061",
+          "text": "Architecture"
+        },
+        {
+          "value": "0062",
+          "text": "Engineering Services"
+        },
+        {
+          "value": "0063",
+          "text": "Engineering technical services"
+        },
+        {
+          "value": "0064",
+          "text": "Surveying Services"
+        },
+        {
+          "value": "0071",
+          "text": "Manufacture of Switchgear and Switchboard Apparatus"
+        },
+        {
+          "value": "0072",
+          "text": "Manufacture of Insulated wire and cable"
+        },
+        {
+          "value": "0073",
+          "text": "Manufacture of TV radio communication equipment"
+        },
+        {
+          "value": "0074",
+          "text": "Manufacture of Typesetting; Platemaking and Related Services"
+        },
+        {
+          "value": "0075",
+          "text": "Manufacture of Aircraft and related machinery"
+        },
+        {
+          "value": "0076",
+          "text": "Manufacture of Consumer goods & Pharmaceuticals"
+        },
+        {
+          "value": "0077",
+          "text": "Manufacture of jewellery, bijouterie & related articles"
+        },
+        {
+          "value": "0078",
+          "text": "Manufacture of machinery/ motor vehicles/ other transport equipment"
+        },
+        {
+          "value": "0079",
+          "text": "Manufacture of other fabricated metal product"
+        },
+        {
+          "value": "0081",
+          "text": "Aviation"
+        },
+        {
+          "value": "0091",
+          "text": "Radio, Television, and Consumer Electronics Stores"
+        },
+        {
+          "value": "0092",
+          "text": "Retail garments / apparels"
+        },
+        {
+          "value": "0093",
+          "text": "Household goods"
+        },
+        {
+          "value": "0094",
+          "text": "Furniture stores"
+        },
+        {
+          "value": "0095",
+          "text": "Retail sale of Chinaware Glassware"
+        },
+        {
+          "value": "0096",
+          "text": "Other retail trade (except for motor vehicle, f&b, health care and grocery)"
+        },
+        {
+          "value": "0097",
+          "text": "Other retail sale in non-specialized stores"
+        },
+        {
+          "value": "0098",
+          "text": "Retail sale of beer, wine and spirits"
+        },
+        {
+          "value": "0099",
+          "text": "Retail sale of tobacco products in specialized store"
+        },
+        {
+          "value": "0101",
+          "text": "Radio and Television Repair Shops"
+        },
+        {
+          "value": "0102",
+          "text": "Repair Shops and Related Services, N.E.C.;"
+        },
+        {
+          "value": "0103",
+          "text": "Refrigeration and Air-Conditioning Service and Repair Shops;"
+        },
+        {
+          "value": "0104",
+          "text": "Computer related activities;"
+        },
+        {
+          "value": "0105",
+          "text": "Electrical and Electronic Repair Shops, N.E.C"
+        },
+        {
+          "value": "00110",
+          "text": "Construction of other civil engineering projects (specialised)"
+        },
+        {
+          "value": "0111",
+          "text": "Building Construction"
+        },
+        {
+          "value": "00111",
+          "text": "Construction of other civil engineering projects (not specialised)"
+        },
+        {
+          "value": "00112",
+          "text": "Electrical, Installation and plumbing"
+        },
+        {
+          "value": "00113",
+          "text": "Demolition and site preparation"
+        },
+        {
+          "value": "00114",
+          "text": "Construction of utility projects"
+        },
+        {
+          "value": "0114",
+          "text": "Construction of Residential house (landed property)"
+        },
+        {
+          "value": "00115",
+          "text": "Other specialized construction activities"
+        },
+        {
+          "value": "0115",
+          "text": "Construction of other residentials"
+        },
+        {
+          "value": "00116",
+          "text": "Roofing, Siding, and Sheet Metal Work"
+        },
+        {
+          "value": "0116",
+          "text": "Construction of industrial building & factories"
+        },
+        {
+          "value": "00117",
+          "text": "Water, Sewer, Pipeline, and Communications and Power Line Construction"
+        },
+        {
+          "value": "0117",
+          "text": "Construction of office buildings"
+        },
+        {
+          "value": "00118",
+          "text": "Assembly and erection of prefabricated constructions on the site"
+        },
+        {
+          "value": "0118",
+          "text": "Construction of commercial complex"
+        },
+        {
+          "value": "0119",
+          "text": "Construction of infrastructure"
+        },
+        {
+          "value": "00119",
+          "text": "Construction of hotels"
+        },
+        {
+          "value": "00120",
+          "text": "Construction of condominiums/apartments"
+        },
+        {
+          "value": "0121",
+          "text": "Creative / Graphics"
+        },
+        {
+          "value": "0131",
+          "text": "Customer Service"
+        },
+        {
+          "value": "0141",
+          "text": "Higher Education with significant reliance on foreign/international students"
+        },
+        {
+          "value": "0142",
+          "text": "Higher Education with no significant reliance on foreign students"
+        },
+        {
+          "value": "0143",
+          "text": "Administration of the State and the economic and social policy of the community"
+        },
+        {
+          "value": "0144",
+          "text": "Public - Pre school, primary and secondary level education"
+        },
+        {
+          "value": "0145",
+          "text": "Private - Pre school, primary and secondary level education"
+        },
+        {
+          "value": "0151",
+          "text": "O&G - Upstream i.e. drilling, extraction, exploration and field services"
+        },
+        {
+          "value": "0152",
+          "text": "O&G - Other than Upstream"
+        },
+        {
+          "value": "0153",
+          "text": "Mining of iron ores and other non-ferrous metal ores"
+        },
+        {
+          "value": "0154",
+          "text": "Stonequarrying, clay & sand pits"
+        },
+        {
+          "value": "155",
+          "text": "Chemical & fertilizer mining"
+        },
+        {
+          "value": "0155",
+          "text": "Chemical & fertiliser mining"
+        },
+        {
+          "value": "156",
+          "text": "Other than oil and gas"
+        },
+        {
+          "value": "0156",
+          "text": "Other than oil and gas"
+        },
+        {
+          "value": "161",
+          "text": "Engineering Services & Engineering Technical Services"
+        },
+        {
+          "value": "0161",
+          "text": "Engineering Services & Engineering Technical Services"
+        },
+        {
+          "value": "171",
+          "text": "Banking services"
+        },
+        {
+          "value": "0171",
+          "text": "Banking services"
+        },
+        {
+          "value": "172",
+          "text": "Finance services"
+        },
+        {
+          "value": "0172",
+          "text": "Finance services"
+        },
+        {
+          "value": "0173",
+          "text": "Insurance services"
+        },
+        {
+          "value": "173",
+          "text": "Insurance services"
+        },
+        {
+          "value": "0174",
+          "text": "Money lenders / Money Changers/ Remittance Services/ Money Transmitter/ Check Cashing Business/ Currency Exchange"
+        },
+        {
+          "value": "0175",
+          "text": "Pawnshop"
+        },
+        {
+          "value": "0176",
+          "text": "Activity of holding companies"
+        },
+        {
+          "value": "0177",
+          "text": "Financial leasing activities"
+        },
+        {
+          "value": "0178",
+          "text": "Finance - credit card services"
+        },
+        {
+          "value": "0179",
+          "text": "Consultancy services"
+        },
+        {
+          "value": "0181",
+          "text": "Freight Forwarding Services"
+        },
+        {
+          "value": "0191",
+          "text": "Government"
+        },
+        {
+          "value": "0192",
+          "text": "Public Service"
+        },
+        {
+          "value": "0193",
+          "text": "Military"
+        },
+        {
+          "value": "0201",
+          "text": "Tourism & Hospitality"
+        },
+        {
+          "value": "0202",
+          "text": "Recreational related services / activities"
+        },
+        {
+          "value": "0211",
+          "text": "Food Service Activities"
+        },
+        {
+          "value": "0212",
+          "text": "Organization Hotel, Lodging Houses, chalet, rest house, homestay, Inn, motels, rooming sporting, and recreational camp"
+        },
+        {
+          "value": "0213",
+          "text": "Other short term accommodation not mentioned above"
+        },
+        {
+          "value": "0214",
+          "text": "Restaurants, bars and canteens"
+        },
+        {
+          "value": "0215",
+          "text": "Restaurant, bar (other discretionary items and significant reliance on dine-in)"
+        },
+        {
+          "value": "0216",
+          "text": "Event catering and other food service activities"
+        },
+        {
+          "value": "0217",
+          "text": "Eating Places, Except Food Service, Institutional"
+        },
+        {
+          "value": "0221",
+          "text": "Human Resources"
+        },
+        {
+          "value": "0231",
+          "text": "Investment advisory services"
+        },
+        {
+          "value": "0241",
+          "text": "Journalist / Editor"
+        },
+        {
+          "value": "0251",
+          "text": "Motion picture, video and television programme production, sound recording and music publishing activities"
+        },
+        {
+          "value": "0252",
+          "text": "Programming and broadcasting activities"
+        },
+        {
+          "value": "0253",
+          "text": "News agency activities"
+        },
+        {
+          "value": "0254",
+          "text": "Media, culture and recreational activities"
+        },
+        {
+          "value": "0261",
+          "text": "Medical / Health Services"
+        },
+        {
+          "value": "0262",
+          "text": "Kidney Dialysis Centers"
+        },
+        {
+          "value": "0263",
+          "text": "Intermediate Care Facilities"
+        },
+        {
+          "value": "0264",
+          "text": "Home Health Care Services Facilities"
+        },
+        {
+          "value": "0271",
+          "text": "Non-Profit Organization"
+        },
+        {
+          "value": "0281",
+          "text": "Geology"
+        },
+        {
+          "value": "0291",
+          "text": "Pharmaceuticals products"
+        },
+        {
+          "value": "0301",
+          "text": "Real estate operations - shopping complex"
+        },
+        {
+          "value": "0302",
+          "text": "Appraisal services for real estate"
+        },
+        {
+          "value": "0303",
+          "text": "Real estate activities on a fee or contract basis"
+        },
+        {
+          "value": "0304",
+          "text": "Buying, selling, renting and operating of residential buildings or land"
+        },
+        {
+          "value": "0305",
+          "text": "Real estate operations - shophouse"
+        },
+        {
+          "value": "0306",
+          "text": "Real estate Operation - Industrial building & factories"
+        },
+        {
+          "value": "0307",
+          "text": "Real estate Operation - office building"
+        },
+        {
+          "value": "0308",
+          "text": "Real estate Operation - other commercial building"
+        },
+        {
+          "value": "0309",
+          "text": "Real estate operation not related above"
+        },
+        {
+          "value": "0311",
+          "text": "Administrative and Support Service Activities"
+        },
+        {
+          "value": "0321",
+          "text": "Social Work Activites"
+        },
+        {
+          "value": "0331",
+          "text": "Wired / Wireless telecommunications activities"
+        },
+        {
+          "value": "0341",
+          "text": "Tour operators"
+        },
+        {
+          "value": "0342",
+          "text": "Travel Agencies"
+        },
+        {
+          "value": "0351",
+          "text": "Rail transport"
+        },
+        {
+          "value": "0352",
+          "text": "Transportation Services, N.E.C."
+        },
+        {
+          "value": "0353",
+          "text": "Service activities incidental to land / road transportation"
+        },
+        {
+          "value": "0354",
+          "text": "Scheduled and Non-Scheduled Air Transport (Transport of passengers by air over regular routes and on regular schedules)"
+        },
+        {
+          "value": "0355",
+          "text": "Aircrafts, Aircraft engine / parts, space vehicles"
+        },
+        {
+          "value": "0356",
+          "text": "Tanks and Tank components"
+        },
+        {
+          "value": "0357",
+          "text": "Warehousing and storage"
+        },
+        {
+          "value": "0358",
+          "text": "Water transport"
+        },
+        {
+          "value": "0359",
+          "text": "Other transportation support activities n.e.c. (e.g. arranging transportation services, terminal maintenance services, etc)"
+        },
+        {
+          "value": "0361",
+          "text": "Casinos including Junket Operators"
+        },
+        {
+          "value": "0362",
+          "text": "Karaoke lounges, internet cafe or video arcade"
+        },
+        {
+          "value": "0363",
+          "text": "Amusement and Recreation Services"
+        },
+        {
+          "value": "0364",
+          "text": "Membership Sports and Recreation Clubs"
+        },
+        {
+          "value": "0365",
+          "text": "Entertainment services"
+        },
+        {
+          "value": "0366",
+          "text": "Arts & Theatrical"
+        },
+        {
+          "value": "0371",
+          "text": "Electricty power generation"
+        },
+        {
+          "value": "0372",
+          "text": "Steam and air conditioning supply"
+        },
+        {
+          "value": "0373",
+          "text": "Water collection, treatment and supply"
+        },
+        {
+          "value": "0381",
+          "text": "Water Supply"
+        },
+        {
+          "value": "0382",
+          "text": "Sewerage"
+        },
+        {
+          "value": "0383",
+          "text": "Waste Management and Remediation Activities"
+        },
+        {
+          "value": "0384",
+          "text": "Recycling of non-metal (including rubber & textile fibre)"
+        },
+        {
+          "value": "0385",
+          "text": "Recycling of tin and other metal waste and scrap"
+        },
+        {
+          "value": "0391",
+          "text": "Activities of Households as Employers; Undifferentiated Goods and Services Producing Activities of Households for Own Use"
+        },
+        {
+          "value": "0401",
+          "text": "Activities of Extraterritorial Organisations and Bodies"
+        },
+        {
+          "value": "0411",
+          "text": "Unemployed/ Outside Labour Force"
+        },
+        {
+          "value": "0421",
+          "text": "Activities of membership organisations (Political/Religious/Trade Union)"
+        },
+        {
+          "value": "0422",
+          "text": "International Business Corporations and other similar entities"
+        },
+        {
+          "value": "0423",
+          "text": "Business Activities - Intermediary activities - trustee/ nominee/ agent  OR Shell Companies"
+        },
+        {
+          "value": "0424",
+          "text": "Other Services"
+        },
+        {
+          "value": "0425",
+          "text": "Offshore Corporations (or their subsidiaries) and bank set up in tax and/or secrecy havens"
+        },
+        {
+          "value": "0426",
+          "text": "Building Cleaning and Maintenance Services, N.E.C."
+        },
+        {
+          "value": "0427",
+          "text": "Detective, Guard, and Armored Car Services"
+        },
+        {
+          "value": "0428",
+          "text": "Rental, Leasing and Packaging ( tour operator, reservation services and related activities, Organisation of conventions and trade shows)"
+        },
+        {
+          "value": "0429",
+          "text": "Funeral Service and Crematories"
+        },
+        {
+          "value": "0431",
+          "text": "Legal Services"
+        },
+        {
+          "value": "0441",
+          "text": "Research & Experiemental Development Services"
+        },
+        {
+          "value": "0451",
+          "text": "Other Professional, scientific and Technical activities"
+        },
+        {
+          "value": "00510",
+          "text": "Hunting, trapping and related service activities"
+        },
+        {
+          "value": "00511",
+          "text": "Logging"
+        },
+        {
+          "value": "00710",
+          "text": "Manufacture of watches and clocks"
+        },
+        {
+          "value": "0711",
+          "text": "Manufacture of others"
+        },
+        {
+          "value": "00711",
+          "text": "Manufacture of others"
+        },
+        {
+          "value": "0712",
+          "text": "Maintenance and repair of motor vehicles"
+        },
+        {
+          "value": "00712",
+          "text": "Maintenance and repair of motor vehicles"
+        },
+        {
+          "value": "0713",
+          "text": "Manufacture of furniture"
+        },
+        {
+          "value": "00713",
+          "text": "Manufacture of furniture"
+        },
+        {
+          "value": "0714",
+          "text": "Manufacture of packaging and stretch film"
+        },
+        {
+          "value": "00714",
+          "text": "Manufacture of packaging and stretch film"
+        },
+        {
+          "value": "0715",
+          "text": "Manufacture of plastic product"
+        },
+        {
+          "value": "00715",
+          "text": "Manufacture of plastic product"
+        },
+        {
+          "value": "0716",
+          "text": "Manufacture of rubber product"
+        },
+        {
+          "value": "00716",
+          "text": "Manufacture of rubber product"
+        },
+        {
+          "value": "00717",
+          "text": "Manufacture of processed food or beverages products"
+        },
+        {
+          "value": "0717",
+          "text": "Manufacture of processed food or beverages products"
+        },
+        {
+          "value": "00718",
+          "text": "Manufacture of wood product except furniture"
+        },
+        {
+          "value": "0718",
+          "text": "Manufacture of wood product except furniture"
+        },
+        {
+          "value": "00719",
+          "text": "Manufacture of refined petroleum products"
+        },
+        {
+          "value": "0719",
+          "text": "Manufacture of refined petroleum products"
+        },
+        {
+          "value": "00720",
+          "text": "Manufacture of chemicals and chemical products (except for refined petroleum products)"
+        },
+        {
+          "value": "0720",
+          "text": "Manufacture of chemicals and chemical products (except for refined petroleum products)"
+        },
+        {
+          "value": "00721",
+          "text": "Manufacture of electrical equipment or components"
+        },
+        {
+          "value": "00722",
+          "text": "Manufacture of dairy food"
+        },
+        {
+          "value": "00723",
+          "text": "Manufacture of grain mills"
+        },
+        {
+          "value": "00724",
+          "text": "Manufacture of other food product (except dairy food and grain mills, starches and starch products)"
+        },
+        {
+          "value": "00725",
+          "text": "Manufacture of vegetable and animal oils and fats"
+        },
+        {
+          "value": "00726",
+          "text": "Manufacture of textiles"
+        },
+        {
+          "value": "00727",
+          "text": "Manufacture of footwear"
+        },
+        {
+          "value": "00728",
+          "text": "Manufacture of building materials"
+        },
+        {
+          "value": "00729",
+          "text": "Manufacture of glass and glass products"
+        },
+        {
+          "value": "00730",
+          "text": "Manufacture of mineral products"
+        },
+        {
+          "value": "00731",
+          "text": "Manufacture of medical and dental instruments and supplies"
+        },
+        {
+          "value": "00732",
+          "text": "Manufacturing of automobile or autopart"
+        },
+        {
+          "value": "00733",
+          "text": "Manufacture of paper and paper products"
+        },
+        {
+          "value": "00734",
+          "text": "Manufacture of gas and distribution of gaseous fuels through mains"
+        },
+        {
+          "value": "00735",
+          "text": "Manufacture of fertiliser pesticides"
+        },
+        {
+          "value": "00736",
+          "text": "Production of natural mineral water and other bottled water"
+        },
+        {
+          "value": "00901",
+          "text": "Retail trade not in stores, stalls or markets"
+        },
+        {
+          "value": "00902",
+          "text": "Retail sale via stalls and markets"
+        },
+        {
+          "value": "00903",
+          "text": "Wholesale of beer, wine and spirits"
+        },
+        {
+          "value": "00904",
+          "text": "Wholesale of tobacco, cigar, cigarettes"
+        },
+        {
+          "value": "00905",
+          "text": "Wholesale of construction and civil engineering machinery and equipment"
+        },
+        {
+          "value": "00906",
+          "text": "Wholesale of other machinery for use in industry, trade and navigation and other services n.e.c."
+        },
+        {
+          "value": "00907",
+          "text": "Motor Vehicle dealer (Used)"
+        },
+        {
+          "value": "00908",
+          "text": "Jewel / Gem / Precious Metal"
+        },
+        {
+          "value": "00909",
+          "text": "Automobile and autoparts"
+        },
+        {
+          "value": "00910",
+          "text": "Hardware / construction material"
+        },
+        {
+          "value": "00911",
+          "text": "Electrical products"
+        },
+        {
+          "value": "00912",
+          "text": "Chemical / Petrochemical"
+        },
+        {
+          "value": "00913",
+          "text": "Cosmetics"
+        },
+        {
+          "value": "00914",
+          "text": "Import / Export"
+        },
+        {
+          "value": "00915",
+          "text": "Medical related products"
+        },
+        {
+          "value": "00916",
+          "text": "Automatic Merchandising Machine Operators"
+        },
+        {
+          "value": "00917",
+          "text": "Direct Selling Establishments"
+        },
+        {
+          "value": "00918",
+          "text": "Liquefied Petroleum Gas (Bottled Gas) Dealers"
+        },
+        {
+          "value": "00919",
+          "text": "Motor Vehicle Dealers (New )"
+        },
+        {
+          "value": "00920",
+          "text": "Office equipment"
+        },
+        {
+          "value": "00921",
+          "text": "Stationery, books, periodical and newspapers"
+        },
+        {
+          "value": "00922",
+          "text": "Retail - Petrol Station"
+        },
+        {
+          "value": "00923",
+          "text": "Retail / wholesaler other than above"
+        },
+        {
+          "value": "01700",
+          "text": "Other monetary intermediation"
+        },
+        {
+          "value": "1700",
+          "text": "Other monetary intermediation"
+        },
+        {
+          "value": "01701",
+          "text": "Research & Experiemental Development Services"
+        },
+        {
+          "value": "1701",
+          "text": "Research & Experimental Development Services"
+        },
+        {
+          "value": "01702",
+          "text": "licensed money lending activities, co-operative with credit functions and factoring companies"
+        },
+        {
+          "value": "1702",
+          "text": "licensed money lending activities, co-operative with credit functions and factoring companies"
+        },
+        {
+          "value": "03510",
+          "text": "Postal and courier activities"
+        },
+        {
+          "value": "04201",
+          "text": "Beauty Shops"
+        },
+        {
+          "value": "04202",
+          "text": "Barber Shops"
+        },
+        {
+          "value": "04203",
+          "text": "Libraries, archives, museums and other cultural activities"
+        },
+        {
+          "value": "04204",
+          "text": "Reupholstery and Furniture Repair"
+        },
+        {
+          "value": "04205",
+          "text": "Armature Rewinding Shops"
+        },
+        {
+          "value": "04206",
+          "text": "Welding Repair"
+        },
+        {
+          "value": "04207",
+          "text": "Maintenance and repair of motor vehicles"
+        },
+        {
+          "value": "04208",
+          "text": "Renting and leasing of motor vehicle, household good, machinery, equipment and tangible goods"
+        },
+        {
+          "value": "04209",
+          "text": "Business management consultancy services"
+        },
+        {
+          "value": "04210",
+          "text": "Activties of  collection agencies / credit bureaus"
+        },
+        {
+          "value": "04211",
+          "text": "Repair of bicycles"
+        },
+        {
+          "value": "04212",
+          "text": "Repair of footwear and other leather goods"
+        }
+      ],
+      "category": "5"
+    },
+    {
+      "name": "dateApplied",
+      "displayName": "Date Applied",
+      "type": "text",
+      "inputType": "date",
+      "category": "11"
+    },
+    {
+      "name": "entity",
+      "displayName": "Entity",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "C",
+          "text": "Conventional"
+        },
+        {
+          "value": "I",
+          "text": "Islamic"
+        }
+      ],
+      "category": "10"
+    },
+    {
+      "name": "facilityPackage",
+      "displayName": "Facility Package",
+      "type": "text",
+      "category": "11"
+    },
+    {
+      "name": "purposeOfAcquisition",
+      "displayName": "Purpose of Acquisition",
+      "placeholder": "Select your Purpose of Acquisition",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "Internal Use",
+          "text": "Internal Use"
+        },
+        {
+          "value": "Tender",
+          "text": "Tender"
+        },
+        {
+          "value": "Service",
+          "text": "Service"
+        }
+      ],
+      "category": "11"
+    },
+    {
+      "name": "facilityPurpose",
+      "displayName": "Facility Purpose",
+      "type": "dropdown",
+      "defaultValue": "Refinancing of property",
+      "choices": [
+        {
+          "value": "01",
+          "text": "Staff ASB - Untuk Kegunaan Sendiri dalam Pelaburan ASB"
+        },
+        {
+          "value": "02",
+          "text": "ASB - Untuk Kegunaan Sendiri dalam pelaburan ASB"
+        },
+        {
+          "value": "002",
+          "text": "Finance purchase of property/land for INVESTMENT."
+        },
+        {
+          "value": "03",
+          "text": "ASB2 - Untuk Kegunaan Sendiri dalam Pelaburan ASB2"
+        },
+        {
+          "value": "003",
+          "text": "Finance purchase of prop/land for own occupation"
+        },
+        {
+          "value": "04",
+          "text": "Personal Consumption Against ASB/ASM2W Certificate"
+        },
+        {
+          "value": "05",
+          "text": "ASB/ASM2W for Sole-prop Business"
+        },
+        {
+          "value": "005",
+          "text": "Personal consumption"
+        },
+        {
+          "value": "008",
+          "text": "Construction of property"
+        },
+        {
+          "value": "010",
+          "text": "Purchase of property for INVESTMENT & consumption."
+        },
+        {
+          "value": "013",
+          "text": "Purchase of car park"
+        },
+        {
+          "value": "015",
+          "text": "To finance renovation/upgrading cost"
+        },
+        {
+          "value": "016",
+          "text": "To part finance Car Park and Renovation Cost"
+        },
+        {
+          "value": "018",
+          "text": "Staff - Renovation of property under staff rate"
+        },
+        {
+          "value": "023",
+          "text": "Refinancing of property"
+        },
+        {
+          "value": "026",
+          "text": "Staff Sundry Loan - Calamities"
+        },
+        {
+          "value": "027",
+          "text": "Staff-To part finance Medical Expenses"
+        },
+        {
+          "value": "028",
+          "text": "Staff-To part finance the purchase of a personal computer"
+        },
+        {
+          "value": "029",
+          "text": "Staff-Purchase of new car"
+        },
+        {
+          "value": "030",
+          "text": "Staff- study loan"
+        },
+        {
+          "value": "031",
+          "text": "Staff-Purchase of motorcycle"
+        },
+        {
+          "value": "036",
+          "text": "Staff-Staff Sundry loan"
+        },
+        {
+          "value": "037",
+          "text": "Booking Fee - Car"
+        },
+        {
+          "value": "038",
+          "text": "Debt Consolidation"
+        },
+        {
+          "value": "039",
+          "text": "Education"
+        },
+        {
+          "value": "040",
+          "text": "Electrical Goods"
+        },
+        {
+          "value": "041",
+          "text": "Home Furnishing/Equipment"
+        },
+        {
+          "value": "042",
+          "text": "Medical Expenses"
+        },
+        {
+          "value": "043",
+          "text": "Online Financing"
+        },
+        {
+          "value": "044",
+          "text": "Personal Refinancing"
+        },
+        {
+          "value": "045",
+          "text": "Property/House Downpayment"
+        },
+        {
+          "value": "046",
+          "text": "Renovation"
+        },
+        {
+          "value": "047",
+          "text": "Travel"
+        },
+        {
+          "value": "048",
+          "text": "Additional Financing for Revival of Abandoned Project"
+        },
+        {
+          "value": "100",
+          "text": "Purchase of Resident / Non Resident Property for personal purpose"
+        },
+        {
+          "value": "101",
+          "text": "Purchase of securities quoted on the Bursa Malaysia and/or financing of IPO shares"
+        },
+        {
+          "value": "102",
+          "text": "Purchase of securities quoted on the Bursa Malaysia and/or financing of IPO shares"
+        },
+        {
+          "value": "COM01AF",
+          "text": "PURCHASE OF COMMERCIAL VEHICLES"
+        },
+        {
+          "value": "PRI01AF",
+          "text": "PURCHASE OF PRIVATE VEHICLES"
+        }
+      ],
+      "category": "11"
+    },
+    {
+      "name": "facilityType",
+      "displayName": "Facility Type (Personal)",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "PLFT001",
+          "text": "Conventional"
+        },
+        {
+          "value": "PLFT002",
+          "text": "Private Sector"
+        }
+      ],
+      "category": "11"
+    },
+    {
+      "name": "facilityType",
+      "displayName": "Facility Type (Auto)",
+      "placeholder": "Facility Type",
+      "startWithNewLine": false,
+      "visible": false,
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "HPFAC04",
+          "text": " Islamic - Variable rate"
+        }
+      ],
+      "category": "11"
+    },
+    {
+      "name": "financingTenure",
+      "displayName": "Financing Tenure (Years)",
+      "placeholder": "Financing Tenure (Years)",
+      "startWithNewLine": false,
+      "type": "text",
+      "maxLength": 3,
+      "min": 1,
+      "max": 7,
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a valid financing tenure from 1 to 7 years.",
+          "regex": "^[1-7]$"
+        }
+      ],
+      "inputType": "number",
+      "category": "11"
+    },
+    {
+      "name": "product",
+      "displayName": "Product (Auto)",
+      "placeholder": "Product",
+      "startWithNewLine": false,
+      "visible": false,
+      "isRequired": true,
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "AFI04",
+          "text": "Vehicle Financing-i (Variable Rate SBR)"
+        }
+      ],
+      "maxLength": 40,
+      "category": "11"
+    },
+    {
+      "name": "purposeOfAcctOpen",
+      "displayName": "Purpose of Account Opening",
+      "type": "dropdown",
+      "defaultValue": "Personal Loan/Financing",
+      "choices": [
+        {
+          "value": "01",
+          "text": "Payroll/Salary"
+        },
+        {
+          "value": "03",
+          "text": "Savings/Fixed/Term Deposits"
+        },
+        {
+          "value": "04",
+          "text": "Remittance (Local/Foreign)"
+        },
+        {
+          "value": "05",
+          "text": "Household/Family Expenses"
+        },
+        {
+          "value": "06",
+          "text": "Investment"
+        },
+        {
+          "value": "08",
+          "text": "Standing Instruction"
+        },
+        {
+          "value": "11",
+          "text": "EPF Withdrawals"
+        },
+        {
+          "value": "12",
+          "text": "Personal Loan/Financing"
+        },
+        {
+          "value": "14",
+          "text": "Equipment & Machinery Expenses"
+        },
+        {
+          "value": "15",
+          "text": "Business Operating Account"
+        },
+        {
+          "value": "16",
+          "text": "Client's Account"
+        },
+        {
+          "value": "17",
+          "text": "Sales Proceed"
+        },
+        {
+          "value": "18",
+          "text": "Capital Injection"
+        },
+        {
+          "value": "19",
+          "text": "Administration of Estate Account"
+        },
+        {
+          "value": "20",
+          "text": "Liquidation/Disposal of Asset"
+        },
+        {
+          "value": "21",
+          "text": "Financing Payment/Drawdown"
+        }
+      ],
+      "category": "11"
+    },
+    {
+      "name": "sourceOfFund",
+      "displayName": "Source of Fund",
+      "placeholder": "Source of Fund",
+      "startWithNewLine": false,
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "01",
+          "text": "Income/Salary"
+        },
+        {
+          "value": "02",
+          "text": "Own Bank Transfer (within RHB)"
+        },
+        {
+          "value": "04",
+          "text": "EPF/SOCSO/Pension/Gratuity"
+        },
+        {
+          "value": "05",
+          "text": "Savings/Investment"
+        },
+        {
+          "value": "08",
+          "text": "Scholarship/Allowance/Edu Loan"
+        },
+        {
+          "value": "13",
+          "text": "Trust Funds"
+        },
+        {
+          "value": "15",
+          "text": "Divorce Sett/Compensation"
+        },
+        {
+          "value": "17",
+          "text": "Sale of Inves/Shares/Prop/Land"
+        },
+        {
+          "value": "18",
+          "text": "Dividends/Profits"
+        },
+        {
+          "value": "20",
+          "text": "Rental Proceeds"
+        },
+        {
+          "value": "21",
+          "text": "Commission"
+        },
+        {
+          "value": "22",
+          "text": "Directors Fee/Salary"
+        },
+        {
+          "value": "23",
+          "text": "Welfare Allowance"
+        },
+        {
+          "value": "24",
+          "text": "Return on Investment"
+        },
+        {
+          "value": "25",
+          "text": "FD Placement Roll Over/Renewal"
+        },
+        {
+          "value": "26",
+          "text": "Insurance Maturity/Surrender"
+        },
+        {
+          "value": "27",
+          "text": "Legal Settlement"
+        },
+        {
+          "value": "28",
+          "text": "Credit Facility Approve by FI"
+        },
+        {
+          "value": "29",
+          "text": "Trf frm Parent/Holding/Subs"
+        },
+        {
+          "value": "30",
+          "text": "Trf frm Own Acct with Oth FI"
+        },
+        {
+          "value": "31",
+          "text": "Spouse/Parents/Children"
+        },
+        {
+          "value": "32",
+          "text": "Financial Aid/Subsidies"
+        },
+        {
+          "value": "33",
+          "text": "Part-time Income"
+        },
+        {
+          "value": "34",
+          "text": "Inheritance"
+        },
+        {
+          "value": "35",
+          "text": "Gift/Donation"
+        },
+        {
+          "value": "36",
+          "text": "Winning-legal Gambling/Contest"
+        },
+        {
+          "value": "37",
+          "text": "Business/Sales Proceeds"
+        },
+        {
+          "value": "38",
+          "text": "Crypto Currency/Digital Asset Investment Proceeds"
+        }
+      ],
+      "category": "4"
+    },
+    {
+      "name": "preferredBranch",
+      "displayName": "Preferred Branch",
+      "placeholder": "Select Preferred Branch",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "000",
+          "text": "Head Office (KL)"
+        },
+        {
+          "value": "002",
+          "text": "JALAN SILANG (WITH KUP)"
+        },
+        {
+          "value": "003",
+          "text": "Jalan Bukit Bintang (WITH BBI)"
+        },
+        {
+          "value": "004",
+          "text": "Jln Tun Sambanthan, Ipoh"
+        },
+        {
+          "value": "005",
+          "text": "Kampar"
+        },
+        {
+          "value": "006",
+          "text": "Johor Bahru City Square"
+        },
+        {
+          "value": "007",
+          "text": "Wisma Khoo, Sandakan"
+        },
+        {
+          "value": "008",
+          "text": "Putra Square, Kuantan"
+        },
+        {
+          "value": "009",
+          "text": "New Town, Petaling Jaya"
+        },
+        {
+          "value": "010",
+          "text": "Seri Kembangan"
+        },
+        {
+          "value": "011",
+          "text": "Kajang"
+        },
+        {
+          "value": "012",
+          "text": "Lebuh Pantai"
+        },
+        {
+          "value": "013",
+          "text": "Bentung"
+        },
+        {
+          "value": "014",
+          "text": "Batu Pahat"
+        },
+        {
+          "value": "015",
+          "text": "Kepong"
+        },
+        {
+          "value": "016",
+          "text": "Tanjung Sepat"
+        },
+        {
+          "value": "017",
+          "text": "Jln Tunku Ibrahim, Alor Setar"
+        },
+        {
+          "value": "018",
+          "text": "Jln Tok Hakim, Kota Bharu"
+        },
+        {
+          "value": "019",
+          "text": "Kuala Terengganu"
+        },
+        {
+          "value": "020",
+          "text": "Air Tawar"
+        },
+        {
+          "value": "021",
+          "text": "Kulai"
+        },
+        {
+          "value": "022",
+          "text": "Jln Gaya, Kota Kinabalu"
+        },
+        {
+          "value": "024",
+          "text": "Setapak"
+        },
+        {
+          "value": "025",
+          "text": "Jelapang"
+        },
+        {
+          "value": "026",
+          "text": "Jln Niaga, Shah Alam"
+        },
+        {
+          "value": "027",
+          "text": "Bukit Baru"
+        },
+        {
+          "value": "028",
+          "text": "Jln Chain Ferry, Prai"
+        },
+        {
+          "value": "029",
+          "text": "Yung Kong"
+        },
+        {
+          "value": "030",
+          "text": "Kenanga Wholesale City"
+        },
+        {
+          "value": "031",
+          "text": "Tmn Sg. Besi"
+        },
+        {
+          "value": "032",
+          "text": "Damansara Jaya"
+        },
+        {
+          "value": "033",
+          "text": "Kluang"
+        },
+        {
+          "value": "034",
+          "text": "Jerantut"
+        },
+        {
+          "value": "035",
+          "text": "Kuala Kurau"
+        },
+        {
+          "value": "036",
+          "text": "Raub"
+        },
+        {
+          "value": "037",
+          "text": "Port Klang"
+        },
+        {
+          "value": "038",
+          "text": "Jln Bakar Arang, Sg. Petani"
+        },
+        {
+          "value": "039",
+          "text": "Kemaman"
+        },
+        {
+          "value": "040",
+          "text": "Pasir Gudang"
+        },
+        {
+          "value": "041",
+          "text": "Bandar Baru Sg. Buloh"
+        },
+        {
+          "value": "042",
+          "text": "Jelutong"
+        },
+        {
+          "value": "043",
+          "text": "Tmn Suntex"
+        },
+        {
+          "value": "044",
+          "text": "Tmn Johor Jaya, Johor Bahru"
+        },
+        {
+          "value": "045",
+          "text": "JALAN TUN RAZAK (WITH PAS)"
+        },
+        {
+          "value": "046",
+          "text": "Jln Nakhoda Gampar, Miri"
+        },
+        {
+          "value": "047",
+          "text": "Tawau"
+        },
+        {
+          "value": "048",
+          "text": "Inanam"
+        },
+        {
+          "value": "049",
+          "text": "Tmn Pelangi, Johor Bahru"
+        },
+        {
+          "value": "050",
+          "text": "Tmn Ungku Tun Aminah"
+        },
+        {
+          "value": "051",
+          "text": "Jln Tunku Osman, Sibu"
+        },
+        {
+          "value": "052",
+          "text": "BUKIT MERTAJAM 1(WITH BMT)"
+        },
+        {
+          "value": "053",
+          "text": "Bandar Baru Uda, Tampoi"
+        },
+        {
+          "value": "054",
+          "text": "Rawang"
+        },
+        {
+          "value": "055",
+          "text": "Jln SS15 Subang Jaya"
+        },
+        {
+          "value": "056",
+          "text": "Mid Valley"
+        },
+        {
+          "value": "057",
+          "text": "Pandan Indah"
+        },
+        {
+          "value": "058",
+          "text": "Bayan Baru"
+        },
+        {
+          "value": "059",
+          "text": "Pasar Borong, Selayang"
+        },
+        {
+          "value": "060",
+          "text": "IOI Boulevard Puchong"
+        },
+        {
+          "value": "061",
+          "text": "KLCC"
+        },
+        {
+          "value": "062",
+          "text": "Bandar Baru Ampang"
+        },
+        {
+          "value": "063",
+          "text": "Tangkak"
+        },
+        {
+          "value": "064",
+          "text": "Mentakab"
+        },
+        {
+          "value": "065",
+          "text": "Bandar Baru Klang"
+        },
+        {
+          "value": "066",
+          "text": "Wisma Mahmud, Kuching"
+        },
+        {
+          "value": "067",
+          "text": "First Avenue"
+        },
+        {
+          "value": "068",
+          "text": "Kuala Lumpur Main"
+        },
+        {
+          "value": "069",
+          "text": "Kuala Kedah"
+        },
+        {
+          "value": "070",
+          "text": "Kulim"
+        },
+        {
+          "value": "073",
+          "text": "Lahad Datu"
+        },
+        {
+          "value": "074",
+          "text": "The Trillium, Lakefields"
+        },
+        {
+          "value": "075",
+          "text": "Mergong, Alor Setar"
+        },
+        {
+          "value": "076",
+          "text": "Ampang Point"
+        },
+        {
+          "value": "077",
+          "text": "Ayer Itam"
+        },
+        {
+          "value": "078",
+          "text": "Bangsar Shopping Centre"
+        },
+        {
+          "value": "079",
+          "text": "Bekok"
+        },
+        {
+          "value": "080",
+          "text": "Butterworth"
+        },
+        {
+          "value": "081",
+          "text": "Gopeng"
+        },
+        {
+          "value": "082",
+          "text": "Gunung Rapat, Ipoh"
+        },
+        {
+          "value": "083",
+          "text": "Ipoh Garden South"
+        },
+        {
+          "value": "084",
+          "text": "Jln Bukit Bintang"
+        },
+        {
+          "value": "086",
+          "text": "Jln Ipoh"
+        },
+        {
+          "value": "087",
+          "text": "Jln Pasar"
+        },
+        {
+          "value": "088",
+          "text": "JALAN RAJA LAUT(WITH JIP)"
+        },
+        {
+          "value": "089",
+          "text": "Jln Raja Uda, Butterworth"
+        },
+        {
+          "value": "091",
+          "text": "Jementah"
+        },
+        {
+          "value": "092",
+          "text": "Tmn Sentosa, Johor Bahru"
+        },
+        {
+          "value": "093",
+          "text": "Kangar"
+        },
+        {
+          "value": "094",
+          "text": "Ketereh"
+        },
+        {
+          "value": "095",
+          "text": "Persiaran Sultan Ibrahim, Kelang"
+        },
+        {
+          "value": "096",
+          "text": "Kluang 2 (WITH KLU)"
+        },
+        {
+          "value": "098",
+          "text": "Jln Tun HS Lee"
+        },
+        {
+          "value": "101",
+          "text": "Jln Burma"
+        },
+        {
+          "value": "102",
+          "text": "Jln Hang Tuah"
+        },
+        {
+          "value": "103",
+          "text": "Plaza OSK, Jln Ampang"
+        },
+        {
+          "value": "104",
+          "text": "Meru"
+        },
+        {
+          "value": "106",
+          "text": "Permas Jaya, Johor Bahru"
+        },
+        {
+          "value": "107",
+          "text": "RHB SOHO IPOH"
+        },
+        {
+          "value": "110",
+          "text": "Rantau"
+        },
+        {
+          "value": "111",
+          "text": "Bandar Sri Permaisuri"
+        },
+        {
+          "value": "112",
+          "text": "Section 14, Petaling Jaya"
+        },
+        {
+          "value": "113",
+          "text": "Segamat"
+        },
+        {
+          "value": "115",
+          "text": "Senai"
+        },
+        {
+          "value": "116",
+          "text": "Seremban"
+        },
+        {
+          "value": "118",
+          "text": "Jln Tengku Ampuan Zabedah, Shah Alam"
+        },
+        {
+          "value": "121",
+          "text": "Bandar Sri Damansara"
+        },
+        {
+          "value": "123",
+          "text": "Sg. Bakap"
+        },
+        {
+          "value": "124",
+          "text": "Kg. Baru Sg. Buloh"
+        },
+        {
+          "value": "125",
+          "text": "Sg. Pelek"
+        },
+        {
+          "value": "126",
+          "text": "Tmn Pekan Baru, Sg. Petani"
+        },
+        {
+          "value": "128",
+          "text": "Sungkai"
+        },
+        {
+          "value": "130",
+          "text": "Tmn Indah"
+        },
+        {
+          "value": "131",
+          "text": "Tmn Megah"
+        },
+        {
+          "value": "132",
+          "text": "Tmn Molek, Johor Bahru"
+        },
+        {
+          "value": "133",
+          "text": "Dataran Wangsa"
+        },
+        {
+          "value": "134",
+          "text": "Tmn Shamelin"
+        },
+        {
+          "value": "136",
+          "text": "Tmn Taming Jaya"
+        },
+        {
+          "value": "139",
+          "text": "UEP Subang Jaya"
+        },
+        {
+          "value": "140",
+          "text": "Ulu Tiram"
+        },
+        {
+          "value": "142",
+          "text": "Bandar Baru Nilai"
+        },
+        {
+          "value": "144",
+          "text": "Menglembu"
+        },
+        {
+          "value": "145",
+          "text": "Bayan Point"
+        },
+        {
+          "value": "150",
+          "text": "Jln Masjid, Bintulu"
+        },
+        {
+          "value": "153",
+          "text": "Damansara Utama"
+        },
+        {
+          "value": "158",
+          "text": "Plentong, Johor Bahru"
+        },
+        {
+          "value": "161",
+          "text": "Bagan Serai"
+        },
+        {
+          "value": "163",
+          "text": "Bahau"
+        },
+        {
+          "value": "165",
+          "text": "Bukit Mertajam"
+        },
+        {
+          "value": "169",
+          "text": "Simpang Empat, Hutan Melintang"
+        },
+        {
+          "value": "176",
+          "text": "Jenjarom"
+        },
+        {
+          "value": "177",
+          "text": "Jinjang Utara"
+        },
+        {
+          "value": "182",
+          "text": "Kerteh"
+        },
+        {
+          "value": "183",
+          "text": "Jln Stesen, Kelang"
+        },
+        {
+          "value": "187",
+          "text": "Kuala Dungun"
+        },
+        {
+          "value": "188",
+          "text": "Kuala Kangsar"
+        },
+        {
+          "value": "190",
+          "text": "Kuala Pilah"
+        },
+        {
+          "value": "195",
+          "text": "Jln Tun Mustapha"
+        },
+        {
+          "value": "196",
+          "text": "Pulau Langkawi"
+        },
+        {
+          "value": "198",
+          "text": "LEBUH PANTAI 3 (WITH PNG)"
+        },
+        {
+          "value": "202",
+          "text": "Jln Abdullah, Muar"
+        },
+        {
+          "value": "203",
+          "text": "Overseas Union Garden"
+        },
+        {
+          "value": "204",
+          "text": "Padang Serai"
+        },
+        {
+          "value": "205",
+          "text": "Parit Buntar"
+        },
+        {
+          "value": "207",
+          "text": "Pasir Mas"
+        },
+        {
+          "value": "208",
+          "text": "Pontian Kecil"
+        },
+        {
+          "value": "213",
+          "text": "Segambut"
+        },
+        {
+          "value": "216",
+          "text": "SETAPAK 3 (WITH STP)"
+        },
+        {
+          "value": "218",
+          "text": "Simpang Renggam"
+        },
+        {
+          "value": "219",
+          "text": "Sitiawan"
+        },
+        {
+          "value": "223",
+          "text": "Sg. Siput"
+        },
+        {
+          "value": "224",
+          "text": "SS2 Petaling Jaya"
+        },
+        {
+          "value": "225",
+          "text": "Taiping"
+        },
+        {
+          "value": "228",
+          "text": "Tmn Midah"
+        },
+        {
+          "value": "231",
+          "text": "Tmn Tun Dr Ismail"
+        },
+        {
+          "value": "232",
+          "text": "Tanjong Karang"
+        },
+        {
+          "value": "233",
+          "text": "Tasek, Ipoh"
+        },
+        {
+          "value": "235",
+          "text": "Teluk Intan"
+        },
+        {
+          "value": "237",
+          "text": "Yong Peng"
+        },
+        {
+          "value": "239",
+          "text": "Plaza Damas 3"
+        },
+        {
+          "value": "240",
+          "text": "Putrajaya"
+        },
+        {
+          "value": "242",
+          "text": "Lawas"
+        },
+        {
+          "value": "252",
+          "text": "Melaka Raya"
+        },
+        {
+          "value": "260",
+          "text": "Prima Square, Sandakan"
+        },
+        {
+          "value": "261",
+          "text": "Jln Kulas, Kuching"
+        },
+        {
+          "value": "264",
+          "text": "Simpang Tiga, Kuching"
+        },
+        {
+          "value": "266",
+          "text": "Boulevard Centre, Miri"
+        },
+        {
+          "value": "268",
+          "text": "Lundu"
+        },
+        {
+          "value": "269",
+          "text": "Kanowit"
+        },
+        {
+          "value": "271",
+          "text": "Dalat"
+        },
+        {
+          "value": "272",
+          "text": "Kota Samarahan, Kuching"
+        },
+        {
+          "value": "273",
+          "text": "Sarikei"
+        },
+        {
+          "value": "275",
+          "text": "Tabuan Jaya, Kuching"
+        },
+        {
+          "value": "276",
+          "text": "Siburan"
+        },
+        {
+          "value": "278",
+          "text": "Matang Jaya, Kuching"
+        },
+        {
+          "value": "280",
+          "text": "Batu Kawah, Kuching"
+        },
+        {
+          "value": "281",
+          "text": "Lintas Station Complex, Kota Kinabalu"
+        },
+        {
+          "value": "282",
+          "text": "Limbang"
+        },
+        {
+          "value": "286",
+          "text": "Taipan Senawang"
+        },
+        {
+          "value": "288",
+          "text": "Kota Damansara"
+        },
+        {
+          "value": "289",
+          "text": "The Vertical, Bangsar South"
+        },
+        {
+          "value": "290",
+          "text": "Tmn Mount Austin, Johor Bahru"
+        },
+        {
+          "value": "291",
+          "text": "Menara Shell"
+        },
+        {
+          "value": "293",
+          "text": "Paradigm Mall, Kelana Jaya"
+        },
+        {
+          "value": "294",
+          "text": "Utropolis Mall, Glenmarie"
+        },
+        {
+          "value": "295",
+          "text": "Bandar Bukit Tinggi"
+        },
+        {
+          "value": "296",
+          "text": "Jitra"
+        },
+        {
+          "value": "297",
+          "text": "Air Putih, Kuantan"
+        },
+        {
+          "value": "298",
+          "text": "Sg. Merah, Sibu"
+        },
+        {
+          "value": "299",
+          "text": "Tmn Nusa Bestari, Johor Bahru"
+        },
+        {
+          "value": "300",
+          "text": "Keningau"
+        },
+        {
+          "value": "301",
+          "text": "1 Lagenda"
+        },
+        {
+          "value": "302",
+          "text": "Triang"
+        },
+        {
+          "value": "303",
+          "text": "Tmn Connaught"
+        },
+        {
+          "value": "304",
+          "text": "MetroTown, Kota Kinabalu"
+        },
+        {
+          "value": "305",
+          "text": "Kota Kemuning"
+        },
+        {
+          "value": "306",
+          "text": "Kota Tinggi"
+        },
+        {
+          "value": "307",
+          "text": "Setia Alam"
+        },
+        {
+          "value": "308",
+          "text": "Alam Avenue"
+        },
+        {
+          "value": "309",
+          "text": "Malim"
+        },
+        {
+          "value": "310",
+          "text": "Mukah"
+        },
+        {
+          "value": "312",
+          "text": "Bandar Mahkota Cheras"
+        },
+        {
+          "value": "313",
+          "text": "Seremban 2"
+        },
+        {
+          "value": "314",
+          "text": "Banting"
+        },
+        {
+          "value": "315",
+          "text": "IOI Resort City"
+        },
+        {
+          "value": "316",
+          "text": "Bandar Sri Petaling"
+        },
+        {
+          "value": "317",
+          "text": "Tanjung Tokong"
+        },
+        {
+          "value": "319",
+          "text": "Bandar Penawar"
+        },
+        {
+          "value": "320",
+          "text": "Kelana Jaya"
+        },
+        {
+          "value": "321",
+          "text": "RHB Bank Jalan Raja Laut, Kuala Lumpur"
+        },
+        {
+          "value": "322",
+          "text": "Auto City, Juru"
+        },
+        {
+          "value": "323",
+          "text": "Tmn Setia Tropika, Johor Bahru"
+        },
+        {
+          "value": "389",
+          "text": "Tmn Flora Utama, Batu Pahat"
+        },
+        {
+          "value": "399",
+          "text": "Caw. Utama"
+        },
+        {
+          "value": "400",
+          "text": "Caw. Jln Satok, Kuching"
+        },
+        {
+          "value": "401",
+          "text": "Caw. Kelana Jaya"
+        },
+        {
+          "value": "402",
+          "text": "Caw. Tmn Flora Utama, Batu Pahat"
+        },
+        {
+          "value": "403",
+          "text": "Caw. Kubang Kerian, Kota Bharu"
+        },
+        {
+          "value": "404",
+          "text": "Caw. Tmn Setia Tropika, Johor Bahru"
+        },
+        {
+          "value": "405",
+          "text": "Caw. Bandar Baru Bangi"
+        },
+        {
+          "value": "407",
+          "text": "Caw. Kuala Terengganu"
+        },
+        {
+          "value": "408",
+          "text": "Caw. Jln Raja Laut"
+        },
+        {
+          "value": "409",
+          "text": "Caw. Auto City"
+        },
+        {
+          "value": "411",
+          "text": "Caw. Lagenda Heights, Sg. Petani"
+        },
+        {
+          "value": "412",
+          "text": "Caw. Laman Seri, Shah Alam"
+        },
+        {
+          "value": "457",
+          "text": "RHB Bank Sales Centre AEON Taman Equine"
+        },
+        {
+          "value": "473",
+          "text": "RHB EASY - Kompleks Teruntum"
+        },
+        {
+          "value": "479",
+          "text": "RHB EASY - Giant Plentong"
+        },
+        {
+          "value": "491",
+          "text": "RHB EASY - Mydin Mall MITC Melaka"
+        },
+        {
+          "value": "630",
+          "text": "RHB EASY - Mydin Kubang Kerian"
+        },
+        {
+          "value": "637",
+          "text": "RHB EASY - Mydin Meru Raya"
+        },
+        {
+          "value": "710",
+          "text": "RHB EASY - E-Mart Commercial Centre"
+        },
+        {
+          "value": "712",
+          "text": "RHB EASY - Giant Hypermarket Bayan Baru"
+        },
+        {
+          "value": "861",
+          "text": "RHB EASY Warisan Square"
+        },
+        {
+          "value": "931",
+          "text": "CC EMBOSSING"
+        },
+        {
+          "value": "RD08",
+          "text": "PERAK REGION"
+        }
+      ],
+      "category": "11"
+    },
+    {
+      "name": "bdmMoreThan2500kg",
+      "displayName": "BDM More Than 2500kg",
+      "type": "text",
+      "category": "12"
+    },
+    {
+      "name": "chassisNo",
+      "displayName": "Chassis Number",
+      "type": "text",
+      "category": "12"
+    },
+    {
+      "name": "engineNo",
+      "displayName": "Engine Number",
+      "type": "text",
+      "category": "12"
+    },
+    {
+      "name": "marketValue",
+      "displayName": "Market Value",
+      "type": "text",
+      "inputType": "number",
+      "category": "12"
+    },
+    {
+      "name": "modelOfVehicle",
+      "displayName": "Model of Vehicle",
+      "type": "text",
+      "category": "12"
+    },
+    {
+      "type": "text",
+      "name": "purchasePriceOTR",
+      "title": "carPrice",
+      "placeholder": "car Price (MYR)",
+      "isRequired": true,
+      "displayName": "Car Price (MYR)",
+      "maxLength": 23,
+      "min": 2000,
+      "max": 150000,
+      "inputType": "number",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a financing amount between 2,000 and 150,000.",
+          "regex": "^(2000|[1-9][0-9]{3}|[1-9][0-9]{4}|150000)$"
+        },
+        {
+          "type": "regex",
+          "text": "Please enter an amount in increments of 1,000.",
+          "regex": "^([1-9][0-9]*000|150000)$"
+        }
+      ],
+      "category": "12"
+    },
+    {
+      "name": "registrationDate",
+      "displayName": "Registration Date",
+      "type": "text",
+      "inputType": "date",
+      "category": "12"
+    },
+    {
+      "name": "registrationNo",
+      "displayName": "Registration Number",
+      "type": "text",
+      "category": "12"
+    },
+    {
+      "name": "vehicleCondition",
+      "displayName": "Condition",
+      "placeholder": "Vehicle Condition",
+      "startWithNewLine": false,
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "N",
+          "text": "New"
+        },
+        {
+          "value": "U",
+          "text": "Used"
+        },
+        {
+          "value": "UN",
+          "text": "UnRegistered Recon"
+        },
+        {
+          "value": "UR",
+          "text": "Used Recon"
+        },
+        {
+          "value": "PR",
+          "text": "Pre-registered"
+        }
+      ],
+      "category": "12"
+    },
+    {
+      "name": "yearMake",
+      "displayName": "Year Make",
+      "type": "text",
+      "inputType": "number",
+      "startWithNewLine": false,
+      "placeholder": "Year",
+      "min": 2014,
+      "max": 2100,
+      "category": "12"
+    },
+    {
+      "name": "permanentaddressLine1",
+      "displayName": "Permanent Address Line 1",
+      "placeholder": "Permanent Address Line 1",
+      "maxLength": 40,
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "permanentaddressLine2",
+      "displayName": "Permanent Address Line 2",
+      "placeholder": "Permanent Address Line 2 (optional)",
+      "isRequired": false,
+      "type": "text",
+      "maxLength": 40,
+      "category": "7"
+    },
+    {
+      "name": "permanentaddressLine3",
+      "displayName": "Permanent Address Line 3",
+      "maxLength": 40,
+      "placeholder": "Permanent Address Line 3 (optional)",
+      "isRequired": false,
+      "startWithNewLine": false,
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "permanentaddressType",
+      "displayName": "Permanent Address Type",
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "permanentcity",
+      "displayName": "Permanent City",
+      "placeholder": "City of the Permanent Address",
+      "type": "text",
+      "maxLength": 20,
+      "startWithNewLine": false,
+      "category": "7"
+    },
+    {
+      "name": "permanentpostcode",
+      "displayName": "Permanent Postcode",
+      "placeholder": "Postcode of the Permanent Address",
+      "type": "text",
+      "maxLength": 10,
+      "category": "7"
+    },
+    {
+      "name": "residentialaddressLine1",
+      "displayName": "Residential Address Line 1",
+      "placeholder": "Residential Address Line 1",
+      "visibleIf": "{residenceAddress} == false",
+      "type": "text",
+      "maxLength": 40,
+      "category": "7"
+    },
+    {
+      "name": "residentialaddressLine2",
+      "displayName": "Residential Address Line 2",
+      "placeholder": "Residential Address Line 2 (optional)",
+      "isRequired": false,
+      "visibleIf": "{residenceAddress} == false",
+      "type": "text",
+      "maxLength": 40,
+      "category": "7"
+    },
+    {
+      "name": "residentialaddressLine3",
+      "displayName": "Residential Address Line 3",
+      "placeholder": "Residential Address Line 3 (optional)",
+      "isRequired": false,
+      "startWithNewLine": false,
+      "visibleIf": "{residenceAddress} == false",
+      "type": "text",
+      "maxLength": 40,
+      "category": "7"
+    },
+    {
+      "name": "residentialaddressType",
+      "displayName": "Residential Address Type",
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "residentialcity",
+      "displayName": "Residential City",
+      "placeholder": "City of the Residential Address",
+      "visibleIf": "{residenceAddress} == false",
+      "startWithNewLine": false,
+      "type": "text",
+      "maxLength": 20,
+      "category": "7"
+    },
+    {
+      "name": "residentialpostcode",
+      "displayName": "Residential Postcode",
+      "placeholder": "Postcode of the Residential Address",
+      "visibleIf": "{residenceAddress} == false",
+      "type": "text",
+      "maxLength": 10,
+      "category": "7"
+    },
+    {
+      "name": "residentialstate",
+      "displayName": "Residential State",
+      "placeholder": "Select State Of The Residential Address",
+      "startWithNewLine": false,
+      "visibleIf": "{residenceAddress} == false",
+      "type": "dropdown",
+      "choices": [
+        {
+          "value": "A",
+          "text": "PERAK"
+        },
+        {
+          "value": "B",
+          "text": "SELANGOR"
+        },
+        {
+          "value": "C",
+          "text": "PAHANG"
+        },
+        {
+          "value": "D",
+          "text": "KELANTAN"
+        },
+        {
+          "value": "J",
+          "text": "JOHOR"
+        },
+        {
+          "value": "K",
+          "text": "KEDAH"
+        },
+        {
+          "value": "L",
+          "text": "WP LABUAN"
+        },
+        {
+          "value": "M",
+          "text": "MELAKA"
+        },
+        {
+          "value": "N",
+          "text": "NEGERI SEMBILAN"
+        },
+        {
+          "value": "P",
+          "text": "PULAU PINANG"
+        },
+        {
+          "value": "Q",
+          "text": "SARAWAK"
+        },
+        {
+          "value": "R",
+          "text": "PERLIS"
+        },
+        {
+          "value": "S",
+          "text": "SABAH"
+        },
+        {
+          "value": "T",
+          "text": "TERENGGANU"
+        },
+        {
+          "value": "U",
+          "text": "WP PUTRAJAYA"
+        },
+        {
+          "value": "W",
+          "text": "WP KUALA LUMPUR"
+        }
+      ],
+      "category": "7"
+    },
+    {
+      "name": "officeaddressLine1",
+      "displayName": "Employer Address Line 1",
+      "placeholder": "Employer Address Line 1",
+      "type": "text",
+      "maxLength": 40,
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "category": "5"
+    },
+    {
+      "name": "officeaddressLine2",
+      "displayName": "Employer Address Line 2",
+      "placeholder": "Employer Address Line 2 (optional)",
+      "isRequired": false,
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "type": "text",
+      "maxLength": 40,
+      "category": "5"
+    },
+    {
+      "name": "officeaddressLine3",
+      "displayName": "Employer Address Line 3",
+      "placeholder": "Employer Address Line 3 (optional)",
+      "startWithNewLine": false,
+      "isRequired": false,
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "type": "text",
+      "maxLength": 40,
+      "category": "5"
+    },
+    {
+      "name": "officeaddressType",
+      "displayName": "Office Address Type",
+      "type": "text",
+      "category": "7"
+    },
+    {
+      "name": "officecity",
+      "displayName": "Employer City",
+      "placeholder": "Employer City",
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "startWithNewLine": false,
+      "type": "text",
+      "maxLength": 20,
+      "category": "5"
+    },
+    {
+      "name": "officepostcode",
+      "displayName": "Employer Postcode",
+      "placeholder": "Employer Postcode",
+      "visibleIf": "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+      "type": "text",
+      "maxLength": 10,
+      "inputType": "number",
+      "category": "5"
+    },
+    {
+      "name": "computationMode",
+      "displayName": "Computation Mode",
+      "type": "text",
+      "category": "10"
+    },
+    {
+      "name": "countryOfPermanentResident",
+      "displayName": "Country of Permanent Resident",
+      "type": "text",
+      "category": "2"
+    },
+    {
+      "name": "foreignPR",
+      "displayName": "Foreign PR",
+      "type": "text",
+      "category": "2"
+    },
+    {
+      "name": "internationalExtensionPhoneNo",
+      "displayName": "International Extension Phone No",
+      "type": "text",
+      "inputType": "number",
+      "category": "8"
+    },
+    {
+      "name": "internationalPhoneNo",
+      "displayName": "International Phone No",
+      "type": "text",
+      "inputType": "tel",
+      "category": "8"
+    },
+    {
+      "name": "internationalPhoneNoAreaCode",
+      "displayName": "International Phone No Area Code",
+      "type": "text",
+      "inputType": "tel",
+      "category": "8"
+    },
+    {
+      "name": "pRIDNo",
+      "displayName": "PR ID No",
+      "type": "text",
+      "category": "2"
+    },
+    {
+      "name": "dealerName",
+      "displayName": "Dealer Name",
+      "type": "text",
+      "category": "3"
+    },
+    {
+      "name": "cashDownpayment",
+      "displayName": "Cash Downpayment",
+      "placeholder": "Cash Downpayment",
+      "startWithNewLine": false,
+      "type": "text",
+      "maxLength": 20,
+      "category": "11"
+    },
+    {
+      "name": "downpayment",
+      "displayName": "Down Payment (%)",
+      "placeholder": "Down Payment (%)",
+      "type": "text",
+      "category": "11"
+    },
+    {
+      "name": "bankName",
+      "displayName": "Bank Name",
+      "placeholder": "Bank Name",
+      "visible": false,
+      "type": "text",
+      "startWithNewLine": false,
+      "category": "11"
+    },
+    {
+      "name": "bankRates",
+      "displayName": "Bank Rate",
+      "placeholder": "Bank Rate",
+      "type": "text",
+      "inputType": "number",
+      "startWithNewLine": false,
+      "category": "11"
+    },
+    {
+      "name": "monthlyRepayment",
+      "displayName": "Monthly Repayment",
+      "placeholder": "Monthly Repayment",
+      "startWithNewLine": false,
+      "type": "text",
+      "inputType": "number",
+      "category": "11"
+    },
+    {
+      "name": "facilityTenureYears",
+      "displayName": "Repayment Term (Years)",
+      "placeholder": "Payment Term",
+      "startWithNewLine": false,
+      "type": "text",
+      "inputType": "number",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a valid financing tenure from 1 to 7 years.",
+          "regex": "^[1-7]$"
+        }
+      ],
+      "category": "11"
+    },
+    {
+      "name": "totalFinancing",
+      "displayName": "Financing Amount (RM)",
+      "placeholder": "How much do you want to borrow?",
+      "type": "text",
+      "maxLength": 15,
+      "min": 2000,
+      "max": 150000,
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a financing amount between 2,000 and 150,000.",
+          "regex": "^(2000|[1-9][0-9]{3}|[1-9][0-9]{4}|150000)$"
+        },
+        {
+          "type": "regex",
+          "text": "Please enter an amount in increments of 1,000.",
+          "regex": "^([1-9][0-9]*000|150000)$"
+        }
+      ],
+      "inputType": "number",
+      "category": "11"
+    },
+    {
+      "name": "myKadOrPassport",
+      "displayName": "MyKad or Passport",
+      "type": "text",
+      "category": "2"
+    },
+    {
+      "name": "incomeEPF_iakaun",
+      "displayName": "Income EPF i-Akaun",
+      "type": "text",
+      "category": "11"
+    },
+    {
+      "name": "phoneNumber",
+      "displayName": "Phone Number",
+      "type": "text",
+      "inputType": "tel",
+      "category": "1"
+    },
+    {
+      "name": "incorporatedDate",
+      "displayName": "Incorporated Date",
+      "type": "text",
+      "inputType": "date",
+      "category": "3"
+    },
+    {
+      "name": "shareCapital",
+      "displayName": "Share Capital",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "tangibleAssets",
+      "displayName": "Tangible Assets",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "totalCurrentLiabilities",
+      "displayName": "Total Current Liabilities",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "totalCurrentAssets",
+      "displayName": "Total Current Assets",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "endOfYearCash",
+      "displayName": "Cash and Cash Equivalent at end of the Financial Year or Period",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "shortTermLiabilities",
+      "displayName": "Short Term Liabilities",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "ebitda",
+      "displayName": "Earning Before Interest, Tax, Depreciation and Amortization (EBITDA)",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "totalAssets",
+      "displayName": "Total Assets",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "netOperatingCashFlow",
+      "displayName": "Net Operating Cash Flow",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "netProfitT1",
+      "displayName": "Net Profit/ Loss and Total Comprehensive Income (year T-1)",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "totalEquityT1",
+      "displayName": "Total Equity/Owner equity/Total Net (year T-1)",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "netProfitT2",
+      "displayName": "Net Profit/ Loss and Total Comprehensive Income (year T-2)",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "totalEquityT2",
+      "displayName": "Total Equity/Owner equity/Total Net (year T-2)",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "facilityInterestRate",
+      "displayName": "Interest Rate",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "eppProduct",
+      "displayName": "EPP Product Name",
+      "type": "text",
+      "category": "4"
+    },
+    {
+      "name": "eppPrice",
+      "displayName": "EPP Price",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "eppNoOfPax",
+      "displayName": "EPP No. of Pax",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "housingLoanMonthlyInstallment",
+      "displayName": "Housing Loan Monthly Installment",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "hirePurchaseMonthlyInstallment",
+      "displayName": "Hire Purchase Monthly Installment",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "personalLoanMonthlyInstallment",
+      "displayName": "Personal Loan Monthly Installment",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "creditCardMonthlyInstallment",
+      "displayName": "Credit Card Monthly Installment",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "otherFinancingMonthlyInstallment",
+      "displayName": "Other Financing Monthly Installment",
+      "type": "text",
+      "inputType": "number",
+      "category": "4"
+    },
+    {
+      "name": "bank_statement_t1",
+      "displayName": "Bank Statement (Month T-1)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "accountHolderNameT1",
+        "statementDateT1",
+        "bankNameT1",
+        "accountNumberT1",
+        "totalCreditsT1",
+        "totalDebitsT1",
+        "openingBalanceT1",
+        "bankBalanceT1"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "bank_statement_t2",
+      "displayName": "Bank Statement (Month T-2)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "accountHolderNameT2",
+        "statementDateT2",
+        "bankNameT2",
+        "accountNumberT2",
+        "totalCreditsT2",
+        "totalDebitsT2",
+        "openingBalanceT2",
+        "bankBalanceT2"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "bank_statement_t3",
+      "displayName": "Bank Statement (Month T-3)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "accountHolderNameT3",
+        "statementDateT3",
+        "bankNameT3",
+        "accountNumberT3",
+        "totalCreditsT3",
+        "totalDebitsT3",
+        "openingBalanceT3",
+        "bankBalanceT3"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "bank_statement_t4",
+      "displayName": "Bank Statement (Month T-4)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "accountHolderNameT4",
+        "statementDateT4",
+        "bankNameT4",
+        "accountNumberT4",
+        "totalCreditsT4",
+        "totalDebitsT4",
+        "openingBalanceT4",
+        "bankBalanceT4"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "bank_statement_t5",
+      "displayName": "Bank Statement (Month T-5)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "accountHolderNameT5",
+        "statementDateT5",
+        "bankNameT5",
+        "accountNumberT5",
+        "totalCreditsT5",
+        "totalDebitsT5",
+        "openingBalanceT5",
+        "bankBalanceT5"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "bank_statement_t6",
+      "displayName": "Bank Statement (Month T-6)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "accountHolderNameT6",
+        "statementDateT6",
+        "bankNameT6",
+        "accountNumberT6",
+        "totalCreditsT6",
+        "totalDebitsT6",
+        "openingBalanceT6",
+        "bankBalanceT6"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "financials",
+      "displayName": "Audited Financial Statement",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "shareCapital",
+        "totalEquityT1",
+        "totalEquityT2",
+        "totalCurrentLiabilities",
+        "shortTermLiabilities",
+        "totalAssets",
+        "totalCurrentAssets",
+        "tangibleAssets",
+        "netProfitT1",
+        "netProfitT2",
+        "endOfYearCash",
+        "netOperatingCashFlow",
+        "ebitda"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "financials_fincap_t1",
+      "displayName": "Audited Financial Statement (T-1) (FinCap)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "nonCurrentAssetsSubsidiaryCompaniesT1",
+        "nonCurrentAssetsAssociatedCompaniesT1",
+        "nonCurrentAssetsDevelopmentPropertiesOrExpenditureT1",
+        "nonCurrentAssetInvestmentPropertiesT1",
+        "nonCurrentAssetsInvestmentsT1",
+        "nonCurrentAssetInvestmentSecuritiesT1",
+        "nonCurrentAssetDeferredAssetsT1",
+        "nonCurrentAssetDepositsT1",
+        "nonCurrentAssetOwnGoodwillT1",
+        "nonCurrentAssetGoodwillOnConsolidationT1",
+        "nonCurrentAssetSinkingFundT1",
+        "nonCurrentAssetPropertyPlantEquipmentT1",
+        "nonCurrentAssetInventoriesT1",
+        "nonCurrentAssetRightOfUseAssetsT1",
+        "nonCurrentAssetIntangibleAssetsT1",
+        "nonCurrentAssetPrepaidLeasePaymentsT1",
+        "nonCurrentAssetFinancialAssetAtFairValueT1",
+        "nonCurrentAssetLandUseRightT1",
+        "nonCurrentAssetTradeReceivablesT1",
+        "nonCurrentAssetOtherReceivablesT1",
+        "nonCurrentAssetTradeAndOtherReceivablesT1",
+        "nonCurrentAssetOtherReceivablesDepositsAndPrepaymentsT1",
+        "totalNonCurrentAssetsT1",
+        "currentAssetDevelopmentPropertiesOrExpenditureT1",
+        "currentAssetShortTermInvestmentsT1",
+        "currentAssetTradeDebtorsT1",
+        "currentAssetShortTermDepositsT1",
+        "currentAssetAmountDueFromHoldingCompanyT1",
+        "currentAssetAmountDueFromSubsidiaryCompaniesT1",
+        "currentAssetAmountDueFromAssociatedCompaniesT1",
+        "currentAssetAmountDueFromDirectorT1",
+        "currentAssetAmountDueFromCustomerT1",
+        "currentAssetAmountOwingByShareholdersT1",
+        "currentAssetInventoriesT1",
+        "currentAssetFinancialAssetAtFairValueT1",
+        "currentAssetLandUseRightT1",
+        "currentAssetTaxRecoverableT1",
+        "currentAssetContractAssetsT1",
+        "currentAssetCurrentTaxAssetsT1",
+        "currentAssetPrepaymentsT1",
+        "currentAssetDerivativeT1",
+        "currentAssetCashAndBankBalancesT1",
+        "currentAssetOtherReceivablesT1",
+        "currentAssetRestrictedCashT1",
+        "currentAssetCashAndCashEquivalentsT1",
+        "currentAssetDepositsCashAndBankBalancesT1",
+        "currentAssetCashAtBanksT1",
+        "currentAssetCashOnHandT1",
+        "currentAssetDepositsAndPrepaymentsT1",
+        "currentAssetTradeAndOtherReceivablesT1",
+        "currentAssetOtherReceivablesDepositsAndPrepaymentsT1",
+        "currentAssetOtherReceivablesAndDepositsT1",
+        "currentAssetOtherReceivablesAndPrepaymentsT1",
+        "currentAssetCashT1",
+        "totalCurrentAssetsT1",
+        "totalAssetsT1",
+        "currentLiabilitiesTradeCreditorsT1",
+        "currentLiabilitiesHirePurchasePayablesT1",
+        "currentLiabilitiesBankOverdraftT1",
+        "currentLiabilitiesBankAcceptanceT1",
+        "currentLiabilitiesBorrowingsOrTermLoansT1",
+        "currentLiabilitiesBankborrowingsT1",
+        "currentLiabilitiesAmountsOwingToHoldingCompanyT1",
+        "currentLiabilitiesAmountsOwingToSubsidiaryCompaniesT1",
+        "currentLiabilitiesAmountOwingToAssociatedCompaniesT1",
+        "currentLiabilitiesAmountsOwingToDirectorT1",
+        "currentLiabilitiesProvisionForTaxationT1",
+        "currentLiabilitiesLeasePayablesT1",
+        "currentLiabilitiesFinanceLeasePayablesT1",
+        "currentLiabilitiesOtherPayablesT1",
+        "currentLiabilitiesDividendPayablesT1",
+        "currentLiabilitiesTradeAndOtherPayablesT1",
+        "currentLiabilitiesDepositsFromCustomersT1",
+        "currentLiabilitiesOtherPayablesAccrualsAndDepositsT1",
+        "currentLiabilitiesOtherPayablesAndAccrualsT1",
+        "currentLiabilitiesContractLiabilitiesT1",
+        "currentLiabilitiesDerivativeT1",
+        "totalCurrentLiabilitiesT1",
+        "shortTermLiabilitiesT1",
+        "nonCurrentLiabilitiesBorrowingsOrTermLoansT1",
+        "nonCurrentLiabilitiesBankBorrowingsT1",
+        "nonCurrentLiabilitiesLeaseObligationsT1",
+        "nonCurrentLiabilitiesFinanceLeaseObligationsT1",
+        "nonCurrentLiabilitiesDeferredTaxationT1",
+        "nonCurrentLiabilitiesRetirementBenefitsT1",
+        "nonCurrentLiabilitiesHirePurchasePayablesT1",
+        "nonCurrentLiabilitiesDepositsFromCustomersT1",
+        "nonCurrentLiabilitiesContractLiabilitiesT1",
+        "totalNonCurrentLiabilitiesT1",
+        "totalLiabilitiesT1",
+        "tangibleAssetsT1",
+        "shareCapitalT1",
+        "preferenceShareCapitalT1",
+        "sharePremiumT1",
+        "reservesT1",
+        "capitalReservesT1",
+        "revaluationReservesT1",
+        "exchangeEqualisationOrFluctuationReservesT1",
+        "retainedEarningsT1",
+        "totalEquityT1",
+        "revenueT1",
+        "costOfGoodsSoldT1",
+        "grossProfitT1",
+        "otherIncomeT1",
+        "profitFromOperationsT1",
+        "financeCostT1",
+        "ebitdaT1",
+        "taxesT1",
+        "zakatT1",
+        "profitAfterTaxT1",
+        "netProfitT1",
+        "netOperatingCashFlowT1",
+        "depreciationT1",
+        "depreciationOfPropertyPlantEquipmentT1",
+        "depreciationRightOfUseAssetsT1",
+        "depreciationOfInvestmentPropertiesT1",
+        "depreciationOfInvestmentSecuritiesT1",
+        "endOfYearCashT1",
+        "nonCurrentAssetsSubsidiaryCompaniesT2",
+        "nonCurrentAssetsAssociatedCompaniesT2",
+        "nonCurrentAssetsDevelopmentPropertiesOrExpenditureT2",
+        "nonCurrentAssetInvestmentPropertiesT2",
+        "nonCurrentAssetsInvestmentsT2",
+        "nonCurrentAssetInvestmentSecuritiesT2",
+        "nonCurrentAssetDeferredAssetsT2",
+        "nonCurrentAssetDepositsT2",
+        "nonCurrentAssetOwnGoodwillT2",
+        "nonCurrentAssetGoodwillOnConsolidationT2",
+        "nonCurrentAssetSinkingFundT2",
+        "nonCurrentAssetPropertyPlantEquipmentT2",
+        "nonCurrentAssetInventoriesT2",
+        "nonCurrentAssetRightOfUseAssetsT2",
+        "nonCurrentAssetIntangibleAssetsT2",
+        "nonCurrentAssetPrepaidLeasePaymentsT2",
+        "nonCurrentAssetFinancialAssetAtFairValueT2",
+        "nonCurrentAssetLandUseRightT2",
+        "nonCurrentAssetTradeReceivablesT2",
+        "nonCurrentAssetOtherReceivablesT2",
+        "nonCurrentAssetTradeAndOtherReceivablesT2",
+        "nonCurrentAssetOtherReceivablesDepositsAndPrepaymentsT2",
+        "totalNonCurrentAssetsT2",
+        "currentAssetDevelopmentPropertiesOrExpenditureT2",
+        "currentAssetShortTermInvestmentsT2",
+        "currentAssetTradeDebtorsT2",
+        "currentAssetShortTermDepositsT2",
+        "currentAssetAmountDueFromHoldingCompanyT2",
+        "currentAssetAmountDueFromSubsidiaryCompaniesT2",
+        "currentAssetAmountDueFromAssociatedCompaniesT2",
+        "currentAssetAmountDueFromDirectorT2",
+        "currentAssetAmountDueFromCustomerT2",
+        "currentAssetAmountOwingByShareholdersT2",
+        "currentAssetInventoriesT2",
+        "currentAssetFinancialAssetAtFairValueT2",
+        "currentAssetLandUseRightT2",
+        "currentAssetTaxRecoverableT2",
+        "currentAssetContractAssetsT2",
+        "currentAssetCurrentTaxAssetsT2",
+        "currentAssetPrepaymentsT2",
+        "currentAssetDerivativeT2",
+        "currentAssetCashAndBankBalancesT2",
+        "currentAssetOtherReceivablesT2",
+        "currentAssetRestrictedCashT2",
+        "currentAssetCashAndCashEquivalentsT2",
+        "currentAssetDepositsCashAndBankBalancesT2",
+        "currentAssetCashAtBanksT2",
+        "currentAssetCashOnHandT2",
+        "currentAssetDepositsAndPrepaymentsT2",
+        "currentAssetTradeAndOtherReceivablesT2",
+        "currentAssetOtherReceivablesDepositsAndPrepaymentsT2",
+        "currentAssetOtherReceivablesAndDepositsT2",
+        "currentAssetOtherReceivablesAndPrepaymentsT2",
+        "currentAssetCashT2",
+        "totalCurrentAssetsT2",
+        "totalAssetsT2",
+        "currentLiabilitiesTradeCreditorsT2",
+        "currentLiabilitiesHirePurchasePayablesT2",
+        "currentLiabilitiesBankOverdraftT2",
+        "currentLiabilitiesBankAcceptanceT2",
+        "currentLiabilitiesBorrowingsOrTermLoansT2",
+        "currentLiabilitiesBankborrowingsT2",
+        "currentLiabilitiesAmountsOwingToHoldingCompanyT2",
+        "currentLiabilitiesAmountsOwingToSubsidiaryCompaniesT2",
+        "currentLiabilitiesAmountOwingToAssociatedCompaniesT2",
+        "currentLiabilitiesAmountsOwingToDirectorT2",
+        "currentLiabilitiesProvisionForTaxationT2",
+        "currentLiabilitiesLeasePayablesT2",
+        "currentLiabilitiesFinanceLeasePayablesT2",
+        "currentLiabilitiesOtherPayablesT2",
+        "currentLiabilitiesDividendPayablesT2",
+        "currentLiabilitiesTradeAndOtherPayablesT2",
+        "currentLiabilitiesDepositsFromCustomersT2",
+        "currentLiabilitiesOtherPayablesAccrualsAndDepositsT2",
+        "currentLiabilitiesOtherPayablesAndAccrualsT2",
+        "currentLiabilitiesContractLiabilitiesT2",
+        "currentLiabilitiesDerivativeT2",
+        "totalCurrentLiabilitiesT2",
+        "shortTermLiabilitiesT2",
+        "nonCurrentLiabilitiesBorrowingsOrTermLoansT2",
+        "nonCurrentLiabilitiesBankBorrowingsT2",
+        "nonCurrentLiabilitiesLeaseObligationsT2",
+        "nonCurrentLiabilitiesFinanceLeaseObligationsT2",
+        "nonCurrentLiabilitiesDeferredTaxationT2",
+        "nonCurrentLiabilitiesRetirementBenefitsT2",
+        "nonCurrentLiabilitiesHirePurchasePayablesT2",
+        "nonCurrentLiabilitiesDepositsFromCustomersT2",
+        "nonCurrentLiabilitiesContractLiabilitiesT2",
+        "totalNonCurrentLiabilitiesT2",
+        "totalLiabilitiesT2",
+        "tangibleAssetsT2",
+        "shareCapitalT2",
+        "preferenceShareCapitalT2",
+        "sharePremiumT2",
+        "reservesT2",
+        "capitalReservesT2",
+        "revaluationReservesT2",
+        "exchangeEqualisationOrFluctuationReservesT2",
+        "retainedEarningsT2",
+        "totalEquityT2",
+        "revenueT2",
+        "costOfGoodsSoldT2",
+        "grossProfitT2",
+        "otherIncomeT2",
+        "profitFromOperationsT2",
+        "financeCostT2",
+        "ebitdaT2",
+        "taxesT2",
+        "zakatT2",
+        "profitAfterTaxT2",
+        "netProfitT2",
+        "netOperatingCashFlowT2",
+        "depreciationT2",
+        "depreciationOfPropertyPlantEquipmentT2",
+        "depreciationRightOfUseAssetsT2",
+        "depreciationOfInvestmentPropertiesT2",
+        "depreciationOfInvestmentSecuritiesT2",
+        "endOfYearCashT2"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "financials_fincap_t2",
+      "displayName": "Audited Financial Statement (T-2) (FinCap)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "nonCurrentAssetsSubsidiaryCompaniesT3",
+        "nonCurrentAssetsAssociatedCompaniesT3",
+        "nonCurrentAssetsDevelopmentPropertiesOrExpenditureT3",
+        "nonCurrentAssetInvestmentPropertiesT3",
+        "nonCurrentAssetsInvestmentsT3",
+        "nonCurrentAssetInvestmentSecuritiesT3",
+        "nonCurrentAssetDeferredAssetsT3",
+        "nonCurrentAssetDepositsT3",
+        "nonCurrentAssetOwnGoodwillT3",
+        "nonCurrentAssetGoodwillOnConsolidationT3",
+        "nonCurrentAssetSinkingFundT3",
+        "nonCurrentAssetPropertyPlantEquipmentT3",
+        "nonCurrentAssetInventoriesT3",
+        "nonCurrentAssetRightOfUseAssetsT3",
+        "nonCurrentAssetIntangibleAssetsT3",
+        "nonCurrentAssetPrepaidLeasePaymentsT3",
+        "nonCurrentAssetFinancialAssetAtFairValueT3",
+        "nonCurrentAssetLandUseRightT3",
+        "nonCurrentAssetTradeReceivablesT3",
+        "nonCurrentAssetOtherReceivablesT3",
+        "nonCurrentAssetTradeAndOtherReceivablesT3",
+        "nonCurrentAssetOtherReceivablesDepositsAndPrepaymentsT3",
+        "totalNonCurrentAssetsT3",
+        "currentAssetDevelopmentPropertiesOrExpenditureT3",
+        "currentAssetShortTermInvestmentsT3",
+        "currentAssetTradeDebtorsT3",
+        "currentAssetShortTermDepositsT3",
+        "currentAssetAmountDueFromHoldingCompanyT3",
+        "currentAssetAmountDueFromSubsidiaryCompaniesT3",
+        "currentAssetAmountDueFromAssociatedCompaniesT3",
+        "currentAssetAmountDueFromDirectorT3",
+        "currentAssetAmountDueFromCustomerT3",
+        "currentAssetAmountOwingByShareholdersT3",
+        "currentAssetInventoriesT3",
+        "currentAssetFinancialAssetAtFairValueT3",
+        "currentAssetLandUseRightT3",
+        "currentAssetTaxRecoverableT3",
+        "currentAssetContractAssetsT3",
+        "currentAssetCurrentTaxAssetsT3",
+        "currentAssetPrepaymentsT3",
+        "currentAssetDerivativeT3",
+        "currentAssetCashAndBankBalancesT3",
+        "currentAssetOtherReceivablesT3",
+        "currentAssetRestrictedCashT3",
+        "currentAssetCashAndCashEquivalentsT3",
+        "currentAssetDepositsCashAndBankBalancesT3",
+        "currentAssetCashAtBanksT3",
+        "currentAssetCashOnHandT3",
+        "currentAssetDepositsAndPrepaymentsT3",
+        "currentAssetTradeAndOtherReceivablesT3",
+        "currentAssetOtherReceivablesDepositsAndPrepaymentsT3",
+        "currentAssetOtherReceivablesAndDepositsT3",
+        "currentAssetOtherReceivablesAndPrepaymentsT3",
+        "currentAssetCashT3",
+        "totalCurrentAssetsT3",
+        "totalAssetsT3",
+        "currentLiabilitiesTradeCreditorsT3",
+        "currentLiabilitiesHirePurchasePayablesT3",
+        "currentLiabilitiesBankOverdraftT3",
+        "currentLiabilitiesBankAcceptanceT3",
+        "currentLiabilitiesBorrowingsOrTermLoansT3",
+        "currentLiabilitiesBankborrowingsT3",
+        "currentLiabilitiesAmountsOwingToHoldingCompanyT3",
+        "currentLiabilitiesAmountsOwingToSubsidiaryCompaniesT3",
+        "currentLiabilitiesAmountOwingToAssociatedCompaniesT3",
+        "currentLiabilitiesAmountsOwingToDirectorT3",
+        "currentLiabilitiesProvisionForTaxationT3",
+        "currentLiabilitiesLeasePayablesT3",
+        "currentLiabilitiesFinanceLeasePayablesT3",
+        "currentLiabilitiesOtherPayablesT3",
+        "currentLiabilitiesDividendPayablesT3",
+        "currentLiabilitiesTradeAndOtherPayablesT3",
+        "currentLiabilitiesDepositsFromCustomersT3",
+        "currentLiabilitiesOtherPayablesAccrualsAndDepositsT3",
+        "currentLiabilitiesOtherPayablesAndAccrualsT3",
+        "currentLiabilitiesContractLiabilitiesT3",
+        "currentLiabilitiesDerivativeT3",
+        "totalCurrentLiabilitiesT3",
+        "shortTermLiabilitiesT3",
+        "nonCurrentLiabilitiesBorrowingsOrTermLoansT3",
+        "nonCurrentLiabilitiesBankBorrowingsT3",
+        "nonCurrentLiabilitiesLeaseObligationsT3",
+        "nonCurrentLiabilitiesFinanceLeaseObligationsT3",
+        "nonCurrentLiabilitiesDeferredTaxationT3",
+        "nonCurrentLiabilitiesRetirementBenefitsT3",
+        "nonCurrentLiabilitiesHirePurchasePayablesT3",
+        "nonCurrentLiabilitiesDepositsFromCustomersT3",
+        "nonCurrentLiabilitiesContractLiabilitiesT3",
+        "totalNonCurrentLiabilitiesT3",
+        "totalLiabilitiesT3",
+        "tangibleAssetsT3",
+        "shareCapitalT3",
+        "preferenceShareCapitalT3",
+        "sharePremiumT3",
+        "reservesT3",
+        "capitalReservesT3",
+        "revaluationReservesT3",
+        "exchangeEqualisationOrFluctuationReservesT3",
+        "retainedEarningsT3",
+        "totalEquityT3",
+        "revenueT3",
+        "costOfGoodsSoldT3",
+        "grossProfitT3",
+        "otherIncomeT3",
+        "profitFromOperationsT3",
+        "financeCostT3",
+        "ebitdaT3",
+        "taxesT3",
+        "zakatT3",
+        "profitAfterTaxT3",
+        "netProfitT3",
+        "netOperatingCashFlowT3",
+        "depreciationT3",
+        "depreciationOfPropertyPlantEquipmentT3",
+        "depreciationRightOfUseAssetsT3",
+        "depreciationOfInvestmentPropertiesT3",
+        "depreciationOfInvestmentSecuritiesT3",
+        "endOfYearCashT3"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "ssm",
+      "displayName": "Form 9 / Section 17 / Form D",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": ["incorporatedDate"],
+      "category": "13"
+    },
+    {
+      "name": "epf_statement_t1",
+      "displayName": "Employees' Provident Fund (T-1)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "epfAccountHolderNameT1",
+        "epfAccountHolderAddressT1",
+        "epfStatementYearT1",
+        "epfKwspMemberNumberT1",
+        "epfIcNumberT1",
+        "epfEmployerNumberT1",
+        "epfDateOfStatementT1",
+        "epfTotalContributionT1",
+        "epfTotalCurrentContributionT1"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "epf_statement_t2",
+      "displayName": "Employees' Provident Fund (T-2)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "epfAccountHolderNameT2",
+        "epfAccountHolderAddressT2",
+        "epfStatementYearT2",
+        "epfKwspMemberNumberT2",
+        "epfIcNumberT2",
+        "epfEmployerNumberT2",
+        "epfDateOfStatementT2",
+        "epfTotalContributionT2",
+        "epfTotalCurrentContributionT2"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "payslip_statement_t1",
+      "displayName": "Payslip Statement (Month T-1)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "payslipEmployerNameT1",
+        "payslipEmployeeNameT1",
+        "payslipPayPeriodT1",
+        "payslipPayDateT1",
+        "payslipGrossPayT1",
+        "payslipDeductionT1",
+        "payslipEmployeeEpfContributionT1",
+        "payslipEmployeeSocsoContributionT1",
+        "payslipNetPayT1",
+        "payslipBasicPayT1",
+        "payslipFixedAllowancesT1",
+        "payslipVariableIncomeT1",
+        "payslipEmployeeEisContributionT1",
+        "payslipEmployeeTaxT1",
+        "payslipOtherDeductionT1"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "payslip_statement_t2",
+      "displayName": "Payslip Statement (Month T-2)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "payslipEmployerNameT2",
+        "payslipEmployeeNameT2",
+        "payslipPayPeriodT2",
+        "payslipPayDateT2",
+        "payslipGrossPayT2",
+        "payslipDeductionT2",
+        "payslipEmployeeEpfContributionT2",
+        "payslipEmployeeSocsoContributionT2",
+        "payslipNetPayT2",
+        "payslipBasicPayT2",
+        "payslipFixedAllowancesT2",
+        "payslipVariableIncomeT2",
+        "payslipEmployeeEisContributionT2",
+        "payslipEmployeeTaxT2",
+        "payslipOtherDeductionT2"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "payslip_statement_t3",
+      "displayName": "Payslip Statement (Month T-3)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "payslipEmployerNameT3",
+        "payslipEmployeeNameT3",
+        "payslipPayPeriodT3",
+        "payslipPayDateT3",
+        "payslipGrossPayT3",
+        "payslipDeductionT3",
+        "payslipEmployeeEpfContributionT3",
+        "payslipEmployeeSocsoContributionT3",
+        "payslipNetPayT3",
+        "payslipBasicPayT3",
+        "payslipFixedAllowancesT3",
+        "payslipVariableIncomeT3",
+        "payslipEmployeeEisContributionT3",
+        "payslipEmployeeTaxT3",
+        "payslipOtherDeductionT3"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "payslip_statement_t4",
+      "displayName": "Payslip Statement (Month T-4)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "payslipEmployerNameT4",
+        "payslipEmployeeNameT4",
+        "payslipPayPeriodT4",
+        "payslipPayDateT4",
+        "payslipGrossPayT4",
+        "payslipDeductionT4",
+        "payslipEmployeeEpfContributionT4",
+        "payslipEmployeeSocsoContributionT4",
+        "payslipNetPayT4",
+        "payslipBasicPayT4",
+        "payslipFixedAllowancesT4",
+        "payslipVariableIncomeT4",
+        "payslipEmployeeEisContributionT4",
+        "payslipEmployeeTaxT4",
+        "payslipOtherDeductionT4"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "payslip_statement_t5",
+      "displayName": "Payslip Statement (Month T-5)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "payslipEmployerNameT5",
+        "payslipEmployeeNameT5",
+        "payslipPayPeriodT5",
+        "payslipPayDateT5",
+        "payslipGrossPayT5",
+        "payslipDeductionT5",
+        "payslipEmployeeEpfContributionT5",
+        "payslipEmployeeSocsoContributionT5",
+        "payslipNetPayT5",
+        "payslipBasicPayT5",
+        "payslipFixedAllowancesT5",
+        "payslipVariableIncomeT5",
+        "payslipEmployeeEisContributionT5",
+        "payslipEmployeeTaxT5",
+        "payslipOtherDeductionT5"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "payslip_statement_t6",
+      "displayName": "Payslip Statement (Month T-6)",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "payslipEmployerNameT6",
+        "payslipEmployeeNameT6",
+        "payslipPayPeriodT6",
+        "payslipPayDateT6",
+        "payslipGrossPayT6",
+        "payslipDeductionT6",
+        "payslipEmployeeEpfContributionT6",
+        "payslipEmployeeSocsoContributionT6",
+        "payslipNetPayT6",
+        "payslipBasicPayT6",
+        "payslipFixedAllowancesT6",
+        "payslipVariableIncomeT6",
+        "payslipEmployeeEisContributionT6",
+        "payslipEmployeeTaxT6",
+        "payslipOtherDeductionT6"
+      ],
+      "category": "13"
+    }
+  ]
+}

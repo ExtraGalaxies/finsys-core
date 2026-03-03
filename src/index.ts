@@ -59,3 +59,21 @@ export type { RHFStep, RHFSchemaOutput } from "./rhf-generator.js";
 
 // Re-export survey-core types for convenience
 export type { IQuestion, IPage, ISurvey, IPanel, IElement } from "./survey-generator.js";
+
+// Form domain classes
+export { FormSpec } from "./form-spec.js";
+export { default as FormField, BasicFormField, FileFormField, FieldType } from "./form-field.js";
+export type { FormFieldType, FormFieldInputType, FormFieldTypeDefinitions, DropdownOption, EditorValidator } from "./form-field.js";
+export { FormFieldCategory } from "./form-field-category.js";
+export { FormFieldValidator } from "./form-field-validator.js";
+export type { FormValidatorDefinitions } from "./form-field-validator.js";
+
+// Catalogs
+export {
+  BASE_FIELD_SPECS,
+  DEFAULT_VALIDATOR_DEFINITIONS,
+  FIELD_TYPE_DEFINITIONS,
+  getBaseFieldSpecs,
+  getBaseCategories,
+  getBaseFieldNames,
+} from "./catalogs.js";

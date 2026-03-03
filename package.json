@@ -1,6 +1,6 @@
 {
   "name": "@finsys/core",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Convert unified form configurations into Zod schemas, React Hook Form defaults, and SurveyJS JSON",
   "repository": {
     "type": "git",
@@ -30,7 +30,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && cp src/schema/unified-form.schema.json dist/schema/unified-form.schema.json",
+    "build": "tsc && cp src/schema/unified-form.schema.json dist/schema/unified-form.schema.json && rm -rf dist/data && cp -r src/data dist/data",
     "dev": "tsc --watch",
     "test": "vitest run",
     "lint": "tsc --noEmit",
@@ -47,10 +47,12 @@
   "dependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "semver": "^7.7.3",
     "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
+    "@types/semver": "^7.5.0",
     "survey-core": "^2.5.6",
     "typescript": "^5.4.0",
     "vitest": "^4.0.18"

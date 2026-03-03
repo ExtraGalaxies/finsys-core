@@ -1,0 +1,341 @@
+{
+  "version": 1,
+  "options": [
+    {
+      "id": 1,
+      "displayName": "Numeric Validator",
+      "class": "NumericValidator",
+      "description": "Ensures the answer is a number within the specified range of minValue and maxValue.",
+      "isRequired": true,
+      "validators": [
+        {
+          "type": "numeric",
+          "text": "Value must be within the range of 0 to 100",
+          "minValue": 0,
+          "maxValue": 100
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "displayName": "Text Length Validator",
+      "class": "TextValidator",
+      "description": "Confirms the length of entered text is between minLength and maxLength.",
+      "isRequired": true,
+      "validators": [
+        {
+          "type": "text",
+          "minLength": 10,
+          "maxLength": 280
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "displayName": "Regex Validator",
+      "class": "RegexValidator",
+      "description": "Throws an error if an entered value does not match a regular expression defined in the regex property.",
+      "isRequired": true,
+      "validators": [
+        {
+          "type": "regex",
+          "text": "The value must match the required pattern.",
+          "regex": "your-regex-pattern-here"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "displayName": "Email Validator",
+      "class": "EmailValidator",
+      "description": "Confirms that the entered value is a valid e-mail address.",
+      "isRequired": true,
+      "validators": [
+        {
+          "type": "email",
+          "text": "Value must be a valid email"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "displayName": "Expression Validator",
+      "class": "ExpressionValidator",
+      "isRequired": true,
+      "description": "Ensures that the field's expression always evaluates to true.",
+      "validators": [
+        {
+          "type": "expression",
+          "expression": "{fields} = true",
+          "text": "The value must be true and cannot be false."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "displayName": "Answer Count Validator",
+      "class": "AnswerCountValidator",
+      "isRequired": true,
+      "description": "Ensures selection of an appropriate number of choices, keeping responses within the minCount and maxCount range.",
+      "validators": [
+        {
+          "type": "answercount",
+          "minCount": 2,
+          "maxCount": 4
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "displayName": "Full Name Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures that the entered value is a valid full name.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please make sure the name doesn't include extra spaces, numbers, or invalid symbols",
+          "regex": "^[A-Za-z'-]+(?:\\s[A-Za-z'-]+)*\\s?[A-Za-z'-]+$"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "displayName": "Mobile Phone No Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures valid Malaysia phone number is entered.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "A valid Malaysia phone number is required.",
+          "regex": "^(011[0-9]{8}|01[2346789][0-9]{7}|[2-9][0-9]{0,8})$"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "displayName": "IC Number Total Digits Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures exactly 12 digits are entered for the IC number.",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^\\d{12}$",
+          "text": "Please enter exactly 12 digits numbers"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "displayName": "IC Number Valid Birth Year, Month, and Date Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures valid birth year, month, and day are entered for the IC number.",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^(\\d{2})(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])\\d{6}$",
+          "text": "First 6 digits must be valid birth year (00-99), month (01-12), and day (01-31)"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "displayName": "Duration in Current Residence (Months) Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures duration includes a number between 0-11.",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^([0-9]|10|11)$",
+          "text": "Value must be a number between 0-11."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "displayName": "Duration in Current Residence (Years) Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures duration includes a number between 0-99.",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^([0-9]|[1-9][0-9])$",
+          "text": "Value must be a number between 0-99."
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "displayName": "Office Phone No. Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures office phone number is entered in the correct format.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "The phone number must be a valid Malaysian number",
+          "regex": "^(011[0-9]{8}|(60[4-7]|004|005|006|007|009|609|012|013|014|016|017|019)[0-9]{7})$"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "displayName": "Age Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures age entered is between 21-55.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a valid whole number age between 21 and 55.",
+          "regex": "^(2[1-9]|[3-4][0-9]|55)$"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "displayName": "Consent(s) Expression Validator",
+      "class": "ExpressionValidator",
+      "isRequired": true,
+      "description": "Ensures that the field's expression always evaluates to true.",
+      "validators": [
+        {
+          "type": "expression",
+          "expression": "{consentCrossSelling} = true",
+          "text": "You must provide consent to Consent Cross-Selling."
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "displayName": "Date Joined Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures date joined is in the correct format.",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^\\d{4}-\\d{2}-\\d{2}$",
+          "text": "Date must be in YYYY-MM-DD format"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "displayName": "Date Joined Custom Validator",
+      "class": "CustomValidator",
+      "isRequired": true,
+      "description": "Ensures date joined is not in the future.",
+      "validators": [
+        {
+          "type": "custom",
+          "validator": "validateNotFutureDate",
+          "text": "Date of joining cannot be in the future"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "displayName": "Emergency Contact No. Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures emergency contact number is entered in the correct format.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "A valid Malaysia phone number is required.",
+          "regex": "^((60[4-79]|0[4-79])[0-9]{7}|011[0-9]{8}|01[2346789][0-9]{7})$"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "displayName": "Monthly Gross Income Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures monthly gross income is entered in the correct format.",
+      "validators": [
+        {
+          "type": "regex",
+          "regex": "^\\d+(\\.\\d+)?$",
+          "text": "Please enter a valid non-negative number."
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "displayName": "Monthly Gross Income Expression Validator",
+      "class": "ExpressionValidator",
+      "isRequired": true,
+      "description": "Ensures monthly gross income is at least RM 2000.",
+      "validators": [
+        {
+          "type": "expression",
+          "expression": "{monthlyGrossIncome} >= 2000",
+          "text": "Income must be at least RM 2000."
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "displayName": "No of Dependants Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures number of dependants is entered in the correct format.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a valid whole number between 0 and 99.",
+          "regex": "^[0-9][0-9]?$"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "displayName": "Financing Tenure (Years) Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures financing tenure is entered in the correct format.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a valid financing tenure from 1 to 7 years.",
+          "regex": "^[1-7]$"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "displayName": "Financing Amount Range Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures financing amount is entered in the correct format.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter a financing amount between 2,000 and 150,000.",
+          "regex": "^(2000|[1-9][0-9]{3}|[1-9][0-9]{4}|150000)$"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "displayName": "Financing Amount Incrementals Regex Validator",
+      "class": "RegexValidator",
+      "isRequired": true,
+      "description": "Ensures financing amount is entered incrementally in the correct format.",
+      "validators": [
+        {
+          "type": "regex",
+          "text": "Please enter an amount in increments of 1,000.",
+          "regex": "^([1-9][0-9]*000|150000)$"
+        }
+      ]
+    }
+  ]
+}

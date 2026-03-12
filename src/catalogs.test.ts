@@ -7,6 +7,7 @@ import {
   getBaseFieldSpecs,
   getBaseCategories,
   getBaseFieldNames,
+  getBaseFieldSpecMap,
 } from "./catalogs.js";
 
 describe("BASE_FIELD_SPECS", () => {
@@ -64,6 +65,24 @@ describe("getBaseFieldNames", () => {
     expect(names.length).toBeGreaterThan(0);
     // Should be unique
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe("getBaseFieldSpecMap", () => {
+  it("returns a Map keyed by field name", () => {
+    const map = getBaseFieldSpecMap();
+    expect(map).toBeInstanceOf(Map);
+    expect(map.size).toBeGreaterThan(0);
+
+    for (const [key, field] of map) {
+      expect(field.name).toBe(key);
+    }
+  });
+
+  it("returns the same cached instance on subsequent calls", () => {
+    const map1 = getBaseFieldSpecMap();
+    const map2 = getBaseFieldSpecMap();
+    expect(map1).toBe(map2);
   });
 });
 

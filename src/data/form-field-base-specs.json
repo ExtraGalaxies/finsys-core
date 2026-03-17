@@ -7166,7 +7166,7 @@
       "displayName": "Form 9 / Section 17 / Form D",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": ["incorporatedDate"],
+      "ihs_column_names": ["incorporatedDate", "ssmIncorporatedDate"],
       "category": "13"
     },
     {
@@ -7174,7 +7174,7 @@
       "displayName": "Identification Card (Front & Back)",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": ["ic"],
+      "ihs_column_names": ["ic", "icNumber", "icName", "icAddress", "icGender", "icReligion", "icDateOfBirth", "icPlaceOfBirth", "icNationality", "icRace"],
       "category": "13"
     },
     {

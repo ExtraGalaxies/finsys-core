@@ -7166,15 +7166,23 @@
       "displayName": "Form 9 / Section 17 / Form D",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": ["incorporatedDate", "ssmIncorporatedDate"],
+      "ihs_column_names": ["incorporatedDate"],
+      "category": "13"
+    },
+    {
+      "name": "ssm_business_information",
+      "displayName": "SSM Company Profile",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": ["ssmIncorporatedDate"],
       "category": "13"
     },
     {
       "name": "ic",
-      "displayName": "Identification Card (Front & Back)",
+      "displayName": "Identification Card (Front)",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": ["ic", "icNumber", "icName", "icAddress", "icGender", "icReligion", "icDateOfBirth", "icPlaceOfBirth", "icNationality", "icRace"],
+      "ihs_column_names": ["icNumber", "icName", "icAddress", "icGender", "icReligion", "icDateOfBirth", "icPlaceOfBirth", "icNationality", "icRace"],
       "category": "13"
     },
     {

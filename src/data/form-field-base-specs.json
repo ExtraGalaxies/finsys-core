@@ -7174,15 +7174,40 @@
       "displayName": "SSM Company Profile",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": ["ssmIncorporatedDate"],
+      "ihs_column_names": [
+        "ssmCompanyName",
+        "ssmCompanyRegNo",
+        "ssmIncorporatedDate",
+        "businessCommencementDate",
+        "businessNature",
+        "companyStatus",
+        "shareholders",
+        "directors",
+        "previousDirectors",
+        "totalShareIssued",
+        "companyLastOldName",
+        "companyNameDateOfChange",
+        "businessOrigin",
+        "registeredAddress"
+      ],
       "category": "13"
     },
     {
-      "name": "ic",
+      "name": "ic_front",
       "displayName": "Identification Card (Front)",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": ["icNumber", "icName", "icAddress", "icGender", "icReligion", "icDateOfBirth", "icPlaceOfBirth", "icNationality", "icRace"],
+      "ihs_column_names": [
+        "icNumber",
+        "icName",
+        "icAddress",
+        "icGender",
+        "icReligion",
+        "icDateOfBirth",
+        "icPlaceOfBirth",
+        "icNationality",
+        "icRace"
+      ],
       "category": "13"
     },
     {

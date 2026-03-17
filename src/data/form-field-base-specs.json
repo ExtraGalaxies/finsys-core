@@ -7166,7 +7166,7 @@
       "displayName": "Form 9 / Section 17 / Form D",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": ["incorporatedDate"],
+      "ihs_column_names": ["incorporatedDate", "companyName", "companyRegNo"],
       "category": "13"
     },
     {

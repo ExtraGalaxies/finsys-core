@@ -1,87 +1,87 @@
 {
-    "version":  2,
-    "types":  [
-                  {
-                      "displayName":  "Text",
-                      "name":  "text"
-                  },
-                  {
-                      "displayName":  "Number",
-                      "name":  "number"
-                  },
-                  {
-                      "displayName":  "Email",
-                      "name":  "email"
-                  },
-                  {
-                      "displayName":  "Dropdown",
-                      "name":  "dropdown"
-                  },
-                  {
-                      "displayName":  "Checkbox",
-                      "name":  "checkbox"
-                  },
-                  {
-                      "displayName":  "Radio Group",
-                      "name":  "radiogroup"
-                  },
-                  {
-                      "displayName":  "Boolean",
-                      "name":  "boolean"
-                  },
-                  {
-                      "displayName":  "File",
-                      "name":  "file"
-                  },
-                  {
-                      "displayName":  "Slider",
-                      "name":  "slider"
-                  },
-                  {
-                      "displayName":  "Range",
-                      "name":  "range"
-                  },
-                  {
-                      "displayName":  "Long Text (Comment)",
-                      "name":  "comment"
-                  },
-                  {
-                      "displayName":  "HTML Content",
-                      "name":  "html"
-                  },
-                  {
-                      "displayName":  "Dynamic Panel",
-                      "name":  "paneldynamic"
-                  }
-              ],
-    "input_types":  [
-                        {
-                            "displayName":  "Text",
-                            "name":  "text"
-                        },
-                        {
-                            "displayName":  "Number",
-                            "name":  "number"
-                        },
-                        {
-                            "displayName":  "Email",
-                            "name":  "email"
-                        },
-                        {
-                            "displayName":  "Tel",
-                            "name":  "tel"
-                        },
-                        {
-                            "displayName":  "Date",
-                            "name":  "date"
-                        },
-                        {
-                            "displayName":  "Password",
-                            "name":  "password"
-                        },
-                        {
-                            "displayName":  "URL",
-                            "name":  "url"
-                        }
-                    ]
+  "version": 2,
+  "types": [
+    {
+      "displayName": "Text",
+      "name": "text"
+    },
+    {
+      "displayName": "Number",
+      "name": "number"
+    },
+    {
+      "displayName": "Email",
+      "name": "email"
+    },
+    {
+      "displayName": "Dropdown",
+      "name": "dropdown"
+    },
+    {
+      "displayName": "Checkbox",
+      "name": "checkbox"
+    },
+    {
+      "displayName": "Radio Group",
+      "name": "radiogroup"
+    },
+    {
+      "displayName": "Boolean",
+      "name": "boolean"
+    },
+    {
+      "displayName": "File",
+      "name": "file"
+    },
+    {
+      "displayName": "Slider",
+      "name": "slider"
+    },
+    {
+      "displayName": "Range",
+      "name": "range"
+    },
+    {
+      "displayName": "Long Text (Comment)",
+      "name": "comment"
+    },
+    {
+      "displayName": "HTML Content",
+      "name": "html"
+    },
+    {
+      "displayName": "Dynamic Panel",
+      "name": "paneldynamic"
+    }
+  ],
+  "input_types": [
+    {
+      "displayName": "Text",
+      "name": "text"
+    },
+    {
+      "displayName": "Number",
+      "name": "number"
+    },
+    {
+      "displayName": "Email",
+      "name": "email"
+    },
+    {
+      "displayName": "Tel",
+      "name": "tel"
+    },
+    {
+      "displayName": "Date",
+      "name": "date"
+    },
+    {
+      "displayName": "Password",
+      "name": "password"
+    },
+    {
+      "displayName": "URL",
+      "name": "url"
+    }
+  ]
 }

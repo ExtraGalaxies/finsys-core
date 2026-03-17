@@ -27,6 +27,28 @@ export function getBaseCategories(): Category[] {
   return BASE_FIELD_SPECS.categories;
 }
 
+let cachedFieldSpecMap: Map<string, FieldData> | null = null;
+
+/**
+ * Returns a cached Map of base field name → FieldData.
+ * Keyed by each field's `name` property from the base specs.
+ */
+export function getBaseFieldSpecMap(): Map<string, FieldData> {
+  if (cachedFieldSpecMap) {
+    return cachedFieldSpecMap;
+  }
+
+  const map = new Map<string, FieldData>();
+  for (const field of BASE_FIELD_SPECS.fields) {
+    if (field.name) {
+      map.set(field.name, field);
+    }
+  }
+
+  cachedFieldSpecMap = map;
+  return cachedFieldSpecMap;
+}
+
 let cachedFieldNames: string[] | null = null;
 
 export function getBaseFieldNames(): string[] {

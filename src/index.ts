@@ -76,4 +76,5 @@ export {
   getBaseFieldSpecs,
   getBaseCategories,
   getBaseFieldNames,
+  getBaseFieldSpecMap,
 } from "./catalogs.js";

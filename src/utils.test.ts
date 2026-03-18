@@ -226,6 +226,22 @@ describe('evaluateExpression', () => {
           {}
         )).toBe(false);
       });
+
+      it('should work correctly with array values', () => {
+        expect(evaluateExpression(
+          "{roles} contains 'admin'",
+          { roles: ['admin', 'user'] }
+        )).toBe(true);
+      });
+
+      it('should not false-positive on partial array string matches', () => {
+        // With || '' fallback, ['ab'].toString() = 'ab' which includes 'a' — bug!
+        // With || [] fallback, ['ab'].includes('a') = false — correct!
+        expect(evaluateExpression(
+          "{roles} contains 'a'",
+          { roles: ['ab'] }
+        )).toBe(false);
+      });
     });
 
     describe('notcontains', () => {
@@ -240,6 +256,18 @@ describe('evaluateExpression', () => {
         expect(evaluateExpression(
           "{role} notcontains 'admin'",
           { role: 'admin-user' }
+        )).toBe(false);
+      });
+
+      it('should work correctly with array values', () => {
+        expect(evaluateExpression(
+          "{roles} notcontains 'admin'",
+          { roles: ['user', 'editor'] }
+        )).toBe(true);
+
+        expect(evaluateExpression(
+          "{roles} notcontains 'admin'",
+          { roles: ['admin', 'user'] }
         )).toBe(false);
       });
     });

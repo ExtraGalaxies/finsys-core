@@ -64,24 +64,27 @@ export function evaluateExpression(expression: string, data: any): boolean {
 
     //    "allof" → value (expected to be an array) contains all items
     //    e.g. this['skills'] allof ['a','b']
-    //    Note: `this` binding doesn't propagate into nested function() callbacks,
-    //    so we pass the value as a parameter to an IIFE.
+    //      → ['a','b'].every(item => (this['skills'] || []).includes(item))
+    //    Arrow functions inherit `this` from enclosing scope (the new Function call),
+    //    so this works correctly with Function.call(data).
     jsExpression = jsExpression.replace(
       /(this\['[^']+'\])\s+allof\s+(\[[^\]]+\])/gi,
-      (_, ref, arr) => `(function(_v,_a){for(var i=0;i<_a.length;i++){if((_v||[]).indexOf(_a[i])<0)return false}return true})(${ref},${arr})`
+      (_, ref, arr) => `${arr}.every(item => (${ref} || []).includes(item))`
     );
 
     //    "contains" → string/array contains value
     //    e.g. this['roles'] contains 'admin'
+    //    Uses || [] fallback to handle both string and array values correctly.
+    //    (|| '' would stringify arrays causing false positives)
     jsExpression = jsExpression.replace(
       /(this\['[^']+'\])\s+contains\s+'([^']+)'/gi,
-      (_, ref, val) => `(${ref}||'').includes('${val}')`
+      (_, ref, val) => `(${ref} || []).includes('${val}')`
     );
 
     //    "notcontains" → string/array does not contain value
     jsExpression = jsExpression.replace(
       /(this\['[^']+'\])\s+notcontains\s+'([^']+)'/gi,
-      (_, ref, val) => `!(${ref}||'').includes('${val}')`
+      (_, ref, val) => `!(${ref} || []).includes('${val}')`
     );
 
     // 4. Execute with Function, binding 'data' as 'this'

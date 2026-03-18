@@ -137,6 +137,142 @@ describe('evaluateExpression', () => {
     });
   });
 
+  describe('SurveyJS array operators (SYS-535)', () => {
+    describe('anyof', () => {
+      it('should return true when value is in the anyof array', () => {
+        expect(evaluateExpression(
+          "{employmentType} anyof ['01', '08', '09']",
+          { employmentType: '01' }
+        )).toBe(true);
+      });
+
+      it('should return true for another matching value', () => {
+        expect(evaluateExpression(
+          "{employmentType} anyof ['01', '08', '09']",
+          { employmentType: '09' }
+        )).toBe(true);
+      });
+
+      it('should return false when value is not in the anyof array', () => {
+        expect(evaluateExpression(
+          "{employmentType} anyof ['01', '08', '09']",
+          { employmentType: '03' }
+        )).toBe(false);
+      });
+
+      it('should return false when value is undefined', () => {
+        expect(evaluateExpression(
+          "{employmentType} anyof ['01', '08', '09']",
+          {}
+        )).toBe(false);
+      });
+
+      it('should handle longer arrays with spaces', () => {
+        expect(evaluateExpression(
+          "{employmentType} anyof ['01', '02', '07', '08', '09', '10' ]",
+          { employmentType: '07' }
+        )).toBe(true);
+      });
+
+      it('should be case insensitive for the operator', () => {
+        expect(evaluateExpression(
+          "{type} AnyOf ['a', 'b']",
+          { type: 'a' }
+        )).toBe(true);
+      });
+    });
+
+    describe('allof', () => {
+      it('should return true when value array contains all items', () => {
+        expect(evaluateExpression(
+          "{skills} allof ['js', 'ts']",
+          { skills: ['js', 'ts', 'python'] }
+        )).toBe(true);
+      });
+
+      it('should return false when value array is missing items', () => {
+        expect(evaluateExpression(
+          "{skills} allof ['js', 'ts']",
+          { skills: ['js'] }
+        )).toBe(false);
+      });
+
+      it('should return false when value is undefined', () => {
+        expect(evaluateExpression(
+          "{skills} allof ['js']",
+          {}
+        )).toBe(false);
+      });
+    });
+
+    describe('contains', () => {
+      it('should return true when string contains the value', () => {
+        expect(evaluateExpression(
+          "{role} contains 'admin'",
+          { role: 'super-admin' }
+        )).toBe(true);
+      });
+
+      it('should return false when string does not contain the value', () => {
+        expect(evaluateExpression(
+          "{role} contains 'admin'",
+          { role: 'user' }
+        )).toBe(false);
+      });
+
+      it('should handle undefined gracefully', () => {
+        expect(evaluateExpression(
+          "{role} contains 'admin'",
+          {}
+        )).toBe(false);
+      });
+
+      it('should work correctly with array values', () => {
+        expect(evaluateExpression(
+          "{roles} contains 'admin'",
+          { roles: ['admin', 'user'] }
+        )).toBe(true);
+      });
+
+      it('should not false-positive on partial array string matches', () => {
+        // With || '' fallback, ['ab'].toString() = 'ab' which includes 'a' — bug!
+        // With || [] fallback, ['ab'].includes('a') = false — correct!
+        expect(evaluateExpression(
+          "{roles} contains 'a'",
+          { roles: ['ab'] }
+        )).toBe(false);
+      });
+    });
+
+    describe('notcontains', () => {
+      it('should return true when string does not contain the value', () => {
+        expect(evaluateExpression(
+          "{role} notcontains 'admin'",
+          { role: 'user' }
+        )).toBe(true);
+      });
+
+      it('should return false when string contains the value', () => {
+        expect(evaluateExpression(
+          "{role} notcontains 'admin'",
+          { role: 'admin-user' }
+        )).toBe(false);
+      });
+
+      it('should work correctly with array values', () => {
+        expect(evaluateExpression(
+          "{roles} notcontains 'admin'",
+          { roles: ['user', 'editor'] }
+        )).toBe(true);
+
+        expect(evaluateExpression(
+          "{roles} notcontains 'admin'",
+          { roles: ['admin', 'user'] }
+        )).toBe(false);
+      });
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle null data', () => {
       // Should not throw, returns false

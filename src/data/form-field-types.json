@@ -48,10 +48,6 @@
     {
       "displayName": "HTML Content",
       "name": "html"
-    },
-    {
-      "displayName": "Dynamic Panel",
-      "name": "paneldynamic"
     }
   ],
   "input_types": [

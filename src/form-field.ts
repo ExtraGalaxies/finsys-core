@@ -14,7 +14,6 @@ export enum FieldType {
   EMAIL = 'email',
   COMMENT = 'comment',
   RANGE = 'range',
-  PANELDYNAMIC = 'paneldynamic',
   UNKNOWN = 'unknown',
 }
 
@@ -65,7 +64,6 @@ function toFieldType(value: string): FieldType {
     [FieldType.EMAIL]: FieldType.EMAIL,
     [FieldType.COMMENT]: FieldType.COMMENT,
     [FieldType.RANGE]: FieldType.RANGE,
-    [FieldType.PANELDYNAMIC]: FieldType.PANELDYNAMIC,
   };
   return typeMap[value] || FieldType.UNKNOWN;
 }

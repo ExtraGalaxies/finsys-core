@@ -46,12 +46,45 @@ export function evaluateExpression(expression: string, data: any): boolean {
       return `this['${key.trim()}']`;
     });
 
-    // 2. Map SurveyJS operators to JS operators
+    // 2. Map SurveyJS comparison operators to JS operators FIRST
+    //    (before array operator transforms inject JS code containing '=' assignments)
     // Replace single '=' with '==' if it's not already '==' or '!=' or '>=' or '<='
-    // Simplistic approach: look for '=' that are not preceded or followed by other operator chars
     jsExpression = jsExpression.replace(/(?<![<>!=])=(?![=])/g, '==');
 
-    // 3. Execute with Function, binding 'data' as 'this'
+    // 3. Map SurveyJS array operators to JS equivalents
+    //    These run AFTER the '=' transform so their generated JS won't be mangled.
+
+    //    "anyof" → value is one of the items in the array
+    //    e.g. this['employmentType'] anyof ['01','08','09']
+    //      → (['01','08','09']).includes(this['employmentType'])
+    jsExpression = jsExpression.replace(
+      /(this\['[^']+'\])\s+anyof\s+(\[[^\]]+\])/gi,
+      (_, ref, arr) => `(${arr}).includes(${ref})`
+    );
+
+    //    "allof" → value (expected to be an array) contains all items
+    //    e.g. this['skills'] allof ['a','b']
+    //    Note: `this` binding doesn't propagate into nested function() callbacks,
+    //    so we pass the value as a parameter to an IIFE.
+    jsExpression = jsExpression.replace(
+      /(this\['[^']+'\])\s+allof\s+(\[[^\]]+\])/gi,
+      (_, ref, arr) => `(function(_v,_a){for(var i=0;i<_a.length;i++){if((_v||[]).indexOf(_a[i])<0)return false}return true})(${ref},${arr})`
+    );
+
+    //    "contains" → string/array contains value
+    //    e.g. this['roles'] contains 'admin'
+    jsExpression = jsExpression.replace(
+      /(this\['[^']+'\])\s+contains\s+'([^']+)'/gi,
+      (_, ref, val) => `(${ref}||'').includes('${val}')`
+    );
+
+    //    "notcontains" → string/array does not contain value
+    jsExpression = jsExpression.replace(
+      /(this\['[^']+'\])\s+notcontains\s+'([^']+)'/gi,
+      (_, ref, val) => `!(${ref}||'').includes('${val}')`
+    );
+
+    // 4. Execute with Function, binding 'data' as 'this'
     const func = new Function(`return ${jsExpression};`);
     return !!func.call(data || {});
   } catch (e) {

@@ -85,17 +85,6 @@ describe("ssm_business_information field spec (SYS-2085)", () => {
     expect(String(field.category)).toBe("13");
   });
 
-  it("has all expected ihs_column_names", () => {
-    const field = findField(SSM_FIELD_NAME)!;
-    expect(Array.isArray(field.ihs_column_names)).toBe(true);
-    for (const col of SSM_IHS_COLUMNS) {
-      expect(
-        (field.ihs_column_names as string[]).includes(col),
-        `ihs_column_names must include '${col}'`
-      ).toBe(true);
-    }
-  });
-
   it("ihs_column_names contains exactly the expected columns (no extra, no missing)", () => {
     const field = findField(SSM_FIELD_NAME)!;
     const actual = [...(field.ihs_column_names as string[])].sort();
@@ -187,17 +176,6 @@ describe("ic_front field spec (SYS-2085)", () => {
   it("has category '13'", () => {
     const field = findField(IC_FIELD_NAME)!;
     expect(String(field.category)).toBe("13");
-  });
-
-  it("has all expected ihs_column_names", () => {
-    const field = findField(IC_FIELD_NAME)!;
-    expect(Array.isArray(field.ihs_column_names)).toBe(true);
-    for (const col of IC_IHS_COLUMNS) {
-      expect(
-        (field.ihs_column_names as string[]).includes(col),
-        `ihs_column_names must include '${col}'`
-      ).toBe(true);
-    }
   });
 
   it("ihs_column_names contains exactly the expected columns (no extra, no missing)", () => {

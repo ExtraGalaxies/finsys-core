@@ -1102,7 +1102,7 @@
           "value": "SRB"
         },
         {
-          "text": "São Tomé and Príncipe",
+          "text": "S\u00e3o Tom\u00e9 and Pr\u00edncipe",
           "value": "STP"
         },
         {
@@ -6118,6 +6118,12 @@
       "category": "12"
     },
     {
+      "name": "makeOfVehicle",
+      "displayName": "Make of Vehicle",
+      "type": "text",
+      "category": "12"
+    },
+    {
       "name": "permanentaddressLine1",
       "displayName": "Permanent Address Line 1",
       "placeholder": "Permanent Address Line 1",
@@ -7166,7 +7172,11 @@
       "displayName": "Form 9 / Section 17 / Form D",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": ["incorporatedDate", "companyName", "companyRegNo"],
+      "ihs_column_names": [
+        "incorporatedDate",
+        "companyName",
+        "companyRegNo"
+      ],
       "category": "13"
     },
     {

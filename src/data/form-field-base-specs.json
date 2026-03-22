@@ -1919,12 +1919,6 @@
       "category": "2"
     },
     {
-      "name": "idNo",
-      "displayName": "ID Number (Alt)",
-      "type": "text",
-      "category": "2"
-    },
-    {
       "name": "lengthOfServiceMonth",
       "displayName": "Length of Service (Months)",
       "type": "text",

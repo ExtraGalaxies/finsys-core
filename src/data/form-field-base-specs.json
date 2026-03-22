@@ -6121,6 +6121,8 @@
       "name": "makeOfVehicle",
       "displayName": "Make of Vehicle",
       "type": "text",
+      "placeholder": "E.g. Proton",
+      "maxLength": 50,
       "category": "12"
     },
     {

@@ -52,6 +52,14 @@
     {
       "id": "13",
       "name": "Document Upload"
+    },
+    {
+      "id": "14",
+      "name": "SSM Company Profile Data"
+    },
+    {
+      "id": "15",
+      "name": "NRIC Data"
     }
   ],
   "fields": [
@@ -114,7 +122,7 @@
       "title": "ID Number",
       "placeholder": "E.g. 700513065143",
       "isRequired": true,
-      "displayName": "IC Number",
+      "displayName": "IC Number (Manual Entry)",
       "maxLength": 25,
       "inputType": "text",
       "validators": [
@@ -7399,6 +7407,165 @@
         "payslipOtherDeductionT6"
       ],
       "category": "13"
+    },
+    {
+      "name": "ic",
+      "displayName": "Identity Card (NRIC)",
+      "type": "file",
+      "ihs_column_names": [
+        "icName",
+        "icNumber",
+        "icAddress",
+        "icGender",
+        "icReligion",
+        "icDateOfBirth",
+        "icPlaceOfBirth",
+        "icNationality",
+        "icRace"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "ssmCompanyName",
+      "displayName": "Company Name (SSM Profile)",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "ssmCompanyRegNo",
+      "displayName": "Company Registration No (SSM Profile)",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "ssmIncorporatedDate",
+      "displayName": "Incorporated Date (SSM Profile)",
+      "type": "text",
+      "inputType": "date",
+      "category": "14"
+    },
+    {
+      "name": "businessCommencementDate",
+      "displayName": "Business Commencement Date",
+      "type": "text",
+      "inputType": "date",
+      "category": "14"
+    },
+    {
+      "name": "businessNature",
+      "displayName": "Business Nature",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "companyStatus",
+      "displayName": "Company Status (SSM)",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "shareholders",
+      "displayName": "Shareholders",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "directors",
+      "displayName": "Directors",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "previousDirectors",
+      "displayName": "Previous Directors",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "totalShareIssued",
+      "displayName": "Total Shares Issued",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "companyLastOldName",
+      "displayName": "Previous Company Name",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "companyNameDateOfChange",
+      "displayName": "Company Name Change Date",
+      "type": "text",
+      "inputType": "date",
+      "category": "14"
+    },
+    {
+      "name": "businessOrigin",
+      "displayName": "Business Origin",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "registeredAddress",
+      "displayName": "Registered Address (SSM)",
+      "type": "text",
+      "category": "14"
+    },
+    {
+      "name": "icName",
+      "displayName": "Full Name (NRIC)",
+      "type": "text",
+      "category": "15"
+    },
+    {
+      "name": "icNumber",
+      "displayName": "IC Number (NRIC Extracted)",
+      "type": "text",
+      "category": "15"
+    },
+    {
+      "name": "icAddress",
+      "displayName": "Address (NRIC)",
+      "type": "text",
+      "category": "15"
+    },
+    {
+      "name": "icGender",
+      "displayName": "Gender (NRIC)",
+      "type": "text",
+      "category": "15"
+    },
+    {
+      "name": "icReligion",
+      "displayName": "Religion (NRIC)",
+      "type": "text",
+      "category": "15"
+    },
+    {
+      "name": "icDateOfBirth",
+      "displayName": "Date of Birth (NRIC)",
+      "type": "text",
+      "inputType": "date",
+      "category": "15"
+    },
+    {
+      "name": "icPlaceOfBirth",
+      "displayName": "Place of Birth (NRIC)",
+      "type": "text",
+      "category": "15"
+    },
+    {
+      "name": "icNationality",
+      "displayName": "Nationality (NRIC)",
+      "type": "text",
+      "category": "15"
+    },
+    {
+      "name": "icRace",
+      "displayName": "Race (NRIC)",
+      "type": "text",
+      "category": "15"
     }
   ]
 }

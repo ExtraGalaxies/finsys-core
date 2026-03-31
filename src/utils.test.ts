@@ -44,6 +44,28 @@ describe('getPastMonthLabel', () => {
     const expected = new Date().toLocaleString('default', { month: 'long' });
     expect(label).toBe(expected);
   });
+
+  it('should not produce duplicate months on the 31st (SYS-2193)', () => {
+    // On March 31, without setDate(1), setMonth to Feb (28 days) rolls to March,
+    // setMonth to Nov (30 days) rolls to Dec, setMonth to Sep (30 days) rolls to Oct.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 2, 31)); // March 31, 2026
+
+    const labels = [];
+    for (let i = 1; i <= 6; i++) {
+      labels.push(getPastMonthLabel(i));
+    }
+
+    // Each label must be unique
+    expect(new Set(labels).size).toBe(labels.length);
+
+    // Verify exact months: Feb, Jan, Dec, Nov, Oct, Sep
+    expect(labels).toEqual([
+      'February', 'January', 'December', 'November', 'October', 'September'
+    ]);
+
+    vi.useRealTimers();
+  });
 });
 
 describe('getPastYearLabel', () => {

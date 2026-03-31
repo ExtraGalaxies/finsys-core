@@ -20,6 +20,7 @@
 
 export function getPastMonthLabel(monthsAgo: number): string {
   const date = new Date();
+  date.setDate(1); // Avoid day-of-month rollover (e.g. Mar 31 → "February" would roll to March)
   date.setMonth(date.getMonth() - monthsAgo);
   return date.toLocaleString('default', { month: 'long' });
 }

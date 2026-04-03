@@ -7,13 +7,15 @@
  */
 
 import type { FieldData } from './survey-generator.js'
+import {
+  IhsValueFormat,
+  FileFieldTableType,
+} from './ihs-types.js'
 import type {
   IhsFieldDetail,
   IhsDetailCategory,
-  IhsValueFormat,
   FileFieldTableData,
   FileFieldTableItem,
-  FileFieldTableType,
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
@@ -156,7 +158,7 @@ function buildTableForGroup(
 
   const periods = extractTimePeriods(allColumns)
   const isTimeSeries = periods.length > 0
-  const tableType: FileFieldTableType = isTimeSeries ? 'timeSeries' : 'keyValue'
+  const tableType = isTimeSeries ? FileFieldTableType.TIME_SERIES : FileFieldTableType.KEY_VALUE
   const groupDisplayName =
     GROUP_DISPLAY_NAMES[groupName] || fields[0]?.displayName || getDisplayName(groupName)
 
@@ -246,7 +248,7 @@ function inferValueFormat(fieldName: string, value: unknown): IhsValueFormat {
     'approvedAmount',
     'monthlyInstallment',
   ])
-  if (currencyFields.has(fieldName)) return 'currency'
+  if (currencyFields.has(fieldName)) return IhsValueFormat.CURRENCY
 
   const numberFields = new Set([
     'age',
@@ -256,14 +258,14 @@ function inferValueFormat(fieldName: string, value: unknown): IhsValueFormat {
     'programId',
     'borrowerAgentId',
   ])
-  if (numberFields.has(fieldName)) return 'number'
+  if (numberFields.has(fieldName)) return IhsValueFormat.NUMBER
 
   const tableFields = new Set(['shareholders', 'directors', 'previousDirectors'])
-  if (tableFields.has(fieldName)) return 'table'
+  if (tableFields.has(fieldName)) return IhsValueFormat.TABLE
 
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return 'date'
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return IhsValueFormat.DATE
 
-  return 'string'
+  return IhsValueFormat.STRING
 }
 
 const EXCLUDED_FIELDS = new Set([

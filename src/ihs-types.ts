@@ -3,7 +3,14 @@
  * Used by finsys-client and finhub-adonisjs to render application details.
  */
 
-export type IhsValueFormat = 'string' | 'currency' | 'number' | 'percentage' | 'date' | 'table'
+export enum IhsValueFormat {
+  STRING = 'string',
+  CURRENCY = 'currency',
+  NUMBER = 'number',
+  PERCENTAGE = 'percentage',
+  DATE = 'date',
+  TABLE = 'table',
+}
 
 export interface IhsFieldDetail {
   name: string
@@ -18,7 +25,10 @@ export interface IhsDetailCategory {
   items: { name: string; displayName: string; value: unknown; valueFormat: IhsValueFormat }[]
 }
 
-export type FileFieldTableType = 'timeSeries' | 'keyValue'
+export enum FileFieldTableType {
+  TIME_SERIES = 'timeSeries',
+  KEY_VALUE = 'keyValue',
+}
 
 export interface FileFieldTableItem {
   displayName: string

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { IhsValueFormat, FileFieldTableType } from './ihs-types.js'
 import {
   extractTimePeriods,
   groupColumnsByTimePeriod,
@@ -99,7 +100,7 @@ describe('buildFileFieldTables', () => {
     expect(typeof tables).toBe('object')
     // bank_statements should exist if base specs have bank_statement fields
     if (tables['bank_statements']) {
-      expect(tables['bank_statements'].type).toBe('timeSeries')
+      expect(tables['bank_statements'].type).toBe(FileFieldTableType.TIME_SERIES)
       expect(tables['bank_statements'].hasData).toBe(true)
     }
   })
@@ -129,13 +130,13 @@ describe('processIhsDetails', () => {
   it('infers date format from ISO date strings', () => {
     const details = processIhsDetails({ dateJoined: '2020-01-15T00:00:00.000Z' })
     const dj = details.find((d) => d.name === 'dateJoined')
-    expect(dj?.valueFormat).toBe('date')
+    expect(dj?.valueFormat).toBe(IhsValueFormat.DATE)
   })
 
   it('infers currency format for known fields', () => {
     const details = processIhsDetails({ totalFinancing: 50000 })
     const tf = details.find((d) => d.name === 'totalFinancing')
-    expect(tf?.valueFormat).toBe('currency')
+    expect(tf?.valueFormat).toBe(IhsValueFormat.CURRENCY)
   })
 })
 
@@ -147,21 +148,21 @@ describe('groupDetailsByCategory', () => {
         displayName: 'Full Name',
         category: 'Personal Info',
         value: 'Alice',
-        valueFormat: 'string' as const,
+        valueFormat: IhsValueFormat.STRING,
       },
       {
         name: 'email',
         displayName: 'Email',
         category: 'Personal Info',
         value: 'alice@test.com',
-        valueFormat: 'string' as const,
+        valueFormat: IhsValueFormat.STRING,
       },
       {
         name: 'something',
         displayName: 'Something',
         category: 'Default Category',
         value: 'x',
-        valueFormat: 'string' as const,
+        valueFormat: IhsValueFormat.STRING,
       },
     ]
     const grouped = groupDetailsByCategory(details)

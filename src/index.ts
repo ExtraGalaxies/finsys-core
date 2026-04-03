@@ -91,11 +91,11 @@ export {
   groupDetailsByCategory,
 } from './ihs-processing.js'
 
+export { IhsValueFormat, FileFieldTableType } from './ihs-types.js'
+
 export type {
   IhsFieldDetail,
   IhsDetailCategory,
-  IhsValueFormat,
   FileFieldTableData,
   FileFieldTableItem,
-  FileFieldTableType,
 } from './ihs-types.js'

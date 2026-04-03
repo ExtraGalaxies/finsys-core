@@ -95,6 +95,16 @@ export function groupFieldsByPattern(fields: FieldData[]): Record<string, FieldD
   return groups
 }
 
+/** Human-friendly display names for field groups (when a group combines multiple fields). */
+const GROUP_DISPLAY_NAMES: Record<string, string> = {
+  bank_statements: 'Bank Statements',
+  financials: 'Audited Financial Statements',
+  epf_statements: 'EPF Statements',
+  payslip_statements: 'Payslip Statements',
+  ssm_documents: 'SSM Company Information',
+  ic_documents: 'Identification Card',
+}
+
 // ── File-field table building ──────────────────────────────────
 
 function isNumericField(fieldName: string): boolean {
@@ -147,7 +157,8 @@ function buildTableForGroup(
   const periods = extractTimePeriods(allColumns)
   const isTimeSeries = periods.length > 0
   const tableType: FileFieldTableType = isTimeSeries ? 'timeSeries' : 'keyValue'
-  const groupDisplayName = fields[0]?.displayName || getDisplayName(groupName)
+  const groupDisplayName =
+    GROUP_DISPLAY_NAMES[groupName] || fields[0]?.displayName || getDisplayName(groupName)
 
   if (isTimeSeries) {
     const columnGroups = groupColumnsByTimePeriod(allColumns)

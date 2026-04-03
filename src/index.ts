@@ -78,3 +78,24 @@ export {
   getBaseFieldNames,
   getBaseFieldSpecMap,
 } from "./catalogs.js";
+
+// IHS data processing
+export {
+  getDisplayNames,
+  getDisplayName,
+  extractTimePeriods,
+  groupColumnsByTimePeriod,
+  groupFieldsByPattern,
+  buildFileFieldTables,
+  processIhsDetails,
+  groupDetailsByCategory,
+} from './ihs-processing.js'
+
+export { IhsValueFormat, FileFieldTableType } from './ihs-types.js'
+
+export type {
+  IhsFieldDetail,
+  IhsDetailCategory,
+  FileFieldTableData,
+  FileFieldTableItem,
+} from './ihs-types.js'

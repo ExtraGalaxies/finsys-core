@@ -76,6 +76,7 @@ const FIELD_GROUP_PREFIXES: [string, string][] = [
   ['financials', 'financials'],
   ['epf_statement', 'epf_statements'],
   ['payslip_statement', 'payslip_statements'],
+  ['ssm_business_information', 'ssm_company_profile'],
   ['ssm', 'ssm_documents'],
   ['ic_', 'ic_documents'],
 ]
@@ -103,7 +104,8 @@ const GROUP_DISPLAY_NAMES: Record<string, string> = {
   financials: 'Audited Financial Statements',
   epf_statements: 'EPF Statements',
   payslip_statements: 'Payslip Statements',
-  ssm_documents: 'SSM Company Information',
+  ssm_documents: 'Form 9 / Section 17 / Form D',
+  ssm_company_profile: 'SSM Company Profile',
   ic_documents: 'Identification Card',
 }
 

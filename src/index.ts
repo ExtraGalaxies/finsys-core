@@ -93,6 +93,9 @@ export {
 
 export { IhsValueFormat, FileFieldTableType } from './ihs-types.js'
 
+// Roles
+export { Role } from './roles.js'
+
 export type {
   IhsFieldDetail,
   IhsDetailCategory,

@@ -18,7 +18,7 @@
  * Program access roles — shared across finsys-api and finhub-adonisjs.
  * Values must match the database enum column in the `programaccess` table.
  */
-export enum ROLE {
+export enum Role {
   ADMIN = 'Admin',
   BORROWER_AGENT = 'Borrower Agent',
   LENDER_AGENT = 'Lender Agent',

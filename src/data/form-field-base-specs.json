@@ -7190,6 +7190,8 @@
         "ssmIncorporatedDate",
         "businessCommencementDate",
         "businessNature",
+        "ssmCompanyEntityType",
+        "ssmPaidUpCapital",
         "companyStatus",
         "shareholders",
         "directors",
@@ -7217,6 +7219,21 @@
         "icPlaceOfBirth",
         "icNationality",
         "icRace"
+      ],
+      "category": "13"
+    },
+    {
+      "name": "form9",
+      "displayName": "Form 9 / Section 17 / Form D",
+      "type": "file",
+      "enableIf": "{formOfDisclosure} contains 'consented'",
+      "ihs_column_names": [
+        "incorporatedDate",
+        "companyName",
+        "companyRegNo",
+        "ssmIncorporatedDate",
+        "ssmCompanyName",
+        "ssmCompanyRegNo"
       ],
       "category": "13"
     },

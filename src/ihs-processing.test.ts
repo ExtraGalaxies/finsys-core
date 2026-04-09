@@ -74,16 +74,18 @@ describe('groupFieldsByPattern', () => {
     expect(grouped['financials']).toHaveLength(1)
   })
 
-  it('groups epf, ssm, and ic fields', () => {
+  it('groups epf, form9, ic, and ssm fields', () => {
     const fields: FieldData[] = [
       { name: 'epf_statement_1', type: 'file' },
-      { name: 'ssm_form9', type: 'file' },
-      { name: 'ic_front', type: 'file' },
+      { name: 'form9', type: 'file' },
+      { name: 'ic', type: 'file' },
+      { name: 'ssm', type: 'file' },
     ]
     const grouped = groupFieldsByPattern(fields)
     expect(grouped['epf_statements']).toHaveLength(1)
-    expect(grouped['ssm_documents']).toHaveLength(1)
-    expect(grouped['ic_documents']).toHaveLength(1)
+    expect(grouped['form9']).toHaveLength(1)
+    expect(grouped['ic']).toHaveLength(1)
+    expect(grouped['ssm_company_profile']).toHaveLength(1)
   })
 })
 

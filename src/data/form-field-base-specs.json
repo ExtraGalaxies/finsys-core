@@ -7168,7 +7168,7 @@
       "category": "13"
     },
     {
-      "name": "ssm",
+      "name": "form9",
       "displayName": "Form 9 / Section 17 / Form D",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
@@ -7180,7 +7180,7 @@
       "category": "13"
     },
     {
-      "name": "ssm_business_information",
+      "name": "ssm",
       "displayName": "SSM Company Profile",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",
@@ -7190,6 +7190,8 @@
         "ssmIncorporatedDate",
         "businessCommencementDate",
         "businessNature",
+        "ssmCompanyEntityType",
+        "ssmPaidUpCapital",
         "companyStatus",
         "shareholders",
         "directors",
@@ -7203,7 +7205,7 @@
       "category": "13"
     },
     {
-      "name": "ic_front",
+      "name": "ic",
       "displayName": "Identification Card (Front)",
       "type": "file",
       "enableIf": "{formOfDisclosure} contains 'consented'",

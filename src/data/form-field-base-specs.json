@@ -7223,21 +7223,6 @@
       "category": "13"
     },
     {
-      "name": "form9",
-      "displayName": "Form 9 / Section 17 / Form D",
-      "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
-      "ihs_column_names": [
-        "incorporatedDate",
-        "companyName",
-        "companyRegNo",
-        "ssmIncorporatedDate",
-        "ssmCompanyName",
-        "ssmCompanyRegNo"
-      ],
-      "category": "13"
-    },
-    {
       "name": "epf_statement_t1",
       "displayName": "Employees' Provident Fund (T-1)",
       "type": "file",

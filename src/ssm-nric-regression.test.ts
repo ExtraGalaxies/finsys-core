@@ -16,8 +16,8 @@
 
 /**
  * Regression tests for SYS-2085 / SYS-528:
- * - ssm_business_information file field with SSM IHS column names
- * - ic_front file field with NRIC IHS column names
+ * - ssm file field with SSM IHS column names
+ * - ic file field with NRIC IHS column names
  *
  * These tests guard against regressions in field specs that feed into
  * downstream form rendering, IHS extraction, and evaluation pipelines.
@@ -42,11 +42,11 @@ function findField(name: string): FieldData | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// SSM field: ssm_business_information
+// SSM field: ssm
 // ---------------------------------------------------------------------------
 
-describe("ssm_business_information field spec (SYS-2085)", () => {
-  const SSM_FIELD_NAME = "ssm_business_information";
+describe("ssm field spec (SYS-2085)", () => {
+  const SSM_FIELD_NAME = "ssm";
 
   const SSM_IHS_COLUMNS = [
     "ssmCompanyName",
@@ -54,6 +54,8 @@ describe("ssm_business_information field spec (SYS-2085)", () => {
     "ssmIncorporatedDate",
     "businessCommencementDate",
     "businessNature",
+    "ssmCompanyEntityType",
+    "ssmPaidUpCapital",
     "companyStatus",
     "shareholders",
     "directors",
@@ -140,11 +142,11 @@ describe("ssm_business_information field spec (SYS-2085)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// NRIC/IC field: ic_front
+// NRIC/IC field: ic
 // ---------------------------------------------------------------------------
 
-describe("ic_front field spec (SYS-2085)", () => {
-  const IC_FIELD_NAME = "ic_front";
+describe("ic field spec (SYS-2085)", () => {
+  const IC_FIELD_NAME = "ic";
 
   const IC_IHS_COLUMNS = [
     "icNumber",
@@ -238,6 +240,8 @@ describe("ic_front field spec (SYS-2085)", () => {
 describe("getBaseFieldNames includes new SSM/NRIC columns (SYS-2085)", () => {
   const NEW_COLUMNS = [
     "businessCommencementDate",
+    "ssmCompanyEntityType",
+    "ssmPaidUpCapital",
     "shareholders",
     "directors",
     "previousDirectors",
@@ -266,16 +270,16 @@ describe("getBaseFieldNames includes new SSM/NRIC columns (SYS-2085)", () => {
 });
 
 describe("getBaseFieldSpecMap includes new SSM/NRIC fields (SYS-2085)", () => {
-  it("contains ssm_business_information", () => {
+  it("contains ssm", () => {
     const map = getBaseFieldSpecMap();
-    expect(map.has("ssm_business_information")).toBe(true);
-    expect(map.get("ssm_business_information")!.type).toBe("file");
+    expect(map.has("ssm")).toBe(true);
+    expect(map.get("ssm")!.type).toBe("file");
   });
 
-  it("contains ic_front", () => {
+  it("contains ic", () => {
     const map = getBaseFieldSpecMap();
-    expect(map.has("ic_front")).toBe(true);
-    expect(map.get("ic_front")!.type).toBe("file");
+    expect(map.has("ic")).toBe(true);
+    expect(map.get("ic")!.type).toBe("file");
   });
 });
 
@@ -283,8 +287,8 @@ describe("getBaseFieldSpecs includes new SSM/NRIC fields (SYS-2085)", () => {
   it("contains both new file fields", () => {
     const fields = getBaseFieldSpecs();
     const names = fields.map((f) => f.name);
-    expect(names).toContain("ssm_business_information");
-    expect(names).toContain("ic_front");
+    expect(names).toContain("ssm");
+    expect(names).toContain("ic");
   });
 });
 
@@ -293,40 +297,40 @@ describe("getBaseFieldSpecs includes new SSM/NRIC fields (SYS-2085)", () => {
 // ---------------------------------------------------------------------------
 
 describe("SYS-2085 field spec integrity edge cases", () => {
-  it("ssm_business_information does not have empty ihs_column_names", () => {
-    const field = findField("ssm_business_information")!;
+  it("ssm does not have empty ihs_column_names", () => {
+    const field = findField("ssm")!;
     expect((field.ihs_column_names as string[]).length).toBeGreaterThan(0);
   });
 
-  it("ic_front does not have empty ihs_column_names", () => {
-    const field = findField("ic_front")!;
+  it("ic does not have empty ihs_column_names", () => {
+    const field = findField("ic")!;
     expect((field.ihs_column_names as string[]).length).toBeGreaterThan(0);
   });
 
-  it("all ihs_column_names in ssm_business_information are non-empty strings", () => {
-    const field = findField("ssm_business_information")!;
+  it("all ihs_column_names in ssm are non-empty strings", () => {
+    const field = findField("ssm")!;
     for (const col of field.ihs_column_names as string[]) {
       expect(typeof col).toBe("string");
       expect(col.length).toBeGreaterThan(0);
     }
   });
 
-  it("all ihs_column_names in ic_front are non-empty strings", () => {
-    const field = findField("ic_front")!;
+  it("all ihs_column_names in ic are non-empty strings", () => {
+    const field = findField("ic")!;
     for (const col of field.ihs_column_names as string[]) {
       expect(typeof col).toBe("string");
       expect(col.length).toBeGreaterThan(0);
     }
   });
 
-  it("no duplicate ihs_column_names in ssm_business_information", () => {
-    const field = findField("ssm_business_information")!;
+  it("no duplicate ihs_column_names in ssm", () => {
+    const field = findField("ssm")!;
     const cols = field.ihs_column_names as string[];
     expect(new Set(cols).size).toBe(cols.length);
   });
 
-  it("no duplicate ihs_column_names in ic_front", () => {
-    const field = findField("ic_front")!;
+  it("no duplicate ihs_column_names in ic", () => {
+    const field = findField("ic")!;
     const cols = field.ihs_column_names as string[];
     expect(new Set(cols).size).toBe(cols.length);
   });
@@ -348,13 +352,13 @@ describe("SYS-2085 field spec integrity edge cases", () => {
     expect(field.getFieldNames()).toEqual(cols);
   });
 
-  it("ssm_business_information field name is valid (no spaces, no special chars beyond underscore)", () => {
-    const field = findField("ssm_business_information")!;
+  it("ssm field name is valid (no spaces, no special chars beyond underscore)", () => {
+    const field = findField("ssm")!;
     expect(field.name).toMatch(/^[a-z_]+$/);
   });
 
-  it("ic_front field name is valid (no spaces, no special chars beyond underscore)", () => {
-    const field = findField("ic_front")!;
+  it("ic field name is valid (no spaces, no special chars beyond underscore)", () => {
+    const field = findField("ic")!;
     expect(field.name).toMatch(/^[a-z_]+$/);
   });
 });

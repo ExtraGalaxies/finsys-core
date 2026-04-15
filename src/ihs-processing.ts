@@ -109,6 +109,11 @@ const GROUP_DISPLAY_NAMES: Record<string, string> = {
   ic_documents: 'Identification Card',
 }
 
+/** Returns human-friendly display names for field groups. */
+export function getGroupDisplayNames(): Record<string, string> {
+  return GROUP_DISPLAY_NAMES
+}
+
 // ── File-field table building ──────────────────────────────────
 
 function isNumericField(fieldName: string): boolean {

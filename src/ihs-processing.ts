@@ -76,9 +76,9 @@ const FIELD_GROUP_PREFIXES: [string, string][] = [
   ['financials', 'financials'],
   ['epf_statement', 'epf_statements'],
   ['payslip_statement', 'payslip_statements'],
-  ['ssm', 'ssm_company_profile'],
+  ['ssm', 'ssm_documents'],
   ['form9', 'form9'],
-  ['ic', 'ic'],
+  ['ic', 'ic_documents'],
 ]
 
 export function groupFieldsByPattern(fields: FieldData[]): Record<string, FieldData[]> {
@@ -105,8 +105,8 @@ const GROUP_DISPLAY_NAMES: Record<string, string> = {
   epf_statements: 'EPF Statements',
   payslip_statements: 'Payslip Statements',
   form9: 'Form 9 / Section 17 / Form D',
-  ssm_company_profile: 'SSM Company Profile',
-  ic: 'Identification Card',
+  ssm_documents: 'SSM Company Information',
+  ic_documents: 'Identification Card',
 }
 
 // ── File-field table building ──────────────────────────────────

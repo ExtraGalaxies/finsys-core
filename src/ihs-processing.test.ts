@@ -84,8 +84,8 @@ describe('groupFieldsByPattern', () => {
     const grouped = groupFieldsByPattern(fields)
     expect(grouped['epf_statements']).toHaveLength(1)
     expect(grouped['form9']).toHaveLength(1)
-    expect(grouped['ic']).toHaveLength(1)
-    expect(grouped['ssm_company_profile']).toHaveLength(1)
+    expect(grouped['ic_documents']).toHaveLength(1)
+    expect(grouped['ssm_documents']).toHaveLength(1)
   })
 })
 

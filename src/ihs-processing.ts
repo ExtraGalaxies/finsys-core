@@ -248,6 +248,7 @@ function isFileOrFinancialColumn(fieldName: string, fileColumnSet: Set<string>):
   )
 }
 
+
 function inferValueFormat(fieldName: string, value: unknown): IhsValueFormat {
   const currencyFields = new Set([
     'totalFinancing',
@@ -289,9 +290,12 @@ export function processIhsDetails(ihsData: Record<string, unknown>): IhsFieldDet
   const specs = getBaseFieldSpecs()
   const fileColumnSet = new Set<string>()
   for (const field of specs) {
-    if (field.type === 'file' && field.ihs_column_names) {
-      for (const col of field.ihs_column_names) {
-        fileColumnSet.add(col)
+    if (field.type === 'file') {
+      if (field.name) fileColumnSet.add(field.name)
+      if (field.ihs_column_names) {
+        for (const col of field.ihs_column_names) {
+          fileColumnSet.add(col)
+        }
       }
     }
   }

@@ -3,7 +3,7 @@ import { resolveExtractionStatus, DocExtractionStatus } from './extraction-statu
 import { ExtractionFileType } from './extraction.js'
 
 describe('resolveExtractionStatus', () => {
-  describe('not_uploaded', () => {
+  describe('single-file types (ssm, form9, ic)', () => {
     it('returns not_uploaded when file path field is empty', () => {
       const ihsRecord = { ihsId: 1, fullName: 'Test' }
       const result = resolveExtractionStatus(ihsRecord)
@@ -17,9 +17,7 @@ describe('resolveExtractionStatus', () => {
       const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
       expect(ssm?.status).toBe(DocExtractionStatus.NotUploaded)
     })
-  })
 
-  describe('extracted (from IHS columns)', () => {
     it('returns extracted when extraction columns are populated', () => {
       const ihsRecord = {
         ihsId: 1,
@@ -48,20 +46,6 @@ describe('resolveExtractionStatus', () => {
       expect(ic?.populatedColumns).toContain('icName')
     })
 
-    it('returns extracted for time-series when any period has data', () => {
-      const ihsRecord = {
-        ihsId: 1,
-        bank_statement_t1: 'https://blob/bank1.pdf',
-        bankBalanceT1: 50000,
-        bankBalanceT2: null,
-      }
-      const result = resolveExtractionStatus(ihsRecord)
-      const bank = result.documents.find((d) => d.fileType === ExtractionFileType.BankStatement)
-      expect(bank?.status).toBe(DocExtractionStatus.Extracted)
-    })
-  })
-
-  describe('unknown (uploaded but no job records provided)', () => {
     it('returns unknown when file exists but no extraction columns populated and no jobs', () => {
       const ihsRecord = {
         ihsId: 1,
@@ -71,10 +55,8 @@ describe('resolveExtractionStatus', () => {
       const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
       expect(ssm?.status).toBe(DocExtractionStatus.Unknown)
     })
-  })
 
-  describe('uploaded (empty job records array)', () => {
-    it('returns uploaded (not unknown) when empty job records array is passed', () => {
+    it('returns uploaded when empty job records array is passed', () => {
       const ihsRecord = {
         ihsId: 1,
         ssm: 'https://blob/ssm.pdf',
@@ -82,6 +64,80 @@ describe('resolveExtractionStatus', () => {
       const result = resolveExtractionStatus(ihsRecord, [])
       const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
       expect(ssm?.status).toBe(DocExtractionStatus.Uploaded)
+    })
+  })
+
+  describe('multi-file types (bank statements, etc.)', () => {
+    it('produces one result per uploaded file', () => {
+      const ihsRecord = {
+        ihsId: 1,
+        bankStatements: JSON.stringify([
+          { path: 'https://blob/bank1.pdf', month: 1, year: 2026 },
+          { path: 'https://blob/bank2.pdf', month: 2, year: 2026 },
+          { path: 'https://blob/bank3.pdf', month: 3, year: 2026 },
+        ]),
+        bankNameT1: 'CIMB',
+        bankBalanceT1: 50000,
+        bankNameT2: 'Maybank',
+        bankBalanceT2: 30000,
+        // T3 not extracted
+      }
+      const result = resolveExtractionStatus(ihsRecord)
+      const bankDocs = result.documents.filter(
+        (d) => d.fileType === ExtractionFileType.BankStatement
+      )
+      expect(bankDocs).toHaveLength(3)
+      expect(bankDocs[0].status).toBe(DocExtractionStatus.Extracted)
+      expect(bankDocs[0].populatedColumns).toContain('bankNameT1')
+      expect(bankDocs[1].status).toBe(DocExtractionStatus.Extracted)
+      expect(bankDocs[1].populatedColumns).toContain('bankNameT2')
+      expect(bankDocs[2].status).toBe(DocExtractionStatus.Unknown)
+    })
+
+    it('detects uploaded bank statements via aggregate key', () => {
+      const ihsRecord = {
+        ihsId: 1,
+        bankStatements: '[{"path":"https://blob/bank1.pdf","month":1,"year":2026}]',
+      }
+      const result = resolveExtractionStatus(ihsRecord)
+      const bankDocs = result.documents.filter(
+        (d) => d.fileType === ExtractionFileType.BankStatement
+      )
+      expect(bankDocs).toHaveLength(1)
+      expect(bankDocs[0].status).toBe(DocExtractionStatus.Unknown)
+    })
+
+    it('returns correct status per-file with job records', () => {
+      const ihsRecord = {
+        ihsId: 1,
+        bankStatements: JSON.stringify([
+          { path: 'https://blob/bank1.pdf' },
+          { path: 'https://blob/bank2.pdf' },
+        ]),
+        bankNameT1: 'CIMB',
+        bankBalanceT1: 50000,
+      }
+      const jobs = [
+        { fileType: 'bankStatements', status: 'succeeded' },
+        { fileType: 'bankStatements', status: 'processing' },
+      ]
+      const result = resolveExtractionStatus(ihsRecord, jobs)
+      const bankDocs = result.documents.filter(
+        (d) => d.fileType === ExtractionFileType.BankStatement
+      )
+      expect(bankDocs).toHaveLength(2)
+      expect(bankDocs[0].status).toBe(DocExtractionStatus.Extracted)
+      expect(bankDocs[1].status).toBe(DocExtractionStatus.Processing)
+    })
+
+    it('returns single not_uploaded when no bank statements exist', () => {
+      const ihsRecord = { ihsId: 1 }
+      const result = resolveExtractionStatus(ihsRecord)
+      const bankDocs = result.documents.filter(
+        (d) => d.fileType === ExtractionFileType.BankStatement
+      )
+      expect(bankDocs).toHaveLength(1)
+      expect(bankDocs[0].status).toBe(DocExtractionStatus.NotUploaded)
     })
   })
 
@@ -165,11 +221,10 @@ describe('resolveExtractionStatus', () => {
         ic: '[{"path":"https://blob/ic.pdf"}]',
       }
       const result = resolveExtractionStatus(ihsRecord)
-      expect(result.summary.total).toBe(Object.values(ExtractionFileType).length)
       expect(result.summary.extracted).toBeGreaterThanOrEqual(1)
     })
 
-    it('summary counts include notUploaded and sum to total', () => {
+    it('summary counts sum to total', () => {
       const ihsRecord = {
         ihsId: 1,
         ssm: 'https://blob/ssm.pdf',
@@ -177,7 +232,6 @@ describe('resolveExtractionStatus', () => {
       }
       const result = resolveExtractionStatus(ihsRecord)
       const { total, extracted, failed, pending, notUploaded } = result.summary
-      expect(total).toBe(Object.values(ExtractionFileType).length)
       expect(extracted + failed + pending + notUploaded).toBe(total)
     })
   })

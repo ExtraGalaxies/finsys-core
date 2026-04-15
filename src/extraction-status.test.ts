@@ -51,11 +51,33 @@ describe('resolveExtractionStatus', () => {
     it('returns extracted for time-series when any period has data', () => {
       const ihsRecord = {
         ihsId: 1,
-        bank_statement_t1: 'https://blob/bank1.pdf',
+        bankStatements: '[{"path":"https://blob/bank1.pdf","month":1,"year":2026}]',
         bankBalanceT1: 50000,
         bankBalanceT2: null,
       }
       const result = resolveExtractionStatus(ihsRecord)
+      const bank = result.documents.find((d) => d.fileType === ExtractionFileType.BankStatement)
+      expect(bank?.status).toBe(DocExtractionStatus.Extracted)
+    })
+
+    it('detects uploaded bank statements via aggregate key', () => {
+      const ihsRecord = {
+        ihsId: 1,
+        bankStatements: '[{"path":"https://blob/bank1.pdf","month":1,"year":2026}]',
+      }
+      const result = resolveExtractionStatus(ihsRecord)
+      const bank = result.documents.find((d) => d.fileType === ExtractionFileType.BankStatement)
+      // Uploaded but no extraction columns populated and no job records → Unknown
+      expect(bank?.status).toBe(DocExtractionStatus.Unknown)
+    })
+
+    it('detects uploaded bank statements with job records', () => {
+      const ihsRecord = {
+        ihsId: 1,
+        bankStatements: '[{"path":"https://blob/bank1.pdf"}]',
+      }
+      const jobs = [{ fileType: 'bankStatements', status: 'succeeded' }]
+      const result = resolveExtractionStatus(ihsRecord, jobs)
       const bank = result.documents.find((d) => d.fileType === ExtractionFileType.BankStatement)
       expect(bank?.status).toBe(DocExtractionStatus.Extracted)
     })

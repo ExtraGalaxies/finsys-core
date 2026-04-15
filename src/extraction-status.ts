@@ -76,7 +76,17 @@ function isPopulated(value: unknown): boolean {
   return true
 }
 
-function hasUploadedFile(fields: FieldData[], ihsRecord: Record<string, unknown>): boolean {
+function hasUploadedFile(
+  fields: FieldData[],
+  ihsRecord: Record<string, unknown>,
+  aggregateKey: string
+): boolean {
+  // Check the aggregate key first (e.g. ihsRecord['bankStatements']).
+  // IHS records store multi-file uploads as a JSON array under the ExtractionFileType value,
+  // not under individual field spec names like 'bank_statement_t1'.
+  if (isPopulated(ihsRecord[aggregateKey])) return true
+
+  // Fall back to individual field names for single-file types (ssm, form9, ic)
   return fields.some((field) => {
     if (!field.name) return false
     return isPopulated(ihsRecord[field.name])
@@ -121,7 +131,7 @@ export function resolveExtractionStatus(
     const fields = _grouped[groupName] ?? []
     const displayName = _groupDisplayNames[groupName] ?? fileType
 
-    const uploaded = fields.length > 0 && hasUploadedFile(fields, ihsRecord)
+    const uploaded = fields.length > 0 && hasUploadedFile(fields, ihsRecord, fileType)
     const allColumns = getExtractionColumns(fields)
     const populated = getPopulatedColumns(allColumns, ihsRecord)
     const hasExtractedData = populated.length > 0

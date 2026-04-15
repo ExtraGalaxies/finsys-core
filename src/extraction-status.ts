@@ -61,6 +61,13 @@ const FILE_TYPE_TO_GROUP: Record<ExtractionFileType, string> = {
   [ExtractionFileType.Ic]: 'ic_documents',
 }
 
+// ── Static field metadata (derived once at module load) ────
+
+const _specs = getBaseFieldSpecs()
+const _fileFields = _specs.filter((f) => f.type === 'file' && f.ihs_column_names?.length)
+const _grouped = groupFieldsByPattern(_fileFields)
+const _groupDisplayNames = getGroupDisplayNames()
+
 // ── Helpers ────────────────────────────────────────────────
 
 function isPopulated(value: unknown): boolean {
@@ -107,17 +114,12 @@ export function resolveExtractionStatus(
   ihsRecord: Record<string, unknown>,
   jobRecords?: ExtractionJobRecord[]
 ): ExtractionStatusResult {
-  const specs = getBaseFieldSpecs()
-  const fileFields = specs.filter((f) => f.type === 'file' && f.ihs_column_names?.length)
-  const grouped = groupFieldsByPattern(fileFields)
-  const groupDisplayNames = getGroupDisplayNames()
-
   const documents: DocExtractionResult[] = []
 
   for (const fileType of Object.values(ExtractionFileType)) {
     const groupName = FILE_TYPE_TO_GROUP[fileType]
-    const fields = grouped[groupName] ?? []
-    const displayName = groupDisplayNames[groupName] ?? fileType
+    const fields = _grouped[groupName] ?? []
+    const displayName = _groupDisplayNames[groupName] ?? fileType
 
     const uploaded = fields.length > 0 && hasUploadedFile(fields, ihsRecord)
     const allColumns = getExtractionColumns(fields)
@@ -173,20 +175,16 @@ export function resolveExtractionStatus(
     })
   }
 
-  const summary = {
-    total: documents.length,
-    extracted: documents.filter((d) => d.status === DocExtractionStatus.Extracted).length,
-    failed: documents.filter((d) => d.status === DocExtractionStatus.Failed).length,
-    pending: documents.filter((d) =>
-      [
-        DocExtractionStatus.Queued,
-        DocExtractionStatus.Processing,
-        DocExtractionStatus.Uploaded,
-        DocExtractionStatus.Unknown,
-      ].includes(d.status)
-    ).length,
-    notUploaded: documents.filter((d) => d.status === DocExtractionStatus.NotUploaded).length,
-  }
+  const summary = documents.reduce(
+    (acc, d) => {
+      if (d.status === DocExtractionStatus.Extracted) acc.extracted++
+      else if (d.status === DocExtractionStatus.Failed) acc.failed++
+      else if (d.status === DocExtractionStatus.NotUploaded) acc.notUploaded++
+      else acc.pending++
+      return acc
+    },
+    { total: documents.length, extracted: 0, failed: 0, pending: 0, notUploaded: 0 }
+  )
 
   return { documents, summary }
 }

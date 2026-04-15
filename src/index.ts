@@ -83,6 +83,7 @@ export {
 export {
   getDisplayNames,
   getDisplayName,
+  getGroupDisplayNames,
   extractTimePeriods,
   groupColumnsByTimePeriod,
   groupFieldsByPattern,
@@ -98,6 +99,18 @@ export { Role } from './roles.js'
 
 // Extraction
 export { ExtractionJobStatus, ExtractionFileType } from './extraction.js'
+
+// Extraction status
+export {
+  resolveExtractionStatus,
+  DocExtractionStatus,
+} from './extraction-status.js'
+
+export type {
+  ExtractionJobRecord,
+  DocExtractionResult,
+  ExtractionStatusResult,
+} from './extraction-status.js'
 
 export type {
   IhsFieldDetail,

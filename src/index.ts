@@ -100,6 +100,17 @@ export { Role } from './roles.js'
 // Extraction
 export { ExtractionJobStatus, ExtractionFileType } from './extraction.js'
 
+// IHS status (canonical enum, mirrors finsys-api)
+export {
+  IhsStatus,
+  IHS_VALID_STATUSES,
+  IHS_TERMINAL_STATUSES,
+  IHS_FAILURE_STATUSES,
+  isValidIhsStatus,
+  isTerminalIhsStatus,
+  isFailureIhsStatus,
+} from './ihs-status.js'
+
 // Extraction status
 export {
   resolveExtractionStatus,

@@ -94,10 +94,13 @@ describe("ssm field spec (SYS-2085)", () => {
     expect(actual).toEqual(expected);
   });
 
-  it("has enableIf condition referencing formOfDisclosure", () => {
+  it("does not declare an enableIf clause (gating is template-owned per SYS-2402)", () => {
+    // Base field specs describe WHAT a field is, not WHEN it appears. Document
+    // gating (e.g. on a consent field) is the responsibility of each loan
+    // template that composes this field; the base catalog cannot guarantee any
+    // particular consent field exists in every template that uses it.
     const field = findField(SSM_FIELD_NAME)!;
-    expect(field.enableIf).toBeDefined();
-    expect(field.enableIf).toContain("formOfDisclosure");
+    expect(field.enableIf).toBeUndefined();
   });
 
   it("parses to a FileFormField instance", () => {
@@ -187,10 +190,11 @@ describe("ic field spec (SYS-2085)", () => {
     expect(actual).toEqual(expected);
   });
 
-  it("has enableIf condition referencing formOfDisclosure", () => {
+  it("does not declare an enableIf clause (gating is template-owned per SYS-2402)", () => {
+    // See note on the equivalent SSM test above. Base field specs are
+    // composition-neutral; templates own their own enableIf overrides.
     const field = findField(IC_FIELD_NAME)!;
-    expect(field.enableIf).toBeDefined();
-    expect(field.enableIf).toContain("formOfDisclosure");
+    expect(field.enableIf).toBeUndefined();
   });
 
   it("parses to a FileFormField instance", () => {

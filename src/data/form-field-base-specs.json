@@ -6675,7 +6675,6 @@
       "name": "bank_statement_t1",
       "displayName": "Bank Statement (Month T-1)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "accountHolderNameT1",
         "statementDateT1",
@@ -6692,7 +6691,6 @@
       "name": "bank_statement_t2",
       "displayName": "Bank Statement (Month T-2)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "accountHolderNameT2",
         "statementDateT2",
@@ -6709,7 +6707,6 @@
       "name": "bank_statement_t3",
       "displayName": "Bank Statement (Month T-3)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "accountHolderNameT3",
         "statementDateT3",
@@ -6726,7 +6723,6 @@
       "name": "bank_statement_t4",
       "displayName": "Bank Statement (Month T-4)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "accountHolderNameT4",
         "statementDateT4",
@@ -6743,7 +6739,6 @@
       "name": "bank_statement_t5",
       "displayName": "Bank Statement (Month T-5)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "accountHolderNameT5",
         "statementDateT5",
@@ -6760,7 +6755,6 @@
       "name": "bank_statement_t6",
       "displayName": "Bank Statement (Month T-6)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "accountHolderNameT6",
         "statementDateT6",
@@ -6777,7 +6771,6 @@
       "name": "financials",
       "displayName": "Audited Financial Statement",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "shareCapital",
         "totalEquityT1",
@@ -6799,7 +6792,6 @@
       "name": "financials_fincap_t1",
       "displayName": "Audited Financial Statement (T-1) (FinCap)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "nonCurrentAssetsSubsidiaryCompaniesT1",
         "nonCurrentAssetsAssociatedCompaniesT1",
@@ -7044,7 +7036,6 @@
       "name": "financials_fincap_t2",
       "displayName": "Audited Financial Statement (T-2) (FinCap)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "nonCurrentAssetsSubsidiaryCompaniesT3",
         "nonCurrentAssetsAssociatedCompaniesT3",
@@ -7171,7 +7162,6 @@
       "name": "form9",
       "displayName": "Form 9 / Section 17 / Form D",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "incorporatedDate",
         "companyName",
@@ -7183,7 +7173,6 @@
       "name": "ssm",
       "displayName": "SSM Company Profile",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "ssmCompanyName",
         "ssmCompanyRegNo",
@@ -7208,7 +7197,6 @@
       "name": "ic",
       "displayName": "Identification Card (Front)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "icNumber",
         "icName",
@@ -7226,7 +7214,6 @@
       "name": "epf_statement_t1",
       "displayName": "Employees' Provident Fund (T-1)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "epfAccountHolderNameT1",
         "epfAccountHolderAddressT1",
@@ -7244,7 +7231,6 @@
       "name": "epf_statement_t2",
       "displayName": "Employees' Provident Fund (T-2)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "epfAccountHolderNameT2",
         "epfAccountHolderAddressT2",
@@ -7262,7 +7248,6 @@
       "name": "payslip_statement_t1",
       "displayName": "Payslip Statement (Month T-1)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "payslipEmployerNameT1",
         "payslipEmployeeNameT1",
@@ -7286,7 +7271,6 @@
       "name": "payslip_statement_t2",
       "displayName": "Payslip Statement (Month T-2)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "payslipEmployerNameT2",
         "payslipEmployeeNameT2",
@@ -7310,7 +7294,6 @@
       "name": "payslip_statement_t3",
       "displayName": "Payslip Statement (Month T-3)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "payslipEmployerNameT3",
         "payslipEmployeeNameT3",
@@ -7334,7 +7317,6 @@
       "name": "payslip_statement_t4",
       "displayName": "Payslip Statement (Month T-4)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "payslipEmployerNameT4",
         "payslipEmployeeNameT4",
@@ -7358,7 +7340,6 @@
       "name": "payslip_statement_t5",
       "displayName": "Payslip Statement (Month T-5)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "payslipEmployerNameT5",
         "payslipEmployeeNameT5",
@@ -7382,7 +7363,6 @@
       "name": "payslip_statement_t6",
       "displayName": "Payslip Statement (Month T-6)",
       "type": "file",
-      "enableIf": "{formOfDisclosure} contains 'consented'",
       "ihs_column_names": [
         "payslipEmployerNameT6",
         "payslipEmployeeNameT6",

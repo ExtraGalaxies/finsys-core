@@ -12,13 +12,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   alt-data sources (telco carriers, payment networks, etc.) ingest raw
   partner-specific payloads and produce canonical credit signals. Adds:
   - `SourceAdapter` interface, `AdapterError` class, `AdapterErrorReason`
-    discriminator — the runtime contract every adapter implements.
+    discriminator — the runtime contract every adapter implements. The
+    `extract(raw)` method returns `Promise<AdapterExtraction[]>` —
+    multi-instance per applicant is first-class (6 bank statements, 12
+    monthly payment snapshots, 3 mobile lines per applicant all
+    supported by a single adapter call). Multi-VENDOR cases use
+    separate adapter registrations (each vendor is its own
+    `SourceAdapter`).
+  - `AdapterExtraction` shape with `instanceKey` — within-adapter
+    instance discriminator; empty string for single-instance adapters.
   - `AdapterCategory` union (`telco-carrier`, `payment-network`) +
     `CategorySchema` with `categorySchemaOf`, `categoryFieldsOf`,
     `allCategories`, `categoryForField` lookup helpers — the publication
     boundary between generic categories declared here and vendor-specific
     implementations that live in private extension directories on the
     host app.
+  - `AggregationOp` union (`sum | mean | latest | max | count`) +
+    `applyAggregation` helper — operator set the eval engine uses to
+    collapse multi-instance canonical-field values to scoring inputs.
+    Published from finsys-core so policy fixtures across all consumers
+    reference the same surface.
   - `AdapterManifest` TypeScript type + matching JSON-schema at
     `schema/adapter-manifest.schema.json` — the declarative descriptor
     every adapter ships alongside its implementation.

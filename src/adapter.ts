@@ -52,12 +52,12 @@ import type { AdapterCategory, CanonicalFieldName } from "./adapter-categories.j
 export type RawPayload = unknown;
 
 /**
- * Canonical field values produced by an adapter. Keys MUST be drawn
- * from the field set declared by the adapter's category (see
- * `categoryFieldsOf` in adapter-categories.ts). Values are typed
- * narrowly per field by the category schema; this loose TS type is
- * runtime-validated against the category schema by the host app at
- * registration time, AND at every extract() call result.
+ * Canonical field values produced by an adapter for ONE instance.
+ * Keys MUST be drawn from the field set declared by the adapter's
+ * category (see `categoryFieldsOf` in adapter-categories.ts). Values
+ * are typed narrowly per field by the category schema; this loose TS
+ * type is runtime-validated against the category schema by the host
+ * app at registration time, AND at every extract() call result.
  *
  * The framework rejects:
  *   - Field names not declared by the adapter's category
@@ -65,10 +65,46 @@ export type RawPayload = unknown;
  *
  * Adapters MAY return a partial set — not every category field has to
  * be produced on every applicant (telco fields may be absent if the
- * borrower didn't opt in, for instance). Missing fields score as zero
- * in the eval engine; that's a feature, not a defect.
+ * borrower didn't opt in, for instance). Missing fields are aggregated
+ * as zero / null in the eval engine; that's a feature, not a defect.
  */
 export type CanonicalFieldValues = Partial<Record<CanonicalFieldName, CanonicalFieldValue>>;
+
+/**
+ * One extraction "instance" — the framework supports multi-instance
+ * per applicant per adapter. Examples:
+ *   - 6 bank statements from one bank (one adapter call, 6 instances)
+ *   - 12 monthly payment-summary snapshots from one payment network
+ *   - 3 mobile lines from one telco carrier
+ *
+ * For multi-VENDOR cases (3 different telco carriers), use separate
+ * adapter registrations — each vendor is its own SourceAdapter with
+ * its own id. For multi-INSTANCE-from-one-vendor (6 statements from
+ * one bank), the adapter returns multiple AdapterExtraction entries
+ * in a single extract() call.
+ *
+ * `instanceKey` is the within-adapter discriminator: free-form, but
+ * MUST be stable across re-extractions so the storage layer can
+ * replace-in-place rather than accumulating duplicates. Conventions:
+ *   - For periodic data: encode the period (`'2026-Q1'`, `'2026-03'`)
+ *   - For per-line data: encode the line id (`'msisdn-60123456789'`,
+ *     `'card-last4-1234'`)
+ *   - For natively single-instance adapters: use the empty string `''`
+ *     (the framework treats `''` as "this adapter only ever has one
+ *     instance per applicant").
+ */
+export interface AdapterExtraction {
+  /**
+   * Stable within-adapter instance discriminator. Empty string for
+   * adapters that only ever produce one instance per applicant.
+   */
+  readonly instanceKey: string;
+
+  /**
+   * The canonical field values for this instance.
+   */
+  readonly values: CanonicalFieldValues;
+}
 
 /**
  * Allowed value shapes for canonical fields. Per-field type narrowing
@@ -126,7 +162,15 @@ export interface SourceAdapter {
   /**
    * Transform a raw payload into canonical field values. The host app
    * calls this once per applicant per adapter, passes the result to
-   * the persistence layer, and writes provenance.
+   * the persistence layer (one row per AdapterExtraction in the
+   * canonical sibling table), and writes provenance.
+   *
+   * The return is ALWAYS a list, even when the adapter produces only
+   * one instance per applicant — return a one-element array in that
+   * case with `instanceKey: ''`. The list shape exists to support
+   * inherently multi-instance sources (6 bank statements, 12 monthly
+   * payment snapshots, 3 mobile lines) without forcing adapters to
+   * batch their own calls.
    *
    * Throw `AdapterError` for any failure path — network timeout,
    * schema mismatch, partner API rate limit, malformed payload. The
@@ -139,7 +183,7 @@ export interface SourceAdapter {
    * them to logs separately. Stick to AdapterError for the
    * expected-failure path.
    */
-  extract(raw: RawPayload): Promise<CanonicalFieldValues>;
+  extract(raw: RawPayload): Promise<AdapterExtraction[]>;
 }
 
 /**

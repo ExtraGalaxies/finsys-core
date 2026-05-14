@@ -141,11 +141,15 @@ export type {
   RawPayload,
   CanonicalFieldValue,
   CanonicalFieldValues,
+  AdapterExtraction,
   SourceAdapter,
   AdapterErrorReason,
 } from './adapter.js'
 
 export { AdapterError } from './adapter.js'
+
+export type { AggregationOp, InstanceValue } from './adapter-aggregation.js'
+export { applyAggregation, ALL_AGGREGATION_OPS } from './adapter-aggregation.js'
 
 export type {
   AdapterCategory,

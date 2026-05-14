@@ -85,8 +85,8 @@
             "type": { "const": "typescript" },
             "entryPoint": {
               "type": "string",
-              "pattern": "^[^/].*\\.(ts|js|mjs|cjs)$",
-              "description": "Relative path (from the adapter directory) to the module exporting the extract function."
+              "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))[^/].*\\.(ts|js|mjs|cjs)$",
+              "description": "Relative path (from the adapter directory) to the module exporting the extract function. Must not start with '/' and must not contain '..' path segments — the host will reject manifests that try to escape the adapter directory. The host also runs a defence-in-depth path-traversal check at load time."
             }
           }
         }

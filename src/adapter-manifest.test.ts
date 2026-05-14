@@ -147,6 +147,29 @@ describe("Adapter manifest JSON-schema validation", () => {
     }
   });
 
+  it("rejects entryPoint with .. path segments (traversal)", () => {
+    const m = validTypescript();
+    if (m.implementation.type === "typescript") {
+      const cases = [
+        "../etc/passwd.js",
+        "../../something.ts",
+        "subdir/../../escape.js",
+        "foo/../../bar.mjs",
+        "..",
+        "..foo.js", // ok — `..foo` is a normal segment; this MUST pass
+      ];
+      const expectValid = (ep: string) => ep === "..foo.js";
+      for (const ep of cases) {
+        const candidate = {
+          ...m,
+          implementation: { ...m.implementation, entryPoint: ep },
+        };
+        const got = validate(candidate);
+        expect(got, `entryPoint=${JSON.stringify(ep)}`).toBe(expectValid(ep));
+      }
+    }
+  });
+
   it("rejects unknown top-level properties", () => {
     const m = validDeclarative() as unknown as Record<string, unknown>;
     m.unexpectedField = "boom";

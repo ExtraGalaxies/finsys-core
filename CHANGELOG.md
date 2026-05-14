@@ -4,6 +4,44 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] — 2026-05-14
+
+### Added
+
+- **Source Adapter framework contract.** New types + helpers describing how
+  alt-data sources (telco carriers, payment networks, etc.) ingest raw
+  partner-specific payloads and produce canonical credit signals. Adds:
+  - `SourceAdapter` interface, `AdapterError` class, `AdapterErrorReason`
+    discriminator — the runtime contract every adapter implements.
+  - `AdapterCategory` union (`telco-carrier`, `payment-network`) +
+    `CategorySchema` with `categorySchemaOf`, `categoryFieldsOf`,
+    `allCategories`, `categoryForField` lookup helpers — the publication
+    boundary between generic categories declared here and vendor-specific
+    implementations that live in private extension directories on the
+    host app.
+  - `AdapterManifest` TypeScript type + matching JSON-schema at
+    `schema/adapter-manifest.schema.json` — the declarative descriptor
+    every adapter ships alongside its implementation.
+  - Per-category canonical field definitions in
+    `data/adapter-categories.json` — the vendor-agnostic field set every
+    adapter of a given category produces.
+
+  No implementations, no host wiring — this release ships the contract
+  only. Storage layer (SYS-2441), plugin discovery (SYS-2444), reference
+  adapters (SYS-2442, SYS-2443) follow as separate PRs that depend on this
+  contract. See SYS-2440 + Confluence FinSim / Source Adapter Framework.
+
+### Why
+
+The CRA roadmap (multiple alt-data partnerships) needs an extension
+mechanism that decouples vendor adapters from the open-source core.
+Vendor names cannot appear in this package; categories must be
+vendor-agnostic and the field schemas they publish must be the same
+shape whether the underlying source is one carrier or another. Adapter
+implementations are deployment artifacts loaded into the host app at
+runtime, NOT new npm packages — keeps the rollout chore confined to
+core itself.
+
 ## [2.5.0] — 2026-05-06
 
 ### Changed

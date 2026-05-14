@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0.0",
+  "categories": [
+    {
+      "id": "telco-carrier",
+      "displayName": "Telco Carrier",
+      "description": "Mobile carrier bill-payment + account-history signals. Any telco vendor (Celcom, Maxis, DiGi, U-Mobile, etc.) implementing this category produces the same canonical field set.",
+      "canonicalTable": "ihs_alt_data_telco",
+      "fields": [
+        {
+          "name": "telcoOnTimePaymentRatio24m",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Fraction of bills paid on time over the last 24 months. Strongest single telco predictor; ≥0.95 is the clean-history signal."
+        },
+        {
+          "name": "telcoTenureMonths",
+          "type": "number",
+          "unit": "months",
+          "range": [0, 600],
+          "description": "Account age. ≥48 months is the thin-file uplift trigger."
+        },
+        {
+          "name": "telcoSuspensionsCount24m",
+          "type": "number",
+          "unit": "count",
+          "range": [0, 100],
+          "description": "Non-payment-driven account suspensions in the last 24 months. ≥3 is a strong distress signal."
+        },
+        {
+          "name": "telcoLateDays24m",
+          "type": "number",
+          "unit": "days",
+          "range": [0, 800],
+          "description": "Cumulative days late across all bills in the trailing 24-month window."
+        },
+        {
+          "name": "telcoHandsetFinancingActive",
+          "type": "boolean",
+          "description": "Has an active handset-EMI account currently. Proxy for financing capacity already extended."
+        },
+        {
+          "name": "telcoHandsetFinancingDelinquent",
+          "type": "boolean",
+          "description": "Recent handset-EMI delinquency in the last 24 months. Distress signal even with otherwise clean bill payment."
+        },
+        {
+          "name": "telcoArpuMyr",
+          "type": "number",
+          "unit": "MYR",
+          "range": [0, 10000],
+          "description": "Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy."
+        }
+      ]
+    },
+    {
+      "id": "payment-network",
+      "displayName": "Payment Network",
+      "description": "Merchant-side payment-flow signals from POS / gateway networks (iPay88, GHL, etc.). Captures actual transaction velocity rather than self-reported revenue.",
+      "canonicalTable": "ihs_alt_data_payments",
+      "fields": [
+        {
+          "name": "paymentsMonthlyVolumeMyrT3",
+          "type": "number",
+          "unit": "MYR",
+          "range": [0, 100000000],
+          "description": "Mean monthly inbound transaction volume (RM) over the trailing 3 months."
+        },
+        {
+          "name": "paymentsMonthlyVolumeMyrT12",
+          "type": "number",
+          "unit": "MYR",
+          "range": [0, 100000000],
+          "description": "Mean monthly inbound transaction volume (RM) over the trailing 12 months. Pair with T3 for trend direction."
+        },
+        {
+          "name": "paymentsArpuStability12m",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Coefficient-of-variation inverse over monthly ARPU in the trailing 12 months. Closer to 1 = steadier; closer to 0 = volatile."
+        },
+        {
+          "name": "paymentsDisputeRate12m",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Fraction of transactions disputed or refunded in the trailing 12 months."
+        },
+        {
+          "name": "paymentsCustomerConcentrationTop5Pct",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Revenue share from the top-5 recurring customers. Above ~0.7 is concentration risk."
+        },
+        {
+          "name": "paymentsActiveTenureMonths",
+          "type": "number",
+          "unit": "months",
+          "range": [0, 600],
+          "description": "Months since first transaction on the payment network. Establishment / continuity proxy."
+        }
+      ]
+    }
+  ]
+}

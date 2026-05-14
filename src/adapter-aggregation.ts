@@ -66,9 +66,13 @@ export const ALL_AGGREGATION_OPS: ReadonlyArray<AggregationOp> = [
 export interface InstanceValue {
   readonly value: CanonicalFieldValue;
   /**
-   * The instance's observed-at timestamp (ISO string). Only the
-   * `latest` operator inspects this; others ignore. Pass an empty
-   * string if the operator in question doesn't need it.
+   * The instance's observed-at timestamp. MUST be an ISO-8601 UTC
+   * string (`Z`-suffixed, e.g. `2026-04-01T00:00:00Z`). The `latest`
+   * operator compares these lexicographically, which is only
+   * monotonic with wall-time when all timestamps share the UTC
+   * offset — mixed offsets (e.g. `+08:00` vs `Z`) can yield
+   * incorrect ordering. Other operators ignore this field; pass an
+   * empty string if the operator in question doesn't need it.
    */
   readonly observedAt: string;
 }
@@ -114,9 +118,11 @@ export function applyAggregation(
     return pick.value;
   }
 
-  // Numeric operators below this point. Filter to numeric values
-  // only; everything else is silently dropped (a string canonical
-  // field can't be summed). If nothing numeric remains, return null.
+  // Numeric operators below this point. Filter to numeric values.
+  // Null/undefined values are silently dropped (consistent with the
+  // contract's "no usable data → null" semantics). Non-null,
+  // non-numeric values throw — the operator was misused at policy-
+  // authoring time and silent zero-coercion would mask the bug.
   const nums: number[] = [];
   for (const i of instances) {
     if (typeof i.value === "number" && Number.isFinite(i.value)) {

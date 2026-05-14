@@ -104,8 +104,13 @@ export function applyAggregation(
   }
 
   if (op === "count") {
-    return instances.filter((i) => i.value !== null && i.value !== undefined)
-      .length;
+    // Single-pass count of non-null/undefined values; avoids the
+    // intermediate array filter().length would allocate.
+    return instances.reduce(
+      (acc, i) =>
+        i.value !== null && i.value !== undefined ? acc + 1 : acc,
+      0,
+    );
   }
 
   if (op === "latest") {
@@ -142,6 +147,9 @@ export function applyAggregation(
     case "mean":
       return nums.reduce((a, b) => a + b, 0) / nums.length;
     case "max":
-      return Math.max(...nums);
+      // `Math.max(...nums)` spreads through the call stack — V8 throws
+      // RangeError once `nums.length` crosses the engine's argument
+      // limit (~65k on current V8). Reduce form is safe for any size.
+      return nums.reduce((a, b) => (a > b ? a : b));
   }
 }

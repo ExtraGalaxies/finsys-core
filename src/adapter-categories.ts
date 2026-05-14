@@ -141,6 +141,25 @@ export function allCategories(): ReadonlyArray<CategorySchema> {
 }
 
 /**
+ * Pre-computed reverse map: canonical field name → category id.
+ * Built once at module load — O(1) lookup at call time. Hosts +
+ * eval engines call categoryForField on every field read from a
+ * canonical row, so this lookup is on the hot path for report
+ * rendering and policy evaluation.
+ *
+ * Frozen so consumers can't accidentally mutate the shared map.
+ */
+const fieldToCategory: ReadonlyMap<string, AdapterCategory> = (() => {
+  const m = new Map<string, AdapterCategory>();
+  for (const cat of data.categories) {
+    for (const f of cat.fields) {
+      m.set(f.name, cat.id as AdapterCategory);
+    }
+  }
+  return m;
+})();
+
+/**
  * Reverse lookup: which category declares a given canonical field?
  * Returns null if the field name isn't declared by any category in
  * this version of finsys-core. Useful when the host app is reading
@@ -148,10 +167,5 @@ export function allCategories(): ReadonlyArray<CategorySchema> {
  * producing category for rendering.
  */
 export function categoryForField(field: CanonicalFieldName): AdapterCategory | null {
-  for (const cat of data.categories) {
-    if (cat.fields.some((f) => f.name === field)) {
-      return cat.id as AdapterCategory;
-    }
-  }
-  return null;
+  return fieldToCategory.get(field) ?? null;
 }

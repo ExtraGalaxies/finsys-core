@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://finhero.asia/schemas/finsys-core/adapter-manifest.schema.json",
+  "title": "Adapter Manifest",
+  "description": "Declarative descriptor every source adapter ships alongside its implementation. Validated by the host app's discovery mechanism at boot. Mirrors the AdapterManifest TypeScript type in adapter-manifest.ts; KEEP IN SYNC.",
+  "type": "object",
+  "required": ["manifestVersion", "id", "displayName", "category", "version", "produces", "implementation"],
+  "additionalProperties": false,
+  "properties": {
+    "manifestVersion": {
+      "const": 1,
+      "description": "Manifest format version. The schema file's $id should track this."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*-v[0-9]+$",
+      "minLength": 3,
+      "maxLength": 100,
+      "description": "Globally unique adapter id. Convention: <vendor>-<category-short>-v<n>"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Human-readable label for operator UIs."
+    },
+    "category": {
+      "type": "string",
+      "enum": ["telco-carrier", "payment-network", "bank-statement"],
+      "description": "Generic category this adapter implements. MUST be one declared by finsys-core's category catalogue."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonic version per adapter. Bump on any change to payload shape, field-mapping logic, or output semantics."
+    },
+    "produces": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Subset of the category's canonical field names that this adapter promises to produce. Validated against categoryFieldsOf(category) at registration."
+    },
+    "implementation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "fieldMap"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "declarative" },
+            "fieldMap": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["source", "canonical"],
+                "additionalProperties": false,
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "pattern": "^\\$",
+                    "description": "JSONPath into the raw payload, starting with $."
+                  },
+                  "canonical": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Canonical field name (must be in the category's field set)."
+                  },
+                  "transform": {
+                    "type": "string",
+                    "enum": ["identity", "pct_to_ratio01", "to_boolean", "to_integer"],
+                    "default": "identity"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "entryPoint"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "typescript" },
+            "entryPoint": {
+              "type": "string",
+              "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))[^/].*\\.(ts|js|mjs|cjs)$",
+              "description": "Relative path (from the adapter directory) to the module exporting the extract function. Must not start with '/' and must not contain '..' path segments — the host will reject manifests that try to escape the adapter directory. The host also runs a defence-in-depth path-traversal check at load time."
+            }
+          }
+        }
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Optional free-form notes; not consumed by the runtime."
+    }
+  }
+}

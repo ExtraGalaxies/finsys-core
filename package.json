@@ -1,6 +1,6 @@
 {
   "name": "@finsys/core",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "Convert unified form configurations into Zod schemas, React Hook Form defaults, and SurveyJS JSON",
   "repository": {
     "type": "git",
@@ -23,6 +23,11 @@
     "./schema": {
       "import": "./dist/schema/unified-form.schema.json",
       "require": "./dist/schema/unified-form.schema.json"
+    },
+    "./schema/adapter-manifest": {
+      "types": "./dist/schema/adapter-manifest.schema.json",
+      "import": "./dist/schema/adapter-manifest.schema.json",
+      "require": "./dist/schema/adapter-manifest.schema.json"
     }
   },
   "files": [

@@ -129,3 +129,45 @@ export type {
   FileFieldTableData,
   FileFieldTableItem,
 } from './ihs-types.js'
+
+// ── Source Adapter framework (SYS-2440) ──────────────────────────────
+// The contract for ingesting unstructured / partner-specific data
+// sources and producing canonical credit signals. Vendor-specific
+// adapter implementations live OUTSIDE this open-source package, in
+// private extension directories loaded by the host app at runtime.
+// finsys-core publishes the contract + the category catalogue.
+
+export type {
+  RawPayload,
+  CanonicalFieldValue,
+  CanonicalFieldValues,
+  AdapterExtraction,
+  SourceAdapter,
+  AdapterErrorReason,
+} from './adapter.js'
+
+export { AdapterError } from './adapter.js'
+
+export type { AggregationOp, InstanceValue } from './adapter-aggregation.js'
+export { applyAggregation, ALL_AGGREGATION_OPS } from './adapter-aggregation.js'
+
+export type {
+  AdapterCategory,
+  CanonicalFieldName,
+  CanonicalFieldSpec,
+  CategorySchema,
+} from './adapter-categories.js'
+
+export {
+  categorySchemaOf,
+  categoryFieldsOf,
+  allCategories,
+  categoryForField,
+} from './adapter-categories.js'
+
+export type {
+  AdapterManifest,
+  DeclarativeImplementation,
+  TypescriptImplementation,
+  FieldMapEntry,
+} from './adapter-manifest.js'

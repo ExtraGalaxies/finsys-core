@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import Ajv from "ajv";
+import { Ajv } from "ajv";
 import schema from "./schema/adapter-manifest.schema.json" with { type: "json" };
 import type { AdapterManifest } from "./adapter-manifest.js";
 

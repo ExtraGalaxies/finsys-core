@@ -23,6 +23,10 @@
     "./schema": {
       "import": "./dist/schema/unified-form.schema.json",
       "require": "./dist/schema/unified-form.schema.json"
+    },
+    "./schema/adapter-manifest": {
+      "import": "./dist/schema/adapter-manifest.schema.json",
+      "require": "./dist/schema/adapter-manifest.schema.json"
     }
   },
   "files": [

@@ -103,6 +103,54 @@
           "description": "Months since first transaction on the payment network. Establishment / continuity proxy."
         }
       ]
+    },
+    {
+      "id": "bank-statement",
+      "displayName": "Bank Statement",
+      "description": "Per-month bank-statement extractions. Naturally multi-instance: one statement per (account, month). Eval components typically aggregate across instances (sum closing balance, max debit, count of bounced transactions).",
+      "canonicalTable": "ihs_alt_data_bank_statements",
+      "fields": [
+        {
+          "name": "bankStatementMonth",
+          "type": "string",
+          "description": "Statement period in YYYY-MM format. Used as the instance_key discriminator + by the `latest` aggregation operator."
+        },
+        {
+          "name": "bankClosingBalanceMyr",
+          "type": "number",
+          "unit": "MYR",
+          "range": [-100000000, 100000000],
+          "description": "Closing balance for the statement period."
+        },
+        {
+          "name": "bankTotalCreditsMyr",
+          "type": "number",
+          "unit": "MYR",
+          "range": [0, 100000000],
+          "description": "Sum of credit transactions during the period."
+        },
+        {
+          "name": "bankTotalDebitsMyr",
+          "type": "number",
+          "unit": "MYR",
+          "range": [0, 100000000],
+          "description": "Sum of debit transactions during the period."
+        },
+        {
+          "name": "bankLargestSingleCreditMyr",
+          "type": "number",
+          "unit": "MYR",
+          "range": [0, 100000000],
+          "description": "Largest single inbound transaction in the period. Useful for spotting one-off injections vs steady revenue."
+        },
+        {
+          "name": "bankBouncedTransactionsCount",
+          "type": "number",
+          "unit": "count",
+          "range": [0, 1000],
+          "description": "Bounced / returned transactions in the period. Distress signal at counts > 0."
+        }
+      ]
     }
   ]
 }

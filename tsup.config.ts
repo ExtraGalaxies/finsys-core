@@ -11,6 +11,7 @@ export default defineConfig({
   onSuccess: [
     'mkdir -p dist/schema dist/data',
     'cp src/schema/unified-form.schema.json dist/schema/unified-form.schema.json',
+    'cp src/schema/adapter-manifest.schema.json dist/schema/adapter-manifest.schema.json',
     'cp -r src/data/* dist/data/',
   ].join(' && '),
 });

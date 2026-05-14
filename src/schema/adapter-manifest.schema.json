@@ -26,7 +26,7 @@
     },
     "category": {
       "type": "string",
-      "enum": ["telco-carrier", "payment-network"],
+      "enum": ["telco-carrier", "payment-network", "bank-statement"],
       "description": "Generic category this adapter implements. MUST be one declared by finsys-core's category catalogue."
     },
     "version": {

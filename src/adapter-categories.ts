@@ -66,7 +66,7 @@ const data = categoriesData as RawCategoryData;
  * Vendor adapters can ship freely (deployment-time, no core change)
  * but the CATEGORY they implement must exist here.
  */
-export type AdapterCategory = "telco-carrier" | "payment-network";
+export type AdapterCategory = "telco-carrier" | "payment-network" | "bank-statement";
 
 /**
  * Per-field metadata for a canonical field declared by a category.

@@ -1,8 +1,20 @@
 # @finsys/core
 
-Convert unified form configurations into Zod schemas, React Hook Form defaults, and SurveyJS JSON.
+The shared contract layer for the FinSys ecosystem. Two distinct surfaces:
 
-## Features
+1. **Unified form configuration** — generate Zod schemas, React Hook Form defaults, and SurveyJS JSON from a single JSON form spec.
+2. **Source Adapter Framework** — vendor-agnostic contract for ingesting alternative-data sources (telco, payments, bank statements, etc.) into FinSys's canonical credit-signal vocabulary.
+
+## Building a Source Adapter?
+
+Partner-facing integration documentation lives in [`docs/`](./docs/):
+
+- 📖 [**Adapter Authoring Guide**](./docs/adapter-authoring.md) — start here. Walks from "what's an adapter" through "how do I package and deliver one."
+- 📋 [Category Reference](./docs/category-reference.md) — canonical field set per category.
+- 📋 [Manifest Reference](./docs/manifest-reference.md) — every field in `manifest.json`.
+- 🔒 [Security Model](./docs/security-model.md) — sandboxing, secrets, network posture.
+
+## Features (form-config surface)
 
 - **Unified Form Configuration** — Single JSON format for defining form fields and multi-step page layouts
 - **React Hook Form Generator** — Generate Zod schemas, default values, and step configurations from a form config

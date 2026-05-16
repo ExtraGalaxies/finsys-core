@@ -121,8 +121,27 @@ export type CanonicalFieldValue = number | string | boolean | null;
  * host app's discovery mechanism (SYS-2444); the host app constructs
  * the adapter from its manifest + extract module, then registers it
  * against the registry by `id`.
+ *
+ * Type parameter `E` lets adapter authors declare the partner-specific
+ * extension shape on ApplicantIdentity. v2.7.0+ — defaults to `{}` so
+ * v2.6.0 adapters (which didn't have fetch and never read identity)
+ * stay assignment-compatible. A telco adapter that needs an MSISDN
+ * declares it once at the interface level:
+ *
+ *     interface CelcomExt { msisdn: string }
+ *     const celcomTelco: SourceAdapter<CelcomExt> = {
+ *       async fetch(identity) {
+ *         identity.msisdn  // string  (typed via E)
+ *         identity.ic      // string  (core)
+ *       },
+ *       ...
+ *     }
+ *
+ * The generic flows from interface → method, so implementations
+ * don't have to redeclare it on fetch.
  */
-export interface SourceAdapter {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SourceAdapter<E extends Record<string, unknown> = {}> {
   /**
    * Globally unique id for this adapter instance. By convention:
    * `<vendor>-<category-short>-v<n>` — e.g. `celcom-telco-v1`. Vendor
@@ -219,40 +238,72 @@ export interface SourceAdapter {
    * Strict additive — v2.6.0 read-only adapters that omit fetch()
    * keep working without change.
    *
+   * @example WRONG — recurses into the adapter method:
+   * ```ts
+   * const adapter: SourceAdapter = {
+   *   async fetch(identity) {
+   *     const res = await fetch(`/api/lookup/${identity.ic}`)  // infinite recursion
+   *     return res.json()
+   *   },
+   *   ...
+   * }
+   * ```
+   *
+   * @example RIGHT — explicit globalThis access:
+   * ```ts
+   * const adapter: SourceAdapter = {
+   *   async fetch(identity) {
+   *     const res = await globalThis.fetch(`/api/lookup/${identity.ic}`)
+   *     return res.json()
+   *   },
+   *   ...
+   * }
+   * ```
+   *
    * Implementation note: this method is named `fetch` which shadows
-   * the global `fetch()` inside the method body. Do NOT write a naked
-   * `fetch(url, ...)` call inside your `fetch()` implementation — it
-   * will recurse into the adapter method instead of hitting the
-   * global. Either bind to a local (`const httpFetch = globalThis.fetch`)
-   * or use `globalThis.fetch(url, ...)` explicitly. The Node 18+
-   * runtime + the @finsys/adapter-toolkit fake-* reference adapters
-   * use the explicit-global pattern.
+   * the global `fetch()` inside the method body — see the @example
+   * blocks above. The fake-* reference adapters in
+   * @finsys/adapter-toolkit use the explicit-globalThis pattern.
+   * Partner repos can also pin this with the lint rule
+   * `no-restricted-syntax`: `CallExpression[callee.name='fetch']`
+   * inside any method literal named `fetch`.
    */
-  fetch?<E extends Record<string, unknown> = Record<string, unknown>>(
-    identity: ApplicantIdentity<E>,
-  ): Promise<RawPayload>;
+  fetch?(identity: ApplicantIdentity<E>): Promise<RawPayload>;
 }
 
 /**
  * Identity payload the host hands to fetch() so adapters can call
  * partner APIs with the right per-applicant identifiers.
  *
- * Core fields are always present (the host populates them from the
- * IHS row). Partner-specific fields land under the open string-keyed
- * extension — adapters declare what they need via the manifest's
- * `requiredIdentityFields`, and the host validates per-applicant
- * before invoking fetch().
+ * The shape is an intersection of three pieces:
+ *   - Core fields (`ihsId`, `ic`, `fullName`) — always present, the
+ *     host populates them from the IHS row before invoking fetch().
+ *   - Partner extensions (`E`) — typed declaratively per adapter.
+ *     Defaults to `{}` (no extra typed fields) for adapters that only
+ *     need the core trio.
+ *   - Open index signature (`[k: string]: unknown`) — catches any
+ *     ad-hoc field a host might pass through; reads land on `unknown`
+ *     so partners must validate before use.
  *
- * Type parameter `E` lets adapter authors narrow the partner-specific
- * shape:
+ * Narrowing example (the ergonomics win this type is designed to deliver):
  *
- *     interface CelcomExtensions { msisdn: string; accountRef: string }
- *     const identity: ApplicantIdentity<CelcomExtensions> = ...
- *     identity.msisdn  // string, not unknown
+ *     interface CelcomExt { msisdn: string; accountRef: string }
  *
- * The default `Record<string, unknown>` preserves the open shape so
- * partners who don't bother narrowing still get the v0 behavior
- * (dot access lands on `unknown`, just like before).
+ *     // declare adapter with the extension shape baked in:
+ *     const celcom: SourceAdapter<CelcomExt> = {
+ *       async fetch(identity) {
+ *         identity.ic        // string
+ *         identity.msisdn    // string  (NOT unknown — narrowed by E)
+ *         identity.foo       // unknown (falls through to index signature)
+ *         // ...
+ *       },
+ *       // ...
+ *     }
+ *
+ * The intersection puts narrowed members at the root, so partners get
+ * `identity.msisdn` (not `identity.extensions?.msisdn`) — matching the
+ * pattern the host actually uses (it spreads partner-required fields
+ * onto the root identity object, no nested 'extensions' envelope).
  *
  * Examples:
  *   - Telco adapter declares `requiredIdentityFields: ['msisdn']`.
@@ -265,26 +316,21 @@ export interface SourceAdapter {
  *     ['businessRegistrationNumber']`. Adapter looks it up + calls.
  *   - An adapter that only needs the IHS id declares no extra
  *     fields; identity has just the core trio.
- *
- * Implementation note on the open index signature: reading a key not
- * declared on the type returns `unknown`, so partners adding ad-hoc
- * fields (`identity.someThing` without narrowing) must validate the
- * value before passing it to an external call.
  */
-export interface ApplicantIdentity<
-  E extends Record<string, unknown> = Record<string, unknown>,
-> {
+export type ApplicantIdentity<
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  E extends Record<string, unknown> = {},
+> = {
   /** Internal IHS id — always present. */
   readonly ihsId: number;
   /** Malaysian IC (or analogous national id). May be empty for non-MY scope. */
   readonly ic: string;
   /** Applicant full legal name. */
   readonly fullName: string;
-  /** Partner-specific identifiers — typed by the optional `E` parameter; falls back to `unknown` for ad-hoc reads. */
-  readonly extensions?: E;
+} & E & {
   /** Catch-all for ad-hoc reads (typed `unknown` — validate before use). */
   readonly [key: string]: unknown;
-}
+};
 
 /**
  * Typed error thrown by adapters on expected failure paths. The

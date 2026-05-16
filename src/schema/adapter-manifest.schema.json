@@ -94,9 +94,14 @@
     },
     "requiredIdentityFields": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100,
+        "not": { "enum": ["ihsId", "ic", "fullName"] }
+      },
       "uniqueItems": true,
-      "description": "v2.7.0 — partner-specific identity field names required by fetch(). Host validates per-applicant before invoking fetch() and skips the adapter when missing. Omit (or empty) for adapters that don't implement fetch()."
+      "description": "v2.7.0 — partner-specific identity field names required by fetch(). Host validates per-applicant before invoking fetch() and skips the adapter when missing. Omit (or empty) for adapters that don't implement fetch(). Must NOT include core fields ('ihsId', 'ic', 'fullName') — those are always populated, and declaring 'ic' as required would cause the host to skip every non-MY applicant since 'ic' can legitimately be empty."
     },
     "notes": {
       "type": "string",

@@ -218,8 +218,19 @@ export interface SourceAdapter {
    *
    * Strict additive — v2.6.0 read-only adapters that omit fetch()
    * keep working without change.
+   *
+   * Implementation note: this method is named `fetch` which shadows
+   * the global `fetch()` inside the method body. Do NOT write a naked
+   * `fetch(url, ...)` call inside your `fetch()` implementation — it
+   * will recurse into the adapter method instead of hitting the
+   * global. Either bind to a local (`const httpFetch = globalThis.fetch`)
+   * or use `globalThis.fetch(url, ...)` explicitly. The Node 18+
+   * runtime + the @finsys/adapter-toolkit fake-* reference adapters
+   * use the explicit-global pattern.
    */
-  fetch?(identity: ApplicantIdentity): Promise<RawPayload>;
+  fetch?<E extends Record<string, unknown> = Record<string, unknown>>(
+    identity: ApplicantIdentity<E>,
+  ): Promise<RawPayload>;
 }
 
 /**
@@ -232,22 +243,46 @@ export interface SourceAdapter {
  * `requiredIdentityFields`, and the host validates per-applicant
  * before invoking fetch().
  *
+ * Type parameter `E` lets adapter authors narrow the partner-specific
+ * shape:
+ *
+ *     interface CelcomExtensions { msisdn: string; accountRef: string }
+ *     const identity: ApplicantIdentity<CelcomExtensions> = ...
+ *     identity.msisdn  // string, not unknown
+ *
+ * The default `Record<string, unknown>` preserves the open shape so
+ * partners who don't bother narrowing still get the v0 behavior
+ * (dot access lands on `unknown`, just like before).
+ *
  * Examples:
- *   - Telco adapter declares `requiredIdentityFields: ['ic', 'msisdn']`.
- *     Identity arrives with both populated; adapter calls partner API.
+ *   - Telco adapter declares `requiredIdentityFields: ['msisdn']`.
+ *     Identity arrives with msisdn populated; adapter calls partner API.
+ *     (Don't include 'ihsId', 'ic', or 'fullName' in
+ *     `requiredIdentityFields` — those are core fields. `ic` in
+ *     particular can be legitimately empty for non-MY scope, so
+ *     declaring it required would cause the host to skip every applicant.)
  *   - Payment-network adapter declares `requiredIdentityFields:
  *     ['businessRegistrationNumber']`. Adapter looks it up + calls.
  *   - An adapter that only needs the IHS id declares no extra
  *     fields; identity has just the core trio.
+ *
+ * Implementation note on the open index signature: reading a key not
+ * declared on the type returns `unknown`, so partners adding ad-hoc
+ * fields (`identity.someThing` without narrowing) must validate the
+ * value before passing it to an external call.
  */
-export interface ApplicantIdentity {
+export interface ApplicantIdentity<
+  E extends Record<string, unknown> = Record<string, unknown>,
+> {
   /** Internal IHS id — always present. */
   readonly ihsId: number;
   /** Malaysian IC (or analogous national id). May be empty for non-MY scope. */
   readonly ic: string;
   /** Applicant full legal name. */
   readonly fullName: string;
-  /** Partner-specific identifiers — populated when the adapter declares them required. */
+  /** Partner-specific identifiers — typed by the optional `E` parameter; falls back to `unknown` for ad-hoc reads. */
+  readonly extensions?: E;
+  /** Catch-all for ad-hoc reads (typed `unknown` — validate before use). */
   readonly [key: string]: unknown;
 }
 

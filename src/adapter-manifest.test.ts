@@ -177,10 +177,10 @@ describe("Adapter manifest JSON-schema validation", () => {
   });
 
   // SYS-2460 — fetch contract additions to the manifest schema.
-  it("accepts a manifest with requiredIdentityFields", () => {
+  it("accepts a manifest with partner-specific requiredIdentityFields", () => {
     const m = {
       ...validTypescript(),
-      requiredIdentityFields: ["ic", "msisdn"],
+      requiredIdentityFields: ["msisdn", "accountRef"],
     };
     expect(validate(m)).toBe(true);
   });
@@ -205,7 +205,7 @@ describe("Adapter manifest JSON-schema validation", () => {
   it("rejects requiredIdentityFields with duplicate entries", () => {
     const m = {
       ...validTypescript(),
-      requiredIdentityFields: ["ic", "ic"],
+      requiredIdentityFields: ["msisdn", "msisdn"],
     };
     expect(validate(m)).toBe(false);
   });
@@ -213,7 +213,33 @@ describe("Adapter manifest JSON-schema validation", () => {
   it("rejects requiredIdentityFields with non-string entries", () => {
     const m = {
       ...validTypescript(),
-      requiredIdentityFields: ["ic", 42 as unknown as string],
+      requiredIdentityFields: ["msisdn", 42 as unknown as string],
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  // The next three tests cover constraints added in the second pass on
+  // the SYS-2460 schema after the frontier code review flagged the
+  // core-field + length-bound gaps.
+  it("rejects requiredIdentityFields naming a core field ('ic')", () => {
+    // 'ic' can legitimately be empty for non-MY scope per ApplicantIdentity's
+    // doc contract. If a partner declared it required the host would
+    // skip every applicant — silent footgun. Schema rejects upfront.
+    const m = { ...validTypescript(), requiredIdentityFields: ["ic"] };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects requiredIdentityFields naming any of the three core fields", () => {
+    for (const core of ["ihsId", "ic", "fullName"]) {
+      const m = { ...validTypescript(), requiredIdentityFields: [core, "msisdn"] };
+      expect(validate(m)).toBe(false);
+    }
+  });
+
+  it("rejects requiredIdentityFields with an item longer than 100 chars", () => {
+    const m = {
+      ...validTypescript(),
+      requiredIdentityFields: ["x".repeat(101)],
     };
     expect(validate(m)).toBe(false);
   });

@@ -92,6 +92,12 @@
         }
       ]
     },
+    "requiredIdentityFields": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "v2.7.0 — partner-specific identity field names required by fetch(). Host validates per-applicant before invoking fetch() and skips the adapter when missing. Omit (or empty) for adapters that don't implement fetch()."
+    },
     "notes": {
       "type": "string",
       "maxLength": 2000,

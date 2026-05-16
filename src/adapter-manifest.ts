@@ -94,6 +94,29 @@ export interface AdapterManifest {
   readonly implementation: DeclarativeImplementation | TypescriptImplementation;
 
   /**
+   * v2.7.0 — partner-specific identity fields the adapter needs from
+   * the IHS row when fetch() is invoked. Strings name the keys that
+   * MUST be present on the ApplicantIdentity payload — the host
+   * validates per-applicant before calling fetch() and skips the
+   * adapter (with a logged warning) if any required field is missing.
+   *
+   * Examples:
+   *   - Telco adapter: `["ic", "msisdn"]`
+   *   - Payment-network adapter: `["businessRegistrationNumber"]`
+   *   - Bank-statement-from-OCR adapter: `[]` (no fetch — extract
+   *     reads from FinXtract output staged elsewhere)
+   *
+   * Omit entirely (or use empty array) for adapters that don't
+   * implement fetch() — the host then passes an empty raw payload
+   * to extract() and the adapter is responsible for sourcing data
+   * via some other path (FinXtract output, webhook ingest, etc.).
+   *
+   * Core identity fields (`ihsId`, `ic`, `fullName`) are always
+   * present — declaring them is harmless but unnecessary.
+   */
+  readonly requiredIdentityFields?: ReadonlyArray<string>;
+
+  /**
    * Optional free-form notes — useful for partner-side documentation
    * (where to find the adapter's source, who owns it, what version of
    * the partner API it expects). Not consumed by the runtime.

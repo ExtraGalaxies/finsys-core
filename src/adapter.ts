@@ -184,6 +184,65 @@ export interface SourceAdapter {
    * expected-failure path.
    */
   extract(raw: RawPayload): Promise<AdapterExtraction[]>;
+
+  /**
+   * Optional partner-data fetch path. v2.7.0+ — adapters that own their
+   * partner-API integration declare this method; the host invokes it
+   * before extract() and passes the result through. Adapters that
+   * receive raw payload from elsewhere (e.g., bank-statement adapters
+   * reading FinXtract OCR output, or webhook-driven push ingest) omit
+   * fetch() entirely and the host treats raw as already-staged.
+   *
+   * The host builds `identity` from the IHS row (ic, fullName, etc.)
+   * plus any partner-specific fields the adapter declared via the
+   * manifest's `requiredIdentityFields`. If a required field is missing
+   * from the IHS, the host logs + skips this adapter for the run
+   * (no extract call, no canonical rows).
+   *
+   * Implementations should:
+   *   - Throw AdapterError('partner_transient') on retryable network
+   *     failures (timeouts, 5xx, rate limits).
+   *   - Throw AdapterError('partner_permanent') on non-retryable
+   *     failures (404 — applicant unknown to partner, 410, etc.).
+   *   - Throw AdapterError('payload_invalid') if the partner returned
+   *     a malformed response.
+   *   - Return a RawPayload that extract() will translate. The same
+   *     adapter's extract() is the only consumer; the host doesn't
+   *     inspect the shape.
+   *
+   * Strict additive — v2.6.0 read-only adapters that omit fetch()
+   * keep working without change.
+   */
+  fetch?(identity: ApplicantIdentity): Promise<RawPayload>;
+}
+
+/**
+ * Identity payload the host hands to fetch() so adapters can call
+ * partner APIs with the right per-applicant identifiers.
+ *
+ * Core fields are always present (the host populates them from the
+ * IHS row). Partner-specific fields land under the open string-keyed
+ * extension — adapters declare what they need via the manifest's
+ * `requiredIdentityFields`, and the host validates per-applicant
+ * before invoking fetch().
+ *
+ * Examples:
+ *   - Telco adapter declares `requiredIdentityFields: ['ic', 'msisdn']`.
+ *     Identity arrives with both populated; adapter calls partner API.
+ *   - Payment-network adapter declares `requiredIdentityFields:
+ *     ['businessRegistrationNumber']`. Adapter looks it up + calls.
+ *   - An adapter that only needs the IHS id declares no extra
+ *     fields; identity has just the core trio.
+ */
+export interface ApplicantIdentity {
+  /** Internal IHS id — always present. */
+  readonly ihsId: number;
+  /** Malaysian IC (or analogous national id). May be empty for non-MY scope. */
+  readonly ic: string;
+  /** Applicant full legal name. */
+  readonly fullName: string;
+  /** Partner-specific identifiers — populated when the adapter declares them required. */
+  readonly [key: string]: unknown;
 }
 
 /**

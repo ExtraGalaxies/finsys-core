@@ -144,6 +144,7 @@ export type {
   AdapterExtraction,
   SourceAdapter,
   AdapterErrorReason,
+  ApplicantIdentity,
 } from './adapter.js'
 
 export { AdapterError } from './adapter.js'

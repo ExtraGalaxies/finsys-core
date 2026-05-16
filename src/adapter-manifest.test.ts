@@ -175,4 +175,46 @@ describe("Adapter manifest JSON-schema validation", () => {
     m.unexpectedField = "boom";
     expect(validate(m)).toBe(false);
   });
+
+  // SYS-2460 — fetch contract additions to the manifest schema.
+  it("accepts a manifest with requiredIdentityFields", () => {
+    const m = {
+      ...validTypescript(),
+      requiredIdentityFields: ["ic", "msisdn"],
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("accepts an adapter with no requiredIdentityFields (omitted)", () => {
+    // Manifests that don't declare fetch() omit the field entirely;
+    // the host treats fetch() as absent and passes empty raw to extract.
+    const m = validTypescript();
+    expect(validate(m)).toBe(true);
+  });
+
+  it("accepts an empty requiredIdentityFields array", () => {
+    const m = { ...validTypescript(), requiredIdentityFields: [] };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("rejects requiredIdentityFields containing an empty string", () => {
+    const m = { ...validTypescript(), requiredIdentityFields: [""] };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects requiredIdentityFields with duplicate entries", () => {
+    const m = {
+      ...validTypescript(),
+      requiredIdentityFields: ["ic", "ic"],
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects requiredIdentityFields with non-string entries", () => {
+    const m = {
+      ...validTypescript(),
+      requiredIdentityFields: ["ic", 42 as unknown as string],
+    };
+    expect(validate(m)).toBe(false);
+  });
 });

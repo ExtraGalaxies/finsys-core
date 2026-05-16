@@ -200,17 +200,18 @@ export interface SourceAdapter {
    * (no extract call, no canonical rows).
    *
    * Implementations should:
-   *   - Throw AdapterError('source_unavailable') on retryable network
-   *     failures (timeouts, 5xx, rate limits) AND non-retryable upstream
-   *     failures (404 applicant unknown, 410 gone). The host records the
-   *     run as failed/source_unavailable; runner retry policy is the
-   *     host's call, not the adapter's.
+   *   - Throw AdapterError('source_unavailable') ONLY on transient,
+   *     retryable upstream failures (timeouts, 5xx, rate limits). The
+   *     host runner is free to retry these; misclassifying a permanent
+   *     failure here will burn retry budget for nothing.
+   *   - Throw AdapterError('not_applicable') on permanent
+   *     no-relationship signals — 404 ("applicant unknown to partner"),
+   *     410, an explicit "not a subscriber" response. Communicates
+   *     'we asked and they said no' so the host records the run + skips
+   *     retry. This is the correct reason for most non-retryable
+   *     upstream conditions.
    *   - Throw AdapterError('payload_invalid') if the partner returned
-   *     a malformed response.
-   *   - Throw AdapterError('not_applicable') if the partner explicitly
-   *     reports no relationship with this applicant (e.g. "not a
-   *     subscriber") — distinguishes 'we asked and they said no' from
-   *     'we couldn't ask' for downstream attribution.
+   *     a malformed response (200 with garbage body, schema violation).
    *   - Return a RawPayload that extract() will translate. The same
    *     adapter's extract() is the only consumer; the host doesn't
    *     inspect the shape.

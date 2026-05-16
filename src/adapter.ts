@@ -121,8 +121,27 @@ export type CanonicalFieldValue = number | string | boolean | null;
  * host app's discovery mechanism (SYS-2444); the host app constructs
  * the adapter from its manifest + extract module, then registers it
  * against the registry by `id`.
+ *
+ * Type parameter `E` lets adapter authors declare the partner-specific
+ * extension shape on ApplicantIdentity. v2.7.0+ — defaults to `{}` so
+ * v2.6.0 adapters (which didn't have fetch and never read identity)
+ * stay assignment-compatible. A telco adapter that needs an MSISDN
+ * declares it once at the interface level:
+ *
+ *     interface CelcomExt { msisdn: string }
+ *     const celcomTelco: SourceAdapter<CelcomExt> = {
+ *       async fetch(identity) {
+ *         identity.msisdn  // string  (typed via E)
+ *         identity.ic      // string  (core)
+ *       },
+ *       ...
+ *     }
+ *
+ * The generic flows from interface → method, so implementations
+ * don't have to redeclare it on fetch.
  */
-export interface SourceAdapter {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SourceAdapter<E extends Record<string, unknown> = {}> {
   /**
    * Globally unique id for this adapter instance. By convention:
    * `<vendor>-<category-short>-v<n>` — e.g. `celcom-telco-v1`. Vendor
@@ -184,7 +203,134 @@ export interface SourceAdapter {
    * expected-failure path.
    */
   extract(raw: RawPayload): Promise<AdapterExtraction[]>;
+
+  /**
+   * Optional partner-data fetch path. v2.7.0+ — adapters that own their
+   * partner-API integration declare this method; the host invokes it
+   * before extract() and passes the result through. Adapters that
+   * receive raw payload from elsewhere (e.g., bank-statement adapters
+   * reading FinXtract OCR output, or webhook-driven push ingest) omit
+   * fetch() entirely and the host treats raw as already-staged.
+   *
+   * The host builds `identity` from the IHS row (ic, fullName, etc.)
+   * plus any partner-specific fields the adapter declared via the
+   * manifest's `requiredIdentityFields`. If a required field is missing
+   * from the IHS, the host logs + skips this adapter for the run
+   * (no extract call, no canonical rows).
+   *
+   * Implementations should:
+   *   - Throw AdapterError('source_unavailable') ONLY on transient,
+   *     retryable upstream failures (timeouts, 5xx, rate limits). The
+   *     host runner is free to retry these; misclassifying a permanent
+   *     failure here will burn retry budget for nothing.
+   *   - Throw AdapterError('not_applicable') on permanent
+   *     no-relationship signals — 404 ("applicant unknown to partner"),
+   *     410, an explicit "not a subscriber" response. Communicates
+   *     'we asked and they said no' so the host records the run + skips
+   *     retry. This is the correct reason for most non-retryable
+   *     upstream conditions.
+   *   - Throw AdapterError('payload_invalid') if the partner returned
+   *     a malformed response (200 with garbage body, schema violation).
+   *   - Return a RawPayload that extract() will translate. The same
+   *     adapter's extract() is the only consumer; the host doesn't
+   *     inspect the shape.
+   *
+   * Strict additive — v2.6.0 read-only adapters that omit fetch()
+   * keep working without change.
+   *
+   * @example WRONG — recurses into the adapter method:
+   * ```ts
+   * const adapter: SourceAdapter = {
+   *   async fetch(identity) {
+   *     const res = await fetch(`/api/lookup/${identity.ic}`)  // infinite recursion
+   *     return res.json()
+   *   },
+   *   ...
+   * }
+   * ```
+   *
+   * @example RIGHT — explicit globalThis access:
+   * ```ts
+   * const adapter: SourceAdapter = {
+   *   async fetch(identity) {
+   *     const res = await globalThis.fetch(`/api/lookup/${identity.ic}`)
+   *     return res.json()
+   *   },
+   *   ...
+   * }
+   * ```
+   *
+   * Implementation note: this method is named `fetch` which shadows
+   * the global `fetch()` inside the method body — see the @example
+   * blocks above. The fake-* reference adapters in
+   * @finsys/adapter-toolkit use the explicit-globalThis pattern.
+   * Partner repos can also pin this with the lint rule
+   * `no-restricted-syntax`: `CallExpression[callee.name='fetch']`
+   * inside any method literal named `fetch`.
+   */
+  fetch?(identity: ApplicantIdentity<E>): Promise<RawPayload>;
 }
+
+/**
+ * Identity payload the host hands to fetch() so adapters can call
+ * partner APIs with the right per-applicant identifiers.
+ *
+ * The shape is an intersection of three pieces:
+ *   - Core fields (`ihsId`, `ic`, `fullName`) — always present, the
+ *     host populates them from the IHS row before invoking fetch().
+ *   - Partner extensions (`E`) — typed declaratively per adapter.
+ *     Defaults to `{}` (no extra typed fields) for adapters that only
+ *     need the core trio.
+ *   - Open index signature (`[k: string]: unknown`) — catches any
+ *     ad-hoc field a host might pass through; reads land on `unknown`
+ *     so partners must validate before use.
+ *
+ * Narrowing example (the ergonomics win this type is designed to deliver):
+ *
+ *     interface CelcomExt { msisdn: string; accountRef: string }
+ *
+ *     // declare adapter with the extension shape baked in:
+ *     const celcom: SourceAdapter<CelcomExt> = {
+ *       async fetch(identity) {
+ *         identity.ic        // string
+ *         identity.msisdn    // string  (NOT unknown — narrowed by E)
+ *         identity.foo       // unknown (falls through to index signature)
+ *         // ...
+ *       },
+ *       // ...
+ *     }
+ *
+ * The intersection puts narrowed members at the root, so partners get
+ * `identity.msisdn` (not `identity.extensions?.msisdn`) — matching the
+ * pattern the host actually uses (it spreads partner-required fields
+ * onto the root identity object, no nested 'extensions' envelope).
+ *
+ * Examples:
+ *   - Telco adapter declares `requiredIdentityFields: ['msisdn']`.
+ *     Identity arrives with msisdn populated; adapter calls partner API.
+ *     (Don't include 'ihsId', 'ic', or 'fullName' in
+ *     `requiredIdentityFields` — those are core fields. `ic` in
+ *     particular can be legitimately empty for non-MY scope, so
+ *     declaring it required would cause the host to skip every applicant.)
+ *   - Payment-network adapter declares `requiredIdentityFields:
+ *     ['businessRegistrationNumber']`. Adapter looks it up + calls.
+ *   - An adapter that only needs the IHS id declares no extra
+ *     fields; identity has just the core trio.
+ */
+export type ApplicantIdentity<
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  E extends Record<string, unknown> = {},
+> = {
+  /** Internal IHS id — always present. */
+  readonly ihsId: number;
+  /** Malaysian IC (or analogous national id). May be empty for non-MY scope. */
+  readonly ic: string;
+  /** Applicant full legal name. */
+  readonly fullName: string;
+} & E & {
+  /** Catch-all for ad-hoc reads (typed `unknown` — validate before use). */
+  readonly [key: string]: unknown;
+};
 
 /**
  * Typed error thrown by adapters on expected failure paths. The

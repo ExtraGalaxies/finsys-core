@@ -16,10 +16,14 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  ADAPTER_CATEGORY_IDS,
   allCategories,
+  assertAdapterCategory,
+  buildCategoryRegistry,
   categorySchemaOf,
   categoryFieldsOf,
   categoryForField,
+  isAdapterCategory,
 } from "./adapter-categories.js";
 
 describe("Adapter category catalogue", () => {
@@ -78,7 +82,6 @@ describe("categorySchemaOf", () => {
 
   it("throws on unknown category id", () => {
     expect(() =>
-      // @ts-expect-error: deliberately unknown category to test guard
       categorySchemaOf("absurd-category-that-does-not-exist"),
     ).toThrow(/Unknown adapter category/);
   });
@@ -116,5 +119,193 @@ describe("categoryForField", () => {
 
   it("returns null for a field not declared by any category", () => {
     expect(categoryForField("clearlyNotACanonicalField")).toBeNull();
+  });
+});
+
+// ── SYS-2500: extensible registry helpers ────────────────────────────
+
+describe("ADAPTER_CATEGORY_IDS", () => {
+  it("lists every category id from allCategories()", () => {
+    expect([...ADAPTER_CATEGORY_IDS].sort()).toEqual(
+      allCategories()
+        .map((c) => c.id)
+        .sort(),
+    );
+  });
+});
+
+describe("isAdapterCategory / assertAdapterCategory", () => {
+  it("isAdapterCategory is true for declared ids, false otherwise", () => {
+    expect(isAdapterCategory("telco-carrier")).toBe(true);
+    expect(isAdapterCategory("social-media")).toBe(true);
+    expect(isAdapterCategory("fortune-teller")).toBe(false);
+    expect(isAdapterCategory("")).toBe(false);
+  });
+
+  it("assertAdapterCategory returns the id for a declared category", () => {
+    expect(assertAdapterCategory("payment-network")).toBe("payment-network");
+  });
+
+  it("assertAdapterCategory throws (listing available ids) for an unknown category", () => {
+    expect(() => assertAdapterCategory("fortune-teller")).toThrow(
+      /Unknown adapter category.*Available:/,
+    );
+  });
+});
+
+// ── SYS-2500: the social-media category (extensibility demonstrator) ──
+
+describe("social-media category", () => {
+  it("is declared with the canonical social table", () => {
+    const social = categorySchemaOf("social-media");
+    expect(social.canonicalTable).toBe("ihs_alt_data_social_media");
+    expect(social.fields.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("declares the expected credit-actionable fields", () => {
+    const fields = new Set(categoryFieldsOf("social-media"));
+    for (const f of [
+      "socialAccountTenureMonths",
+      "socialFollowerCount",
+      "socialEngagementRate90d",
+      "socialPostingConsistency12m",
+      "socialVerifiedBusinessAccount",
+      "socialCustomerRatingAvg",
+      "socialNegativeSentimentRatio90d",
+      "socialAccountFlags24m",
+    ]) {
+      expect(fields.has(f), `expected social-media field "${f}"`).toBe(true);
+    }
+  });
+
+  it("maps a social field back to its category", () => {
+    expect(categoryForField("socialEngagementRate90d")).toBe("social-media");
+  });
+
+  it("carries a boolean field type for the verified-account flag", () => {
+    const spec = categorySchemaOf("social-media").fields.find(
+      (f) => f.name === "socialVerifiedBusinessAccount",
+    );
+    expect(spec?.type).toBe("boolean");
+  });
+});
+
+// ── SYS-2500: the loader is genuinely data-driven ────────────────────
+
+type RawArg = Parameters<typeof buildCategoryRegistry>[0];
+
+/** A minimal, valid raw category data object usable as a base for cases. */
+function validRaw(): RawArg {
+  return {
+    schemaVersion: "1.0.0",
+    categories: [
+      {
+        id: "fixture-source",
+        displayName: "Fixture Source",
+        description: "A category that exists only in this test.",
+        canonicalTable: "ihs_alt_data_fixture",
+        fields: [
+          {
+            name: "fixtureScore",
+            type: "number",
+            unit: "ratio",
+            range: [0, 1],
+            description: "A test field.",
+          },
+        ],
+      },
+    ],
+  };
+}
+
+describe("buildCategoryRegistry (data-driven loader)", () => {
+  it("builds a registry from arbitrary conforming data — including a brand-new category id", () => {
+    // Proof that categories are NOT hardcoded: a category id that does
+    // not exist anywhere in the package loads and is fully queryable.
+    const reg = buildCategoryRegistry(validRaw());
+    expect(reg.ids).toEqual(["fixture-source"]);
+    expect(reg.byId.get("fixture-source")?.canonicalTable).toBe("ihs_alt_data_fixture");
+    expect(reg.fieldToCategory.get("fixtureScore")).toBe("fixture-source");
+  });
+
+  it("rejects a missing/empty schemaVersion", () => {
+    const raw = validRaw() as unknown as Record<string, unknown>;
+    raw.schemaVersion = "";
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(/schemaVersion/);
+  });
+
+  it("rejects an empty categories array", () => {
+    const raw = validRaw();
+    raw.categories = [];
+    expect(() => buildCategoryRegistry(raw)).toThrow(/non-empty array/);
+  });
+
+  it("rejects a duplicate category id", () => {
+    const raw = validRaw();
+    raw.categories.push({ ...raw.categories[0], canonicalTable: "ihs_alt_data_other" });
+    expect(() => buildCategoryRegistry(raw)).toThrow(/duplicate category id/);
+  });
+
+  it("rejects a duplicate canonicalTable", () => {
+    const raw = validRaw();
+    raw.categories.push({ ...raw.categories[0], id: "fixture-two" });
+    expect(() => buildCategoryRegistry(raw)).toThrow(/duplicate canonicalTable/);
+  });
+
+  it("rejects a canonicalTable without the ihs_alt_data_ prefix", () => {
+    const raw = validRaw();
+    raw.categories[0].canonicalTable = "some_other_table";
+    expect(() => buildCategoryRegistry(raw)).toThrow(/ihs_alt_data_/);
+  });
+
+  it("rejects a category with no fields", () => {
+    const raw = validRaw();
+    raw.categories[0].fields = [];
+    expect(() => buildCategoryRegistry(raw)).toThrow(/at least one field/);
+  });
+
+  it("rejects a canonical field name reused across categories", () => {
+    const raw = validRaw();
+    raw.categories.push({
+      id: "fixture-two",
+      displayName: "Fixture Two",
+      description: "Second test category.",
+      canonicalTable: "ihs_alt_data_fixture_two",
+      fields: [{ name: "fixtureScore", type: "number", description: "Clashes." }],
+    });
+    expect(() => buildCategoryRegistry(raw)).toThrow(/globally unique/);
+  });
+
+  it("rejects an invalid field type", () => {
+    const raw = validRaw() as unknown as { categories: Array<{ fields: Array<{ type: string }> }> };
+    raw.categories[0].fields[0].type = "timestamp";
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(/invalid type/);
+  });
+
+  it("rejects a range with lo > hi", () => {
+    const raw = validRaw();
+    raw.categories[0].fields[0].range = [1, 0];
+    expect(() => buildCategoryRegistry(raw)).toThrow(/invalid range/);
+  });
+
+  it("rejects a non-finite range bound (NaN / Infinity)", () => {
+    for (const bad of [
+      [0, NaN],
+      [NaN, 1],
+      [0, Infinity],
+    ] as Array<[number, number]>) {
+      const raw = validRaw();
+      raw.categories[0].fields[0].range = bad;
+      expect(
+        () => buildCategoryRegistry(raw),
+        `range ${JSON.stringify(bad)} should be rejected`,
+      ).toThrow(/invalid range/);
+    }
+  });
+
+  it("rejects a field with no description", () => {
+    const raw = validRaw() as unknown as { categories: Array<{ fields: Array<{ description: string }> }> };
+    raw.categories[0].fields[0].description = "";
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(/non-empty description/);
   });
 });

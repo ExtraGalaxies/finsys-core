@@ -151,6 +151,68 @@
           "description": "Bounced / returned transactions in the period. Distress signal at counts > 0."
         }
       ]
+    },
+    {
+      "id": "social-media",
+      "displayName": "Social Media Presence",
+      "description": "Public business-presence signals from social / commerce platforms — establishment, reach, engagement authenticity, customer reputation, and account standing. Vendor-agnostic: any platform exposing a public business profile maps its data to this canonical field set. Useful as thin-file corroboration of a borrower's operating reality where formal financials are sparse.",
+      "canonicalTable": "ihs_alt_data_social_media",
+      "fields": [
+        {
+          "name": "socialAccountTenureMonths",
+          "type": "number",
+          "unit": "months",
+          "range": [0, 600],
+          "description": "Age of the oldest verified public business presence across linked profiles. Establishment / continuity proxy, parallel to telco + payment-network tenure."
+        },
+        {
+          "name": "socialFollowerCount",
+          "type": "number",
+          "unit": "count",
+          "range": [0, 100000000],
+          "description": "Aggregate audience size across linked public profiles. Coarse reach / scale proxy — gameable on its own, so read alongside socialEngagementRate90d."
+        },
+        {
+          "name": "socialEngagementRate90d",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Mean interactions per impression over the trailing 90 days. Authenticity signal: a large follower count with near-zero engagement indicates a bought or dormant audience."
+        },
+        {
+          "name": "socialPostingConsistency12m",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Fraction of weeks in the trailing 12 months with at least one public post. Ongoing-operation signal — distinguishes an active business from a stale listing."
+        },
+        {
+          "name": "socialVerifiedBusinessAccount",
+          "type": "boolean",
+          "description": "Has at least one platform-verified business / commerce profile. Legitimacy signal — the platform has performed its own business-identity check."
+        },
+        {
+          "name": "socialCustomerRatingAvg",
+          "type": "number",
+          "unit": "rating",
+          "range": [0, 5],
+          "description": "Mean public customer rating (normalised to a 0–5 scale) across review-bearing profiles. Reputation signal; especially predictive for consumer-facing SMEs."
+        },
+        {
+          "name": "socialNegativeSentimentRatio90d",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Fraction of public mentions / reviews classified as negative over the trailing 90 days. Reputation-risk / distress signal independent of overall rating volume."
+        },
+        {
+          "name": "socialAccountFlags24m",
+          "type": "number",
+          "unit": "count",
+          "range": [0, 100],
+          "description": "Policy strikes, suspensions, or content takedowns across linked profiles in the last 24 months. Distress signal, parallel to telcoSuspensionsCount24m."
+        }
+      ]
     }
   ]
 }

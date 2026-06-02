@@ -90,9 +90,20 @@ describe("Adapter manifest JSON-schema validation", () => {
     expect(validate(m)).toBe(false);
   });
 
-  it("rejects an unknown category", () => {
+  it("accepts any non-empty category string — membership is a runtime check (SYS-2500), not the schema's job", () => {
+    // Pre-SYS-2500 the schema pinned `category` to an enum. It now
+    // validates STRUCTURE only; whether the category actually exists is
+    // enforced against the registry via assertAdapterCategory() at
+    // registration time (see adapter-categories.test.ts). This keeps
+    // "add a category = data-file edit, no schema change" honest.
     const m = validDeclarative() as unknown as Record<string, unknown>;
     m.category = "fortune-teller";
+    expect(validate(m)).toBe(true);
+  });
+
+  it("rejects an empty category string", () => {
+    const m = validDeclarative() as unknown as Record<string, unknown>;
+    m.category = "";
     expect(validate(m)).toBe(false);
   });
 

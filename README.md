@@ -3,7 +3,7 @@
 The shared contract layer for the FinSys ecosystem. Two distinct surfaces:
 
 1. **Unified form configuration** — generate Zod schemas, React Hook Form defaults, and SurveyJS JSON from a single JSON form spec.
-2. **Source Adapter Framework** — vendor-agnostic contract for ingesting alternative-data sources (telco, payments, bank statements, etc.) into FinSys's canonical credit-signal vocabulary.
+2. **Source Adapter Framework** — vendor-agnostic contract for ingesting alternative-data sources (telco, payments, bank statements, social-media presence, etc.) into FinSys's canonical credit-signal vocabulary. Categories are a runtime registry loaded from a single data file (see [Category Reference](./docs/category-reference.md)).
 
 ## Building a Source Adapter?
 

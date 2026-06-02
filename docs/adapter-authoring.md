@@ -36,15 +36,16 @@ The "category" is the boundary. Vendor identity stays on your side; FinSys's eva
 
 `@finsys/core` declares a small, slow-growing set of categories. Each category has a fixed canonical field set — types, units, descriptions — published in `src/data/adapter-categories.json` and consumable via the package's TypeScript API.
 
-Today's catalogue (v2.6.0):
+Today's catalogue (v3.0.0):
 
 - **`telco-carrier`** — payment punctuality, account tenure, suspensions, late days, handset financing, ARPU
 - **`payment-network`** — monthly volume (T3 + T12), ARPU stability, dispute rate, customer concentration, active tenure
 - **`bank-statement`** — month, closing balance, total credits/debits, largest single credit, bounced count
+- **`social-media`** — account tenure, follower count, engagement rate, posting consistency, verified-business flag, customer rating, negative-sentiment ratio, account flags
 
 See [Category Reference](./category-reference.md) for the full field list per category with types, units, and ranges.
 
-**If your data doesn't fit an existing category**, talk to FinHero — categories are versioned minor releases of `@finsys/core`, so a new category is a coordinated change (manifest schema enum + TS union + data file + drift-guard test all updated together). New categories are welcome; we just want to design the canonical field set deliberately, not per-vendor.
+**If your data doesn't fit an existing category**, talk to FinHero. As of `@finsys/core` v3.0.0 (SYS-2500) the category id set is a runtime registry loaded from a single data file — adding a category is one edit to `adapter-categories.json` plus a minor `@finsys/core` bump, no TS union or manifest-schema enum to coordinate. New categories are welcome; we just want to design the canonical field set deliberately (and provision host-side storage for it), not per-vendor.
 
 ---
 

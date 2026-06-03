@@ -26,8 +26,8 @@
     },
     "category": {
       "type": "string",
-      "enum": ["telco-carrier", "payment-network", "bank-statement"],
-      "description": "Generic category this adapter implements. MUST be one declared by finsys-core's category catalogue."
+      "minLength": 1,
+      "description": "Generic category this adapter implements. SYS-2500: the schema validates STRUCTURE only (non-empty string) — category MEMBERSHIP is enforced at runtime against finsys-core's registry (assertAdapterCategory / categorySchemaOf), so adding a category is a data-file edit with no schema change. The host rejects manifests whose category is not in the loaded catalogue."
     },
     "version": {
       "type": "integer",

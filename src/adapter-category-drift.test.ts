@@ -10,59 +10,69 @@
 
 import { describe, it, expect } from "vitest";
 import {
-  type AdapterCategory,
+  ADAPTER_CATEGORY_IDS,
   allCategories,
   categoryFieldsOf,
+  isAdapterCategory,
 } from "./adapter-categories.js";
 import manifestSchema from "./schema/adapter-manifest.schema.json" with { type: "json" };
 import categoriesData from "./data/adapter-categories.json" with { type: "json" };
 
 /**
- * Three sources of truth declare the AdapterCategory id set:
- *   - TS union: `AdapterCategory` in `adapter-categories.ts`
- *   - data file: `categories[].id` in `data/adapter-categories.json`
- *   - JSON-schema: `properties.category.enum` in
- *     `schema/adapter-manifest.schema.json`
+ * SYS-2500 changed the model. The AdapterCategory id set used to live in
+ * THREE places that had to agree (a TS union, the data file, the
+ * manifest JSON-schema enum), guarded by a hand-maintained list here.
+ * It now lives in ONE place — `data/adapter-categories.json` — loaded
+ * into a runtime registry. There is no TS union and no schema enum to
+ * drift.
  *
- * They MUST agree. This test fails loudly when one is updated without
- * the others. The TS union is enumerated here by hand — that's the
- * point: adding a category requires touching this list deliberately,
- * not via inference.
+ * This guard's job is therefore inverted: instead of checking that the
+ * three sources agree, it checks that the single source of truth stays
+ * single — i.e. that nobody reintroduces a hardcoded enum/union that
+ * could silently drift from the data file again.
  */
-const TS_CATEGORIES_HARDCODED: ReadonlyArray<AdapterCategory> = [
-  "telco-carrier",
-  "payment-network",
-  "bank-statement",
-];
-
-describe("AdapterCategory drift guard", () => {
-  it("data file ids match the TS union", () => {
+describe("AdapterCategory single-source-of-truth guard", () => {
+  it("the runtime registry matches the data file exactly", () => {
     const dataIds = (categoriesData as { categories: Array<{ id: string }> }).categories
       .map((c) => c.id)
       .sort();
-    const expected = [...TS_CATEGORIES_HARDCODED].sort();
-    expect(dataIds).toEqual(expected);
+    expect([...ADAPTER_CATEGORY_IDS].sort()).toEqual(dataIds);
+    expect(
+      allCategories()
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual(dataIds);
   });
 
-  it("JSON-schema enum matches the TS union", () => {
-    const schema = manifestSchema as unknown as {
-      properties: { category: { enum: string[] } };
-    };
-    const enumIds = [...schema.properties.category.enum].sort();
-    const expected = [...TS_CATEGORIES_HARDCODED].sort();
-    expect(enumIds).toEqual(expected);
+  it("the manifest JSON-schema `category` is an OPEN string, not an enum", () => {
+    // The whole point of SYS-2500: adding a category is a data-file edit
+    // with no schema change. A reintroduced enum would re-create the
+    // three-sources-of-truth drift problem. Fail loudly if one appears.
+    const category = (
+      manifestSchema as unknown as {
+        properties: { category: Record<string, unknown> };
+      }
+    ).properties.category;
+    expect(category.type).toBe("string");
+    expect(category).not.toHaveProperty("enum");
   });
 
-  it("allCategories() agrees with the data file", () => {
-    const fromHelper = allCategories().map((c) => c.id).sort();
-    const expected = [...TS_CATEGORIES_HARDCODED].sort();
-    expect(fromHelper).toEqual(expected);
+  it("isAdapterCategory agrees with the registry for every declared id", () => {
+    for (const id of ADAPTER_CATEGORY_IDS) {
+      expect(isAdapterCategory(id)).toBe(true);
+    }
+    expect(isAdapterCategory("absurd-category-that-does-not-exist")).toBe(false);
   });
 
   it("every declared category has at least one canonical field", () => {
-    for (const id of TS_CATEGORIES_HARDCODED) {
-      const fields = categoryFieldsOf(id);
-      expect(fields.length, `category "${id}" has no fields`).toBeGreaterThan(0);
+    for (const id of ADAPTER_CATEGORY_IDS) {
+      expect(categoryFieldsOf(id).length, `category "${id}" has no fields`).toBeGreaterThan(0);
+    }
+  });
+
+  it("includes the baseline categories plus the social-media category", () => {
+    for (const id of ["telco-carrier", "payment-network", "bank-statement", "social-media"]) {
+      expect(ADAPTER_CATEGORY_IDS, `expected "${id}" in registry`).toContain(id);
     }
   });
 });

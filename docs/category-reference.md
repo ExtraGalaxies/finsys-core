@@ -1,10 +1,12 @@
 # Category Reference
 
-The canonical field set for each adapter category in `@finsys/core` v2.6.0.
+The canonical field set for each adapter category in `@finsys/core` v3.0.0.
 
 This document is the human-readable view of [`src/data/adapter-categories.json`](../src/data/adapter-categories.json) — the data file is the authoritative source; if the two disagree, treat the JSON as correct and file an issue.
 
 When a category gains a new field, this doc and the JSON file are updated together via a minor version bump of `@finsys/core`. Existing adapters keep working unchanged; new adapters can opt into the new field by adding it to their `produces` list.
+
+**Adding a whole category (SYS-2500):** since v3.0.0 the category id set is no longer a hardcoded TypeScript union — it's a runtime registry loaded and validated from `adapter-categories.json` at module load. Adding a category is therefore a single data-file edit plus a minor `@finsys/core` bump: append a category object to the JSON, add a row to this doc, and ship. There is no TS union and no manifest-schema enum to keep in sync. (Adding a category still needs storage on the host side — a canonical table + persistence mapper in finsys-api — until the canonical-data-plane generic-storage work lands.)
 
 ## How to read this reference
 
@@ -82,6 +84,27 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 ---
 
+## `social-media`
+
+**Description**: Public business-presence signals from social / commerce platforms — establishment, reach, engagement authenticity, customer reputation, and account standing. Vendor-agnostic: any platform exposing a public business profile maps its data to this canonical field set. Useful as thin-file corroboration of a borrower's operating reality where formal financials are sparse.
+
+**Canonical table**: `ihs_alt_data_social_media`
+
+| Field | Type | Unit | Range | Description |
+|---|---|---|---|---|
+| `socialAccountTenureMonths` | number | months | 0..600 | Age of the oldest verified public business presence across linked profiles. Establishment / continuity proxy, parallel to telco + payment-network tenure. |
+| `socialFollowerCount` | number | count | 0..100000000 | Aggregate audience size across linked public profiles. Coarse reach / scale proxy — gameable on its own, so read alongside `socialEngagementRate90d`. |
+| `socialEngagementRate90d` | number | ratio | 0..1 | Mean interactions per impression over the trailing 90 days. Authenticity signal: a large follower count with near-zero engagement indicates a bought or dormant audience. |
+| `socialPostingConsistency12m` | number | ratio | 0..1 | Fraction of weeks in the trailing 12 months with at least one public post. Ongoing-operation signal — distinguishes an active business from a stale listing. |
+| `socialVerifiedBusinessAccount` | boolean |  |  | Has at least one platform-verified business / commerce profile. Legitimacy signal — the platform has performed its own business-identity check. |
+| `socialCustomerRatingAvg` | number | rating | 0..5 | Mean public customer rating (normalised to a 0–5 scale) across review-bearing profiles. Reputation signal; especially predictive for consumer-facing SMEs. |
+| `socialNegativeSentimentRatio90d` | number | ratio | 0..1 | Fraction of public mentions / reviews classified as negative over the trailing 90 days. Reputation-risk / distress signal independent of overall rating volume. |
+| `socialAccountFlags24m` | number | count | 0..100 | Policy strikes, suspensions, or content takedowns across linked profiles in the last 24 months. Distress signal, parallel to `telcoSuspensionsCount24m`. |
+
+**Multi-instance notes**: Usually single-instance per applicant (one consolidated business presence). If you model each linked profile as its own instance, key on a stable profile id; eval policies typically use `mean` for rates/ratings and `sum` for follower count and flags. The verified-account flag is a natural `latest`/`max` (any verified profile → verified).
+
+---
+
 ## Aggregation operators
 
 For reference; these aren't called by your adapter but they're what eval policies use to collapse the multi-instance output your adapter produces.
@@ -100,11 +123,10 @@ Operators that don't apply to a type (e.g., `sum` on booleans) throw at evaluati
 
 ## What's NOT yet a category
 
-These data sources are part of the roadmap but don't have a published category as of v2.6.0:
+These data sources are part of the roadmap but don't have a published category as of v3.0.0:
 
 - **E-commerce platforms** (Shopify, WooCommerce order history)
 - **Logistics / delivery** (consignment volumes, on-time rate)
 - **Utility bills** (electric, water — non-telco recurring payment history)
-- **Social / business directory** (rated reviews, business listings)
 
 If your use case fits one of these, the category may land in a future minor release. Coordinate with FinHero on the canonical field set early — the category schema is the most expensive thing to change retroactively.

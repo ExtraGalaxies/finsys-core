@@ -159,11 +159,22 @@ export type {
   CategorySchema,
 } from './adapter-categories.js'
 
+// NB: `buildCategoryRegistry` + the `CategoryRegistry` shape are
+// intentionally NOT re-exported here. They're the internal loader (and
+// its return type, which carries mutable Maps that `ReadonlyMap` only
+// guards at compile time). Keeping them out of the package's public API
+// avoids exposing a corruptible view of the shared singleton registry.
+// They remain module-exported for finsys-core's own tests. Promote to a
+// public, defensively-immutable API only when a consumer (e.g. host-side
+// category merging in a future phase) actually needs it.
 export {
+  ADAPTER_CATEGORY_IDS,
   categorySchemaOf,
   categoryFieldsOf,
   allCategories,
   categoryForField,
+  isAdapterCategory,
+  assertAdapterCategory,
 } from './adapter-categories.js'
 
 export type {

@@ -4,7 +4,7 @@
     {
       "id": "telco-carrier",
       "displayName": "Telco Carrier",
-      "description": "Mobile carrier bill-payment + account-history signals. Any telco vendor (Celcom, Maxis, DiGi, U-Mobile, etc.) implementing this category produces the same canonical field set.",
+      "description": "Mobile carrier bill-payment + account-history signals. Any mobile carrier implementing this category produces the same canonical field set.",
       "canonicalTable": "ihs_alt_data_telco",
       "fields": [
         {
@@ -57,7 +57,7 @@
     {
       "id": "payment-network",
       "displayName": "Payment Network",
-      "description": "Merchant-side payment-flow signals from POS / gateway networks (iPay88, GHL, etc.). Captures actual transaction velocity rather than self-reported revenue.",
+      "description": "Merchant-side payment-flow signals from POS / payment-gateway networks. Captures actual transaction velocity rather than self-reported revenue.",
       "canonicalTable": "ihs_alt_data_payments",
       "fields": [
         {
@@ -211,6 +211,84 @@
           "unit": "count",
           "range": [0, 100],
           "description": "Policy strikes, suspensions, or content takedowns across linked profiles in the last 24 months. Distress signal, parallel to telcoSuspensionsCount24m."
+        }
+      ]
+    },
+    {
+      "id": "trade-credit",
+      "displayName": "Trade Credit (Accounting)",
+      "description": "Accounts-receivable / accounts-payable aging and ledger-derived working-capital signals sourced from a business's accounting / ERP system. Captures how promptly the business collects from its debtors and pays its creditors, the aging profile and concentration of its receivables, and P&L / cash-conversion efficiency. Vendor-agnostic: any accounting or ERP system that exposes an AR/AP aging report plus a P&L summary maps its data to this canonical field set. A direct, high-signal view of trade-obligation behaviour — closer to formal credit history than most alternative data — and the anchor for cross-referencing self-reported accounting figures against bank-statement reality.",
+      "canonicalTable": "ihs_alt_data_trade_credit",
+      "fields": [
+        {
+          "name": "arDaysSalesOutstanding",
+          "type": "number",
+          "unit": "days",
+          "range": [0, 400],
+          "description": "Days Sales Outstanding — average days to collect a receivable. The headline collection-efficiency metric; lower is healthier, and a rising DSO is an early liquidity-stress signal."
+        },
+        {
+          "name": "apDaysPayableOutstanding",
+          "type": "number",
+          "unit": "days",
+          "range": [0, 400],
+          "description": "Days Payable Outstanding — average days the business takes to pay its suppliers. Context for DSO; a very high DPO can indicate the business is stretching its creditors to fund operations."
+        },
+        {
+          "name": "arTotalOutstandingMyr",
+          "type": "number",
+          "unit": "MYR",
+          "range": [0, 1000000000],
+          "description": "Total accounts-receivable balance outstanding (RM). The size of the debtor book the business is carrying."
+        },
+        {
+          "name": "arCurrentRatio",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Fraction of the receivables book that is current (within payment terms, not yet overdue). Higher is healthier; the complement is the overdue share across all aging buckets."
+        },
+        {
+          "name": "arOverdue90PlusRatio",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Fraction of the receivables book aged more than 90 days past terms. The key impairment / bad-debt risk signal from the AR aging report; elevated values indicate collection difficulty."
+        },
+        {
+          "name": "debtorConcentrationTop5Ratio",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Share of total receivables owed by the top-5 debtors. Above ~0.6 is single-customer concentration risk — one debtor default would materially impair cash flow."
+        },
+        {
+          "name": "tradeReferenceDefaults12m",
+          "type": "number",
+          "unit": "count",
+          "range": [0, 1000],
+          "description": "Count of supplier-reported defaults or dishonoured / returned payments against the business in the trailing 12 months. Direct distress signal, parallel to a bureau default record."
+        },
+        {
+          "name": "accountingRevenue12mMyr",
+          "type": "number",
+          "unit": "MYR",
+          "range": [0, 1000000000],
+          "description": "Trailing-12-month turnover per the general ledger (RM). The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies."
+        },
+        {
+          "name": "grossMarginPct",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Gross margin from the P&L (gross profit / revenue). Profitability-quality signal; a thin or declining margin constrains debt-service capacity even at healthy revenue."
+        },
+        {
+          "name": "cashConversionCycleDays",
+          "type": "number",
+          "unit": "days",
+          "range": [-200, 600],
+          "description": "Cash Conversion Cycle (DSO + days-inventory-outstanding − DPO). Working-capital efficiency; negative values (collect before paying suppliers) are strongest, very high values indicate cash tied up in operations."
         }
       ]
     }

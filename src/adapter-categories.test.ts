@@ -190,6 +190,59 @@ describe("social-media category", () => {
   });
 });
 
+// ── SYS-2548: the trade-credit category (accounting AR/AP model) ────
+
+describe("trade-credit category", () => {
+  it("is declared with the canonical trade-credit table", () => {
+    const trade = categorySchemaOf("trade-credit");
+    expect(trade.canonicalTable).toBe("ihs_alt_data_trade_credit");
+    expect(trade.fields.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("declares the AR/AP + P&L accounting fields", () => {
+    const fields = new Set(categoryFieldsOf("trade-credit"));
+    for (const f of [
+      "arDaysSalesOutstanding",
+      "apDaysPayableOutstanding",
+      "arTotalOutstandingMyr",
+      "arCurrentRatio",
+      "arOverdue90PlusRatio",
+      "debtorConcentrationTop5Ratio",
+      "tradeReferenceDefaults12m",
+      "accountingRevenue12mMyr",
+      "grossMarginPct",
+      "cashConversionCycleDays",
+    ]) {
+      expect(fields.has(f), `expected trade-credit field "${f}"`).toBe(true);
+    }
+  });
+
+  it("carries the cross-reference revenue anchor for bank-statement consistency checks", () => {
+    // accountingRevenue12mMyr is the self-reported figure the dashboard's
+    // consistency tier cross-checks against payment-network + bank inflows.
+    expect(categoryForField("accountingRevenue12mMyr")).toBe("trade-credit");
+  });
+
+  it("allows a negative lower bound on the cash-conversion cycle", () => {
+    const spec = categorySchemaOf("trade-credit").fields.find(
+      (f) => f.name === "cashConversionCycleDays",
+    );
+    expect(spec?.range?.[0]).toBeLessThan(0);
+  });
+
+  it("locks the [0,1] range contract on ratio fields", () => {
+    for (const name of [
+      "arCurrentRatio",
+      "arOverdue90PlusRatio",
+      "debtorConcentrationTop5Ratio",
+      "grossMarginPct",
+    ]) {
+      const spec = categorySchemaOf("trade-credit").fields.find((f) => f.name === name);
+      expect(spec?.range, `range for ${name}`).toEqual([0, 1]);
+    }
+  });
+});
+
 // ── SYS-2500: the loader is genuinely data-driven ────────────────────
 
 type RawArg = Parameters<typeof buildCategoryRegistry>[0];

@@ -9,4 +9,4 @@ permissions:
 
 jobs:
   publish:
-    uses: ExtraGalaxies/finhero-devops/.github/workflows/npm-package-publish.yml@5519e02da278658131466d24540b2a4d15109a8d
+    uses: ./.github/workflows/npm-package-publish.yml

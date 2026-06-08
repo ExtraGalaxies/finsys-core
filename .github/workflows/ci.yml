@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  ci:
+  test:
     uses: ./.github/workflows/npm-package-ci.yml
     with:
       node-versions: '[20, 22, 24]'

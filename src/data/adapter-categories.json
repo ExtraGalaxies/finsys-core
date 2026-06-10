@@ -291,6 +291,99 @@
           "description": "Cash Conversion Cycle (DSO + days-inventory-outstanding − DPO). Working-capital efficiency; negative values (collect before paying suppliers) are strongest, very high values indicate cash tied up in operations."
         }
       ]
+    },
+    {
+      "id": "geolocation",
+      "displayName": "Geolocation",
+      "description": "Hourly-granularity movement track plus derived mobility signals for an applicant, sourced from any location-capable provider (telco network location, mobile-SDK GPS, GIS / address-verification services). Two instance kinds share this category: point instances (instanceKey 'pt:<ISO-hour>') carry one observed position per hourly bucket, mirroring the bank-statement multi-instance pattern; a single summary instance (instanceKey 'summary') carries adapter-derived behaviour signals — most importantly work-pattern regularity (sustained weekday dwell at a stable work anchor corroborates income reliability), residential stability, vacation windows, and dwell in operator-flagged hotspot zones. Vendor-agnostic: the source classifies or the adapter infers place labels; no provider-specific semantics leak into the field set. Raw coordinates are sensitive personal data — product-plane persistence is gated on PDPA consent + CRA Act 710 s25 retention review.",
+      "canonicalTable": "ihs_alt_data_geolocation",
+      "fields": [
+        {
+          "name": "geoLatitude",
+          "type": "number",
+          "unit": "deg",
+          "range": [-90, 90],
+          "description": "Observed latitude for this hourly bucket (point instances only)."
+        },
+        {
+          "name": "geoLongitude",
+          "type": "number",
+          "unit": "deg",
+          "range": [-180, 180],
+          "description": "Observed longitude for this hourly bucket (point instances only)."
+        },
+        {
+          "name": "geoAccuracyM",
+          "type": "number",
+          "unit": "meters",
+          "range": [0, 100000],
+          "description": "Source-reported horizontal accuracy radius of the observation. Cell-tower fixes are typically hundreds of meters; GPS fixes tens."
+        },
+        {
+          "name": "geoBucket",
+          "type": "string",
+          "description": "ISO-8601 hour bucket of the observation, e.g. '2026-06-01T08'. Redundant with the instance key (pt:<bucket>) so consumers can query without parsing keys."
+        },
+        {
+          "name": "geoPlaceLabel",
+          "type": "string",
+          "description": "Classified place for the bucket: home | work | commute | leisure | travel | hotspot | other. Classified by the source or inferred by the adapter from anchor dwell."
+        },
+        {
+          "name": "geoWorkAttendanceRatio30d",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Fraction of the last 30 weekdays with >= 6 hours of dwell at the inferred work anchor. The income-reliability headline: regular full-time work patterns corroborate declared employment income (summary instance only)."
+        },
+        {
+          "name": "geoWorkDailyHoursAvg30d",
+          "type": "number",
+          "unit": "hours",
+          "range": [0, 24],
+          "description": "Mean daily hours of work-anchor dwell across the last 30 weekdays (summary instance only)."
+        },
+        {
+          "name": "geoLocationStabilityScore",
+          "type": "number",
+          "unit": "score",
+          "range": [0, 1],
+          "description": "Residential stability: share of nights spent at the primary home anchor over the observation window. 1 = every night at home (summary instance only)."
+        },
+        {
+          "name": "geoCommuteRegularityRatio",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Consistency of the weekday home->work->home rhythm: fraction of weekdays matching the dominant commute pattern within an hour's tolerance (summary instance only)."
+        },
+        {
+          "name": "geoVacationDays90d",
+          "type": "number",
+          "unit": "days",
+          "range": [0, 90],
+          "description": "Days in the last 90 spent fully away from both home and work anchors (contiguous travel windows; summary instance only)."
+        },
+        {
+          "name": "geoHotspotDwellRatio",
+          "type": "number",
+          "unit": "ratio",
+          "range": [0, 1],
+          "description": "Share of observed buckets spent inside operator-flagged hotspot zones (known fraud / illicit-activity locations supplied to the adapter). Non-zero values warrant review, not automatic decline (summary instance only)."
+        },
+        {
+          "name": "geoPrimaryStateCode",
+          "type": "string",
+          "description": "Malaysian state / federal-territory code of the primary home anchor, e.g. PNG, KUL, JHR (summary instance only)."
+        },
+        {
+          "name": "geoAddressMatchScore",
+          "type": "number",
+          "unit": "score",
+          "range": [0, 1],
+          "description": "Agreement between the inferred home anchor and the applicant's registered residential address. 1 = same premises, 0 = different state (summary instance only)."
+        }
+      ]
     }
   ]
 }

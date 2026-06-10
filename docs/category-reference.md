@@ -105,6 +105,55 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 ---
 
+## `trade-credit`
+
+**Description**: Accounts-receivable / accounts-payable aging and ledger-derived working-capital signals sourced from a business's accounting / ERP system. Captures how promptly the business collects from its debtors and pays its creditors, the aging profile and concentration of its receivables, and P&L / cash-conversion efficiency. A direct, high-signal view of trade-obligation behaviour, and the anchor for cross-referencing self-reported accounting figures against bank-statement reality.
+
+**Canonical table**: `ihs_alt_data_trade_credit`
+
+| Field | Type | Unit | Range | Description |
+|---|---|---|---|---|
+| `arDaysSalesOutstanding` | number | days | 0..365 | Average days to collect receivables (DSO). |
+| `apDaysPayableOutstanding` | number | days | 0..365 | Average days taken to pay creditors (DPO). |
+| `arTotalOutstandingMyr` | number | MYR |  | Total receivables currently outstanding. |
+| `arCurrentRatio` | number | ratio | 0..1 | Share of receivables not yet past due. |
+| `arOverdue90PlusRatio` | number | ratio | 0..1 | Share of receivables overdue 90+ days — the distress headline. |
+| `debtorConcentrationTop5Ratio` | number | ratio | 0..1 | Share of receivables owed by the top-5 debtors. |
+| `tradeReferenceDefaults12m` | number | count | 0..100 | Trade-reference defaults in the last 12 months. |
+| `accountingRevenue12mMyr` | number | MYR |  | Self-reported trailing-12-month revenue — cross-checked against bank inflows by consistency tiers. |
+| `grossMarginPct` | number | ratio | 0..1 | Gross margin from the P&L summary. |
+| `cashConversionCycleDays` | number | days | -200..600 | Cash Conversion Cycle; negative (collect before paying suppliers) is strongest. |
+
+**Multi-instance notes**: Single-instance per applicant (one consolidated AR/AP + P&L summary). Eval policies use `latest`.
+
+---
+
+## `geolocation`
+
+**Description**: Hourly-granularity movement track plus derived mobility signals, sourced from any location-capable provider (telco network location, mobile-SDK GPS, GIS / address-verification services). The derived signals corroborate income reliability (regular full-time work-anchor dwell), residential stability, and exposure to operator-flagged hotspot zones. Raw coordinates are sensitive personal data — product-plane persistence is gated on PDPA consent + CRA Act 710 §25 retention review.
+
+**Canonical table**: `ihs_alt_data_geolocation`
+
+| Field | Type | Unit | Range | Description |
+|---|---|---|---|---|
+| `geoLatitude` | number | deg | -90..90 | Observed latitude for the hourly bucket (point instances only). |
+| `geoLongitude` | number | deg | -180..180 | Observed longitude for the hourly bucket (point instances only). |
+| `geoAccuracyM` | number | meters | 0..100000 | Source-reported horizontal accuracy radius. Cell-tower fixes: hundreds of meters; GPS: tens. |
+| `geoBucket` | string |  |  | ISO-8601 hour bucket, e.g. `2026-06-01T08`. Redundant with the instance key for query convenience. |
+| `geoPlaceLabel` | string |  |  | Classified place: `home \| work \| commute \| leisure \| travel \| hotspot \| other`. |
+| `geoWorkAttendanceRatio30d` | number | ratio | 0..1 | Fraction of the last 30 weekdays with ≥ 6h dwell at the work anchor — the income-reliability headline (summary only). |
+| `geoWorkDailyHoursAvg30d` | number | hours | 0..24 | Mean daily work-anchor dwell hours over the last 30 weekdays (summary only). |
+| `geoLocationStabilityScore` | number | score | 0..1 | Share of nights at the primary home anchor (summary only). |
+| `geoCommuteRegularityRatio` | number | ratio | 0..1 | Fraction of weekdays matching the dominant commute rhythm (summary only). |
+| `geoVacationDays90d` | number | days | 0..90 | Days fully away from both anchors in the last 90 (summary only). |
+| `geoHotspotDwellRatio` | number | ratio | 0..1 | Share of buckets inside operator-flagged hotspot zones. Review trigger, not auto-decline (summary only). |
+| `geoPrimaryStateCode` | string |  |  | Malaysian state / FT code of the home anchor, e.g. `PNG`, `KUL` (summary only). |
+| `geoAddressMatchScore` | number | score | 0..1 | Agreement between the inferred home anchor and the registered residential address (summary only). |
+
+**Multi-instance notes**: Two instance kinds share the table (bank-statement precedent). **Point instances** — `instanceKey = "pt:<ISO-hour>"`, one per hourly bucket, carrying only the point fields. **Summary instance** — `instanceKey = "summary"`, exactly one per adapter run, carrying only the derived signals. Eval policies bind summary fields with `latest`; the point track is for playback/analysis UIs, not direct scoring inputs.
+
+---
+
 ## Aggregation operators
 
 For reference; these aren't called by your adapter but they're what eval policies use to collapse the multi-instance output your adapter produces.

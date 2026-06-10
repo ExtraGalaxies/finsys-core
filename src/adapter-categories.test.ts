@@ -362,3 +362,56 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
     expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(/non-empty description/);
   });
 });
+
+// ── SYS-2561: the geolocation category (hourly track + derived signals) ──
+
+describe("geolocation category", () => {
+  it("is declared with the canonical geolocation table", () => {
+    const geo = categorySchemaOf("geolocation");
+    expect(geo.canonicalTable).toBe("ihs_alt_data_geolocation");
+    expect(geo.fields.length).toBe(13);
+  });
+
+  it("declares the point-track fields and the derived summary fields", () => {
+    const fields = new Set(categoryFieldsOf("geolocation"));
+    for (const f of [
+      // point instances (instanceKey "pt:<ISO-hour>")
+      "geoLatitude",
+      "geoLongitude",
+      "geoAccuracyM",
+      "geoBucket",
+      "geoPlaceLabel",
+      // summary instance (instanceKey "summary")
+      "geoWorkAttendanceRatio30d",
+      "geoWorkDailyHoursAvg30d",
+      "geoLocationStabilityScore",
+      "geoCommuteRegularityRatio",
+      "geoVacationDays90d",
+      "geoHotspotDwellRatio",
+      "geoPrimaryStateCode",
+      "geoAddressMatchScore",
+    ]) {
+      expect(fields.has(f), `expected geolocation field "${f}"`).toBe(true);
+    }
+  });
+
+  it("routes the income-reliability headline field to geolocation", () => {
+    expect(categoryForField("geoWorkAttendanceRatio30d")).toBe("geolocation");
+  });
+
+  it("locks coordinate and ratio range contracts", () => {
+    const spec = (name: string) =>
+      categorySchemaOf("geolocation").fields.find((f) => f.name === name);
+    expect(spec("geoLatitude")?.range).toEqual([-90, 90]);
+    expect(spec("geoLongitude")?.range).toEqual([-180, 180]);
+    for (const name of [
+      "geoWorkAttendanceRatio30d",
+      "geoLocationStabilityScore",
+      "geoCommuteRegularityRatio",
+      "geoHotspotDwellRatio",
+      "geoAddressMatchScore",
+    ]) {
+      expect(spec(name)?.range, `${name} should be [0,1]`).toEqual([0, 1]);
+    }
+  });
+});

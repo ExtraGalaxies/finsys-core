@@ -4,6 +4,25 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] — 2026-06-10
+
+### Added
+
+- **`geolocation` adapter category** (SYS-2561). Hourly-granularity movement
+  track + derived mobility signals, source-neutral (telco network location,
+  mobile-SDK GPS, GIS / address-verification providers all map to it). Two
+  instance kinds share `ihs_alt_data_geolocation` (bank-statement
+  multi-instance precedent): point instances (`pt:<ISO-hour>` — geoLatitude,
+  geoLongitude, geoAccuracyM, geoBucket, geoPlaceLabel) and one summary
+  instance (`summary` — geoWorkAttendanceRatio30d, geoWorkDailyHoursAvg30d,
+  geoLocationStabilityScore, geoCommuteRegularityRatio, geoVacationDays90d,
+  geoHotspotDwellRatio, geoPrimaryStateCode, geoAddressMatchScore). The
+  work-attendance signals corroborate declared employment income. Raw
+  coordinates are sensitive personal data: product-plane persistence is
+  gated on PDPA consent + CRA Act 710 §25 retention review.
+- `docs/category-reference.md`: sections for `trade-credit` (missing since
+  SYS-2548) and `geolocation`.
+
 ## [2.6.0] — 2026-05-14
 
 ### Added

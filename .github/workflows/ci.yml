@@ -9,4 +9,4 @@ jobs:
   test:
     uses: ./.github/workflows/npm-package-ci.yml
     with:
-      node-versions: '[20, 22, 24]'
+      node-versions: '[24]'

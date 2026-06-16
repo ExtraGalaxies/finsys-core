@@ -10,3 +10,5 @@ permissions:
 jobs:
   publish:
     uses: ./.github/workflows/npm-package-publish.yml
+    with:
+      environment: Production

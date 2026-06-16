@@ -7,6 +7,10 @@ on:
         description: 'Node.js version used to publish'
         type: string
         default: '24'
+      environment:
+        description: 'GitHub deployment environment to publish under (drives deployment tracking in Jira)'
+        type: string
+        default: Production
 
 permissions:
   id-token: write
@@ -15,6 +19,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     timeout-minutes: 15
     steps:
       - name: Checkout

@@ -128,6 +128,7 @@ export type {
   IhsDetailCategory,
   FileFieldTableData,
   FileFieldTableItem,
+  IhsFieldProvenance,
 } from './ihs-types.js'
 
 // ── Source Adapter framework (SYS-2440) ──────────────────────────────

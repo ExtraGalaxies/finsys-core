@@ -191,7 +191,11 @@ function buildTableForGroup(
         const prov = colName ? fieldProvenance?.[colName] : undefined
         if (prov) {
           provenance[period] = prov
-          if (prov.origin === 'extracted' && typeof prov.confidence === 'number') {
+          if (
+            prov.origin === 'extracted' &&
+            typeof prov.confidence === 'number' &&
+            !Number.isNaN(prov.confidence)
+          ) {
             confidence[period] = prov.confidence
           }
         }
@@ -229,7 +233,10 @@ function buildTableForGroup(
         formattedData: { value: formatValue(value, numeric) },
         type: tableType,
         isNumeric: numeric,
-        ...(prov && prov.origin === 'extracted' && typeof prov.confidence === 'number'
+        ...(prov &&
+        prov.origin === 'extracted' &&
+        typeof prov.confidence === 'number' &&
+        !Number.isNaN(prov.confidence)
           ? { confidence: { value: prov.confidence } }
           : {}),
         ...(prov ? { provenance: { value: prov } } : {}),

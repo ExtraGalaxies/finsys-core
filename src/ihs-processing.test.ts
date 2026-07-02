@@ -136,22 +136,20 @@ describe('buildFileFieldTables', () => {
     }
     const tables = buildFileFieldTables(ihsData, fieldProvenance)
     const bank = tables['bank_statements']
-    if (bank) {
-      const item = bank.items.find((i) => i.data['T1'] === 'Maybank')
-      expect(item).toBeDefined()
-      expect(item!.confidence?.['T1']).toBe(0.91)
-      expect(item!.confidence?.['T2']).toBeUndefined()
-      expect(item!.provenance?.['T2']?.origin).toBe('derived')
-    }
+    expect(bank).toBeDefined()
+    const item = bank!.items.find((i) => i.data['T1'] === 'Maybank')
+    expect(item).toBeDefined()
+    expect(item!.confidence?.['T1']).toBe(0.91)
+    expect(item!.confidence?.['T2']).toBeUndefined()
+    expect(item!.provenance?.['T2']?.origin).toBe('derived')
   })
 
   it('omits confidence/provenance when none supplied (backward compatible)', () => {
     const tables = buildFileFieldTables({ bankNameT1: 'Maybank', bankNameT2: 'CIMB' })
     const bank = tables['bank_statements']
-    if (bank) {
-      expect(bank.items[0].confidence).toBeUndefined()
-      expect(bank.items[0].provenance).toBeUndefined()
-    }
+    expect(bank).toBeDefined()
+    expect(bank!.items[0].confidence).toBeUndefined()
+    expect(bank!.items[0].provenance).toBeUndefined()
   })
 })
 

@@ -111,6 +111,46 @@ describe('buildFileFieldTables', () => {
     const tables = buildFileFieldTables({ fullName: 'Alice', email: 'a@b.com' })
     expect(Object.keys(tables).length).toBe(0)
   })
+
+  it('attaches per-cell confidence + provenance from fieldProvenance (SYS-2741)', () => {
+    const ihsData: Record<string, unknown> = {
+      bankNameT1: 'Maybank',
+      bankNameT2: 'CIMB',
+    }
+    const fieldProvenance = {
+      bankNameT1: {
+        source: 'finxtract:bank_statement',
+        confidence: 0.91,
+        observedAt: '2026-07-01T00:00:00Z',
+        sourceRunId: 'run-1',
+        origin: 'extracted' as const,
+      },
+      // derived → carries the envelope but NO numeric confidence (never a low dot)
+      bankNameT2: {
+        source: 'finxtract:bank_statement',
+        confidence: null,
+        observedAt: '2026-07-01T00:00:00Z',
+        sourceRunId: 'run-1',
+        origin: 'derived' as const,
+      },
+    }
+    const tables = buildFileFieldTables(ihsData, fieldProvenance)
+    const bank = tables['bank_statements']
+    expect(bank).toBeDefined()
+    const item = bank!.items.find((i) => i.data['T1'] === 'Maybank')
+    expect(item).toBeDefined()
+    expect(item!.confidence?.['T1']).toBe(0.91)
+    expect(item!.confidence?.['T2']).toBeUndefined()
+    expect(item!.provenance?.['T2']?.origin).toBe('derived')
+  })
+
+  it('omits confidence/provenance when none supplied (backward compatible)', () => {
+    const tables = buildFileFieldTables({ bankNameT1: 'Maybank', bankNameT2: 'CIMB' })
+    const bank = tables['bank_statements']
+    expect(bank).toBeDefined()
+    expect(bank!.items[0].confidence).toBeUndefined()
+    expect(bank!.items[0].provenance).toBeUndefined()
+  })
 })
 
 describe('processIhsDetails', () => {

@@ -16,6 +16,7 @@ import type {
   IhsDetailCategory,
   FileFieldTableData,
   FileFieldTableItem,
+  IhsFieldProvenance,
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
@@ -153,7 +154,8 @@ function formatValue(value: unknown, numeric: boolean): string {
 function buildTableForGroup(
   groupName: string,
   fields: FieldData[],
-  ihsData: Record<string, unknown>
+  ihsData: Record<string, unknown>,
+  fieldProvenance?: Record<string, IhsFieldProvenance>
 ): FileFieldTableData | null {
   const allColumns: string[] = []
   for (const field of fields) {
@@ -177,12 +179,26 @@ function buildTableForGroup(
       const numeric = isNumericField(baseName)
       const data: Record<string, unknown> = {}
       const formattedData: Record<string, string> = {}
+      const confidence: Record<string, number> = {}
+      const provenance: Record<string, IhsFieldProvenance> = {}
 
       for (const period of periods) {
         const colName = periodMap[period]
         const value = colName ? (ihsData[colName] ?? null) : null
         data[period] = value
         formattedData[period] = formatValue(value, numeric)
+        // SYS-2741: colName is the exact ihs_field_metadata key (incl. T{n} suffix).
+        const prov = colName ? fieldProvenance?.[colName] : undefined
+        if (prov) {
+          provenance[period] = prov
+          if (
+            prov.origin === 'extracted' &&
+            typeof prov.confidence === 'number' &&
+            !Number.isNaN(prov.confidence)
+          ) {
+            confidence[period] = prov.confidence
+          }
+        }
       }
 
       items.push({
@@ -192,6 +208,8 @@ function buildTableForGroup(
         formattedData,
         type: tableType,
         isNumeric: numeric,
+        ...(Object.keys(confidence).length ? { confidence } : {}),
+        ...(Object.keys(provenance).length ? { provenance } : {}),
       })
     }
 
@@ -204,6 +222,10 @@ function buildTableForGroup(
     for (const colName of allColumns) {
       const value = ihsData[colName] ?? null
       const numeric = isNumericField(colName)
+      // SYS-2741: single-doc columns (ssmCompanyName, companyName, icName, …) are
+      // keyed directly in ihs_field_metadata — lit up here (the value-match interim
+      // had to skip these because filename-based OCR lookup was unreliable).
+      const prov = fieldProvenance?.[colName]
       items.push({
         displayName: getDisplayName(colName),
         timePeriods: [],
@@ -211,6 +233,13 @@ function buildTableForGroup(
         formattedData: { value: formatValue(value, numeric) },
         type: tableType,
         isNumeric: numeric,
+        ...(prov &&
+        prov.origin === 'extracted' &&
+        typeof prov.confidence === 'number' &&
+        !Number.isNaN(prov.confidence)
+          ? { confidence: { value: prov.confidence } }
+          : {}),
+        ...(prov ? { provenance: { value: prov } } : {}),
       })
     }
     const hasData = items.some((item) => {
@@ -222,7 +251,8 @@ function buildTableForGroup(
 }
 
 export function buildFileFieldTables(
-  ihsData: Record<string, unknown>
+  ihsData: Record<string, unknown>,
+  fieldProvenance?: Record<string, IhsFieldProvenance>
 ): Record<string, FileFieldTableData> {
   const specs = getBaseFieldSpecs()
   const fileFields = specs.filter((f) => f.type === 'file' && f.ihs_column_names?.length)
@@ -230,7 +260,7 @@ export function buildFileFieldTables(
 
   const tables: Record<string, FileFieldTableData> = {}
   for (const [groupName, fields] of Object.entries(grouped)) {
-    const table = buildTableForGroup(groupName, fields, ihsData)
+    const table = buildTableForGroup(groupName, fields, ihsData, fieldProvenance)
     if (table && table.hasData) {
       tables[groupName] = table
     }

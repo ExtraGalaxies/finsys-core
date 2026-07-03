@@ -9,6 +9,13 @@ import {
   buildFileFieldTables,
   processIhsDetails,
   groupDetailsByCategory,
+  buildDocumentRows,
+  getDocDisplayNames,
+  getExtractableDocTypes,
+  getReuploadableDocTypes,
+  formatDocumentType,
+  formatDocumentSize,
+  formatDocumentUploaded,
 } from './ihs-processing.js'
 import type { FieldData } from './survey-generator.js'
 
@@ -211,5 +218,155 @@ describe('groupDetailsByCategory', () => {
     expect(grouped).toHaveLength(1)
     expect(grouped[0].category).toBe('Personal Info')
     expect(grouped[0].items).toHaveLength(2)
+  })
+})
+
+describe('buildDocumentRows (SYS-2766)', () => {
+  it('builds a row for a single-URL doc field, joining documentMetadata by path', () => {
+    const path = 'https://finherodms.blob.core.windows.net/dms/abc123'
+    const rows = buildDocumentRows({
+      ssm: path,
+      documentMetadata: {
+        [path]: {
+          fileName: 'ssm.pdf',
+          fileType: 'application/pdf',
+          fileSize: 2048,
+          createdAt: '2026-01-15T10:30:00',
+        },
+      },
+    })
+    expect(rows).toHaveLength(1)
+    const r = rows[0]
+    expect(r.docType).toBe('ssm')
+    expect(r.label).toBe('SSM Company Profile')
+    expect(r.documentId).toBe('abc123')
+    expect(r.path).toBe(path)
+    expect(r.timePeriod).toBe('ALL')
+    expect(r.fileName).toBe('ssm.pdf')
+    expect(r.fileType).toBe('PDF') // extension wins over MIME
+    expect(r.fileSize).toBe(2048)
+    expect(r.uploadedAt).toBe('2026-01-15T10:30:00')
+    expect(r.displayName).toBe('ssm.pdf')
+    // ssm is extractable but not re-uploadable
+    expect(r.capabilities).toEqual({
+      download: true,
+      viewJson: true,
+      reExtract: true,
+      reUpload: false,
+    })
+  })
+
+  it('builds period-labeled rows for a JSON-array field and derives type from MIME', () => {
+    const p1 = 'https://dms/bank1'
+    const p2 = 'https://dms/bank2'
+    const rows = buildDocumentRows({
+      bankStatements: JSON.stringify([
+        { path: p1, month: 1, year: 2026 },
+        { path: p2, month: 2, year: 2026 },
+      ]),
+      documentMetadata: {
+        [p1]: { fileName: null, fileType: 'image/png', fileSize: 500, createdAt: null },
+        [p2]: { fileName: null, fileType: 'image/png', fileSize: 1024 * 1024 * 3, createdAt: null },
+      },
+    })
+    expect(rows).toHaveLength(2)
+    expect(rows[0].timePeriod).toBe('T1')
+    expect(rows[0].periodLabel).toBe('Jan 2026')
+    expect(rows[0].fileType).toBe('PNG') // MIME subtype, no filename ext
+    expect(rows[0].fileName).toBeNull()
+    expect(rows[0].displayName).toBe('Bank Statements — Jan 2026')
+    expect(rows[1].periodLabel).toBe('Feb 2026')
+    // bankStatements is re-uploadable
+    expect(rows[0].capabilities.reUpload).toBe(true)
+  })
+
+  it('uses inline metadata for supplementaryDoc (already enriched, not in documentMetadata)', () => {
+    const rows = buildDocumentRows({
+      supplementaryDoc: [
+        {
+          path: 'https://dms/supp1',
+          fileName: 'contract.pdf',
+          fileType: 'application/pdf',
+          fileSize: 5000,
+          createdAt: '2026-02-01T00:00:00',
+          documentId: 'supp1',
+        },
+      ],
+    })
+    expect(rows).toHaveLength(1)
+    const r = rows[0]
+    expect(r.fileName).toBe('contract.pdf')
+    expect(r.fileType).toBe('PDF')
+    expect(r.fileSize).toBe(5000)
+    expect(r.documentId).toBe('supp1')
+    // supplementaryDoc is NOT extractable
+    expect(r.capabilities).toEqual({
+      download: true,
+      viewJson: false,
+      reExtract: false,
+      reUpload: false,
+    })
+  })
+
+  it('leaves type/size/uploaded null when no metadata is available', () => {
+    const rows = buildDocumentRows({ form9: 'https://dms/f9xyz' })
+    expect(rows).toHaveLength(1)
+    const r = rows[0]
+    expect(r.fileType).toBeNull()
+    expect(r.fileSize).toBeNull()
+    expect(r.uploadedAt).toBeNull()
+    // the empty-state formatters render em-dash
+    expect(formatDocumentType(r)).toBe('—')
+    expect(formatDocumentSize(r.fileSize)).toBe('—')
+    expect(formatDocumentUploaded(r)).toBe('—')
+  })
+
+  it('drops an opaque-id file name and falls back to a numbered label', () => {
+    const hash = 'a'.repeat(64) // sha256-like → looks like an id
+    const rows = buildDocumentRows({
+      ic_documents: JSON.stringify([{ path: 'https://dms/x1' }, { path: 'https://dms/x2' }]),
+      documentMetadata: {
+        'https://dms/x1': { fileName: hash, fileType: null, fileSize: null, createdAt: null },
+        'https://dms/x2': { fileName: hash, fileType: null, fileSize: null, createdAt: null },
+      },
+    })
+    expect(rows).toHaveLength(2)
+    expect(rows[0].fileName).toBeNull()
+    expect(rows[0].displayName).toBe('Identity Documents (Supplementary) 1')
+    expect(rows[1].displayName).toBe('Identity Documents (Supplementary) 2')
+  })
+
+  it('returns [] when the IHS has no document fields', () => {
+    expect(buildDocumentRows({ ihsId: 1, monthlyGrossIncome: 5000 })).toEqual([])
+  })
+})
+
+describe('document-table maps + formatters (SYS-2766)', () => {
+  it('exposes the doc-type maps/sets', () => {
+    expect(getDocDisplayNames().bankStatements).toBe('Bank Statements')
+    expect(getExtractableDocTypes().has('ssm')).toBe(true)
+    expect(getExtractableDocTypes().has('supplementaryDoc')).toBe(false)
+    expect(getReuploadableDocTypes().has('bankStatements')).toBe(true)
+    expect(getReuploadableDocTypes().has('ssm')).toBe(false)
+  })
+
+  it('formatDocumentSize renders human bytes with em-dash on unknown', () => {
+    expect(formatDocumentSize(500)).toBe('500 B')
+    expect(formatDocumentSize(2048)).toBe('2.0 KB')
+    expect(formatDocumentSize(5 * 1024 * 1024)).toBe('5.0 MB')
+    expect(formatDocumentSize(null)).toBe('—')
+    expect(formatDocumentSize(0)).toBe('—')
+  })
+
+  it('formatDocumentUploaded prefers the date, falls back to period label, then em-dash', () => {
+    expect(formatDocumentUploaded({ uploadedAt: '2026-01-15T10:30:00', periodLabel: null })).toMatch(
+      /2026/,
+    )
+    expect(formatDocumentUploaded({ uploadedAt: null, periodLabel: 'Jan 2026' })).toBe('Jan 2026')
+    expect(formatDocumentUploaded({ uploadedAt: null, periodLabel: null })).toBe('—')
+    // invalid date string → fall back to period label
+    expect(formatDocumentUploaded({ uploadedAt: 'not-a-date', periodLabel: 'Year 2024' })).toBe(
+      'Year 2024',
+    )
   })
 })

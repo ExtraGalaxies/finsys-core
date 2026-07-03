@@ -76,3 +76,71 @@ export interface FileFieldTableData {
   items: FileFieldTableItem[]
   hasData: boolean
 }
+
+// ── Documents table (SYS-2765 / SYS-2766) ──────────────────────
+
+/**
+ * Per-document File metadata attached by finsys-api `getIhsDetailsById` as the
+ * `documentMetadata` sibling map (SYS-2765), keyed by the document's raw stored
+ * path. The single source for the documents table's Type / Size / Uploaded
+ * columns — the IHS doc fields themselves carry only the path.
+ */
+export interface DocumentFileMetadata {
+  fileName: string | null
+  fileType: string | null
+  fileSize: number | null
+  createdAt: string | null
+}
+
+/**
+ * Intrinsic, data-derived capability eligibility for a document row. Reflects
+ * ONLY what the IHS payload implies (doc type + a resolvable file); the consumer
+ * ANDs in its own runtime gates (readOnly, allowReupload, and — for viewJson —
+ * whether extraction has actually completed) before showing a control.
+ */
+export interface DocumentRowCapabilities {
+  /** A downloadable original exists (a resolvable documentId). */
+  download: boolean
+  /** The doc type produces extracted JSON (consumer still gates on "Extracted"). */
+  viewJson: boolean
+  /** The doc type can be re-extracted. */
+  reExtract: boolean
+  /** The doc type accepts a replacement upload (finsys-api /ihs/client/update/document). */
+  reUpload: boolean
+}
+
+/**
+ * One uploaded document, presentation-agnostic — built by `buildDocumentRows`
+ * from the IHS payload + its `documentMetadata` map. Rendered identically by
+ * FinHub (React) and finsys-client (Edge). Live extraction status + confidence
+ * are NOT payload-derived; the consumer overlays them by matching
+ * `(docType, timePeriod)`.
+ */
+export interface DocumentRow {
+  /** IHS field key, e.g. 'bankStatements'. */
+  docType: string
+  /** Human label for the doc-type group, e.g. 'Bank Statements'. */
+  label: string
+  /** 0-based position within the docType group. */
+  index: number
+  /** Best display name (resolved file name, or a label + period/index fallback). */
+  displayName: string
+  /** Id for the download link; null when no file path is resolvable. */
+  documentId: string | null
+  /** Raw stored path — the join key back to `documentMetadata`. */
+  path: string | null
+  /** Extraction time-period token: 'T{month|year}' or 'ALL'. */
+  timePeriod: string
+  /** Human period label ('Jan 2026' / 'Year 2024') or null. */
+  periodLabel: string | null
+  /** Resolved file name; null when the stored name looks like an opaque id. */
+  fileName: string | null
+  /** File type label (extension → MIME subtype, upper-cased) or null. */
+  fileType: string | null
+  /** File size in bytes, or null when unknown. */
+  fileSize: number | null
+  /** ISO upload timestamp (File.createdAt) or null. */
+  uploadedAt: string | null
+  /** Intrinsic capability eligibility (consumer overlays its runtime gates). */
+  capabilities: DocumentRowCapabilities
+}

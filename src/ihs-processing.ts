@@ -17,6 +17,8 @@ import type {
   FileFieldTableData,
   FileFieldTableItem,
   IhsFieldProvenance,
+  DocumentRow,
+  DocumentFileMetadata,
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
@@ -266,6 +268,231 @@ export function buildFileFieldTables(
     }
   }
   return tables
+}
+
+// ── Documents table (SYS-2766) ─────────────────────────────────
+//
+// Presentation-agnostic model of the per-document table on the IHS detail page.
+// Absorbs the doc-type maps/rules FinHub used to own inline so FinHub and
+// finsys-client render the SAME table. Pure transform: file metadata is attached
+// upstream by finsys-api (the `documentMetadata` sibling map, SYS-2765).
+
+/** IHS doc-field key → human label. Its keys drive which fields become sections. */
+const DOC_DISPLAY_NAMES: Record<string, string> = {
+  bankStatements: 'Bank Statements',
+  financialStatements: 'Financial Statements',
+  form9: 'Form 9',
+  epfStatements: 'EPF Statements',
+  payslips: 'Payslips',
+  ssm: 'SSM Company Profile',
+  ic: 'Identity Card',
+  ssm_registration_documents: 'Form 9',
+  ic_documents: 'Identity Documents (Supplementary)',
+  consentForm: 'Consent Form',
+  supplementaryDoc: 'Supplementary Documents',
+  coreIncomeDoc: 'Core Income Document',
+  incomeSupportingDoc: 'Income Supporting Document',
+  incomeEPF_iakaun: 'EPF i-Akaun',
+  photocopyRegistrationCard: 'Registration Card',
+  bankStatementOrSavingPassbook: 'Bank Passbook',
+  tnbBills: 'TNB Bills',
+}
+
+/** Doc types finsys-api can run extraction on (→ re-extract / view-JSON eligible). */
+const EXTRACTABLE_DOC_TYPES = new Set<string>([
+  'bankStatements',
+  'financialStatements',
+  'form9',
+  'epfStatements',
+  'payslips',
+  'ssm',
+  'ic',
+  'ssm_registration_documents',
+  'ic_documents',
+])
+
+/** Doc types that accept a replacement upload (SYS-2229 — finsys-api ignores the rest). */
+const REUPLOADABLE_DOC_TYPES = new Set<string>(['bankStatements', 'financialStatements'])
+
+/** IHS doc-field key → human label (the fields that become document sections). */
+export function getDocDisplayNames(): Record<string, string> {
+  return DOC_DISPLAY_NAMES
+}
+
+/** Doc types eligible for extraction (re-extract / view-JSON). */
+export function getExtractableDocTypes(): Set<string> {
+  return EXTRACTABLE_DOC_TYPES
+}
+
+/** Doc types eligible for a replacement upload. */
+export function getReuploadableDocTypes(): Set<string> {
+  return REUPLOADABLE_DOC_TYPES
+}
+
+/** Heuristic: does a string look like an opaque id (UUID / long hex), not a real name? */
+function isProbablyId(str?: string | null): boolean {
+  if (!str) return false
+  const clean = str.split('.')[0] // ignore extension
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean)) return true
+  if (/^[0-9a-f]{32,128}$/i.test(clean)) return true
+  return false
+}
+
+interface ParsedDocFile {
+  path?: string
+  fileName?: string
+  documentId?: string
+  fileSize?: number | string
+  fileType?: string
+  createdAt?: string
+  month?: number
+  year?: number
+}
+
+/**
+ * Parse one IHS doc field into file entries. Handles the shapes the field takes:
+ * a JSON-array string (bank/financial/…, possibly inline-enriched like
+ * supplementaryDoc), an already-parsed array, or a bare URL string (ssm/form9/ic).
+ */
+export function parseFileField(value: unknown): ParsedDocFile[] {
+  if (!value) return []
+  if (Array.isArray(value)) return value as ParsedDocFile[]
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? (parsed as ParsedDocFile[]) : []
+    } catch {
+      // Plain URL string (form9, ssm, ic) — wrap as a single entry.
+      if (value.startsWith('http')) {
+        return [{ path: value, documentId: value.split('/').pop() || undefined }]
+      }
+      return []
+    }
+  }
+  return []
+}
+
+function toBytes(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isNaN(value) ? null : value
+  if (typeof value === 'string') {
+    const n = parseInt(value, 10)
+    return Number.isNaN(n) ? null : n
+  }
+  return null
+}
+
+/**
+ * Build the presentation-agnostic document rows for an IHS. Reads the doc fields
+ * named in DOC_DISPLAY_NAMES + the `documentMetadata` sibling map (SYS-2765) and
+ * emits a flat DocumentRow[] (all sections, in DOC_DISPLAY_NAMES order). Metadata
+ * is taken inline off the entry first (supplementaryDoc is enriched inline), then
+ * from `documentMetadata[path]`.
+ */
+export function buildDocumentRows(ihsData: Record<string, unknown>): DocumentRow[] {
+  const metaMap = (ihsData.documentMetadata ?? {}) as Record<string, DocumentFileMetadata>
+  const rows: DocumentRow[] = []
+
+  for (const docType of Object.keys(DOC_DISPLAY_NAMES)) {
+    const files = parseFileField(ihsData[docType])
+    if (files.length === 0) continue
+
+    const label = DOC_DISPLAY_NAMES[docType]
+    const extractable = EXTRACTABLE_DOC_TYPES.has(docType)
+    const reUploadable = extractable && REUPLOADABLE_DOC_TYPES.has(docType)
+
+    files.forEach((file, index) => {
+      const path = file.path ?? null
+      const meta = path ? metaMap[path] : undefined
+
+      const documentId = file.documentId || (path ? path.split('/').pop() || null : null)
+      const timePeriod = file.month ? `T${file.month}` : file.year ? `T${file.year}` : 'ALL'
+
+      const rawName = file.fileName ?? meta?.fileName ?? undefined
+      const fileName = rawName && !isProbablyId(rawName) ? rawName : null
+
+      const rawExt = (rawName ?? '').split('.').pop()
+      const ext =
+        rawExt && rawExt.length <= 5 && !isProbablyId(rawExt) ? rawExt.toUpperCase() : null
+      const mime = file.fileType ?? meta?.fileType
+      const fileType = ext || (mime?.split('/').pop()?.toUpperCase() ?? null)
+
+      const fileSize = toBytes(file.fileSize) ?? meta?.fileSize ?? null
+      const uploadedAt = file.createdAt ?? meta?.createdAt ?? null
+
+      const periodLabel =
+        file.month && file.year
+          ? new Date(file.year, file.month - 1).toLocaleDateString('en-MY', {
+              year: 'numeric',
+              month: 'short',
+            })
+          : file.year
+            ? `Year ${file.year}`
+            : null
+
+      const displayName =
+        fileName ||
+        (periodLabel
+          ? `${label} — ${periodLabel}`
+          : files.length > 1
+            ? `${label} ${index + 1}`
+            : label)
+
+      rows.push({
+        docType,
+        label,
+        index,
+        displayName,
+        documentId,
+        path,
+        timePeriod,
+        periodLabel,
+        fileName,
+        fileType,
+        fileSize,
+        uploadedAt,
+        capabilities: {
+          download: !!documentId,
+          viewJson: extractable,
+          reExtract: extractable,
+          reUpload: reUploadable,
+        },
+      })
+    })
+  }
+
+  return rows
+}
+
+// ── Documents-table cell formatters (empty-state rules live here) ──
+// Single source for the Type / Size / Uploaded strings so FinHub + finsys-client
+// render identical cells (em-dash on unknown).
+
+const EM_DASH = '—'
+
+/** Type column: the resolved type label, or em-dash. */
+export function formatDocumentType(row: Pick<DocumentRow, 'fileType'>): string {
+  return row.fileType ?? EM_DASH
+}
+
+/** Size column: human bytes (B / KB / MB), or em-dash when unknown. */
+export function formatDocumentSize(bytes: number | null | undefined): string {
+  if (!bytes || Number.isNaN(bytes)) return EM_DASH
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** Uploaded column: the upload date, else the period label, else em-dash. */
+export function formatDocumentUploaded(
+  row: Pick<DocumentRow, 'uploadedAt' | 'periodLabel'>
+): string {
+  if (row.uploadedAt) {
+    const d = new Date(row.uploadedAt)
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' })
+    }
+  }
+  return row.periodLabel ?? EM_DASH
 }
 
 // ── IHS detail processing ──────────────────────────────────────

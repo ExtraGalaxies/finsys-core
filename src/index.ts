@@ -90,6 +90,14 @@ export {
   buildFileFieldTables,
   processIhsDetails,
   groupDetailsByCategory,
+  buildDocumentRows,
+  parseFileField,
+  getDocDisplayNames,
+  getExtractableDocTypes,
+  getReuploadableDocTypes,
+  formatDocumentType,
+  formatDocumentSize,
+  formatDocumentUploaded,
 } from './ihs-processing.js'
 
 export { IhsValueFormat, FileFieldTableType } from './ihs-types.js'
@@ -129,6 +137,9 @@ export type {
   FileFieldTableData,
   FileFieldTableItem,
   IhsFieldProvenance,
+  DocumentRow,
+  DocumentRowCapabilities,
+  DocumentFileMetadata,
 } from './ihs-types.js'
 
 // ── Source Adapter framework (SYS-2440) ──────────────────────────────

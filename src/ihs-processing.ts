@@ -21,6 +21,7 @@ import type {
   DocumentFileMetadata,
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
+import { getDocumentTypeGroups } from './document-types.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
 
 // ── Display names ──────────────────────────────────────────────
@@ -74,47 +75,36 @@ export function groupColumnsByTimePeriod(
 
 // ── Field grouping ─────────────────────────────────────────────
 
-const FIELD_GROUP_PREFIXES: [string, string][] = [
-  ['bank_statement', 'bank_statements'],
-  ['financials', 'financials'],
-  ['epf_statement', 'epf_statements'],
-  ['payslip_statement', 'payslip_statements'],
-  ['ssm', 'ssm_documents'],
-  ['form9', 'form9'],
-  ['ic', 'ic_documents'],
-]
-
+/**
+ * Groups fields by their catalog-declared document_group (falling back to
+ * the field's own name for anything untagged). Was a hardcoded, closed
+ * prefix-matching table (FIELD_GROUP_PREFIXES) requiring a code edit for
+ * every new document type; now reads the same document_group tag the
+ * catalog already carries for document-types.ts, so adding a document
+ * type is a catalog-only data change.
+ */
 export function groupFieldsByPattern(fields: FieldData[]): Record<string, FieldData[]> {
   const groups: Record<string, FieldData[]> = {}
   for (const field of fields) {
     if (!field.name) continue
-    let groupName = field.name
-    for (const [prefix, group] of FIELD_GROUP_PREFIXES) {
-      if (field.name.startsWith(prefix)) {
-        groupName = group
-        break
-      }
-    }
+    const groupName = (field as { document_group?: string }).document_group ?? field.name
     if (!groups[groupName]) groups[groupName] = []
     groups[groupName].push(field)
   }
   return groups
 }
 
-/** Human-friendly display names for field groups (when a group combines multiple fields). */
-const GROUP_DISPLAY_NAMES: Record<string, string> = {
-  bank_statements: 'Bank Statements',
-  financials: 'Audited Financial Statements',
-  epf_statements: 'EPF Statements',
-  payslip_statements: 'Payslip Statements',
-  form9: 'Form 9 / Section 17 / Form D',
-  ssm_documents: 'SSM Company Information',
-  ic_documents: 'Identification Card',
-}
-
-/** Returns human-friendly display names for field groups. */
+/**
+ * Human-friendly display names for field groups (when a group combines
+ * multiple fields), derived from document-types.ts's catalog-backed
+ * registry instead of a hardcoded map.
+ */
 export function getGroupDisplayNames(): Record<string, string> {
-  return GROUP_DISPLAY_NAMES
+  const names: Record<string, string> = {}
+  for (const group of getDocumentTypeGroups()) {
+    names[group.documentGroup] = group.label
+  }
+  return names
 }
 
 // ── File-field table building ──────────────────────────────────
@@ -171,7 +161,7 @@ function buildTableForGroup(
   const isTimeSeries = periods.length > 0
   const tableType = isTimeSeries ? FileFieldTableType.TIME_SERIES : FileFieldTableType.KEY_VALUE
   const groupDisplayName =
-    GROUP_DISPLAY_NAMES[groupName] || fields[0]?.displayName || getDisplayName(groupName)
+    getGroupDisplayNames()[groupName] || fields[0]?.displayName || getDisplayName(groupName)
 
   if (isTimeSeries) {
     const columnGroups = groupColumnsByTimePeriod(allColumns)

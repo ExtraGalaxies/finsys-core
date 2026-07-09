@@ -1,20 +1,39 @@
 import { describe, it, expect } from 'vitest'
 import { resolveExtractionStatus, DocExtractionStatus } from './extraction-status.js'
-import { ExtractionFileType } from './extraction.js'
 
 describe('resolveExtractionStatus', () => {
+  // SYS-2842: resolveExtractionStatus used to iterate a fixed enum
+  // (Object.values(ExtractionFileType)) in a specific declared order; it
+  // now iterates the catalog-derived document-type registry, in catalog
+  // declaration order -- a real, intentional order change (both current
+  // consumers key results by fileType/displayName, confirmed order-
+  // independent, but pin the new order explicitly so a future accidental
+  // reorder is caught here rather than discovered downstream).
+  it('emits documents in catalog declaration order', () => {
+    const result = resolveExtractionStatus({ ihsId: 1 })
+    expect(result.documents.map((d) => d.fileType)).toEqual([
+      'bankStatements',
+      'financialStatements',
+      'form9',
+      'ssm',
+      'ic',
+      'epfStatements',
+      'payslips',
+    ])
+  })
+
   describe('single-file types (ssm, form9, ic)', () => {
     it('returns not_uploaded when file path field is empty', () => {
       const ihsRecord = { ihsId: 1, fullName: 'Test' }
       const result = resolveExtractionStatus(ihsRecord)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.NotUploaded)
     })
 
     it('returns not_uploaded when file path field is null', () => {
       const ihsRecord = { ihsId: 1, ssm: null }
       const result = resolveExtractionStatus(ihsRecord)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.NotUploaded)
     })
 
@@ -26,7 +45,7 @@ describe('resolveExtractionStatus', () => {
         ssmCompanyRegNo: '202001012345',
       }
       const result = resolveExtractionStatus(ihsRecord)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Extracted)
       expect(ssm?.populatedColumns).toContain('ssmCompanyName')
       expect(ssm?.populatedColumns).toContain('ssmCompanyRegNo')
@@ -41,7 +60,7 @@ describe('resolveExtractionStatus', () => {
         icNumber: '900101-14-5678',
       }
       const result = resolveExtractionStatus(ihsRecord)
-      const ic = result.documents.find((d) => d.fileType === ExtractionFileType.Ic)
+      const ic = result.documents.find((d) => d.fileType === 'ic')
       expect(ic?.status).toBe(DocExtractionStatus.Extracted)
       expect(ic?.populatedColumns).toContain('icName')
     })
@@ -52,7 +71,7 @@ describe('resolveExtractionStatus', () => {
         ssm: 'https://storage.blob.core.windows.net/docs/ssm.pdf',
       }
       const result = resolveExtractionStatus(ihsRecord)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Unknown)
     })
 
@@ -62,7 +81,7 @@ describe('resolveExtractionStatus', () => {
         ssm: 'https://blob/ssm.pdf',
       }
       const result = resolveExtractionStatus(ihsRecord, [])
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Uploaded)
     })
   })
@@ -84,7 +103,7 @@ describe('resolveExtractionStatus', () => {
       }
       const result = resolveExtractionStatus(ihsRecord)
       const bankDocs = result.documents.filter(
-        (d) => d.fileType === ExtractionFileType.BankStatement
+        (d) => d.fileType === 'bankStatements'
       )
       expect(bankDocs).toHaveLength(3)
       expect(bankDocs[0].status).toBe(DocExtractionStatus.Extracted)
@@ -101,7 +120,7 @@ describe('resolveExtractionStatus', () => {
       }
       const result = resolveExtractionStatus(ihsRecord)
       const bankDocs = result.documents.filter(
-        (d) => d.fileType === ExtractionFileType.BankStatement
+        (d) => d.fileType === 'bankStatements'
       )
       expect(bankDocs).toHaveLength(1)
       expect(bankDocs[0].status).toBe(DocExtractionStatus.Unknown)
@@ -123,7 +142,7 @@ describe('resolveExtractionStatus', () => {
       ]
       const result = resolveExtractionStatus(ihsRecord, jobs)
       const bankDocs = result.documents.filter(
-        (d) => d.fileType === ExtractionFileType.BankStatement
+        (d) => d.fileType === 'bankStatements'
       )
       expect(bankDocs).toHaveLength(2)
       expect(bankDocs[0].status).toBe(DocExtractionStatus.Extracted)
@@ -134,7 +153,7 @@ describe('resolveExtractionStatus', () => {
       const ihsRecord = { ihsId: 1 }
       const result = resolveExtractionStatus(ihsRecord)
       const bankDocs = result.documents.filter(
-        (d) => d.fileType === ExtractionFileType.BankStatement
+        (d) => d.fileType === 'bankStatements'
       )
       expect(bankDocs).toHaveLength(1)
       expect(bankDocs[0].status).toBe(DocExtractionStatus.NotUploaded)
@@ -149,7 +168,7 @@ describe('resolveExtractionStatus', () => {
       }
       const jobs = [{ fileType: 'ssm', status: 'queued' }]
       const result = resolveExtractionStatus(ihsRecord, jobs)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Queued)
     })
 
@@ -160,7 +179,7 @@ describe('resolveExtractionStatus', () => {
       }
       const jobs = [{ fileType: 'ssm', status: 'processing' }]
       const result = resolveExtractionStatus(ihsRecord, jobs)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Processing)
     })
 
@@ -171,7 +190,7 @@ describe('resolveExtractionStatus', () => {
       }
       const jobs = [{ fileType: 'ssm', status: 'failed', errorMessage: 'OCR timeout' }]
       const result = resolveExtractionStatus(ihsRecord, jobs)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Failed)
       expect(ssm?.errorMessage).toBe('OCR timeout')
     })
@@ -184,7 +203,7 @@ describe('resolveExtractionStatus', () => {
       }
       const jobs = [{ fileType: 'ssm', status: 'failed', errorMessage: 'Re-extraction failed' }]
       const result = resolveExtractionStatus(ihsRecord, jobs)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Extracted)
       expect(ssm?.errorMessage).toBe('Re-extraction failed')
     })
@@ -196,7 +215,7 @@ describe('resolveExtractionStatus', () => {
       }
       const jobs = [{ fileType: 'ssm', status: 'succeeded' }]
       const result = resolveExtractionStatus(ihsRecord, jobs)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Extracted)
     })
 
@@ -207,7 +226,7 @@ describe('resolveExtractionStatus', () => {
       }
       const jobs = [{ fileType: 'bankStatements', status: 'succeeded' }]
       const result = resolveExtractionStatus(ihsRecord, jobs)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.status).toBe(DocExtractionStatus.Uploaded)
     })
   })
@@ -240,7 +259,7 @@ describe('resolveExtractionStatus', () => {
     it('uses GROUP_DISPLAY_NAMES for known types', () => {
       const ihsRecord = { ihsId: 1, ssm: 'https://blob/ssm.pdf', ssmCompanyName: 'Test' }
       const result = resolveExtractionStatus(ihsRecord)
-      const ssm = result.documents.find((d) => d.fileType === ExtractionFileType.Ssm)
+      const ssm = result.documents.find((d) => d.fileType === 'ssm')
       expect(ssm?.displayName).toBe('SSM Company Information')
     })
   })

@@ -7176,7 +7176,7 @@
       "ihs_column_names": [
         "ssmCompanyName",
         "ssmCompanyRegNo",
-        "ssmIncorporatedDate",
+        "incorporatedDate",
         "businessCommencementDate",
         "businessNature",
         "ssmCompanyEntityType",

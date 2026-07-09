@@ -11,8 +11,7 @@
  */
 
 import { ExtractionFileType, ExtractionJobStatus } from './extraction.js'
-import { getBaseFieldSpecs } from './catalogs.js'
-import { getGroupDisplayNames, groupFieldsByPattern } from './ihs-processing.js'
+import { getDocumentTypeGroups } from './document-types.js'
 import type { FieldData } from './survey-generator.js'
 
 // ── Types ──────────────────────────────────────────────────
@@ -52,25 +51,6 @@ export interface ExtractionStatusResult {
     notUploaded: number
   }
 }
-
-// ── Map ExtractionFileType to field group names used by groupFieldsByPattern ──
-
-const FILE_TYPE_TO_GROUP: Record<ExtractionFileType, string> = {
-  [ExtractionFileType.BankStatement]: 'bank_statements',
-  [ExtractionFileType.FinancialStatement]: 'financials',
-  [ExtractionFileType.Epf]: 'epf_statements',
-  [ExtractionFileType.Payslip]: 'payslip_statements',
-  [ExtractionFileType.Ssm]: 'ssm_documents',
-  [ExtractionFileType.Form9]: 'form9',
-  [ExtractionFileType.Ic]: 'ic_documents',
-}
-
-// ── Static field metadata (derived once at module load) ────
-
-const _specs = getBaseFieldSpecs()
-const _fileFields = _specs.filter((f) => f.type === 'file' && f.ihs_column_names?.length)
-const _grouped = groupFieldsByPattern(_fileFields)
-const _groupDisplayNames = getGroupDisplayNames()
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -195,10 +175,10 @@ export function resolveExtractionStatus(
   const documents: DocExtractionResult[] = []
   const hasJobRecords = jobRecords !== undefined
 
-  for (const fileType of Object.values(ExtractionFileType)) {
-    const groupName = FILE_TYPE_TO_GROUP[fileType]
-    const fields = _grouped[groupName] ?? []
-    const displayName = _groupDisplayNames[groupName] ?? fileType
+  for (const group of getDocumentTypeGroups()) {
+    const fileType = group.documentType
+    const fields = group.fields
+    const displayName = group.label
 
     const uploadedCount = countUploadedFiles(ihsRecord, fileType)
     const isUploaded = uploadedCount > 0 || fields.some((f) => f.name && isPopulated(ihsRecord[f.name]))

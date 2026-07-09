@@ -17,6 +17,7 @@ import {
   formatDocumentSize,
   formatDocumentUploaded,
 } from './ihs-processing.js'
+import { getBaseFieldSpecs } from './catalogs.js'
 import type { FieldData } from './survey-generator.js'
 
 describe('extractTimePeriods', () => {
@@ -70,29 +71,58 @@ describe('getDisplayName', () => {
 })
 
 describe('groupFieldsByPattern', () => {
-  it('groups bank_statement fields together', () => {
-    const fields: FieldData[] = [
-      { name: 'bank_statement_t1', type: 'file', ihs_column_names: ['bankNameT1'] },
-      { name: 'bank_statement_t2', type: 'file', ihs_column_names: ['bankNameT2'] },
-      { name: 'financials', type: 'file', ihs_column_names: ['revenue'] },
+  // SYS-2842: groupFieldsByPattern used to bucket fields via a hardcoded
+  // prefix-matching table (FIELD_GROUP_PREFIXES) -- adding a document type
+  // meant a code edit here. It now reads each field's catalog-declared
+  // document_group tag directly, so these tests use tagged fixtures
+  // (matching what the real catalog now carries) instead of relying on
+  // name-prefix inference.
+  it('groups fields sharing the same document_group tag together', () => {
+    const fields: (FieldData & { document_group?: string })[] = [
+      { name: 'bank_statement_t1', type: 'file', ihs_column_names: ['bankNameT1'], document_group: 'bank_statements' },
+      { name: 'bank_statement_t2', type: 'file', ihs_column_names: ['bankNameT2'], document_group: 'bank_statements' },
+      { name: 'financials', type: 'file', ihs_column_names: ['revenue'], document_group: 'financials' },
     ]
     const grouped = groupFieldsByPattern(fields)
     expect(grouped['bank_statements']).toHaveLength(2)
     expect(grouped['financials']).toHaveLength(1)
   })
 
-  it('groups epf, form9, ic, and ssm fields', () => {
-    const fields: FieldData[] = [
-      { name: 'epf_statement_1', type: 'file' },
-      { name: 'form9', type: 'file' },
-      { name: 'ic', type: 'file' },
-      { name: 'ssm', type: 'file' },
+  it('groups epf, form9, ic, and ssm fields by their tagged document_group', () => {
+    const fields: (FieldData & { document_group?: string })[] = [
+      { name: 'epf_statement_1', type: 'file', document_group: 'epf_statements' },
+      { name: 'form9', type: 'file', document_group: 'form9' },
+      { name: 'ic', type: 'file', document_group: 'ic_documents' },
+      { name: 'ssm', type: 'file', document_group: 'ssm_documents' },
     ]
     const grouped = groupFieldsByPattern(fields)
     expect(grouped['epf_statements']).toHaveLength(1)
     expect(grouped['form9']).toHaveLength(1)
     expect(grouped['ic_documents']).toHaveLength(1)
     expect(grouped['ssm_documents']).toHaveLength(1)
+  })
+
+  it('falls back to grouping by the field name itself when document_group is absent', () => {
+    const fields: FieldData[] = [{ name: 'some_untagged_field', type: 'file' }]
+    const grouped = groupFieldsByPattern(fields)
+    expect(grouped['some_untagged_field']).toHaveLength(1)
+  })
+
+  it('derives the real catalog groups end-to-end via getBaseFieldSpecs', () => {
+    const fileFields = getBaseFieldSpecs().filter((f) => f.type === 'file')
+    const grouped = groupFieldsByPattern(fileFields)
+    expect(Object.keys(grouped).sort()).toEqual(
+      [
+        'bank_statements',
+        'financials',
+        'form9',
+        'ssm_documents',
+        'ic_documents',
+        'epf_statements',
+        'payslip_statements',
+      ].sort(),
+    )
+    expect(grouped['bank_statements']).toHaveLength(6)
   })
 })
 

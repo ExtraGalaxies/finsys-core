@@ -106,7 +106,14 @@ export { IhsValueFormat, FileFieldTableType } from './ihs-types.js'
 export { Role } from './roles.js'
 
 // Extraction
-export { ExtractionJobStatus, ExtractionFileType } from './extraction.js'
+export { ExtractionJobStatus } from './extraction.js'
+export type { ExtractionFileType } from './extraction.js'
+export {
+  getDocumentTypeGroups,
+  isDocumentType,
+  assertDocumentType,
+} from './document-types.js'
+export type { DocumentTypeGroup, WireFormat, TaggedFieldData, TimePeriodUnit } from './document-types.js'
 
 // IHS status (canonical enum, mirrors finsys-api)
 export {

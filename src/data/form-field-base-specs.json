@@ -6685,7 +6685,13 @@
         "openingBalanceT1",
         "bankBalanceT1"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "bankStatements",
+      "document_group": "bank_statements",
+      "document_group_label": "Bank Statements",
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t2",
@@ -6701,7 +6707,13 @@
         "openingBalanceT2",
         "bankBalanceT2"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "bankStatements",
+      "document_group": "bank_statements",
+      "document_group_label": "Bank Statements",
+      "wire_format": "path_array",
+      "document_slot": 2,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t3",
@@ -6717,7 +6729,13 @@
         "openingBalanceT3",
         "bankBalanceT3"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "bankStatements",
+      "document_group": "bank_statements",
+      "document_group_label": "Bank Statements",
+      "wire_format": "path_array",
+      "document_slot": 3,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t4",
@@ -6733,7 +6751,13 @@
         "openingBalanceT4",
         "bankBalanceT4"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "bankStatements",
+      "document_group": "bank_statements",
+      "document_group_label": "Bank Statements",
+      "wire_format": "path_array",
+      "document_slot": 4,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t5",
@@ -6749,7 +6773,13 @@
         "openingBalanceT5",
         "bankBalanceT5"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "bankStatements",
+      "document_group": "bank_statements",
+      "document_group_label": "Bank Statements",
+      "wire_format": "path_array",
+      "document_slot": 5,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t6",
@@ -6765,7 +6795,13 @@
         "openingBalanceT6",
         "bankBalanceT6"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "bankStatements",
+      "document_group": "bank_statements",
+      "document_group_label": "Bank Statements",
+      "wire_format": "path_array",
+      "document_slot": 6,
+      "time_period_unit": "month"
     },
     {
       "name": "financials",
@@ -6786,7 +6822,13 @@
         "netOperatingCashFlow",
         "ebitda"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "financialStatements",
+      "document_group": "financials",
+      "document_group_label": "Audited Financial Statements",
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "year"
     },
     {
       "name": "financials_fincap_t1",
@@ -7030,7 +7072,13 @@
         "depreciationOfInvestmentSecuritiesT2",
         "endOfYearCashT2"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "financialStatements",
+      "document_group": "financials",
+      "document_group_label": "Audited Financial Statements",
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "year"
     },
     {
       "name": "financials_fincap_t2",
@@ -7156,7 +7204,13 @@
         "depreciationOfInvestmentSecuritiesT3",
         "endOfYearCashT3"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "financialStatements",
+      "document_group": "financials",
+      "document_group_label": "Audited Financial Statements",
+      "wire_format": "path_array",
+      "document_slot": 2,
+      "time_period_unit": "year"
     },
     {
       "name": "form9",
@@ -7167,7 +7221,11 @@
         "companyName",
         "companyRegNo"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "form9",
+      "document_group": "form9",
+      "document_group_label": "Form 9 / Section 17 / Form D",
+      "wire_format": "url_string"
     },
     {
       "name": "ssm",
@@ -7191,7 +7249,11 @@
         "businessOrigin",
         "registeredAddress"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "ssm",
+      "document_group": "ssm_documents",
+      "document_group_label": "SSM Company Information",
+      "wire_format": "url_string"
     },
     {
       "name": "ic",
@@ -7208,7 +7270,11 @@
         "icNationality",
         "icRace"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "ic",
+      "document_group": "ic_documents",
+      "document_group_label": "Identification Card",
+      "wire_format": "url_string"
     },
     {
       "name": "epf_statement_t1",
@@ -7225,7 +7291,13 @@
         "epfTotalContributionT1",
         "epfTotalCurrentContributionT1"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "epfStatements",
+      "document_group": "epf_statements",
+      "document_group_label": "EPF Statements",
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "year"
     },
     {
       "name": "epf_statement_t2",
@@ -7242,7 +7314,13 @@
         "epfTotalContributionT2",
         "epfTotalCurrentContributionT2"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "epfStatements",
+      "document_group": "epf_statements",
+      "document_group_label": "EPF Statements",
+      "wire_format": "path_array",
+      "document_slot": 2,
+      "time_period_unit": "year"
     },
     {
       "name": "payslip_statement_t1",
@@ -7265,7 +7343,13 @@
         "payslipEmployeeTaxT1",
         "payslipOtherDeductionT1"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "payslips",
+      "document_group": "payslip_statements",
+      "document_group_label": "Payslip Statements",
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t2",
@@ -7288,7 +7372,13 @@
         "payslipEmployeeTaxT2",
         "payslipOtherDeductionT2"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "payslips",
+      "document_group": "payslip_statements",
+      "document_group_label": "Payslip Statements",
+      "wire_format": "path_array",
+      "document_slot": 2,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t3",
@@ -7311,7 +7401,13 @@
         "payslipEmployeeTaxT3",
         "payslipOtherDeductionT3"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "payslips",
+      "document_group": "payslip_statements",
+      "document_group_label": "Payslip Statements",
+      "wire_format": "path_array",
+      "document_slot": 3,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t4",
@@ -7334,7 +7430,13 @@
         "payslipEmployeeTaxT4",
         "payslipOtherDeductionT4"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "payslips",
+      "document_group": "payslip_statements",
+      "document_group_label": "Payslip Statements",
+      "wire_format": "path_array",
+      "document_slot": 4,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t5",
@@ -7357,7 +7459,13 @@
         "payslipEmployeeTaxT5",
         "payslipOtherDeductionT5"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "payslips",
+      "document_group": "payslip_statements",
+      "document_group_label": "Payslip Statements",
+      "wire_format": "path_array",
+      "document_slot": 5,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t6",
@@ -7380,7 +7488,13 @@
         "payslipEmployeeTaxT6",
         "payslipOtherDeductionT6"
       ],
-      "category": "13"
+      "category": "13",
+      "document_type": "payslips",
+      "document_group": "payslip_statements",
+      "document_group_label": "Payslip Statements",
+      "wire_format": "path_array",
+      "document_slot": 6,
+      "time_period_unit": "month"
     }
   ]
 }

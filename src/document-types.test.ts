@@ -75,6 +75,46 @@ describe('document-types', () => {
     })
   })
 
+  describe('document_slot / time_period_unit tagging', () => {
+    it('tags document_slot and time_period_unit on multi-instance fields (SYS-2842)', () => {
+      const groups = getDocumentTypeGroups()
+
+      const bank = groups.find((g) => g.documentType === 'bankStatements')!
+      const bankT3 = bank.fields.find((f) => f.name === 'bank_statement_t3')!
+      expect(bankT3.document_slot).toBe(3)
+      expect(bankT3.time_period_unit).toBe('month')
+
+      const payslip = groups.find((g) => g.documentType === 'payslips')!
+      const payslipT2 = payslip.fields.find((f) => f.name === 'payslip_statement_t2')!
+      expect(payslipT2.document_slot).toBe(2)
+      expect(payslipT2.time_period_unit).toBe('month')
+
+      const epf = groups.find((g) => g.documentType === 'epfStatements')!
+      const epfT1 = epf.fields.find((f) => f.name === 'epf_statement_t1')!
+      expect(epfT1.document_slot).toBe(1)
+      expect(epfT1.time_period_unit).toBe('year')
+
+      const financials = groups.find((g) => g.documentType === 'financialStatements')!
+      const finT1 = financials.fields.find((f) => f.name === 'financials_fincap_t1')!
+      const finT2 = financials.fields.find((f) => f.name === 'financials_fincap_t2')!
+      expect(finT1.document_slot).toBe(1)
+      expect(finT1.time_period_unit).toBe('year')
+      expect(finT2.document_slot).toBe(2)
+      expect(finT2.time_period_unit).toBe('year')
+    })
+
+    it('leaves document_slot/time_period_unit untagged on singleton document types (form9/ssm/ic)', () => {
+      const groups = getDocumentTypeGroups()
+      for (const type of ['form9', 'ssm', 'ic']) {
+        const group = groups.find((g) => g.documentType === type)!
+        for (const f of group.fields) {
+          expect(f.document_slot).toBeUndefined()
+          expect(f.time_period_unit).toBeUndefined()
+        }
+      }
+    })
+  })
+
   describe('isDocumentType / assertDocumentType', () => {
     it('recognizes every known document type', () => {
       for (const g of getDocumentTypeGroups()) {

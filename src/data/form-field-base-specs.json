@@ -6689,7 +6689,9 @@
       "document_type": "bankStatements",
       "document_group": "bank_statements",
       "document_group_label": "Bank Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t2",
@@ -6709,7 +6711,9 @@
       "document_type": "bankStatements",
       "document_group": "bank_statements",
       "document_group_label": "Bank Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 2,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t3",
@@ -6729,7 +6733,9 @@
       "document_type": "bankStatements",
       "document_group": "bank_statements",
       "document_group_label": "Bank Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 3,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t4",
@@ -6749,7 +6755,9 @@
       "document_type": "bankStatements",
       "document_group": "bank_statements",
       "document_group_label": "Bank Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 4,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t5",
@@ -6769,7 +6777,9 @@
       "document_type": "bankStatements",
       "document_group": "bank_statements",
       "document_group_label": "Bank Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 5,
+      "time_period_unit": "month"
     },
     {
       "name": "bank_statement_t6",
@@ -6789,7 +6799,9 @@
       "document_type": "bankStatements",
       "document_group": "bank_statements",
       "document_group_label": "Bank Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 6,
+      "time_period_unit": "month"
     },
     {
       "name": "financials",
@@ -6814,7 +6826,9 @@
       "document_type": "financialStatements",
       "document_group": "financials",
       "document_group_label": "Audited Financial Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "year"
     },
     {
       "name": "financials_fincap_t1",
@@ -7062,7 +7076,9 @@
       "document_type": "financialStatements",
       "document_group": "financials",
       "document_group_label": "Audited Financial Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "year"
     },
     {
       "name": "financials_fincap_t2",
@@ -7192,7 +7208,9 @@
       "document_type": "financialStatements",
       "document_group": "financials",
       "document_group_label": "Audited Financial Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 2,
+      "time_period_unit": "year"
     },
     {
       "name": "form9",
@@ -7277,7 +7295,9 @@
       "document_type": "epfStatements",
       "document_group": "epf_statements",
       "document_group_label": "EPF Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "year"
     },
     {
       "name": "epf_statement_t2",
@@ -7298,7 +7318,9 @@
       "document_type": "epfStatements",
       "document_group": "epf_statements",
       "document_group_label": "EPF Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 2,
+      "time_period_unit": "year"
     },
     {
       "name": "payslip_statement_t1",
@@ -7325,7 +7347,9 @@
       "document_type": "payslips",
       "document_group": "payslip_statements",
       "document_group_label": "Payslip Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t2",
@@ -7352,7 +7376,9 @@
       "document_type": "payslips",
       "document_group": "payslip_statements",
       "document_group_label": "Payslip Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 2,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t3",
@@ -7379,7 +7405,9 @@
       "document_type": "payslips",
       "document_group": "payslip_statements",
       "document_group_label": "Payslip Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 3,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t4",
@@ -7406,7 +7434,9 @@
       "document_type": "payslips",
       "document_group": "payslip_statements",
       "document_group_label": "Payslip Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 4,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t5",
@@ -7433,7 +7463,9 @@
       "document_type": "payslips",
       "document_group": "payslip_statements",
       "document_group_label": "Payslip Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 5,
+      "time_period_unit": "month"
     },
     {
       "name": "payslip_statement_t6",
@@ -7460,7 +7492,9 @@
       "document_type": "payslips",
       "document_group": "payslip_statements",
       "document_group_label": "Payslip Statements",
-      "wire_format": "path_array"
+      "wire_format": "path_array",
+      "document_slot": 6,
+      "time_period_unit": "month"
     }
   ]
 }

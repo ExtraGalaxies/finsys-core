@@ -14,7 +14,7 @@
  * document_type/document_group/document_group_label/wire_format, no
  * TypeScript union to edit, no exhaustive map to keep in sync by hand.
  *
- * Four distinct properties, because real consumer code depends on each
+ * Six distinct properties, because real consumer code depends on each
  * independently (confirmed by direct trace, not assumed):
  *   - document_type: the wire/dispatch value (e.g. "bankStatements") --
  *     what File.type, processIhsUpdate's switch, and ocrValidator's
@@ -29,6 +29,25 @@
  *     consolidation of its own payload-transfer.ts registry (not consumed
  *     by anything in this package yet) -- 'path_array' | 'url_string' |
  *     'path_only', mirroring the shapes borrower-client already uses.
+ *   - document_slot: which UPLOAD position this field represents (1st
+ *     document, 2nd, etc.) -- known at upload time, before extraction
+ *     ever runs. Distinct from a "time period slot" (which final
+ *     displayed period the EXTRACTED DATA populates): for bank
+ *     statements/EPF/payslips these are always 1:1 (one document, one
+ *     period), but for financial statements one document can supply TWO
+ *     periods' worth of data (audited financials show two comparative
+ *     years per document) -- that reconciliation is genuinely
+ *     extraction-time behavior, not catalog data, and is NOT captured
+ *     by document_slot. document_slot is exactly what
+ *     @finsys/borrower-client's payload-transfer.ts currently has to
+ *     regex-capture out of the field name (e.g. `bank_statement_t(\d+)`)
+ *     -- reserved here for that future consolidation, not consumed by
+ *     anything in this package yet.
+ *   - time_period_unit: what unit document_slot's number measures for
+ *     this field -- 'month' | 'year'. Confirmed by the actual catalog
+ *     data, not assumed: bank statements and payslips are monthly,
+ *     financial statements and EPF statements are annual (EPF's own
+ *     column names literally contain "Year", e.g. epfStatementYearT1).
  *
  * Mirrors the AdapterCategory pattern (SYS-2500): runtime lookup/grouping
  * derived from JSON data, no compile-time exhaustiveness. Same trade-off
@@ -41,6 +60,7 @@ import { getBaseFieldSpecs } from './catalogs.js'
 import type { FieldData } from './survey-generator.js'
 
 export type WireFormat = 'path_array' | 'url_string' | 'path_only'
+export type TimePeriodUnit = 'month' | 'year'
 
 export interface DocumentTypeGroup {
   /** Wire/dispatch value, e.g. "bankStatements". */
@@ -51,15 +71,23 @@ export interface DocumentTypeGroup {
   readonly label: string
   /** Reserved for a future borrower-client payload-routing consolidation; undefined until every entry in the group declares one. */
   readonly wireFormat?: WireFormat
-  /** The catalog's own `type: 'file'` entries belonging to this group, in catalog order. */
-  readonly fields: readonly FieldData[]
+  /**
+   * The catalog's own `type: 'file'` entries belonging to this group, in
+   * catalog order. Each entry may carry its own document_slot/
+   * time_period_unit -- see TaggedFieldData and the module doc.
+   */
+  readonly fields: readonly TaggedFieldData[]
 }
 
-interface TaggedFieldData extends FieldData {
+export interface TaggedFieldData extends FieldData {
   document_type?: string
   document_group?: string
   document_group_label?: string
   wire_format?: WireFormat
+  /** Which upload position this field represents (1st document, 2nd, etc). See module doc for why this is distinct from a "time period". */
+  document_slot?: number
+  /** What unit document_slot's number measures for this field. */
+  time_period_unit?: TimePeriodUnit
 }
 
 let cached: readonly DocumentTypeGroup[] | null = null
@@ -72,7 +100,12 @@ function buildDocumentTypeGroups(): readonly DocumentTypeGroup[] {
   const order: string[] = []
   const byDocumentType = new Map<
     string,
-    { documentGroup: string; label: string; wireFormat: WireFormat | undefined; fields: FieldData[] }
+    {
+      documentGroup: string
+      label: string
+      wireFormat: WireFormat | undefined
+      fields: TaggedFieldData[]
+    }
   >()
 
   for (const f of fileFields) {

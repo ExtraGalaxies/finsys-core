@@ -51,7 +51,11 @@ describe("ssm field spec (SYS-2085)", () => {
   const SSM_IHS_COLUMNS = [
     "ssmCompanyName",
     "ssmCompanyRegNo",
-    "ssmIncorporatedDate",
+    // SYS-2722: incorporation date is a single canonical fact regardless of
+    // which document it was extracted from (Form 9 or SSM profile) -- route
+    // through the same ihs.incorporatedDate column processForm9 uses, not a
+    // parallel ssm-specific twin.
+    "incorporatedDate",
     "businessCommencementDate",
     "businessNature",
     "ssmCompanyEntityType",

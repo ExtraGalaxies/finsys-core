@@ -42,7 +42,13 @@
  *     @finsys/borrower-client's payload-transfer.ts currently has to
  *     regex-capture out of the field name (e.g. `bank_statement_t(\d+)`)
  *     -- reserved here for that future consolidation, not consumed by
- *     anything in this package yet.
+ *     anything in this package yet. `financials` (slot 1) and
+ *     `financials_fincap_t1` (also slot 1) are NOT a duplicate-slot bug:
+ *     they're alternate catalog entries for different form variants
+ *     (confirmed by direct read -- both share document_group "financials"
+ *     but represent mutually exclusive form paths, never populated
+ *     together on one IHS), so both correctly describe "the first
+ *     physical document uploaded" for their respective variant.
  *   - time_period_unit: what unit document_slot's number measures for
  *     this field -- 'month' | 'year'. Confirmed by the actual catalog
  *     data, not assumed: bank statements and payslips are monthly,
@@ -69,7 +75,7 @@ export interface DocumentTypeGroup {
   readonly documentGroup: string
   /** Human-friendly label, e.g. "Bank Statements". */
   readonly label: string
-  /** Reserved for a future borrower-client payload-routing consolidation; undefined until every entry in the group declares one. */
+  /** Reserved for a future borrower-client payload-routing consolidation. Taken from the group's first entry; not enforced consistent across entries (all groups agree today, but a future mixed-format group would silently inherit the first entry's value). */
   readonly wireFormat?: WireFormat
   /**
    * The catalog's own `type: 'file'` entries belonging to this group, in

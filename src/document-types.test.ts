@@ -101,6 +101,14 @@ describe('document-types', () => {
       expect(finT1.time_period_unit).toBe('year')
       expect(finT2.document_slot).toBe(2)
       expect(finT2.time_period_unit).toBe('year')
+
+      // The legacy (non-fincap) "financials" entry also carries slot 1 --
+      // NOT a duplicate-slot bug, it's an alternate form variant that
+      // shares document_group "financials" but is never populated
+      // alongside financials_fincap_t1/t2 on the same IHS. See module doc.
+      const finLegacy = financials.fields.find((f) => f.name === 'financials')!
+      expect(finLegacy.document_slot).toBe(1)
+      expect(finLegacy.time_period_unit).toBe('year')
     })
 
     it('leaves document_slot/time_period_unit untagged on singleton document types (form9/ssm/ic)', () => {

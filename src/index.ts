@@ -113,7 +113,7 @@ export {
   isDocumentType,
   assertDocumentType,
 } from './document-types.js'
-export type { DocumentTypeGroup, WireFormat } from './document-types.js'
+export type { DocumentTypeGroup, WireFormat, TaggedFieldData, TimePeriodUnit } from './document-types.js'
 
 // IHS status (canonical enum, mirrors finsys-api)
 export {

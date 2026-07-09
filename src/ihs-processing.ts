@@ -22,6 +22,7 @@ import type {
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
+import type { TaggedFieldData } from './document-types.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
 
 // ── Display names ──────────────────────────────────────────────
@@ -87,7 +88,7 @@ export function groupFieldsByPattern(fields: FieldData[]): Record<string, FieldD
   const groups: Record<string, FieldData[]> = {}
   for (const field of fields) {
     if (!field.name) continue
-    const groupName = (field as { document_group?: string }).document_group ?? field.name
+    const groupName = (field as TaggedFieldData).document_group ?? field.name
     if (!groups[groupName]) groups[groupName] = []
     groups[groupName].push(field)
   }
@@ -99,12 +100,17 @@ export function groupFieldsByPattern(fields: FieldData[]): Record<string, FieldD
  * multiple fields), derived from document-types.ts's catalog-backed
  * registry instead of a hardcoded map.
  */
+let cachedGroupDisplayNames: Record<string, string> | null = null
+
 export function getGroupDisplayNames(): Record<string, string> {
-  const names: Record<string, string> = {}
-  for (const group of getDocumentTypeGroups()) {
-    names[group.documentGroup] = group.label
+  if (!cachedGroupDisplayNames) {
+    const names: Record<string, string> = {}
+    for (const group of getDocumentTypeGroups()) {
+      names[group.documentGroup] = group.label
+    }
+    cachedGroupDisplayNames = names
   }
-  return names
+  return cachedGroupDisplayNames
 }
 
 // ── File-field table building ──────────────────────────────────

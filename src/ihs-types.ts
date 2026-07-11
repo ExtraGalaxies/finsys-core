@@ -41,15 +41,30 @@ export enum FileFieldTableType {
  *   observedAt  — ISO wall-clock of the extraction run
  *   sourceRunId — the extraction run/job id that wrote it
  *   origin      — "extracted" (a real {value,confidence} leaf) vs "derived"
- *                 (computed / no-confidence path). A "derived" field must render
- *                 as "no confidence available", never a fabricated low score.
+ *                 (computed / no-confidence path) vs "manual" (SYS-2806, a
+ *                 lender-entered correction, committed once its edit overlay
+ *                 is approved). A "derived" field must render as "no
+ *                 confidence available", never a fabricated low score; a
+ *                 "manual" field must render as an edit indicator, not a
+ *                 confidence dot — confidence is always null for it too.
  */
 export interface IhsFieldProvenance {
   source: string
   confidence: number | null
   observedAt: string
   sourceRunId: string | null
-  origin: 'extracted' | 'derived'
+  origin: 'extracted' | 'derived' | 'manual'
+}
+
+/**
+ * Type guard: narrows an unknown value to `IhsFieldProvenance['origin']` iff
+ * it is one of the three canonical origin strings. `origin` was previously
+ * validated only by the TS union — this is the first runtime check.
+ */
+export function isValidIhsFieldOrigin(
+  origin: unknown
+): origin is IhsFieldProvenance['origin'] {
+  return origin === 'extracted' || origin === 'derived' || origin === 'manual'
 }
 
 export interface FileFieldTableItem {

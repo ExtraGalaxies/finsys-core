@@ -4,6 +4,32 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] — 2026-07-11
+
+### Added
+
+- **`IhsStatus.EditingApplication` (SYS-2806).** A lender-scoped detour off
+  `LenderEvaluation` for manually editing extracted IHS field values — not
+  reachable from `ApplicationFinalized`. Added to `IHS_VALID_STATUSES`, not
+  to `IHS_TERMINAL_STATUSES`/`IHS_FAILURE_STATUSES` (transient working
+  state).
+- **`IhsFieldProvenance.origin` gains `'manual'`** alongside the existing
+  `'extracted' | 'derived'` — a lender-entered correction, committed once
+  its edit overlay is approved. Confidence is always `null` for a manual
+  origin, same as `'derived'`.
+- **`isValidIhsFieldOrigin()`** runtime guard for the `origin` field,
+  matching the existing `isValidIhsStatus`/`isTerminalIhsStatus` pattern —
+  previously validated only by the TS union type.
+
+### Why
+
+Foundation for lender field-editing with a full audit trail (SYS-2806).
+Lenders correcting/entering IHS data post-extraction is active customer
+demand (MicroLeap, Powervest) against an original design assumption that
+values come only from document extraction. `IhsStatus` stays a closed enum
+here (unlike `ExtractionFileType`'s 4.0.0 conversion to an open string) —
+it mirrors finsys-api's real state machine, not an extensible taxonomy.
+
 ## [3.2.0] — 2026-06-10
 
 ### Added

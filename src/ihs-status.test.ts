@@ -14,6 +14,7 @@ describe('IhsStatus', () => {
     expect(IhsStatus.CreatingApplication).toBe('CREATING_APPLICATION')
     expect(IhsStatus.ApplicationFinalized).toBe('APPLICATION_FINALIZED')
     expect(IhsStatus.LenderEvaluation).toBe('LENDER_EVALUATION')
+    expect(IhsStatus.EditingApplication).toBe('EDITING_APPLICATION')
     expect(IhsStatus.Approved).toBe('APPROVED')
     expect(IhsStatus.LouDelivered).toBe('LOU_DELIVERED')
     expect(IhsStatus.AwaitingDisbursement).toBe('AWAITING_DISBURSEMENT')
@@ -23,12 +24,13 @@ describe('IhsStatus', () => {
     expect(IhsStatus.Canceled).toBe('CANCELED')
   })
 
-  it('IHS_VALID_STATUSES has exactly 10 entries matching finsys-api allowedIhsStatus', () => {
-    expect(IHS_VALID_STATUSES).toHaveLength(10)
+  it('IHS_VALID_STATUSES has exactly 11 entries matching finsys-api allowedIhsStatus', () => {
+    expect(IHS_VALID_STATUSES).toHaveLength(11)
     expect(IHS_VALID_STATUSES).toEqual([
       'CREATING_APPLICATION',
       'APPLICATION_FINALIZED',
       'LENDER_EVALUATION',
+      'EDITING_APPLICATION',
       'APPROVED',
       'LOU_DELIVERED',
       'AWAITING_DISBURSEMENT',
@@ -75,6 +77,7 @@ describe('isTerminalIhsStatus', () => {
     expect(isTerminalIhsStatus(IhsStatus.CreatingApplication)).toBe(false)
     expect(isTerminalIhsStatus(IhsStatus.ApplicationFinalized)).toBe(false)
     expect(isTerminalIhsStatus(IhsStatus.LenderEvaluation)).toBe(false)
+    expect(isTerminalIhsStatus(IhsStatus.EditingApplication)).toBe(false)
     expect(isTerminalIhsStatus(IhsStatus.Approved)).toBe(false)
     expect(isTerminalIhsStatus(IhsStatus.LouDelivered)).toBe(false)
     expect(isTerminalIhsStatus(IhsStatus.AwaitingDisbursement)).toBe(false)

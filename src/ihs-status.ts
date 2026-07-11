@@ -25,11 +25,19 @@
  * Lender rejection is not represented by a distinct status: when a lender
  * rejects an application, finsys-api transitions the record back to
  * `APPLICATION_FINALIZED` from `LENDER_EVALUATION`.
+ *
+ * `EditingApplication` (SYS-2806) is a lender-scoped detour off
+ * `LenderEvaluation` for manually editing extracted field values — not
+ * reachable from `ApplicationFinalized`. A lender toggles into it and back
+ * out to `LenderEvaluation`; it never appears on a record no lender has
+ * claimed. See finsys-api's `updateIhsStatusByLender` for the transition
+ * guard.
  */
 export enum IhsStatus {
   CreatingApplication = 'CREATING_APPLICATION',
   ApplicationFinalized = 'APPLICATION_FINALIZED',
   LenderEvaluation = 'LENDER_EVALUATION',
+  EditingApplication = 'EDITING_APPLICATION',
   Approved = 'APPROVED',
   LouDelivered = 'LOU_DELIVERED',
   AwaitingDisbursement = 'AWAITING_DISBURSEMENT',
@@ -47,6 +55,7 @@ export const IHS_VALID_STATUSES: readonly IhsStatus[] = [
   IhsStatus.CreatingApplication,
   IhsStatus.ApplicationFinalized,
   IhsStatus.LenderEvaluation,
+  IhsStatus.EditingApplication,
   IhsStatus.Approved,
   IhsStatus.LouDelivered,
   IhsStatus.AwaitingDisbursement,

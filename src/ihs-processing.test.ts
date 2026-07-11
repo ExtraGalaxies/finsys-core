@@ -214,6 +214,26 @@ describe('groupColumnsByInstance', () => {
     const groups = groupColumnsByInstance(['invoiceTotal'], rows)
     expect(groups.invoiceTotal).toEqual({ 'invoice:doc-1': 250 })
   })
+
+  it('adversarial-review finding: two distinct rows sharing (timePeriod, sourceLabel) do NOT collide -- both values survive', () => {
+    const rows = [
+      { instanceKey: 'bankStatement:doc-1', sourceLabel: 'Maybank', timePeriod: 'T1', bankBalance: 5000 },
+      { instanceKey: 'bankStatement:doc-2', sourceLabel: 'Maybank', timePeriod: 'T1', bankBalance: 8000 },
+    ]
+    const groups = groupColumnsByInstance(['bankBalance'], rows)
+    expect(Object.keys(groups.bankBalance)).toHaveLength(2)
+    expect(Object.values(groups.bankBalance).sort()).toEqual([5000, 8000])
+  })
+
+  it('adversarial-review finding: two rows sharing timePeriod with NO sourceLabel do NOT collide either', () => {
+    const rows = [
+      { instanceKey: 'financialStatement:doc-1#T1', timePeriod: 'T1', totalAssets: 100 },
+      { instanceKey: 'financialStatement:doc-2#T1', timePeriod: 'T1', totalAssets: 200 },
+    ]
+    const groups = groupColumnsByInstance(['totalAssets'], rows)
+    expect(Object.keys(groups.totalAssets)).toHaveLength(2)
+    expect(Object.values(groups.totalAssets).sort()).toEqual([100, 200])
+  })
 })
 
 describe('buildFileFieldTablesFromInstances', () => {
@@ -234,6 +254,23 @@ describe('buildFileFieldTablesFromInstances', () => {
     // 8 instances -- more than the catalog's T1-T6 cap -- all present.
     expect(bankBalanceItem!.timePeriods.length).toBe(8)
     expect(Object.keys(bankBalanceItem!.data).length).toBe(8)
+  })
+
+  it('adversarial-review finding: two same-period same-bank rows both survive with distinct, disambiguated labels', () => {
+    const rows = [
+      { instanceKey: 'bankStatement:doc-1', sourceLabel: 'Maybank', timePeriod: 'T1', bankName: 'Maybank', bankBalance: 5000 },
+      { instanceKey: 'bankStatement:doc-2', sourceLabel: 'Maybank', timePeriod: 'T1', bankName: 'Maybank', bankBalance: 8000 },
+    ]
+    const tables = buildFileFieldTablesFromInstances({ bank_statements: rows })
+    const bankBalanceItem = tables['bank_statements']!.items.find((i) =>
+      i.displayName.toLowerCase().includes('balance')
+    )!
+    // timePeriods and data must always stay in sync -- same length, no
+    // silently-dropped row.
+    expect(bankBalanceItem.timePeriods).toHaveLength(2)
+    expect(Object.keys(bankBalanceItem.data)).toHaveLength(2)
+    expect(new Set(bankBalanceItem.timePeriods).size).toBe(2) // no duplicate labels
+    expect(Object.values(bankBalanceItem.data).sort()).toEqual([5000, 8000])
   })
 
   it('skips categories absent from instancesByCategory', () => {

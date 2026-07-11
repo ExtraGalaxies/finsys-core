@@ -298,10 +298,40 @@ function instanceColumnLabel(row: InstanceRow): string {
 }
 
 /**
+ * Adversarial-review finding (Phase 5): instanceColumnLabel is NOT
+ * collision-free -- two distinct rows (distinct instanceKey) can share
+ * the same timePeriod + sourceLabel (e.g. two same-bank, same-month
+ * statements, or any row lacking sourceLabel that shares a period).
+ * Since every consumer keys data/confidence/provenance BY this label
+ * (matching FileFieldTableItem's existing contract, where timePeriods'
+ * entries are literal object keys into `data`), an undisambiguated
+ * collision doesn't just look wrong -- it silently drops one row's
+ * value entirely (last-write-wins into the same object key) while
+ * `timePeriods` keeps a duplicate entry pointing at the SURVIVING row's
+ * value twice. Disambiguates by appending "(2)", "(3)", ... to every
+ * occurrence after the first, keeping the common (non-colliding) case's
+ * label exactly as before. Both groupColumnsByInstance and
+ * buildInstanceTable call this SAME function on the SAME instanceRows
+ * array (never the raw per-row instanceColumnLabel directly), so the
+ * two independently-computed label lists always agree with each other.
+ */
+function instanceColumnLabels(rows: InstanceRow[]): string[] {
+  const seenCounts = new Map<string, number>()
+  return rows.map((row) => {
+    const raw = instanceColumnLabel(row)
+    const occurrence = (seenCounts.get(raw) ?? 0) + 1
+    seenCounts.set(raw, occurrence)
+    return occurrence === 1 ? raw : `${raw} (${occurrence})`
+  })
+}
+
+/**
  * Groups instance rows by base metric name -- the unbounded analog of
  * groupColumnsByTimePeriod. `baseColumnNames` is the category's base
  * (unsuffixed) field list; each returned group maps instance column
- * label -> that metric's value on that row.
+ * label -> that metric's value on that row. Labels are disambiguated
+ * (see instanceColumnLabels) so two rows can never collide into the
+ * same key.
  */
 export function groupColumnsByInstance(
   baseColumnNames: string[],
@@ -311,14 +341,15 @@ export function groupColumnsByInstance(
   for (const baseName of baseColumnNames) {
     groups[baseName] = {}
   }
-  for (const row of instanceRows) {
-    const label = instanceColumnLabel(row)
+  const labels = instanceColumnLabels(instanceRows)
+  instanceRows.forEach((row, i) => {
+    const label = labels[i]
     for (const baseName of baseColumnNames) {
       if (baseName in row) {
         groups[baseName][label] = row[baseName]
       }
     }
-  }
+  })
   return groups
 }
 
@@ -346,7 +377,7 @@ function buildInstanceTable(
   fieldProvenance?: Record<string, IhsFieldProvenance>
 ): FileFieldTableData | null {
   const columnGroups = groupColumnsByInstance(baseNames, instanceRows)
-  const instanceLabels = instanceRows.map(instanceColumnLabel)
+  const instanceLabels = instanceColumnLabels(instanceRows)
 
   const items: FileFieldTableItem[] = []
   for (const [baseName, labelMap] of Object.entries(columnGroups)) {

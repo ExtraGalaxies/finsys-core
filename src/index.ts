@@ -100,7 +100,8 @@ export {
   formatDocumentUploaded,
 } from './ihs-processing.js'
 
-export { IhsValueFormat, FileFieldTableType, isValidIhsFieldOrigin } from './ihs-types.js'
+export { IhsValueFormat, FileFieldTableType, isValidIhsFieldOrigin, IHS_FIELD_ORIGINS } from './ihs-types.js'
+export type { IhsFieldOrigin } from './ihs-types.js'
 
 // Roles
 export { Role } from './roles.js'

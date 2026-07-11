@@ -48,23 +48,30 @@ export enum FileFieldTableType {
  *                 "manual" field must render as an edit indicator, not a
  *                 confidence dot — confidence is always null for it too.
  */
+/**
+ * Canonical origin values, single source of truth (Gemini-review finding:
+ * avoids duplicating the literal strings between the type and the runtime
+ * guard) -- mirrors the IhsStatus/IHS_VALID_STATUSES pattern in
+ * ihs-status.ts.
+ */
+export const IHS_FIELD_ORIGINS = ['extracted', 'derived', 'manual'] as const
+export type IhsFieldOrigin = (typeof IHS_FIELD_ORIGINS)[number]
+
 export interface IhsFieldProvenance {
   source: string
   confidence: number | null
   observedAt: string
   sourceRunId: string | null
-  origin: 'extracted' | 'derived' | 'manual'
+  origin: IhsFieldOrigin
 }
 
 /**
- * Type guard: narrows an unknown value to `IhsFieldProvenance['origin']` iff
- * it is one of the three canonical origin strings. `origin` was previously
- * validated only by the TS union — this is the first runtime check.
+ * Type guard: narrows an unknown value to `IhsFieldOrigin` iff it is one of
+ * the three canonical origin strings. `origin` was previously validated
+ * only by the TS union — this is the first runtime check.
  */
-export function isValidIhsFieldOrigin(
-  origin: unknown
-): origin is IhsFieldProvenance['origin'] {
-  return origin === 'extracted' || origin === 'derived' || origin === 'manual'
+export function isValidIhsFieldOrigin(origin: unknown): origin is IhsFieldOrigin {
+  return typeof origin === 'string' && (IHS_FIELD_ORIGINS as readonly string[]).includes(origin)
 }
 
 export interface FileFieldTableItem {

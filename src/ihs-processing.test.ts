@@ -266,6 +266,34 @@ describe('buildFileFieldTablesFromInstances', () => {
     expect(bankNameItem!.confidence?.['T1 · Maybank']).toBe(0.88)
     expect(bankNameItem!.confidence?.['T99 · Beyond']).toBeUndefined()
   })
+
+  it('renders a category via categoryOverrides when no catalog file spec exists (invoice)', () => {
+    const rows = [
+      { instanceKey: 'invoice:doc-1', vendorName: 'Acme Supplies', invoiceTotal: 500 },
+      { instanceKey: 'invoice:doc-2', vendorName: 'Beta Traders', invoiceTotal: 750 },
+    ]
+    const tables = buildFileFieldTablesFromInstances(
+      { invoices: rows },
+      undefined,
+      { invoices: { displayName: 'Invoices', baseColumnNames: ['vendorName', 'invoiceTotal'] } }
+    )
+    const invoices = tables['invoices']
+    expect(invoices).toBeDefined()
+    expect(invoices!.displayName).toBe('Invoices')
+    const vendorItem = invoices!.items.find((i) => i.displayName === 'Vendor Name')
+    expect(vendorItem!.data['invoice:doc-1']).toBe('Acme Supplies')
+    expect(vendorItem!.data['invoice:doc-2']).toBe('Beta Traders')
+  })
+
+  it('prefers the catalog-derived table over a categoryOverrides entry with the same name', () => {
+    const rows = [{ instanceKey: 'bankStatement:doc-1', timePeriod: 'T1', bankName: 'Maybank' }]
+    const tables = buildFileFieldTablesFromInstances(
+      { bank_statements: rows },
+      undefined,
+      { bank_statements: { displayName: 'Should Not Win', baseColumnNames: ['bankName'] } }
+    )
+    expect(tables['bank_statements']!.displayName).not.toBe('Should Not Win')
+  })
 })
 
 describe('processIhsDetails', () => {

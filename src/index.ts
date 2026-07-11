@@ -152,6 +152,8 @@ export type {
   InstanceRow,
 } from './ihs-types.js'
 
+export type { CategorySpec } from './ihs-processing.js'
+
 // ── Source Adapter framework (SYS-2440) ──────────────────────────────
 // The contract for ingesting unstructured / partner-specific data
 // sources and producing canonical credit signals. Vendor-specific

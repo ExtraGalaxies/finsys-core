@@ -338,15 +338,100 @@ export function groupColumnsByInstance(
  * function exists for) simply render with no confidence, same limitation
  * buildFileFieldTables already has today for anything past T6.
  */
+function buildInstanceTable(
+  groupName: string,
+  baseNames: string[],
+  groupDisplayName: string,
+  instanceRows: InstanceRow[],
+  fieldProvenance?: Record<string, IhsFieldProvenance>
+): FileFieldTableData | null {
+  const columnGroups = groupColumnsByInstance(baseNames, instanceRows)
+  const instanceLabels = instanceRows.map(instanceColumnLabel)
+
+  const items: FileFieldTableItem[] = []
+  for (const [baseName, labelMap] of Object.entries(columnGroups)) {
+    const hasAny = Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '')
+    if (!hasAny) continue
+
+    const numeric = isNumericField(baseName)
+    const data: Record<string, unknown> = {}
+    const formattedData: Record<string, string> = {}
+    const confidence: Record<string, number> = {}
+    const provenance: Record<string, IhsFieldProvenance> = {}
+
+    for (const [i, row] of instanceRows.entries()) {
+      const label = instanceLabels[i]
+      const value = labelMap[label] ?? null
+      data[label] = value
+      formattedData[label] = formatValue(value, numeric)
+
+      const legacyKey = row.timePeriod ? `${baseName}${row.timePeriod}` : undefined
+      const prov = legacyKey ? fieldProvenance?.[legacyKey] : undefined
+      if (prov) {
+        provenance[label] = prov
+        if (
+          prov.origin === 'extracted' &&
+          typeof prov.confidence === 'number' &&
+          !Number.isNaN(prov.confidence)
+        ) {
+          confidence[label] = prov.confidence
+        }
+      }
+    }
+
+    items.push({
+      displayName: getDisplayName(baseName),
+      timePeriods: instanceLabels,
+      data,
+      formattedData,
+      type: FileFieldTableType.TIME_SERIES,
+      isNumeric: numeric,
+      ...(Object.keys(confidence).length ? { confidence } : {}),
+      ...(Object.keys(provenance).length ? { provenance } : {}),
+    })
+  }
+
+  const hasData = items.some((item) =>
+    Object.values(item.data).some((v) => v !== null && v !== undefined && v !== '')
+  )
+  if (!items.length || !hasData) return null
+
+  return {
+    name: groupName,
+    displayName: groupDisplayName,
+    type: FileFieldTableType.TIME_SERIES,
+    items,
+    hasData,
+  }
+}
+
+/**
+ * Explicit base-column declaration for a category with NO catalog `file`
+ * spec -- e.g. invoice (SYS-2842 Phase 3), which was deliberately never
+ * registered in form-field-base-specs.json because getDocumentTypeGroups()
+ * is shared with resolveExtractionStatus, which assumes a category's wide-
+ * table columns exist to check "is this populated" against -- invoice has
+ * none (sibling-table only, no wideTableMirror). Registering it there would
+ * silently break resolveExtractionStatus's invoice status reporting. This
+ * override lets a category be instance-rendered without entering that
+ * shared registry at all.
+ */
+export interface CategorySpec {
+  displayName: string
+  baseColumnNames: string[]
+}
+
 export function buildFileFieldTablesFromInstances(
   instancesByCategory: Record<string, InstanceRow[]>,
-  fieldProvenance?: Record<string, IhsFieldProvenance>
+  fieldProvenance?: Record<string, IhsFieldProvenance>,
+  categoryOverrides?: Record<string, CategorySpec>
 ): Record<string, FileFieldTableData> {
   const specs = getBaseFieldSpecs()
   const fileFields = specs.filter((f) => f.type === 'file' && f.ihs_column_names?.length)
   const grouped = groupFieldsByPattern(fileFields)
 
   const tables: Record<string, FileFieldTableData> = {}
+
   for (const [groupName, fields] of Object.entries(grouped)) {
     const instanceRows = instancesByCategory[groupName]
     if (!instanceRows?.length) continue
@@ -357,68 +442,26 @@ export function buildFileFieldTablesFromInstances(
         baseNames.add(col.replace(TIME_PERIOD_REGEX, ''))
       }
     }
-
-    const columnGroups = groupColumnsByInstance([...baseNames], instanceRows)
-    const instanceLabels = instanceRows.map(instanceColumnLabel)
     const groupDisplayName =
       getGroupDisplayNames()[groupName] || fields[0]?.displayName || getDisplayName(groupName)
 
-    const items: FileFieldTableItem[] = []
-    for (const [baseName, labelMap] of Object.entries(columnGroups)) {
-      const hasAny = Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '')
-      if (!hasAny) continue
-
-      const numeric = isNumericField(baseName)
-      const data: Record<string, unknown> = {}
-      const formattedData: Record<string, string> = {}
-      const confidence: Record<string, number> = {}
-      const provenance: Record<string, IhsFieldProvenance> = {}
-
-      for (const [i, row] of instanceRows.entries()) {
-        const label = instanceLabels[i]
-        const value = labelMap[label] ?? null
-        data[label] = value
-        formattedData[label] = formatValue(value, numeric)
-
-        const legacyKey = row.timePeriod ? `${baseName}${row.timePeriod}` : undefined
-        const prov = legacyKey ? fieldProvenance?.[legacyKey] : undefined
-        if (prov) {
-          provenance[label] = prov
-          if (
-            prov.origin === 'extracted' &&
-            typeof prov.confidence === 'number' &&
-            !Number.isNaN(prov.confidence)
-          ) {
-            confidence[label] = prov.confidence
-          }
-        }
-      }
-
-      items.push({
-        displayName: getDisplayName(baseName),
-        timePeriods: instanceLabels,
-        data,
-        formattedData,
-        type: FileFieldTableType.TIME_SERIES,
-        isNumeric: numeric,
-        ...(Object.keys(confidence).length ? { confidence } : {}),
-        ...(Object.keys(provenance).length ? { provenance } : {}),
-      })
-    }
-
-    const hasData = items.some((item) =>
-      Object.values(item.data).some((v) => v !== null && v !== undefined && v !== '')
+    const table = buildInstanceTable(
+      groupName, [...baseNames], groupDisplayName, instanceRows, fieldProvenance
     )
-    if (items.length && hasData) {
-      tables[groupName] = {
-        name: groupName,
-        displayName: groupDisplayName,
-        type: FileFieldTableType.TIME_SERIES,
-        items,
-        hasData,
-      }
-    }
+    if (table) tables[groupName] = table
   }
+
+  for (const [groupName, spec] of Object.entries(categoryOverrides ?? {})) {
+    if (groupName in tables) continue // catalog-derived takes precedence
+    const instanceRows = instancesByCategory[groupName]
+    if (!instanceRows?.length) continue
+
+    const table = buildInstanceTable(
+      groupName, spec.baseColumnNames, spec.displayName, instanceRows, fieldProvenance
+    )
+    if (table) tables[groupName] = table
+  }
+
   return tables
 }
 

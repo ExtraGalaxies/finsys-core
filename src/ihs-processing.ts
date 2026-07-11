@@ -341,11 +341,12 @@ export function groupColumnsByInstance(
   for (const baseName of baseColumnNames) {
     groups[baseName] = {}
   }
+  if (!instanceRows?.length) return groups
   const labels = instanceColumnLabels(instanceRows)
   instanceRows.forEach((row, i) => {
     const label = labels[i]
     for (const baseName of baseColumnNames) {
-      if (baseName in row) {
+      if (Object.prototype.hasOwnProperty.call(row, baseName)) {
         groups[baseName][label] = row[baseName]
       }
     }
@@ -453,7 +454,7 @@ export interface CategorySpec {
 }
 
 export function buildFileFieldTablesFromInstances(
-  instancesByCategory: Record<string, InstanceRow[]>,
+  instancesByCategory: Record<string, InstanceRow[]> = {},
   fieldProvenance?: Record<string, IhsFieldProvenance>,
   categoryOverrides?: Record<string, CategorySpec>
 ): Record<string, FileFieldTableData> {
@@ -483,7 +484,7 @@ export function buildFileFieldTablesFromInstances(
   }
 
   for (const [groupName, spec] of Object.entries(categoryOverrides ?? {})) {
-    if (groupName in tables) continue // catalog-derived takes precedence
+    if (Object.prototype.hasOwnProperty.call(tables, groupName)) continue // catalog-derived takes precedence
     const instanceRows = instancesByCategory[groupName]
     if (!instanceRows?.length) continue
 

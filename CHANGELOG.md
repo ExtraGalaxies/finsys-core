@@ -16,10 +16,32 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **`IhsFieldProvenance.origin` gains `'manual'`** alongside the existing
   `'extracted' | 'derived'` — a lender-entered correction, committed once
   its edit overlay is approved. Confidence is always `null` for a manual
-  origin, same as `'derived'`.
+  origin, same as `'derived'`. The three origin strings now live in a
+  single canonical `IHS_FIELD_ORIGINS` array (mirroring
+  `IHS_VALID_STATUSES`), with `IhsFieldOrigin` derived from it.
 - **`isValidIhsFieldOrigin()`** runtime guard for the `origin` field,
   matching the existing `isValidIhsStatus`/`isTerminalIhsStatus` pattern —
   previously validated only by the TS union type.
+- **`groupColumnsByInstance()` + `buildFileFieldTablesFromInstances()`
+  (SYS-2886, Phase 5 of the FinXtract document-instance storage epic).**
+  The unbounded, instance-based counterpart to `groupColumnsByTimePeriod`/
+  `buildFileFieldTables` — builds the same `FileFieldTableData`/
+  `FileFieldTableItem` shape from finsys-api's new per-document sibling-
+  table rows (one row per uploaded document, keyed by a real
+  `instanceKey`) instead of the old, capped `T{n}`-suffixed wide-table
+  columns. Requires no catalog changes: base metric names are derived by
+  stripping the `T{n}` suffix off the existing catalog specs at runtime.
+  Accepts an optional `categoryOverrides` param (`CategorySpec`) for
+  categories with no catalog `file` spec at all (used for `invoice`,
+  which deliberately stays out of the shared `getDocumentTypeGroups()`
+  registry to avoid breaking `resolveExtractionStatus`'s wide-table-based
+  status check for a doc type that never had a wide-table mirror). Not
+  yet wired into any consumer (finsys-client/finhub-adonisjs) — this
+  release adds the capability; consumer wiring is separate follow-up
+  work.
+- **`InstanceRow` type** — the row shape `groupColumnsByInstance`/
+  `buildFileFieldTablesFromInstances` consume: `instanceKey`,
+  `sourceLabel?`, `timePeriod?`, plus arbitrary metric fields.
 
 ### Why
 
@@ -29,6 +51,14 @@ demand (MicroLeap, Powervest) against an original design assumption that
 values come only from document extraction. `IhsStatus` stays a closed enum
 here (unlike `ExtractionFileType`'s 4.0.0 conversion to an open string) —
 it mirrors finsys-api's real state machine, not an extensible taxonomy.
+
+Separately, the T{n}-suffixed wide-table columns (T1-T6 for bank
+statements/payslips, T1-T3 for financial statements/EPF) hardcode a
+cardinality cap that a lender wanting statements from more banks, or a
+longer document history, can't represent. finsys-api's `docInstanceStorageService`
+(SYS-2842, Phases 3/4) already fixed the storage side; this release adds
+the render-side counterpart so a future finsys-client/finhub-adonisjs
+change can show every uploaded document, not just the first N.
 
 ## [3.2.0] — 2026-06-10
 

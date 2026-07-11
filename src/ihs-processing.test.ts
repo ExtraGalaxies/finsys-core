@@ -3,10 +3,12 @@ import { IhsValueFormat, FileFieldTableType } from './ihs-types.js'
 import {
   extractTimePeriods,
   groupColumnsByTimePeriod,
+  groupColumnsByInstance,
   getDisplayNames,
   getDisplayName,
   groupFieldsByPattern,
   buildFileFieldTables,
+  buildFileFieldTablesFromInstances,
   processIhsDetails,
   groupDetailsByCategory,
   buildDocumentRows,
@@ -187,6 +189,147 @@ describe('buildFileFieldTables', () => {
     expect(bank).toBeDefined()
     expect(bank!.items[0].confidence).toBeUndefined()
     expect(bank!.items[0].provenance).toBeUndefined()
+  })
+})
+
+describe('groupColumnsByInstance', () => {
+  it('groups instance rows by base metric name, one column per row', () => {
+    const rows = [
+      { instanceKey: 'bankStatement:doc-1', sourceLabel: 'Maybank', timePeriod: 'T1', bankName: 'Maybank', bankBalance: 5000 },
+      { instanceKey: 'bankStatement:doc-2', sourceLabel: 'CIMB', timePeriod: 'T1', bankName: 'CIMB', bankBalance: 8000 },
+    ]
+    const groups = groupColumnsByInstance(['bankName', 'bankBalance'], rows)
+    expect(groups.bankName).toEqual({ 'T1 · Maybank': 'Maybank', 'T1 · CIMB': 'CIMB' })
+    expect(groups.bankBalance).toEqual({ 'T1 · Maybank': 5000, 'T1 · CIMB': 8000 })
+  })
+
+  it('falls back to the bare period/instanceKey when sourceLabel is absent', () => {
+    const rows = [{ instanceKey: 'financialStatement:doc-1#T1', timePeriod: 'T1', totalAssets: 100 }]
+    const groups = groupColumnsByInstance(['totalAssets'], rows)
+    expect(groups.totalAssets).toEqual({ T1: 100 })
+  })
+
+  it('falls back to instanceKey when timePeriod is also absent', () => {
+    const rows = [{ instanceKey: 'invoice:doc-1', invoiceTotal: 250 }]
+    const groups = groupColumnsByInstance(['invoiceTotal'], rows)
+    expect(groups.invoiceTotal).toEqual({ 'invoice:doc-1': 250 })
+  })
+
+  it('adversarial-review finding: two distinct rows sharing (timePeriod, sourceLabel) do NOT collide -- both values survive', () => {
+    const rows = [
+      { instanceKey: 'bankStatement:doc-1', sourceLabel: 'Maybank', timePeriod: 'T1', bankBalance: 5000 },
+      { instanceKey: 'bankStatement:doc-2', sourceLabel: 'Maybank', timePeriod: 'T1', bankBalance: 8000 },
+    ]
+    const groups = groupColumnsByInstance(['bankBalance'], rows)
+    expect(Object.keys(groups.bankBalance)).toHaveLength(2)
+    expect(Object.values(groups.bankBalance).sort()).toEqual([5000, 8000])
+  })
+
+  it('adversarial-review finding: two rows sharing timePeriod with NO sourceLabel do NOT collide either', () => {
+    const rows = [
+      { instanceKey: 'financialStatement:doc-1#T1', timePeriod: 'T1', totalAssets: 100 },
+      { instanceKey: 'financialStatement:doc-2#T1', timePeriod: 'T1', totalAssets: 200 },
+    ]
+    const groups = groupColumnsByInstance(['totalAssets'], rows)
+    expect(Object.keys(groups.totalAssets)).toHaveLength(2)
+    expect(Object.values(groups.totalAssets).sort()).toEqual([100, 200])
+  })
+})
+
+describe('buildFileFieldTablesFromInstances', () => {
+  it('builds an unbounded table -- more instance rows than any T{n} slot ever allowed', () => {
+    const rows = Array.from({ length: 8 }, (_, i) => ({
+      instanceKey: `bankStatement:doc-${i}`,
+      sourceLabel: `Bank ${i}`,
+      timePeriod: 'T1',
+      bankName: `Bank ${i}`,
+      bankBalance: 1000 * (i + 1),
+    }))
+    const tables = buildFileFieldTablesFromInstances({ bank_statements: rows })
+    const bank = tables['bank_statements']
+    expect(bank).toBeDefined()
+    expect(bank!.hasData).toBe(true)
+    const bankBalanceItem = bank!.items.find((i) => i.displayName.toLowerCase().includes('balance'))
+    expect(bankBalanceItem).toBeDefined()
+    // 8 instances -- more than the catalog's T1-T6 cap -- all present.
+    expect(bankBalanceItem!.timePeriods.length).toBe(8)
+    expect(Object.keys(bankBalanceItem!.data).length).toBe(8)
+  })
+
+  it('adversarial-review finding: two same-period same-bank rows both survive with distinct, disambiguated labels', () => {
+    const rows = [
+      { instanceKey: 'bankStatement:doc-1', sourceLabel: 'Maybank', timePeriod: 'T1', bankName: 'Maybank', bankBalance: 5000 },
+      { instanceKey: 'bankStatement:doc-2', sourceLabel: 'Maybank', timePeriod: 'T1', bankName: 'Maybank', bankBalance: 8000 },
+    ]
+    const tables = buildFileFieldTablesFromInstances({ bank_statements: rows })
+    const bankBalanceItem = tables['bank_statements']!.items.find((i) =>
+      i.displayName.toLowerCase().includes('balance')
+    )!
+    // timePeriods and data must always stay in sync -- same length, no
+    // silently-dropped row.
+    expect(bankBalanceItem.timePeriods).toHaveLength(2)
+    expect(Object.keys(bankBalanceItem.data)).toHaveLength(2)
+    expect(new Set(bankBalanceItem.timePeriods).size).toBe(2) // no duplicate labels
+    expect(Object.values(bankBalanceItem.data).sort()).toEqual([5000, 8000])
+  })
+
+  it('skips categories absent from instancesByCategory', () => {
+    const tables = buildFileFieldTablesFromInstances({})
+    expect(Object.keys(tables).length).toBe(0)
+  })
+
+  it('skips a category whose rows carry no non-empty values for any metric', () => {
+    const rows = [{ instanceKey: 'bankStatement:doc-1', timePeriod: 'T1' }]
+    const tables = buildFileFieldTablesFromInstances({ bank_statements: rows })
+    expect(tables['bank_statements']).toBeUndefined()
+  })
+
+  it('attaches confidence/provenance only for instances whose timePeriod maps onto a legacy T{n} key', () => {
+    const rows = [
+      { instanceKey: 'bankStatement:doc-1', sourceLabel: 'Maybank', timePeriod: 'T1', bankName: 'Maybank' },
+      { instanceKey: 'bankStatement:doc-2', sourceLabel: 'Beyond', timePeriod: 'T99', bankName: 'Beyond Bank' },
+    ]
+    const fieldProvenance = {
+      bankNameT1: {
+        source: 'finxtract:bank_statement',
+        confidence: 0.88,
+        observedAt: '2026-07-01T00:00:00Z',
+        sourceRunId: 'run-1',
+        origin: 'extracted' as const,
+      },
+    }
+    const tables = buildFileFieldTablesFromInstances({ bank_statements: rows }, fieldProvenance)
+    const bankNameItem = tables['bank_statements']!.items.find((i) => i.displayName === 'Bank Name')
+    expect(bankNameItem!.confidence?.['T1 · Maybank']).toBe(0.88)
+    expect(bankNameItem!.confidence?.['T99 · Beyond']).toBeUndefined()
+  })
+
+  it('renders a category via categoryOverrides when no catalog file spec exists (invoice)', () => {
+    const rows = [
+      { instanceKey: 'invoice:doc-1', vendorName: 'Acme Supplies', invoiceTotal: 500 },
+      { instanceKey: 'invoice:doc-2', vendorName: 'Beta Traders', invoiceTotal: 750 },
+    ]
+    const tables = buildFileFieldTablesFromInstances(
+      { invoices: rows },
+      undefined,
+      { invoices: { displayName: 'Invoices', baseColumnNames: ['vendorName', 'invoiceTotal'] } }
+    )
+    const invoices = tables['invoices']
+    expect(invoices).toBeDefined()
+    expect(invoices!.displayName).toBe('Invoices')
+    const vendorItem = invoices!.items.find((i) => i.displayName === 'Vendor Name')
+    expect(vendorItem!.data['invoice:doc-1']).toBe('Acme Supplies')
+    expect(vendorItem!.data['invoice:doc-2']).toBe('Beta Traders')
+  })
+
+  it('prefers the catalog-derived table over a categoryOverrides entry with the same name', () => {
+    const rows = [{ instanceKey: 'bankStatement:doc-1', timePeriod: 'T1', bankName: 'Maybank' }]
+    const tables = buildFileFieldTablesFromInstances(
+      { bank_statements: rows },
+      undefined,
+      { bank_statements: { displayName: 'Should Not Win', baseColumnNames: ['bankName'] } }
+    )
+    expect(tables['bank_statements']!.displayName).not.toBe('Should Not Win')
   })
 })
 

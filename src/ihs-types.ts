@@ -77,6 +77,23 @@ export interface FileFieldTableData {
   hasData: boolean
 }
 
+/**
+ * One sibling-table row as finsys-api's `docInstanceStorageService` writes
+ * it (SYS-2842) -- the unbounded counterpart to a T{n}-suffixed wide-table
+ * slot. `instanceKey` is the real, collision-free per-document key;
+ * `sourceLabel` is a human label when the doc type has one (e.g. a bank
+ * name); `timePeriod` is the same descriptive value column the legacy
+ * T{n} scheme used, kept for period-labeling and legacy provenance lookup
+ * (SYS-2886 Phase 5) -- no longer the row's key. Metric fields are the
+ * category's own base (unsuffixed) column names.
+ */
+export interface InstanceRow {
+  instanceKey: string
+  sourceLabel?: string | null
+  timePeriod?: string | null
+  [metricKey: string]: unknown
+}
+
 // ── Documents table (SYS-2765 / SYS-2766) ──────────────────────
 
 /**

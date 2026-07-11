@@ -86,8 +86,10 @@ export {
   getGroupDisplayNames,
   extractTimePeriods,
   groupColumnsByTimePeriod,
+  groupColumnsByInstance,
   groupFieldsByPattern,
   buildFileFieldTables,
+  buildFileFieldTablesFromInstances,
   processIhsDetails,
   groupDetailsByCategory,
   buildDocumentRows,
@@ -147,6 +149,7 @@ export type {
   DocumentRow,
   DocumentRowCapabilities,
   DocumentFileMetadata,
+  InstanceRow,
 } from './ihs-types.js'
 
 // ── Source Adapter framework (SYS-2440) ──────────────────────────────

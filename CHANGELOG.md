@@ -59,6 +59,78 @@ backend's storage layer already moved to an unbounded, instance-keyed
 scheme; this release adds the render-side counterpart so a future
 consumer change can show every uploaded document, not just the first N.
 
+## [4.0.0] — 2026-07-09
+
+### Changed
+
+- **Breaking:** `ExtractionFileType` is now `type ExtractionFileType = string`
+  instead of a closed enum. Any consumer accessing it by value (e.g.
+  `ExtractionFileType.Ssm`, `Object.values(ExtractionFileType)`) needs to
+  migrate to the new `document-types.ts` registry (`getDocumentTypeGroups()`,
+  `isDocumentType()`, `assertDocumentType()`).
+- Consolidates four previously hand-synchronized document-type structures (a
+  closed `ExtractionFileType` enum, a file-type-to-group map, and two
+  separate prefix/display-name maps) into one registry derived at runtime
+  from the field-spec catalog. Adding a new document type is now a
+  data-only catalog edit — no TypeScript union to update, no hand-maintained
+  map to keep in sync.
+- New catalog tags: `document_type`, `document_group`, `document_group_label`,
+  `wire_format`, `document_slot`, `time_period_unit`.
+
+### Why
+
+Four structures describing "what document types exist" had drifted out of
+sync with each other over time, since each was maintained by hand in a
+different file. Deriving one registry from the catalog at runtime means
+there's exactly one place a new document type needs to be declared.
+
+## [3.5.0] — 2026-07-09
+
+### Fixed
+
+- Routes an incorporation-date field through its canonical column instead of
+  a retired duplicate column that had drifted out of sync with it.
+
+## [3.4.0] — 2026-07-03
+
+### Added
+
+- **`buildDocumentRows(ihsData)`**, plus the `DocumentRow` /
+  `DocumentFileMetadata` / `DocumentRowCapabilities` types, and
+  `formatDocumentType` / `formatDocumentSize` / `formatDocumentUploaded`
+  formatting helpers — a shared, presentation-agnostic model of the
+  documents table shown on an application's detail view, so multiple
+  consumer applications render the identical table from the same
+  underlying data instead of each reimplementing their own version.
+
+### Why
+
+Purely additive — no existing export changed, so any consumer on a
+caret-range dependency picks this up automatically with no code change
+required.
+
+## [3.3.0] — 2026-07-02
+
+### Added
+
+- **`IhsFieldProvenance` type** — the canonical shape of a field's
+  extraction provenance: `{ source, confidence, observedAt, sourceRunId,
+  origin }`.
+- **`buildFileFieldTables`/`buildTableForGroup` accept an optional
+  `fieldProvenance` map**, attaching per-cell confidence + provenance keyed
+  exactly like the cell data itself. `confidence` is only populated for
+  `origin: 'extracted'` cells (NaN-guarded); derived cells carry the full
+  provenance envelope without a numeric score.
+- Lights up single-document columns (fields with exactly one value, not a
+  time series) that an earlier, interim value-matching approach had
+  skipped.
+
+### Why
+
+Consuming applications need to render a visual confidence indicator next to
+extracted field values, sourced from data already persisted upstream. Fully
+backward-compatible — the new parameter is optional.
+
 ## [3.2.0] — 2026-06-10
 
 ### Added
@@ -77,6 +149,79 @@ consumer change can show every uploaded document, not just the first N.
   gated on PDPA consent + CRA Act 710 §25 retention review.
 - `docs/category-reference.md`: sections for `trade-credit` (missing since
   SYS-2548) and `geolocation`.
+
+## [3.1.0] — 2026-06-05
+
+First release since 2.7.0 — bundles two merged changes (an interim 3.0.0
+was never released standalone). Read the breaking change before upgrading.
+
+### Changed
+
+- **Breaking:** `AdapterCategory` is now an open `string` instead of a
+  hardcoded TypeScript union. The category set loads at runtime from a JSON
+  data file (the single source of truth) — adding a category is a
+  data-file edit, not a union edit. Impact: you lose compile-time
+  autocomplete and exhaustiveness checking on category ids. Validate at
+  trust boundaries with `isAdapterCategory()`/`assertAdapterCategory()`;
+  read the canonical set from `ADAPTER_CATEGORY_IDS`/`allCategories()`.
+  Existing adapters (telco, payment) are unaffected at runtime.
+- Removed vendor brand names from category descriptions, per this
+  package's no-vendor-names convention (adapter implementations for
+  specific vendors live outside this open-source package).
+
+### Added
+
+- **`trade-credit` category** — an accounting AR/AP + P&L signal model:
+  days-sales-outstanding, days-payable-outstanding, outstanding-balance
+  ratios, overdue ratios, debtor concentration, a cross-reference revenue
+  anchor for accounting-vs-bank consistency checks, gross margin, and
+  cash-conversion-cycle days.
+- **`social-media` category** — public business-presence / reputation
+  signals.
+
+### Migration (2.7.0 → 3.1.0)
+
+Replace any exhaustive `switch` over `AdapterCategory` with a runtime
+membership check (`isAdapterCategory`). No storage or adapter-contract
+changes — the core adapter interface is unchanged from 2.7.0.
+
+## [2.7.0] — 2026-05-16
+
+Strict-additive minor release. Lets partner adapters own their own
+data-fetch loop instead of relying on the host application to stage
+payloads ahead of time.
+
+### Added
+
+- **`SourceAdapter.fetch?(identity)`** — an optional partner-data fetch
+  path. Adapters that need to call a partner API (live carrier lookups,
+  payment-network feeds, etc.) implement it; adapters reading pre-staged
+  data omit it and the host treats the raw payload as already-supplied.
+  The host feature-detects via `typeof adapter.fetch === "function"`.
+- **`ApplicantIdentity<E>`** — a new exported type, generic in the
+  partner-extension shape, so a narrowed adapter implementation gets typed
+  dot-access on its own partner-specific identity fields rather than
+  `unknown`. Defaults to `E = {}` so adapters needing only the core
+  identity fields keep working without specifying a generic.
+- **`SourceAdapter<E>` is now generic** — `E` flows from the adapter's own
+  interface into its `fetch` method automatically.
+- **`AdapterManifest.requiredIdentityFields?: string[]`** — an optional
+  manifest field listing partner-specific identifier keys an adapter needs
+  on the identity object. The host validates these per-applicant before
+  invoking `fetch()`. The schema rejects the always-populated core
+  identity fields as invalid entries here.
+- JSDoc warning on `fetch()` about the method name shadowing the global
+  `fetch` function inside its own body — implementations should call
+  `globalThis.fetch(...)` or bind to a local reference; a naked
+  `fetch(...)` call recurses into the adapter's own method.
+
+### Why
+
+Some partner integrations need to actively call out to a partner's API at
+extraction time rather than simply reading data staged in advance by the
+host. Making this an optional method (rather than a required part of the
+interface) keeps every pre-existing adapter compiling and running
+unchanged.
 
 ## [2.6.0] — 2026-05-14
 

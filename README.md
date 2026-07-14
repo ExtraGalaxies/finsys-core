@@ -23,6 +23,10 @@ Partner-facing integration documentation lives in [`docs/`](./docs/):
 - **Visibility-Aware Validation** — Conditional fields are only validated when visible (`visibleIf` expressions)
 - **TypeScript-First** — Full type exports for all config types and generator outputs
 
+## Prerequisites
+
+This project targets Node 24.16.0 (see [`.nvmrc`](./.nvmrc)) and npm ≥ 12.0.1. After `nvm use`, upgrade npm with `npm install -g npm@12.0.1`.
+
 ## Installation
 
 ```bash

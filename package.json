@@ -58,7 +58,6 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@lavamoat/allow-scripts": "^5.0.2",
     "@types/node": "^25.0.10",
     "@types/semver": "^7.5.0",
     "survey-core": "^2.5.6",
@@ -79,12 +78,10 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=24",
-    "npm": ">=11.10.0"
+    "node": ">=24.16.0",
+    "npm": ">=12.0.1"
   },
-  "lavamoat": {
-    "allowScripts": {
-      "tsup>esbuild#0.27.3": false
-    }
+  "allowScripts": {
+    "esbuild": false
   }
 }

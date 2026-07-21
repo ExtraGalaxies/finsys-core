@@ -31,6 +31,18 @@ jobs:
           mode: firewall-free
       - name: Upgrade npm to 12
         run: npm install -g npm@12.0.1
+      # DEVOPS-524: setup-node writes the legacy `always-auth` key into its
+      # generated userconfig whenever registry-url is set. npm 12 removed the
+      # key, and the repo's strict-npmrc=true baseline (DEVOPS-501) turns the
+      # old "unknown config" warning into a hard EUNKNOWNCONFIG error at the
+      # very next npm invocation -- which killed the v4.2.0 release publish.
+      # Strip it after the npm upgrade; the auth token line setup-node also
+      # writes (_authToken) is still valid and untouched.
+      - name: Strip legacy always-auth from setup-node's userconfig (npm 12 rejects it)
+        run: |
+          if [ -n "${NPM_CONFIG_USERCONFIG:-}" ] && [ -f "$NPM_CONFIG_USERCONFIG" ]; then
+            sed -i '/^always-auth[ =]/d' "$NPM_CONFIG_USERCONFIG"
+          fi
       - name: Install dependencies
         run: sfw npm ci
       - name: Build

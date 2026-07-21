@@ -89,8 +89,58 @@
               "description": "Relative path (from the adapter directory) to the module exporting the extract function. Must not start with '/' and must not contain '..' path segments — the host will reject manifests that try to escape the adapter directory. The host also runs a defence-in-depth path-traversal check at load time."
             }
           }
+        },
+        {
+          "type": "object",
+          "required": ["type", "fieldMap"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "form-intake" },
+            "fieldMap": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["formFieldId", "canonical"],
+                "additionalProperties": false,
+                "properties": {
+                  "formFieldId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The form spec's field name this mapping consumes."
+                  },
+                  "canonical": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Canonical field name (must be in the category's field set)."
+                  }
+                }
+              },
+              "description": "SYS-2501 — form-field-id → canonical-field mappings. Data-only: the host's form submission handler is the runtime; no code is loaded. No transform slot — values arrive typed from the form layer."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "manual-override" }
+          },
+          "description": "SYS-2501 — declares that this adapter's `produces` list is operator-overridable post-extraction. `produces` IS the override surface; the shape is intentionally empty beyond the discriminator."
         }
       ]
+    },
+    "cardinality": {
+      "type": "string",
+      "enum": ["single", "multi"],
+      "description": "SYS-2502 — explicit instance cardinality. Optional for backward compatibility: when absent the host infers from the original instanceKey convention (empty string → single, non-empty → multi). New manifests should declare it so the host can reject mismatched extractions at persistence time."
+    },
+    "singletonFields": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "SYS-2502 — per-applicant singleton fields on a multi-instance category (e.g. accountHolderName on bank statements). Every entry must also appear in `produces`; host validates at registration."
     },
     "requiredIdentityFields": {
       "type": "array",

@@ -4,6 +4,43 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] — 2026-07-21
+
+### Added
+
+- **`form-intake` + `manual-override` adapter implementation types.** Two
+  data-only flavours alongside `declarative` and `typescript` — no code is
+  loaded and neither `fetch()` nor `extract()` ever runs. A `form-intake`
+  manifest declares form-field-id → canonical-field mappings (the host's
+  form submission handler is the runtime), turning an operator- or
+  borrower-entered scalar into a canonical, provenance-carrying field
+  instead of a hand-wired column write. A `manual-override` manifest
+  declares that its `produces` list is operator-overridable
+  post-extraction — `produces` IS the override surface, so the shape is
+  intentionally empty beyond the discriminator.
+- **`AdapterManifest.cardinality`** (`"single" | "multi"`, optional) —
+  explicit instance cardinality. Absent means the host infers from the
+  original instanceKey convention (empty string → single), keeping every
+  pre-existing manifest valid; declaring it lets the host reject a
+  mismatched extraction at persistence time instead of silently storing
+  it.
+- **`AdapterManifest.singletonFields`** (optional) — per-applicant
+  singleton fields on a multi-instance category (one value for the
+  applicant regardless of how many instances exist, e.g. an account
+  holder's name across bank statements). Every entry must also appear in
+  `produces`.
+- **`AdapterExtraction.observedAt`** (optional ISO-8601) — when the
+  instance's data was observed at the source, as distinct from when the
+  adapter ran. Hosts fall back to the run timestamp when absent (the
+  inference they always did); new adapters should treat it as required.
+  Expected to become mandatory at the next major version.
+- **`AdapterExtraction.confidence`** (optional) — per-field extraction
+  confidence (0..1, keyed by canonical field name), the provenance slot
+  probabilistic extractors (OCR/LLM document pipelines) need and
+  partner-API adapters simply omit. `null` marks a derived/computed value
+  with no extraction confidence. Upstreams the shape already proven in
+  the document-extraction host.
+
 ## [4.1.0] — 2026-07-11
 
 ### Added

@@ -104,6 +104,32 @@ export interface AdapterExtraction {
    * The canonical field values for this instance.
    */
   readonly values: CanonicalFieldValues;
+
+  /**
+   * SYS-2502: when this instance's data was OBSERVED at the source
+   * (ISO-8601) — the statement's own date, the partner snapshot's
+   * timestamp — as distinct from when the adapter RAN. Optional for
+   * backward compatibility with already-shipped adapters (the host
+   * falls back to the run's ranAt when absent, exactly the inference
+   * it always did), but new adapters should treat it as required:
+   * ranAt-inference conflates "when we fetched" with "when it was
+   * true", which corrupts recency ordering for backfilled or delayed
+   * data. Expected to become mandatory at the next major version.
+   */
+  readonly observedAt?: string;
+
+  /**
+   * SYS-2502 (prototyped in finsys-api under SYS-2977): optional
+   * per-field extraction confidence, 0..1, keyed by canonical field
+   * name. This is the provenance slot SYS-2819 identified as the
+   * missing precondition for FinXtract-as-adapter — probabilistic
+   * extractors (OCR/LLM) carry real per-field confidence; partner-API
+   * adapters (a telco returning a number) simply omit it. `null` marks
+   * a field whose value is derived/computed rather than directly
+   * extracted (renders as "no confidence" rather than low confidence,
+   * matching IhsFieldProvenance.origin semantics).
+   */
+  readonly confidence?: Partial<Record<CanonicalFieldName, number | null>>;
 }
 
 /**

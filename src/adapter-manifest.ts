@@ -199,11 +199,21 @@ export interface AdapterManifest {
 /**
  * SYS-2503: one field's authorization gate. See
  * {@link AdapterManifest.fieldAuthorizations} for semantics.
+ *
+ * A union rather than an all-optional interface so a no-op gate (`{}`)
+ * is unrepresentable at COMPILE time too, not just rejected by the JSON
+ * schema's `minProperties: 1` at runtime — the TS type and the schema
+ * enforce the same invariant at their respective layers.
  */
-export interface FieldAuthorization {
-  readonly lenderRoles?: ReadonlyArray<string>;
-  readonly programIds?: ReadonlyArray<string>;
-}
+export type FieldAuthorization =
+  | {
+      readonly lenderRoles: ReadonlyArray<string>;
+      readonly programIds?: ReadonlyArray<string>;
+    }
+  | {
+      readonly lenderRoles?: ReadonlyArray<string>;
+      readonly programIds: ReadonlyArray<string>;
+    };
 
 export interface DeclarativeImplementation {
   readonly type: "declarative";

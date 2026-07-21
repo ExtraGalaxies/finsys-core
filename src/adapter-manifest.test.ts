@@ -389,3 +389,91 @@ describe("SYS-2502: cardinality + singletonFields", () => {
     expect(validate(m)).toBe(false);
   });
 });
+
+/**
+ * SYS-2503 — declarative per-field authorization gating. The schema
+ * validates SHAPE; the "keys ⊆ produces" rule and the actual read-time
+ * enforcement are host-side (finsys-api), mirroring how produces ⊆
+ * category-fields is handled.
+ */
+describe("SYS-2503: fieldAuthorizations", () => {
+  it("accepts gating by lenderRoles only", () => {
+    const m = {
+      ...validTypescript(),
+      fieldAuthorizations: {
+        paymentsMonthlyVolumeMyrT3: { lenderRoles: ["LENDER_AGENT"] },
+      },
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("accepts gating by programIds only", () => {
+    const m = {
+      ...validTypescript(),
+      fieldAuthorizations: {
+        paymentsMonthlyVolumeMyrT3: { programIds: ["prog-sme-1"] },
+      },
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("accepts gating by both dimensions on one field", () => {
+    const m = {
+      ...validTypescript(),
+      fieldAuthorizations: {
+        paymentsMonthlyVolumeMyrT3: {
+          lenderRoles: ["LENDER_AGENT", "LENDER_ADMIN"],
+          programIds: ["prog-sme-1"],
+        },
+      },
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("a manifest with NO fieldAuthorizations stays valid (gating is opt-in — backward compat)", () => {
+    const m = validTypescript();
+    expect("fieldAuthorizations" in m).toBe(false);
+    expect(validate(m)).toBe(true);
+  });
+
+  it("rejects an empty fieldAuthorizations object", () => {
+    const m = { ...validTypescript(), fieldAuthorizations: {} };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects an entry declaring NO dimension (would be a no-op gate)", () => {
+    const m = {
+      ...validTypescript(),
+      fieldAuthorizations: { paymentsMonthlyVolumeMyrT3: {} },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects an empty dimension list (deny-all is expressed by not producing the field)", () => {
+    for (const entry of [{ lenderRoles: [] }, { programIds: [] }]) {
+      const m = {
+        ...validTypescript(),
+        fieldAuthorizations: { paymentsMonthlyVolumeMyrT3: entry },
+      };
+      expect(validate(m)).toBe(false);
+    }
+  });
+
+  it("rejects an unknown dimension key on an entry", () => {
+    const m = {
+      ...validTypescript(),
+      fieldAuthorizations: {
+        paymentsMonthlyVolumeMyrT3: { lenderIds: ["456"] },
+      },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects empty-string values inside a dimension list", () => {
+    const m = {
+      ...validTypescript(),
+      fieldAuthorizations: { paymentsMonthlyVolumeMyrT3: { lenderRoles: [""] } },
+    };
+    expect(validate(m)).toBe(false);
+  });
+});

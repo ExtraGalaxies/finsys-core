@@ -162,11 +162,47 @@ export interface AdapterManifest {
   readonly requiredIdentityFields?: ReadonlyArray<string>;
 
   /**
+   * SYS-2503: declarative per-field authorization gating. Keyed by
+   * canonical field name (every key MUST also appear in `produces` —
+   * host validates at registration, same as `singletonFields`).
+   *
+   * Semantics, enforced by the HOST at read time (the manifest only
+   * declares):
+   *
+   *   - No entry for a field → visible to every reader (gating is
+   *     strictly opt-in; pre-existing manifests are unaffected).
+   *   - An entry restricts: the reader must satisfy EVERY dimension
+   *     the entry declares (AND across dimensions), matching ANY value
+   *     within a dimension's list (OR within a list).
+   *   - `lenderRoles` — reader's lender-role identifier must be listed.
+   *   - `programIds` — the application's program must be listed.
+   *
+   * Both dimensions are host-interpreted opaque strings: core neither
+   * knows nor validates what a "role" or "program id" is, keeping the
+   * contract deployment-agnostic. An entry must declare at least one
+   * dimension, and a declared dimension must be non-empty — an empty
+   * list would read as deny-all, which is better expressed by simply
+   * not producing the field.
+   */
+  readonly fieldAuthorizations?: Readonly<
+    Partial<Record<CanonicalFieldName, FieldAuthorization>>
+  >;
+
+  /**
    * Optional free-form notes — useful for partner-side documentation
    * (where to find the adapter's source, who owns it, what version of
    * the partner API it expects). Not consumed by the runtime.
    */
   readonly notes?: string;
+}
+
+/**
+ * SYS-2503: one field's authorization gate. See
+ * {@link AdapterManifest.fieldAuthorizations} for semantics.
+ */
+export interface FieldAuthorization {
+  readonly lenderRoles?: ReadonlyArray<string>;
+  readonly programIds?: ReadonlyArray<string>;
 }
 
 export interface DeclarativeImplementation {

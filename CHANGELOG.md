@@ -4,6 +4,23 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] — 2026-07-21
+
+### Added
+
+- **`AdapterManifest.fieldAuthorizations`** (optional) — declarative
+  per-field authorization gating, keyed by canonical field name. No entry
+  means a field is visible to every reader (gating is strictly opt-in, so
+  every pre-existing manifest is unaffected). An entry restricts: the
+  reader must satisfy every dimension the entry declares (AND across
+  dimensions), matching any value within a dimension's list (OR within).
+  Two dimensions today — `lenderRoles` and `programIds` — both
+  host-interpreted opaque strings, keeping the contract
+  deployment-agnostic. Entries must declare at least one non-empty
+  dimension: an empty list would read as deny-all, which is better
+  expressed by not producing the field. Enforcement is the host's job at
+  read time; the manifest only declares.
+
 ## [4.2.0] — 2026-07-21
 
 ### Added

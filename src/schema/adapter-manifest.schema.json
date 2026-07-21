@@ -153,6 +153,31 @@
       "uniqueItems": true,
       "description": "v2.7.0 — partner-specific identity field names required by fetch(). Host validates per-applicant before invoking fetch() and skips the adapter when missing. Omit (or empty) for adapters that don't implement fetch(). Must NOT include core fields ('ihsId', 'ic', 'fullName') — those are always populated, and declaring 'ic' as required would cause the host to skip every non-MY applicant since 'ic' can legitimately be empty."
     },
+    "fieldAuthorizations": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "minLength": 1 },
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "lenderRoles": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "programIds": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "description": "SYS-2503 — declarative per-field authorization gating, keyed by canonical field name (every key must also appear in `produces`; host validates at registration). No entry → field visible to every reader. An entry restricts: reader must satisfy EVERY declared dimension (AND across dimensions), matching ANY value within a list (OR within). Dimensions are host-interpreted opaque strings. Each entry must declare at least one non-empty dimension — an empty list would read as deny-all, better expressed by not producing the field."
+    },
     "notes": {
       "type": "string",
       "maxLength": 2000,

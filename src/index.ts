@@ -206,5 +206,8 @@ export type {
   AdapterManifest,
   DeclarativeImplementation,
   TypescriptImplementation,
+  FormIntakeImplementation,
+  FormIntakeFieldMapEntry,
+  ManualOverrideImplementation,
   FieldMapEntry,
 } from './adapter-manifest.js'

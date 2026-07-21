@@ -90,8 +90,53 @@ export interface AdapterManifest {
    *     code is loaded.
    *   - `typescript` — TS/JS adapter; `entryPoint` is required, the
    *     host imports it dynamically.
+   *   - `form-intake` — SYS-2501: data-only adapter declaring
+   *     form-field-id → canonical-field mappings. No code is loaded and
+   *     no fetch()/extract() ever runs; the host's form submission
+   *     handler IS the runtime, and this manifest is how a
+   *     borrower-entered scalar becomes a canonical, provenance-carrying
+   *     field instead of a hand-wired column write.
+   *   - `manual-override` — SYS-2501: data-only adapter declaring that
+   *     this category's fields may be operator-overridden
+   *     post-extraction. `produces` IS the override surface (a separate
+   *     list could only duplicate or contradict it); the host's
+   *     override endpoints gate on membership.
    */
-  readonly implementation: DeclarativeImplementation | TypescriptImplementation;
+  readonly implementation:
+    | DeclarativeImplementation
+    | TypescriptImplementation
+    | FormIntakeImplementation
+    | ManualOverrideImplementation;
+
+  /**
+   * SYS-2502: explicit instance cardinality.
+   *
+   *   - `single` — at most one instance per applicant; extract() returns
+   *     one AdapterExtraction with `instanceKey: ""`.
+   *   - `multi` — unbounded instances per applicant, each with a stable,
+   *     non-empty instanceKey.
+   *
+   * OPTIONAL for backward compatibility: manifests written before this
+   * field existed rely on the original implicit convention
+   * (instanceKey `""` → single, non-empty → multi), and the host infers
+   * accordingly when the field is absent. New manifests should declare
+   * it — an explicit declaration lets the host REJECT a mismatched
+   * extraction (a multi-keyed instance from a declared-single adapter,
+   * or vice versa) at persistence time instead of silently storing it.
+   */
+  readonly cardinality?: "single" | "multi";
+
+  /**
+   * SYS-2502: per-applicant singleton fields on a multi-instance
+   * category — fields whose value describes the APPLICANT (one value
+   * regardless of how many instances exist) rather than the instance,
+   * e.g. accountHolderName on bank statements. Every entry MUST also
+   * appear in `produces` (host validates at registration, same as
+   * `produces` ⊆ category fields). Only meaningful when cardinality is
+   * `multi`; the host treats a singleton field's value as shared across
+   * the instance set.
+   */
+  readonly singletonFields?: ReadonlyArray<CanonicalFieldName>;
 
   /**
    * v2.7.0 — partner-specific identity fields the adapter needs from
@@ -144,6 +189,50 @@ export interface TypescriptImplementation {
    * dynamic-imports this path at adapter registration time.
    */
   readonly entryPoint: string;
+}
+
+/**
+ * SYS-2501: data-only implementation for borrower/operator form intake.
+ * The manifest declares which form fields feed which canonical fields;
+ * the host's form submission handler applies the mapping — no adapter
+ * code exists to load, and neither fetch() nor extract() ever runs.
+ */
+export interface FormIntakeImplementation {
+  readonly type: "form-intake";
+
+  /**
+   * form-field-id → canonical-field mappings. `formFieldId` is the form
+   * spec's field name (the same identifier UnifiedFormConfig fields
+   * carry); `canonical` MUST be declared by the adapter's category —
+   * host validates at registration, exactly like declarative fieldMap
+   * entries. Values arrive already typed from the form layer, so there
+   * is deliberately no transform slot here: a form field needing value
+   * transformation is a form-spec concern, not an adapter one.
+   */
+  readonly fieldMap: ReadonlyArray<FormIntakeFieldMapEntry>;
+}
+
+export interface FormIntakeFieldMapEntry {
+  /** The form spec's field name this mapping consumes. */
+  readonly formFieldId: string;
+
+  /**
+   * Canonical field name this maps to. MUST be declared by the
+   * adapter's category. Host validates at registration.
+   */
+  readonly canonical: CanonicalFieldName;
+}
+
+/**
+ * SYS-2501: data-only implementation declaring that the adapter's
+ * `produces` list is operator-overridable post-extraction. The manifest
+ * gates the override surface; the host's override endpoints check
+ * membership in `produces` before accepting a manual value. No code, no
+ * fetch(), no extract() — the discriminator alone carries the meaning,
+ * so this shape is intentionally empty beyond `type`.
+ */
+export interface ManualOverrideImplementation {
+  readonly type: "manual-override";
 }
 
 export interface FieldMapEntry {

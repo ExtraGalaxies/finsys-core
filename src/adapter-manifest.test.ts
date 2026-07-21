@@ -255,3 +255,137 @@ describe("Adapter manifest JSON-schema validation", () => {
     expect(validate(m)).toBe(false);
   });
 });
+
+/**
+ * SYS-2501 — the two data-only implementation flavours. Both are
+ * manifest-shape-only: no code is loaded; the discriminator tells the
+ * host which of its own surfaces (form submission handler / operator
+ * override endpoints) acts as the runtime.
+ */
+describe("SYS-2501: form-intake + manual-override implementation types", () => {
+  function validFormIntake(): AdapterManifest {
+    return {
+      manifestVersion: 1,
+      id: "sme-loan-form-intake-v1",
+      displayName: "SME Loan Form Intake v1",
+      category: "form-intake-sme",
+      version: 1,
+      produces: ["monthlyIncome", "employerName"],
+      implementation: {
+        type: "form-intake",
+        fieldMap: [
+          { formFieldId: "monthly_income", canonical: "monthlyIncome" },
+          { formFieldId: "employer_name", canonical: "employerName" },
+        ],
+      },
+    };
+  }
+
+  function validManualOverride(): AdapterManifest {
+    return {
+      manifestVersion: 1,
+      id: "operator-override-bank-v1",
+      displayName: "Operator Override — Bank Statement v1",
+      category: "bank-statement",
+      version: 1,
+      produces: ["bankClosingBalanceMyr"],
+      implementation: { type: "manual-override" },
+    };
+  }
+
+  it("accepts a valid form-intake manifest", () => {
+    expect(validate(validFormIntake())).toBe(true);
+  });
+
+  it("accepts a valid manual-override manifest", () => {
+    expect(validate(validManualOverride())).toBe(true);
+  });
+
+  it("rejects a form-intake manifest with an empty fieldMap", () => {
+    const m = { ...validFormIntake(), implementation: { type: "form-intake", fieldMap: [] } };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects a form-intake fieldMap entry missing formFieldId", () => {
+    const m = {
+      ...validFormIntake(),
+      implementation: {
+        type: "form-intake",
+        fieldMap: [{ canonical: "monthlyIncome" }],
+      },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects a form-intake fieldMap entry with a declarative-style transform (no transform slot)", () => {
+    const m = {
+      ...validFormIntake(),
+      implementation: {
+        type: "form-intake",
+        fieldMap: [
+          { formFieldId: "monthly_income", canonical: "monthlyIncome", transform: "to_integer" },
+        ],
+      },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects a manual-override implementation carrying any extra property", () => {
+    // `produces` IS the override surface — a second list could only
+    // duplicate or contradict it, so the shape forbids one existing.
+    const m = {
+      ...validManualOverride(),
+      implementation: { type: "manual-override", overridableFields: ["bankClosingBalanceMyr"] },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("existing declarative + typescript manifests are unaffected", () => {
+    expect(validate(validDeclarative())).toBe(true);
+    expect(validate(validTypescript())).toBe(true);
+  });
+});
+
+/**
+ * SYS-2502 — explicit cardinality + per-applicant singleton fields.
+ * Both OPTIONAL: absence must keep every pre-existing manifest valid
+ * (backward compat is the ticket's stated done-condition).
+ */
+describe("SYS-2502: cardinality + singletonFields", () => {
+  it("accepts cardinality 'single' and 'multi'", () => {
+    for (const cardinality of ["single", "multi"] as const) {
+      const m = { ...validTypescript(), cardinality };
+      expect(validate(m)).toBe(true);
+    }
+  });
+
+  it("rejects any other cardinality value", () => {
+    const m = { ...validTypescript(), cardinality: "unbounded" };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("a manifest with NO cardinality stays valid (backward compat — host infers from the instanceKey convention)", () => {
+    const m = validTypescript();
+    expect("cardinality" in m).toBe(false);
+    expect(validate(m)).toBe(true);
+  });
+
+  it("accepts singletonFields on a multi-cardinality manifest", () => {
+    const m = {
+      ...validTypescript(),
+      cardinality: "multi",
+      singletonFields: ["paymentsMonthlyVolumeMyrT3"],
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("rejects a singletonFields entry that is an empty string", () => {
+    const m = { ...validTypescript(), singletonFields: [""] };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects duplicate singletonFields entries", () => {
+    const m = { ...validTypescript(), singletonFields: ["a", "a"] };
+    expect(validate(m)).toBe(false);
+  });
+});

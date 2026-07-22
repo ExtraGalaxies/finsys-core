@@ -4,6 +4,28 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.0] — 2026-07-23
+
+### Added
+
+- **`finxtract-financial-statement` category** in the category registry —
+  the fifth document-extraction category, deferred from the 4.4.0 batch
+  until the period-declaration contract (4.5.0) existed to describe its
+  shape. Fields extracted from an uploaded audited financial-statement
+  document by the host's extraction pipeline: one document = one audited
+  financial statement carrying TWO declared periods per the period-axis
+  contract — period1 is its current fiscal year, period2 is its prior
+  comparative year. 122 canonical fields (canonical table
+  `ihsfinancialstatement`), taken verbatim and unprefixed from the host's
+  flat financial-metric vocabulary: header/structural fields with their
+  true types (`localNo`, `companyName`, `financialYearEnd`, `currency` as
+  strings; `consolidated` boolean; `year` an ordinal number) plus the
+  balance-sheet, income-statement, and cash-flow-statement line items as
+  MYR-denominated numbers. Bare names are safe here — the registry's
+  load-time global-uniqueness guard confirms zero collisions with every
+  other category's vocabulary. Purely a data-file addition: no schema
+  change, no new exports.
+
 ## [4.5.0] — 2026-07-23
 
 ### Added

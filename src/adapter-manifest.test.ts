@@ -18,6 +18,7 @@ import { describe, it, expect } from "vitest";
 import { Ajv } from "ajv";
 import schema from "./schema/adapter-manifest.schema.json" with { type: "json" };
 import type { AdapterManifest } from "./adapter-manifest.js";
+import { categoryFieldsOf } from "./adapter-categories.js";
 
 const ajv = new Ajv({ allErrors: true });
 const validate = ajv.compile(schema);
@@ -625,5 +626,47 @@ describe("SYS-3002: periods declaration", () => {
       periods: [{ name: "Current fiscal year" }, { name: "Prior comparative year" }],
     };
     expect(validate(m)).toBe(true);
+  });
+});
+
+/**
+ * SYS-3003 — the finxtract-financial-statement category is registered
+ * now, so the "financial-statement-shaped" fixture above stops being
+ * hypothetical: an extraction-pipeline manifest for the real category
+ * must pass the schema AND stay inside the category's canonical
+ * vocabulary.
+ */
+describe("SYS-3003: financial-statement manifest fixture against the real category", () => {
+  function financialStatementManifest(): AdapterManifest {
+    return {
+      manifestVersion: 1,
+      id: "finxtract-financial-statement-v1",
+      displayName: "FinXtract Financial Statement v1",
+      category: "finxtract-financial-statement",
+      version: 1,
+      produces: [
+        "companyName",
+        "financialYearEnd",
+        "revenue",
+        "netProfit",
+        "totalEquity",
+        "totalAssets",
+        "totalLiabilities",
+      ],
+      cardinality: "multi",
+      implementation: { type: "extraction-pipeline" },
+      periods: [{ name: "Current fiscal year" }, { name: "Prior comparative year" }],
+    };
+  }
+
+  it("validates through the real Ajv path", () => {
+    expect(validate(financialStatementManifest())).toBe(true);
+  });
+
+  it("its produces list is a subset of the category's canonical fields", () => {
+    const canonical = new Set(categoryFieldsOf("finxtract-financial-statement"));
+    for (const f of financialStatementManifest().produces) {
+      expect(canonical.has(f), `"${f}" is not a canonical field`).toBe(true);
+    }
   });
 });

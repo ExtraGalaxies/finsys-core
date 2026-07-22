@@ -466,3 +466,64 @@ describe("FinXtract document-extraction categories", () => {
     expect([...categoryFieldsOf("finxtract-epf")]).toContain("epfTotalContribution");
   });
 });
+
+// ── SYS-3003: the financial-statement document-extraction category ──────
+// Deferred from the 4.4.0 batch until the period-declaration contract
+// (SYS-3002) landed: one document = one audited financial statement
+// carrying period1 (its current fiscal year) + period2 (its prior
+// comparative year).
+describe("finxtract-financial-statement category", () => {
+  it("is declared with the promoted financial-statement sibling table", () => {
+    const cat = categorySchemaOf("finxtract-financial-statement");
+    expect(cat.canonicalTable).toBe("ihsfinancialstatement");
+    // The canonical vocabulary is exactly the host's 122 financial
+    // metric keys, verbatim and unprefixed.
+    expect(cat.fields).toHaveLength(122);
+  });
+
+  it("declares the header/structural fields with their true types", () => {
+    const spec = (name: string) =>
+      categorySchemaOf("finxtract-financial-statement").fields.find(
+        (f) => f.name === name,
+      );
+    expect(spec("localNo")?.type).toBe("string");
+    expect(spec("companyName")?.type).toBe("string");
+    expect(spec("financialYearEnd")?.type).toBe("string");
+    expect(spec("consolidated")?.type).toBe("boolean");
+    expect(spec("currency")?.type).toBe("string");
+    expect(spec("year")?.type).toBe("number");
+    // year is an ordinal, not money — no MYR unit.
+    expect(spec("year")?.unit).toBeUndefined();
+  });
+
+  it("declares the monetary metrics as number/MYR", () => {
+    const spec = (name: string) =>
+      categorySchemaOf("finxtract-financial-statement").fields.find(
+        (f) => f.name === name,
+      );
+    for (const name of ["totalEquity", "netProfit", "revenue", "totalAssets"]) {
+      expect(spec(name)?.type, `${name} type`).toBe("number");
+      expect(spec(name)?.unit, `${name} unit`).toBe("MYR");
+    }
+  });
+
+  it("keeps the bare metric vocabulary disjoint from every other category", () => {
+    // The registry's load-time guard already enforces global uniqueness
+    // (the suite would not load otherwise) — this pins the invariant
+    // explicitly for the new bare-name set.
+    const mine = new Set(categoryFieldsOf("finxtract-financial-statement"));
+    for (const cat of allCategories()) {
+      if (cat.id === "finxtract-financial-statement") continue;
+      for (const f of cat.fields) {
+        expect(mine.has(f.name), `"${f.name}" (${cat.id}) collides`).toBe(false);
+      }
+    }
+  });
+
+  it("maps a bare metric back to its category", () => {
+    expect(categoryForField("totalEquity")).toBe("finxtract-financial-statement");
+    expect(categoryForField("netOperatingCashFlow")).toBe(
+      "finxtract-financial-statement",
+    );
+  });
+});

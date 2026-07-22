@@ -51,7 +51,7 @@ export interface AdapterManifest {
 
   /**
    * Globally unique adapter id. Conventional pattern:
-   * `<vendor>-<category-short>-v<n>` (e.g. `celcom-telco-v1`). The id is
+   * `<vendor>-<category-short>-v<n>` (e.g. `example-telco-v1`). The id is
    * what `SourceAdapter#id` returns + what provenance records pin to.
    */
   readonly id: string;

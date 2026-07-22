@@ -4,6 +4,39 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.4.0] — 2026-07-22
+
+### Added
+
+- **`extraction-pipeline` adapter implementation type.** A
+  declaration-only flavour for adapters whose implementation is the host
+  application's own document-extraction pipeline: no code is loaded and
+  neither `fetch()` nor `extract()` ever runs — the host's pipeline
+  writes the canonical rows and records the runs itself, and the
+  manifest exists purely as the declaration plane (`produces`,
+  `cardinality`, `fieldAuthorizations`) for data the host was already
+  producing. Like `manual-override`, the shape is intentionally empty
+  beyond the discriminator.
+
+- **Four document-extraction categories** in the category registry, so
+  host pipelines can register manifests for the document data they
+  produce:
+  - `ic` — identity fields extracted from an IC (MyKad) or passport
+    document (9 fields, canonical table `ihs_alt_data_ic`).
+  - `finxtract-bank-statement` — bank-statement document extraction
+    (8 fields, canonical table `ihsbankstatement`). Deliberately a
+    distinct vocabulary from the partner-API `bank-statement` category:
+    same real-world domain, different source, zero shared field names.
+  - `finxtract-epf` — EPF statement document extraction (9 fields,
+    canonical table `ihsepfstatement`).
+  - `finxtract-payslip` — payslip document extraction (15 fields,
+    canonical table `ihspayslip`).
+
+  Financial-statement and SSM/Form9 categories are deliberately not in
+  this release: the financial-statement declaration shape depends on the
+  upcoming period-declaration contract, and the SSM/Form9 field sets are
+  being consolidated — each arrives with its own release.
+
 ## [4.3.0] — 2026-07-21
 
 ### Added

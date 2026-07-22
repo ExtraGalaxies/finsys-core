@@ -187,9 +187,15 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     if (typeof cat.description !== "string" || cat.description.length === 0) {
       throw new Error(`adapter category data: ${where} needs a non-empty description`);
     }
-    if (typeof cat.canonicalTable !== "string" || !/^ihs_alt_data_/.test(cat.canonicalTable)) {
+    // Canonical tables live in the host's IHS namespace. Originally every
+    // category stored into a dedicated `ihs_alt_data_*` table; since the
+    // document-extraction categories (SYS-2998), a category may instead be
+    // canonical over a promoted legacy sibling table (`ihsbankstatement`,
+    // `ihsepfstatement`, ...) — so the invariant is the namespace prefix,
+    // not the alt-data naming scheme.
+    if (typeof cat.canonicalTable !== "string" || !/^ihs[a-z0-9_]*$/.test(cat.canonicalTable)) {
       throw new Error(
-        `adapter category data: ${where} canonicalTable must start with "ihs_alt_data_" (got "${cat.canonicalTable}")`,
+        `adapter category data: ${where} canonicalTable must be an "ihs"-prefixed table identifier (got "${cat.canonicalTable}")`,
       );
     }
     if (tables.has(cat.canonicalTable)) {

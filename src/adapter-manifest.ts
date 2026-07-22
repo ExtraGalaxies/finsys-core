@@ -101,12 +101,20 @@ export interface AdapterManifest {
    *     post-extraction. `produces` IS the override surface (a separate
    *     list could only duplicate or contradict it); the host's
    *     override endpoints gate on membership.
+   *   - `extraction-pipeline` — SYS-2998: declaration-only adapter whose
+   *     implementation IS the host application's own document-extraction
+   *     pipeline. No code is loaded and neither fetch() nor extract()
+   *     ever runs — the host's pipeline writes the canonical rows and
+   *     records the adapter runs itself; the manifest exists purely as
+   *     the declaration plane (produces, cardinality,
+   *     fieldAuthorizations) for data the host was already producing.
    */
   readonly implementation:
     | DeclarativeImplementation
     | TypescriptImplementation
     | FormIntakeImplementation
-    | ManualOverrideImplementation;
+    | ManualOverrideImplementation
+    | ExtractionPipelineImplementation;
 
   /**
    * SYS-2502: explicit instance cardinality.
@@ -279,6 +287,27 @@ export interface FormIntakeFieldMapEntry {
  */
 export interface ManualOverrideImplementation {
   readonly type: "manual-override";
+}
+
+/**
+ * SYS-2998: declaration-only implementation for adapters whose
+ * implementation IS the host application's own extraction pipeline
+ * (e.g. the FinXtract document-processing pipeline wrapped as
+ * "finxtract-bank-statement-v1"). The host's pipeline code performs the
+ * extraction, writes the canonical rows, and records the adapter runs —
+ * this manifest is how that pipeline's output becomes declared,
+ * provenance-carrying, per-field-gateable adapter data instead of
+ * hand-wired writes. No code, no fetch(), no extract(); like
+ * `manual-override`, the discriminator alone carries the meaning.
+ *
+ * Distinct from `form-intake` (whose runtime is the form submission
+ * handler and which needs a fieldMap) and from `manual-override` (which
+ * declares an override SURFACE): an extraction-pipeline manifest
+ * declares the pipeline's produced fields verbatim — `produces` is the
+ * contract, and the host validates the pipeline's writes against it.
+ */
+export interface ExtractionPipelineImplementation {
+  readonly type: "extraction-pipeline";
 }
 
 export interface FieldMapEntry {

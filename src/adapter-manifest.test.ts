@@ -347,6 +347,60 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
 });
 
 /**
+ * SYS-2998 — extraction-pipeline implementation type. Declaration-only:
+ * the host application's own document-extraction pipeline IS the
+ * implementation, so like manual-override the shape is empty beyond the
+ * discriminator.
+ */
+describe("SYS-2998: extraction-pipeline implementation type", () => {
+  function validExtractionPipeline(): AdapterManifest {
+    return {
+      manifestVersion: 1,
+      id: "finxtract-bank-statement-v1",
+      displayName: "FinXtract Bank Statement v1",
+      category: "finxtract-bank-statement",
+      version: 1,
+      produces: ["bankName", "bankBalance", "totalCredits", "totalDebits"],
+      cardinality: "multi",
+      implementation: { type: "extraction-pipeline" },
+    };
+  }
+
+  it("accepts a valid extraction-pipeline manifest", () => {
+    expect(validate(validExtractionPipeline())).toBe(true);
+  });
+
+  it("accepts extraction-pipeline with fieldAuthorizations (the SYS-2503 gating plane)", () => {
+    const m = {
+      ...validExtractionPipeline(),
+      fieldAuthorizations: { bankBalance: { lenderRoles: ["Lender Agent"] } },
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("rejects an extraction-pipeline implementation carrying any extra property", () => {
+    // The pipeline's produced fields are declared by `produces` — the
+    // implementation block carries no configuration by design.
+    const m = {
+      ...validExtractionPipeline(),
+      implementation: { type: "extraction-pipeline", entryPoint: "./extract.js" },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects an extraction-pipeline manifest with a declarative fieldMap", () => {
+    const m = {
+      ...validExtractionPipeline(),
+      implementation: {
+        type: "extraction-pipeline",
+        fieldMap: [{ source: "$.a", canonical: "bankBalance" }],
+      },
+    };
+    expect(validate(m)).toBe(false);
+  });
+});
+
+/**
  * SYS-2502 — explicit cardinality + per-applicant singleton fields.
  * Both OPTIONAL: absence must keep every pre-existing manifest valid
  * (backward compat is the ticket's stated done-condition).

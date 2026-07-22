@@ -28,7 +28,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 ## `telco-carrier`
 
-**Description**: Mobile carrier bill-payment + account-history signals. Any telco vendor (Celcom, Maxis, DiGi, U-Mobile, etc.) implementing this category produces the same canonical field set.
+**Description**: Mobile carrier bill-payment + account-history signals. Any major telco provider implementing this category produces the same canonical field set.
 
 **Canonical table**: `ihs_alt_data_telco`
 

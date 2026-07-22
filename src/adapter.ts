@@ -221,8 +221,8 @@ export type CanonicalFieldValue = number | string | boolean | null;
  * stay assignment-compatible. A telco adapter that needs an MSISDN
  * declares it once at the interface level:
  *
- *     interface CelcomExt { msisdn: string }
- *     const celcomTelco: SourceAdapter<CelcomExt> = {
+ *     interface TelcoPartnerExt { msisdn: string }
+ *     const telcoAdapter: SourceAdapter<TelcoPartnerExt> = {
  *       async fetch(identity) {
  *         identity.msisdn  // string  (typed via E)
  *         identity.ic      // string  (core)
@@ -237,7 +237,7 @@ export type CanonicalFieldValue = number | string | boolean | null;
 export interface SourceAdapter<E extends Record<string, unknown> = {}> {
   /**
    * Globally unique id for this adapter instance. By convention:
-   * `<vendor>-<category-short>-v<n>` — e.g. `celcom-telco-v1`. Vendor
+   * `<vendor>-<category-short>-v<n>` — e.g. `example-telco-v1`. Vendor
    * names appear here in deployment-specific code, NEVER in
    * finsys-core. The id is what the registry uses to dedupe + what
    * provenance records pin to.
@@ -380,10 +380,10 @@ export interface SourceAdapter<E extends Record<string, unknown> = {}> {
  *
  * Narrowing example (the ergonomics win this type is designed to deliver):
  *
- *     interface CelcomExt { msisdn: string; accountRef: string }
+ *     interface TelcoPartnerExt { msisdn: string; accountRef: string }
  *
  *     // declare adapter with the extension shape baked in:
- *     const celcom: SourceAdapter<CelcomExt> = {
+ *     const telcoAdapter: SourceAdapter<TelcoPartnerExt> = {
  *       async fetch(identity) {
  *         identity.ic        // string
  *         identity.msisdn    // string  (NOT unknown — narrowed by E)

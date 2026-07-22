@@ -87,6 +87,11 @@ export type CanonicalFieldValues = Partial<Record<CanonicalFieldName, CanonicalF
  * MUST be stable across re-extractions so the storage layer can
  * replace-in-place rather than accumulating duplicates. Conventions:
  *   - For periodic data: encode the period (`'2026-Q1'`, `'2026-03'`)
+   * NOTE (SYS-3002): that is the multi-INSTANCE axis — one snapshot per
+   * instance. Do NOT encode a within-document period into the instance
+   * key; period-scoped values belong in `periods` (contractual 1-based
+   * positions). The two axes compose: instance = which document/snapshot,
+   * period = which declared position within it.
  *   - For per-line data: encode the line id (`'msisdn-60123456789'`,
  *     `'card-last4-1234'`)
  *   - For natively single-instance adapters: use the empty string `''`

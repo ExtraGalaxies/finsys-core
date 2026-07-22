@@ -63,7 +63,10 @@ describe("Adapter category catalogue", () => {
   it("every category declares a distinct canonical storage table", () => {
     const tables = new Set<string>();
     for (const cat of allCategories()) {
-      expect(cat.canonicalTable).toMatch(/^ihs_alt_data_/);
+      // SYS-2998: the invariant is the IHS namespace prefix — alt-data
+      // tables (ihs_alt_data_*) AND promoted legacy sibling tables
+      // (ihsbankstatement, ...) are both canonical now.
+      expect(cat.canonicalTable).toMatch(/^ihs[a-z0-9_]*$/);
       expect(tables.has(cat.canonicalTable)).toBe(false);
       tables.add(cat.canonicalTable);
     }
@@ -305,10 +308,14 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
     expect(() => buildCategoryRegistry(raw)).toThrow(/duplicate canonicalTable/);
   });
 
-  it("rejects a canonicalTable without the ihs_alt_data_ prefix", () => {
+  it("rejects a canonicalTable outside the ihs namespace", () => {
+    // SYS-2998 widened the invariant from the ihs_alt_data_ naming scheme
+    // to the ihs table-namespace prefix (promoted sibling tables like
+    // ihsbankstatement are canonical now) — but a table outside the
+    // namespace is still refused.
     const raw = validRaw();
     raw.categories[0].canonicalTable = "some_other_table";
-    expect(() => buildCategoryRegistry(raw)).toThrow(/ihs_alt_data_/);
+    expect(() => buildCategoryRegistry(raw)).toThrow(/"ihs"-prefixed/);
   });
 
   it("rejects a category with no fields", () => {
@@ -413,5 +420,49 @@ describe("geolocation category", () => {
     ]) {
       expect(spec(name)?.range, `${name} should be [0,1]`).toEqual([0, 1]);
     }
+  });
+});
+
+// ── SYS-2998: FinXtract document-extraction categories ──────────────────
+describe("FinXtract document-extraction categories", () => {
+  it("declares the four doc-extraction categories with their canonical tables", () => {
+    expect(categorySchemaOf("ic").canonicalTable).toBe("ihs_alt_data_ic");
+    expect(categorySchemaOf("finxtract-bank-statement").canonicalTable).toBe("ihsbankstatement");
+    expect(categorySchemaOf("finxtract-epf").canonicalTable).toBe("ihsepfstatement");
+    expect(categorySchemaOf("finxtract-payslip").canonicalTable).toBe("ihspayslip");
+  });
+
+  it("ic declares exactly the nine identity fields (unblocks finxtract-ic-v1 registration)", () => {
+    expect([...categoryFieldsOf("ic")].sort()).toEqual([
+      "icAddress",
+      "icDateOfBirth",
+      "icGender",
+      "icName",
+      "icNationality",
+      "icNumber",
+      "icPlaceOfBirth",
+      "icRace",
+      "icReligion",
+    ]);
+  });
+
+  it("finxtract-bank-statement is a distinct vocabulary from the partner-API bank-statement category", () => {
+    const partner = new Set(categoryFieldsOf("bank-statement"));
+    const finxtract = new Set(categoryFieldsOf("finxtract-bank-statement"));
+    expect(finxtract.size).toBe(8);
+    // Same real-world domain, different Source, zero shared canonical names —
+    // a manifest can never accidentally produce across the two vocabularies.
+    for (const name of finxtract) {
+      expect(partner.has(name), `${name} must not collide with the partner category`).toBe(false);
+    }
+  });
+
+  it("finxtract-epf and finxtract-payslip declare their document field sets", () => {
+    expect(categoryFieldsOf("finxtract-epf")).toHaveLength(9);
+    expect(categoryFieldsOf("finxtract-payslip")).toHaveLength(15);
+    // Prefix-namespaced per the host's established flat/eval vocabulary —
+    // also what keeps canonical names globally unique across categories.
+    expect([...categoryFieldsOf("finxtract-payslip")]).toContain("payslipNetPay");
+    expect([...categoryFieldsOf("finxtract-epf")]).toContain("epfTotalContribution");
   });
 });

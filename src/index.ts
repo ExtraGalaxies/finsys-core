@@ -209,6 +209,7 @@ export type {
   FormIntakeImplementation,
   FormIntakeFieldMapEntry,
   ManualOverrideImplementation,
+  ExtractionPipelineImplementation,
   FieldAuthorization,
   FieldMapEntry,
 } from './adapter-manifest.js'

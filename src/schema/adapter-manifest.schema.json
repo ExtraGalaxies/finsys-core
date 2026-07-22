@@ -128,6 +128,15 @@
             "type": { "const": "manual-override" }
           },
           "description": "SYS-2501 — declares that this adapter's `produces` list is operator-overridable post-extraction. `produces` IS the override surface; the shape is intentionally empty beyond the discriminator."
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "extraction-pipeline" }
+          },
+          "description": "SYS-2998 — declaration-only: the adapter's implementation IS the host application's own document-extraction pipeline. No code is loaded and neither fetch() nor extract() ever runs; the host's pipeline writes the canonical rows and records the runs. The manifest exists purely as the declaration plane (produces, cardinality, fieldAuthorizations) for data the host was already producing."
         }
       ]
     },

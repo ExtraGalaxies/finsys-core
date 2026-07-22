@@ -384,6 +384,260 @@
           "description": "Agreement between the inferred home anchor and the applicant's registered residential address. 1 = same premises, 0 = different state (summary instance only)."
         }
       ]
+    },
+    {
+      "id": "ic",
+      "displayName": "Identity Document (IC / Passport)",
+      "description": "Identity fields extracted from a Malaysian IC (MyKad) or passport document. Produced by the host's document-extraction pipeline; one instance per identity document.",
+      "canonicalTable": "ihs_alt_data_ic",
+      "fields": [
+        {
+          "name": "icName",
+          "type": "string",
+          "description": "Full name as printed on the identity document."
+        },
+        {
+          "name": "icNumber",
+          "type": "string",
+          "description": "IC (MyKad) number, or passport number for passport documents."
+        },
+        {
+          "name": "icAddress",
+          "type": "string",
+          "description": "Registered address as printed on the document."
+        },
+        {
+          "name": "icGender",
+          "type": "string",
+          "description": "Gender as stated on the document."
+        },
+        {
+          "name": "icReligion",
+          "type": "string",
+          "description": "Religion as stated on the document (MyKad-only; absent on passports)."
+        },
+        {
+          "name": "icDateOfBirth",
+          "type": "string",
+          "description": "Date of birth as stated on the document."
+        },
+        {
+          "name": "icPlaceOfBirth",
+          "type": "string",
+          "description": "Place of birth as stated on the document."
+        },
+        {
+          "name": "icNationality",
+          "type": "string",
+          "description": "Nationality as stated on the document."
+        },
+        {
+          "name": "icRace",
+          "type": "string",
+          "description": "Race as stated on the document (MyKad-only; absent on passports)."
+        }
+      ]
+    },
+    {
+      "id": "finxtract-bank-statement",
+      "displayName": "Bank Statement (Document Extraction)",
+      "description": "Fields extracted from an uploaded bank-statement document by the host's extraction pipeline. One instance per statement document; each statement covers a single month. Distinct from the partner-API 'bank-statement' category: same real-world domain, different source and different canonical vocabulary.",
+      "canonicalTable": "ihsbankstatement",
+      "fields": [
+        {
+          "name": "bankName",
+          "type": "string",
+          "description": "Issuing bank's name as printed on the statement."
+        },
+        {
+          "name": "accountHolderName",
+          "type": "string",
+          "description": "Account holder's name as printed on the statement."
+        },
+        {
+          "name": "accountNumber",
+          "type": "string",
+          "description": "Bank account number as printed on the statement."
+        },
+        {
+          "name": "statementDate",
+          "type": "string",
+          "description": "Statement date, normalized to ISO YYYY-MM-DD."
+        },
+        {
+          "name": "openingBalance",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Opening balance for the statement period."
+        },
+        {
+          "name": "bankBalance",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Closing balance for the statement period."
+        },
+        {
+          "name": "totalCredits",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Sum of credit transactions in the statement period."
+        },
+        {
+          "name": "totalDebits",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Sum of debit transactions in the statement period."
+        }
+      ]
+    },
+    {
+      "id": "finxtract-epf",
+      "displayName": "EPF Statement (Document Extraction)",
+      "description": "Fields extracted from an uploaded EPF (KWSP) statement document by the host's extraction pipeline. One instance per statement document. Field names carry the 'epf' prefix — the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
+      "canonicalTable": "ihsepfstatement",
+      "fields": [
+        {
+          "name": "epfAccountHolderName",
+          "type": "string",
+          "description": "Member's name as printed on the statement."
+        },
+        {
+          "name": "epfAccountHolderAddress",
+          "type": "string",
+          "description": "Member's address as printed on the statement."
+        },
+        {
+          "name": "epfStatementYear",
+          "type": "string",
+          "description": "The contribution year the statement covers."
+        },
+        {
+          "name": "epfKwspMemberNumber",
+          "type": "string",
+          "description": "KWSP membership number."
+        },
+        {
+          "name": "epfIcNumber",
+          "type": "string",
+          "description": "Member's IC number as printed on the statement."
+        },
+        {
+          "name": "epfEmployerNumber",
+          "type": "string",
+          "description": "Employer's KWSP reference number."
+        },
+        {
+          "name": "epfDateOfStatement",
+          "type": "string",
+          "description": "Statement issue date, normalized to ISO YYYY-MM-DD."
+        },
+        {
+          "name": "epfTotalContribution",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Cumulative EPF balance as at the statement date."
+        },
+        {
+          "name": "epfTotalCurrentContribution",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Contributions made within the statement's coverage year."
+        }
+      ]
+    },
+    {
+      "id": "finxtract-payslip",
+      "displayName": "Payslip (Document Extraction)",
+      "description": "Fields extracted from an uploaded payslip document by the host's extraction pipeline. One instance per payslip document; each payslip covers a single pay period. Field names carry the 'payslip' prefix — the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
+      "canonicalTable": "ihspayslip",
+      "fields": [
+        {
+          "name": "payslipEmployerName",
+          "type": "string",
+          "description": "Employer's name as printed on the payslip."
+        },
+        {
+          "name": "payslipEmployeeName",
+          "type": "string",
+          "description": "Employee's name as printed on the payslip."
+        },
+        {
+          "name": "payslipPayPeriod",
+          "type": "string",
+          "description": "The pay period the payslip covers, as printed."
+        },
+        {
+          "name": "payslipPayDate",
+          "type": "string",
+          "description": "Payment date, as printed."
+        },
+        {
+          "name": "payslipBasicPay",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Basic salary for the period."
+        },
+        {
+          "name": "payslipGrossPay",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Gross pay for the period."
+        },
+        {
+          "name": "payslipFixedAllowances",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Fixed allowances for the period."
+        },
+        {
+          "name": "payslipVariableIncome",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Variable income (overtime, commission, bonus) for the period."
+        },
+        {
+          "name": "payslipDeduction",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Total statutory deductions for the period."
+        },
+        {
+          "name": "payslipOtherDeduction",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Other (non-statutory) deductions for the period."
+        },
+        {
+          "name": "payslipEmployeeEpfContribution",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Employee EPF contribution for the period."
+        },
+        {
+          "name": "payslipEmployeeSocsoContribution",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Employee SOCSO contribution for the period."
+        },
+        {
+          "name": "payslipEmployeeEisContribution",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Employee EIS contribution for the period."
+        },
+        {
+          "name": "payslipEmployeeTax",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Employee income-tax (PCB) deduction for the period."
+        },
+        {
+          "name": "payslipNetPay",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Net pay for the period."
+        }
+      ]
     }
   ]
 }

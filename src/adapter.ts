@@ -87,6 +87,11 @@ export type CanonicalFieldValues = Partial<Record<CanonicalFieldName, CanonicalF
  * MUST be stable across re-extractions so the storage layer can
  * replace-in-place rather than accumulating duplicates. Conventions:
  *   - For periodic data: encode the period (`'2026-Q1'`, `'2026-03'`)
+   * NOTE (SYS-3002): that is the multi-INSTANCE axis — one snapshot per
+   * instance. Do NOT encode a within-document period into the instance
+   * key; period-scoped values belong in `periods` (contractual 1-based
+   * positions). The two axes compose: instance = which document/snapshot,
+   * period = which declared position within it.
  *   - For per-line data: encode the line id (`'msisdn-60123456789'`,
  *     `'card-last4-1234'`)
  *   - For natively single-instance adapters: use the empty string `''`
@@ -128,6 +133,68 @@ export interface AdapterExtraction {
    * a field whose value is derived/computed rather than directly
    * extracted (renders as "no confidence" rather than low confidence,
    * matching IhsFieldProvenance.origin semantics).
+   */
+  readonly confidence?: Partial<Record<CanonicalFieldName, number | null>>;
+
+  /**
+   * SYS-3002: per-period value sets for adapters whose category
+   * declares a period axis (see `AdapterManifest.periods`). Each entry
+   * carries the values for ONE contractual position; `position` is
+   * 1-based — period1 is the first declared period, there is no
+   * period0.
+   *
+   * An instance carrying `periods` uses them for period-scoped fields,
+   * while the instance-level `values` above remains the home for
+   * period-less (singleton / instance-scoped) fields. Instances of
+   * single-period adapters (no `periods` on the manifest) omit this
+   * entirely and keep everything in `values` — the existing flat path
+   * is unchanged and remains the single-period path.
+   *
+   * Periods are scoped WITHIN this instance: this instance's period1
+   * and another instance's period1 are unrelated data points.
+   */
+  readonly periods?: ReadonlyArray<PeriodValues>;
+}
+
+/**
+ * SYS-3002: one period's value set within an AdapterExtraction
+ * instance. Identity is `position` — the 1-based index into the
+ * manifest's declared `periods` array — never the dates: declared
+ * positions may overlap, nest, vary in length, or be staggered (e.g.
+ * period1 = an annual table, periods 2–5 = the four quarters
+ * overlapping it), so dates cannot identify a period and recency
+ * ordering across positions is meaningless.
+ */
+export interface PeriodValues {
+  /**
+   * 1-based contractual position into the manifest's `periods`
+   * declaration. MUST be >= 1 — period1 is the first declared period;
+   * there is no period0. This IS the period's identity.
+   */
+  readonly position: number;
+
+  /**
+   * ISO-8601 date the period starts — display/temporal metadata only,
+   * NEVER identity.
+   */
+  readonly start?: string;
+
+  /**
+   * ISO-8601 date the period ends — display/temporal metadata only,
+   * NEVER identity.
+   */
+  readonly end?: string;
+
+  /**
+   * The canonical field values for this period, same shape as the
+   * instance-level `values`.
+   */
+  readonly values: CanonicalFieldValues;
+
+  /**
+   * Optional per-field extraction confidence for this period's values,
+   * same semantics as the instance-level `confidence` (0..1 keyed by
+   * canonical field name; `null` marks a derived/computed value).
    */
   readonly confidence?: Partial<Record<CanonicalFieldName, number | null>>;
 }

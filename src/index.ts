@@ -167,6 +167,7 @@ export type {
   CanonicalFieldValue,
   CanonicalFieldValues,
   AdapterExtraction,
+  PeriodValues,
   SourceAdapter,
   AdapterErrorReason,
   ApplicantIdentity,
@@ -212,4 +213,5 @@ export type {
   ExtractionPipelineImplementation,
   FieldAuthorization,
   FieldMapEntry,
+  PeriodDeclaration,
 } from './adapter-manifest.js'

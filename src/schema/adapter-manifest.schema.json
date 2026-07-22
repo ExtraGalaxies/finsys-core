@@ -187,6 +187,29 @@
       },
       "description": "SYS-2503 — declarative per-field authorization gating, keyed by canonical field name (every key must also appear in `produces`; host validates at registration). No entry → field visible to every reader. An entry restricts: reader must satisfy EVERY declared dimension (AND across dimensions), matching ANY value within a list (OR within). Dimensions are host-interpreted opaque strings. Each entry must declare at least one non-empty dimension — an empty list would read as deny-all, better expressed by not producing the field."
     },
+    "periods": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Human role label for the position (e.g. 'Current fiscal year'). Rendered in operator UIs; carries no identity semantics."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional longer description of what this position holds."
+          }
+        }
+      },
+      "description": "SYS-3002 — ordered period declarations: the contract for the category's period axis. Positional identity, 1-BASED: period1 is the FIRST array entry; there is no period0. Declared positions may overlap, nest, vary in length, or be staggered (e.g. period1 = an annual table, periods 2-5 = the four quarters overlapping it) — dates never identify a period. Absent means the single-period convention (exactly one implicit period; single-period categories never need to declare), so a declared list must be non-empty. Any implementation type may declare — the axis is contract-level, not implementation-level."
+    },
     "notes": {
       "type": "string",
       "maxLength": 2000,

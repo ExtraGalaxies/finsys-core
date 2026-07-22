@@ -4,6 +4,39 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.0] — 2026-07-23
+
+### Added
+
+- **`AdapterManifest.periods`** (optional) — ordered period declarations,
+  the contract for the period axis of an adapter's category. The array
+  order IS the contract: a period's identity is its POSITION in the
+  declared list, and numbering is 1-based — period1 is the first declared
+  entry; there is no period0. Declared positions may overlap, nest, vary
+  in length, or be staggered (e.g. period1 = an annual table, periods 2–5
+  = the four quarters overlapping it), so dates never identify a period —
+  identity is contractual position, not dates and not recency. Absent
+  means the single-period convention (exactly one implicit period), so
+  every pre-existing manifest stays valid and single-period categories
+  never need to declare; a declared list must be non-empty. Any
+  implementation type may declare periods — the axis is a property of the
+  contract, not of how the adapter is implemented. The motivating
+  consumer is financial statements, where one document carries period1
+  (its current fiscal year) plus period2 (its prior comparative year).
+
+- **`AdapterExtraction.periods` + `PeriodValues`** (optional) —
+  per-period value sets on an extraction instance. Each entry carries a
+  1-based `position` (its identity — must be >= 1), optional `start`/`end`
+  ISO dates (display/temporal metadata only, never identity), a `values`
+  record, and optional per-field `confidence`, both with the same shapes
+  and semantics as their instance-level counterparts. An instance
+  carrying `periods` uses them for period-scoped fields while the
+  instance-level `values` remains the home for period-less
+  (singleton/instance-scoped) fields; the existing flat `values` path is
+  unchanged and remains the single-period path. Periods are scoped within
+  one instance — one document's period1 and another document's period1
+  are unrelated data points.
+
 ## [4.4.0] — 2026-07-22
 
 ### Added

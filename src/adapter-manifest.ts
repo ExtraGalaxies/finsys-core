@@ -197,11 +197,65 @@ export interface AdapterManifest {
   >;
 
   /**
+   * SYS-3002: ordered period declarations — the contract for the
+   * period axis of this adapter's category.
+   *
+   * The period axis is ordered BY CONTRACT: `periodN` is a POSITIONAL
+   * identifier into this array. Numbering is 1-BASED — period1 is the
+   * FIRST declared period (array index 0); there is no period0.
+   * Position is the period's IDENTITY: two extractions' period1 values
+   * are comparable because they occupy the same contractual slot, not
+   * because their dates match.
+   *
+   * Declared positions may overlap, nest, vary in length, or be
+   * staggered — e.g. period1 = an annual table, periods 2–5 = the four
+   * quarters overlapping it. The declaration makes no statement about
+   * dates; each extraction-time period carries its own dated metadata
+   * (see `PeriodValues.start`/`end`) for display and temporal
+   * reasoning, never for identity. Periods are scoped WITHIN one
+   * instance: one document's period1 and another document's period1
+   * are unrelated data points.
+   *
+   * ABSENT means the single-period convention: the adapter's output
+   * has exactly one implicit period, and instance-level `values` is
+   * that period's value set. Single-period categories (bank
+   * statements, EPF, payslips) never need to declare. Non-empty when
+   * present — declaring zero periods would contradict the implicit
+   * single-period convention, so the schema requires at least one
+   * entry.
+   *
+   * The motivating consumer is financial statements — one document
+   * carries period1 (its current fiscal year) plus period2 (its prior
+   * comparative year) — but any implementation type may declare
+   * periods: the axis is a property of the contract, not of how the
+   * adapter is implemented.
+   */
+  readonly periods?: ReadonlyArray<PeriodDeclaration>;
+
+  /**
    * Optional free-form notes — useful for partner-side documentation
    * (where to find the adapter's source, who owns it, what version of
    * the partner API it expects). Not consumed by the runtime.
    */
   readonly notes?: string;
+}
+
+/**
+ * SYS-3002: one declared period on the adapter's period axis. See
+ * {@link AdapterManifest.periods} for the positional (1-based) identity
+ * semantics — the entry's position in the `periods` array IS the
+ * period's identity; the entry itself only labels the role.
+ */
+export interface PeriodDeclaration {
+  /**
+   * Human role label for the position, e.g. "Current fiscal year",
+   * "Prior comparative year". Rendered in operator UIs; carries no
+   * identity semantics.
+   */
+  readonly name: string;
+
+  /** Optional longer description of what this position holds. */
+  readonly description?: string;
 }
 
 /**

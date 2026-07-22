@@ -130,6 +130,68 @@ export interface AdapterExtraction {
    * matching IhsFieldProvenance.origin semantics).
    */
   readonly confidence?: Partial<Record<CanonicalFieldName, number | null>>;
+
+  /**
+   * SYS-3002: per-period value sets for adapters whose category
+   * declares a period axis (see `AdapterManifest.periods`). Each entry
+   * carries the values for ONE contractual position; `position` is
+   * 1-based — period1 is the first declared period, there is no
+   * period0.
+   *
+   * An instance carrying `periods` uses them for period-scoped fields,
+   * while the instance-level `values` above remains the home for
+   * period-less (singleton / instance-scoped) fields. Instances of
+   * single-period adapters (no `periods` on the manifest) omit this
+   * entirely and keep everything in `values` — the existing flat path
+   * is unchanged and remains the single-period path.
+   *
+   * Periods are scoped WITHIN this instance: this instance's period1
+   * and another instance's period1 are unrelated data points.
+   */
+  readonly periods?: ReadonlyArray<PeriodValues>;
+}
+
+/**
+ * SYS-3002: one period's value set within an AdapterExtraction
+ * instance. Identity is `position` — the 1-based index into the
+ * manifest's declared `periods` array — never the dates: declared
+ * positions may overlap, nest, vary in length, or be staggered (e.g.
+ * period1 = an annual table, periods 2–5 = the four quarters
+ * overlapping it), so dates cannot identify a period and recency
+ * ordering across positions is meaningless.
+ */
+export interface PeriodValues {
+  /**
+   * 1-based contractual position into the manifest's `periods`
+   * declaration. MUST be >= 1 — period1 is the first declared period;
+   * there is no period0. This IS the period's identity.
+   */
+  readonly position: number;
+
+  /**
+   * ISO-8601 date the period starts — display/temporal metadata only,
+   * NEVER identity.
+   */
+  readonly start?: string;
+
+  /**
+   * ISO-8601 date the period ends — display/temporal metadata only,
+   * NEVER identity.
+   */
+  readonly end?: string;
+
+  /**
+   * The canonical field values for this period, same shape as the
+   * instance-level `values`.
+   */
+  readonly values: CanonicalFieldValues;
+
+  /**
+   * Optional per-field extraction confidence for this period's values,
+   * same semantics as the instance-level `confidence` (0..1 keyed by
+   * canonical field name; `null` marks a derived/computed value).
+   */
+  readonly confidence?: Partial<Record<CanonicalFieldName, number | null>>;
 }
 
 /**

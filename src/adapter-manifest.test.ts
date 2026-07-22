@@ -531,3 +531,99 @@ describe("SYS-2503: fieldAuthorizations", () => {
     expect(validate(m)).toBe(false);
   });
 });
+
+/**
+ * SYS-3002 — period declarations on the manifest. The array order IS
+ * the contract: element 1 (index 0) is period1 — numbering is 1-BASED,
+ * there is no period0. Absence means the single-period convention, so
+ * every pre-existing manifest stays valid.
+ */
+describe("SYS-3002: periods declaration", () => {
+  /**
+   * The motivating consumer, financial-statement-shaped: one document
+   * carries period1 (its current fiscal year, the FIRST declared
+   * entry) plus period2 (its prior comparative year, the SECOND).
+   */
+  function validWithTwoPeriods(): AdapterManifest {
+    return {
+      manifestVersion: 1,
+      id: "finxtract-financial-statement-v1",
+      displayName: "FinXtract Financial Statement v1",
+      category: "finxtract-financial-statement",
+      version: 1,
+      produces: ["revenue", "netProfit"],
+      cardinality: "multi",
+      implementation: { type: "extraction-pipeline" },
+      periods: [
+        {
+          name: "Current fiscal year",
+          description: "The statement's own reporting year.",
+        },
+        {
+          name: "Prior comparative year",
+          description: "The prior-year comparative column the statement restates.",
+        },
+      ],
+    };
+  }
+
+  it("accepts a financial-statement-shaped manifest with 2 declared periods (period1 = first entry, 1-based)", () => {
+    expect(validate(validWithTwoPeriods())).toBe(true);
+  });
+
+  it("accepts a single declared period", () => {
+    const m = {
+      ...validWithTwoPeriods(),
+      periods: [{ name: "Current fiscal year" }],
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("accepts a period entry without a description (name alone suffices)", () => {
+    const m = {
+      ...validWithTwoPeriods(),
+      periods: [{ name: "Current fiscal year" }, { name: "Prior comparative year" }],
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("a manifest with NO periods stays valid (single-period convention — backward compat)", () => {
+    const m = validTypescript();
+    expect("periods" in m).toBe(false);
+    expect(validate(m)).toBe(true);
+  });
+
+  it("rejects an empty periods array (absence, not [], expresses the single-period convention)", () => {
+    const m = { ...validWithTwoPeriods(), periods: [] };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects a period entry without a name", () => {
+    const m = {
+      ...validWithTwoPeriods(),
+      periods: [{ description: "nameless" }],
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects a period entry with an empty name", () => {
+    const m = { ...validWithTwoPeriods(), periods: [{ name: "" }] };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects a period entry carrying extra properties (no dates in the DECLARATION — dates are extraction-time metadata, never identity)", () => {
+    const m = {
+      ...validWithTwoPeriods(),
+      periods: [{ name: "Current fiscal year", start: "2025-01-01" }],
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("periods may be declared on any implementation type (contract-level axis, not implementation-level)", () => {
+    const m = {
+      ...validTypescript(),
+      periods: [{ name: "Current fiscal year" }, { name: "Prior comparative year" }],
+    };
+    expect(validate(m)).toBe(true);
+  });
+});

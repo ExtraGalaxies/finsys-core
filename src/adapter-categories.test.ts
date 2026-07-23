@@ -23,6 +23,8 @@ import {
   categorySchemaOf,
   categoryFieldsOf,
   categoryForField,
+  factOf,
+  categoriesAttestingFact,
   isAdapterCategory,
 } from "./adapter-categories.js";
 
@@ -46,16 +48,24 @@ describe("Adapter category catalogue", () => {
     }
   });
 
-  it("canonical field names are unique across all categories", () => {
-    const seen = new Map<string, string>();
+  it("canonical field names are unique across all categories — except shared-fact attestations", () => {
+    const seen = new Map<string, { category: string; fact: string | undefined }>();
     for (const cat of allCategories()) {
       for (const f of cat.fields) {
         const prior = seen.get(f.name);
-        expect(
-          prior,
-          `duplicate canonical field "${f.name}" across categories: ${prior} + ${cat.id}`,
-        ).toBeUndefined();
-        seen.set(f.name, cat.id);
+        if (prior) {
+          // A shared name is only legal when EVERY declaration carries
+          // the SAME fact id (independent attestations of one fact).
+          expect(
+            prior.fact,
+            `duplicate canonical field "${f.name}" across categories without a shared fact: ${prior.category} + ${cat.id}`,
+          ).toBeDefined();
+          expect(
+            f.fact,
+            `"${f.name}" (${cat.id}) reuses a name that ${prior.category} declares with fact "${prior.fact}" — it must attest the same fact`,
+          ).toBe(prior.fact);
+        }
+        seen.set(f.name, { category: cat.id, fact: f.fact });
       }
     }
   });
@@ -336,6 +346,129 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
     expect(() => buildCategoryRegistry(raw)).toThrow(/globally unique/);
   });
 
+  // ── Shared-fact attestations ──────────────────────────────────────────
+
+  function secondCategory(fields: RawArg["categories"][0]["fields"]): RawArg["categories"][0] {
+    return {
+      id: "fixture-two",
+      displayName: "Fixture Two",
+      description: "Second test category.",
+      canonicalTable: "ihs_alt_data_fixture_two",
+      fields,
+    };
+  }
+
+  it("accepts the same field name across categories when every declaration attests the same fact", () => {
+    const raw = validRaw();
+    raw.categories[0].fields.push({
+      name: "sharedThing",
+      type: "string",
+      fact: "sharedThing",
+      description: "First attestation.",
+    });
+    raw.categories.push(
+      secondCategory([
+        { name: "sharedThing", type: "string", fact: "sharedThing", description: "Second attestation." },
+        { name: "fixtureTwoOwn", type: "string", description: "Unique to fixture-two." },
+      ]),
+    );
+    const reg = buildCategoryRegistry(raw);
+    // Shared name → no single owning category in the reverse index.
+    expect(reg.fieldToCategory.has("sharedThing")).toBe(false);
+    // Unique names keep their owner.
+    expect(reg.fieldToCategory.get("fixtureScore")).toBe("fixture-source");
+    expect(reg.fieldToCategory.get("fixtureTwoOwn")).toBe("fixture-two");
+    // Fact indexes carry the attestation graph.
+    expect(reg.fieldToFact.get("sharedThing")).toBe("sharedThing");
+    expect(reg.factToCategories.get("sharedThing")).toEqual(["fixture-source", "fixture-two"]);
+  });
+
+  it("rejects the same field name with DIFFERENT facts", () => {
+    const raw = validRaw();
+    raw.categories[0].fields.push({
+      name: "sharedThing",
+      type: "string",
+      fact: "factA",
+      description: "First attestation.",
+    });
+    raw.categories.push(
+      secondCategory([
+        { name: "sharedThing", type: "string", fact: "factB", description: "Mismatched attestation." },
+      ]),
+    );
+    expect(() => buildCategoryRegistry(raw)).toThrow(/attests the same fact/);
+  });
+
+  it("rejects the same field name declared with a fact in one category and without in another (both orders)", () => {
+    for (const [firstFact, secondFact] of [
+      ["theFact", undefined],
+      [undefined, "theFact"],
+    ] as Array<[string | undefined, string | undefined]>) {
+      const raw = validRaw();
+      raw.categories[0].fields.push({
+        name: "sharedThing",
+        type: "string",
+        ...(firstFact !== undefined ? { fact: firstFact } : {}),
+        description: "First declaration.",
+      });
+      raw.categories.push(
+        secondCategory([
+          {
+            name: "sharedThing",
+            type: "string",
+            ...(secondFact !== undefined ? { fact: secondFact } : {}),
+            description: "Second declaration.",
+          },
+        ]),
+      );
+      expect(
+        () => buildCategoryRegistry(raw),
+        `fact ${firstFact} then ${secondFact} should be rejected`,
+      ).toThrow(/attests the same fact/);
+    }
+  });
+
+  it("rejects the same field name declared twice within ONE category, even with matching facts", () => {
+    const raw = validRaw();
+    raw.categories[0].fields.push(
+      { name: "sharedThing", type: "string", fact: "sharedThing", description: "Once." },
+      { name: "sharedThing", type: "string", fact: "sharedThing", description: "Twice." },
+    );
+    expect(() => buildCategoryRegistry(raw)).toThrow(/more than once/);
+  });
+
+  it("rejects an empty-string fact", () => {
+    const raw = validRaw();
+    raw.categories[0].fields[0].fact = "";
+    expect(() => buildCategoryRegistry(raw)).toThrow(/invalid fact/);
+  });
+
+  it("rejects one fact id carried by two different field names", () => {
+    const raw = validRaw();
+    raw.categories[0].fields.push({
+      name: "thingOne",
+      type: "string",
+      fact: "theFact",
+      description: "First name.",
+    });
+    raw.categories.push(
+      secondCategory([
+        { name: "thingTwo", type: "string", fact: "theFact", description: "Different name, same fact." },
+      ]),
+    );
+    expect(() => buildCategoryRegistry(raw)).toThrow(/exactly one canonical field name/);
+  });
+
+  it("a fact on a single-category field is allowed and indexed", () => {
+    const raw = validRaw();
+    raw.categories[0].fields[0].fact = "fixtureScore";
+    const reg = buildCategoryRegistry(raw);
+    // Uniquely declared → still has an owning category.
+    expect(reg.fieldToCategory.get("fixtureScore")).toBe("fixture-source");
+    expect(reg.fieldToFact.get("fixtureScore")).toBe("fixtureScore");
+    expect(reg.factToCategories.get("fixtureScore")).toEqual(["fixture-source"]);
+  });
+
   it("rejects an invalid field type", () => {
     const raw = validRaw() as unknown as { categories: Array<{ fields: Array<{ type: string }> }> };
     raw.categories[0].fields[0].type = "timestamp";
@@ -507,14 +640,18 @@ describe("finxtract-financial-statement category", () => {
     }
   });
 
-  it("keeps the bare metric vocabulary disjoint from every other category", () => {
-    // The registry's load-time guard already enforces global uniqueness
-    // (the suite would not load otherwise) — this pins the invariant
-    // explicitly for the new bare-name set.
+  it("keeps the bare metric vocabulary disjoint from every other category — except its declared shared facts", () => {
+    // The registry's load-time guard already enforces uniqueness (the
+    // suite would not load otherwise) — this pins the invariant
+    // explicitly for the new bare-name set. Since the shared-fact
+    // attestation model landed, `companyName` is the ONE deliberate
+    // exception: the form9 extraction category attests the same fact.
+    const sharedFacts = new Set(["companyName"]);
     const mine = new Set(categoryFieldsOf("finxtract-financial-statement"));
     for (const cat of allCategories()) {
       if (cat.id === "finxtract-financial-statement") continue;
       for (const f of cat.fields) {
+        if (sharedFacts.has(f.name)) continue;
         expect(mine.has(f.name), `"${f.name}" (${cat.id}) collides`).toBe(false);
       }
     }
@@ -525,5 +662,138 @@ describe("finxtract-financial-statement category", () => {
     expect(categoryForField("netOperatingCashFlow")).toBe(
       "finxtract-financial-statement",
     );
+  });
+
+  it("companyName is now a shared-fact attestation (form9 attests the same fact)", () => {
+    const spec = categorySchemaOf("finxtract-financial-statement").fields.find(
+      (f) => f.name === "companyName",
+    );
+    expect(spec?.fact).toBe("companyName");
+    // Shared across categories → no single owning category.
+    expect(categoryForField("companyName")).toBeNull();
+  });
+});
+
+// ── SYS-3004: SSM Form 9 + SSM company-profile extraction categories ────
+// The last two FinXtract doc types join the category registry — and the
+// first exercise of the shared-fact attestation model: form9 + ssm both
+// extract a company's incorporation date, and form9 + the financial
+// statement both extract the company's name. One fact, N attestations.
+describe("finxtract-form9 category", () => {
+  it("is declared with its canonical alt-data table and exactly three fields", () => {
+    const cat = categorySchemaOf("finxtract-form9");
+    expect(cat.canonicalTable).toBe("ihs_alt_data_form9");
+    expect([...categoryFieldsOf("finxtract-form9")].sort()).toEqual([
+      "companyIncorporationDate",
+      "companyName",
+      "companyRegNo",
+    ]);
+  });
+
+  it("declares its two shared-fact attestations and one unique field", () => {
+    const spec = (name: string) =>
+      categorySchemaOf("finxtract-form9").fields.find((f) => f.name === name);
+    expect(spec("companyName")?.fact).toBe("companyName");
+    expect(spec("companyIncorporationDate")?.fact).toBe("companyIncorporationDate");
+    expect(spec("companyRegNo")?.fact).toBeUndefined();
+    // All three are document strings.
+    for (const name of ["companyName", "companyRegNo", "companyIncorporationDate"]) {
+      expect(spec(name)?.type, `${name} type`).toBe("string");
+    }
+  });
+
+  it("routes the unique field to form9 and leaves the shared names ambiguous", () => {
+    expect(categoryForField("companyRegNo")).toBe("finxtract-form9");
+    expect(categoryForField("companyName")).toBeNull();
+    expect(categoryForField("companyIncorporationDate")).toBeNull();
+  });
+});
+
+describe("finxtract-ssm category", () => {
+  it("is declared with its canonical alt-data table and exactly the sixteen profile fields", () => {
+    const cat = categorySchemaOf("finxtract-ssm");
+    expect(cat.canonicalTable).toBe("ihs_alt_data_ssm");
+    expect([...categoryFieldsOf("finxtract-ssm")].sort()).toEqual([
+      "businessCommencementDate",
+      "businessNature",
+      "businessOrigin",
+      "companyIncorporationDate",
+      "companyLastOldName",
+      "companyNameDateOfChange",
+      "companyStatus",
+      "directors",
+      "previousDirectors",
+      "registeredAddress",
+      "shareholders",
+      "ssmCompanyEntityType",
+      "ssmCompanyName",
+      "ssmCompanyRegNo",
+      "ssmPaidUpCapital",
+      "totalShareIssued",
+    ]);
+    expect(cat.fields).toHaveLength(16);
+  });
+
+  it("declares the capital figures as numbers and everything else as strings", () => {
+    const cat = categorySchemaOf("finxtract-ssm");
+    for (const f of cat.fields) {
+      if (f.name === "totalShareIssued" || f.name === "ssmPaidUpCapital") {
+        expect(f.type, `${f.name} type`).toBe("number");
+      } else {
+        expect(f.type, `${f.name} type`).toBe("string");
+      }
+    }
+    expect(cat.fields.find((f) => f.name === "ssmPaidUpCapital")?.unit).toBe("MYR");
+  });
+
+  it("attests companyIncorporationDate as its ONLY shared fact; all other names are unique to ssm", () => {
+    const cat = categorySchemaOf("finxtract-ssm");
+    for (const f of cat.fields) {
+      if (f.name === "companyIncorporationDate") {
+        expect(f.fact).toBe("companyIncorporationDate");
+        expect(categoryForField(f.name)).toBeNull();
+      } else {
+        expect(f.fact, `${f.name} should carry no fact`).toBeUndefined();
+        expect(categoryForField(f.name), `${f.name} should route to finxtract-ssm`).toBe(
+          "finxtract-ssm",
+        );
+      }
+    }
+  });
+
+  it("stays disjoint from every other category except the declared shared fact", () => {
+    const sharedFacts = new Set(["companyIncorporationDate"]);
+    const mine = new Set(categoryFieldsOf("finxtract-ssm"));
+    for (const cat of allCategories()) {
+      if (cat.id === "finxtract-ssm") continue;
+      for (const f of cat.fields) {
+        if (sharedFacts.has(f.name)) continue;
+        expect(mine.has(f.name), `"${f.name}" (${cat.id}) collides`).toBe(false);
+      }
+    }
+  });
+});
+
+describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
+  it("factOf returns the fact id for attestation fields and null otherwise", () => {
+    expect(factOf("companyIncorporationDate")).toBe("companyIncorporationDate");
+    expect(factOf("companyName")).toBe("companyName");
+    // Uniquely-declared, fact-less names → null.
+    expect(factOf("companyRegNo")).toBeNull();
+    expect(factOf("telcoOnTimePaymentRatio24m")).toBeNull();
+    // Unknown names → null.
+    expect(factOf("clearlyNotACanonicalField")).toBeNull();
+  });
+
+  it("categoriesAttestingFact enumerates every attesting category in data-file order", () => {
+    expect(categoriesAttestingFact("companyIncorporationDate")).toEqual([
+      "finxtract-form9",
+      "finxtract-ssm",
+    ]);
+    expect(categoriesAttestingFact("companyName")).toEqual([
+      "finxtract-financial-statement",
+      "finxtract-form9",
+    ]);
+    expect(categoriesAttestingFact("not-a-fact")).toEqual([]);
   });
 });

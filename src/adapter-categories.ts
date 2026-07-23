@@ -81,6 +81,19 @@ export interface CanonicalFieldSpec {
   readonly unit?: string;
   readonly range?: readonly [number, number];
   readonly description: string;
+  /**
+   * Global fact identifier marking this field as an ATTESTATION of a
+   * shared real-world fact (e.g. a company has exactly one
+   * incorporation date, no matter which document it was extracted
+   * from). Multiple categories may declare the SAME field name iff
+   * every declaring category carries the same `fact` id — each
+   * category's value is then an independent attestation of one fact,
+   * comparable across sources (the future disagreement-comparison
+   * feature's unit of comparison). A `fact` id is bound to exactly one
+   * field name registry-wide; by convention the field name IS the fact
+   * id. Uniquely-declared fields need no `fact` (but may carry one).
+   */
+  readonly fact?: string;
 }
 
 /**
@@ -106,6 +119,7 @@ interface RawCategoryField {
   unit?: string;
   range?: [number, number];
   description: string;
+  fact?: string;
 }
 
 interface RawCategory {
@@ -141,8 +155,17 @@ export interface CategoryRegistry {
   readonly ids: ReadonlyArray<AdapterCategory>;
   /** id → schema, O(1) lookup. */
   readonly byId: ReadonlyMap<AdapterCategory, CategorySchema>;
-  /** canonical field name → owning category id, O(1) reverse lookup. */
+  /**
+   * canonical field name → owning category id, O(1) reverse lookup.
+   * Only UNIQUELY-declared names appear here — a shared-fact name
+   * (declared by more than one category) is deliberately absent, so
+   * `categoryForField` answers null for it (explicit ambiguity).
+   */
   readonly fieldToCategory: ReadonlyMap<CanonicalFieldName, AdapterCategory>;
+  /** canonical field name → fact id, for every field declaring one. */
+  readonly fieldToFact: ReadonlyMap<CanonicalFieldName, string>;
+  /** fact id → every category attesting it, in data-file order. */
+  readonly factToCategories: ReadonlyMap<string, ReadonlyArray<AdapterCategory>>;
 }
 
 /**
@@ -169,6 +192,14 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
 
   const byId = new Map<AdapterCategory, CategorySchema>();
   const fieldToCategory = new Map<CanonicalFieldName, AdapterCategory>();
+  const fieldToFact = new Map<CanonicalFieldName, string>();
+  const factToCategories = new Map<string, AdapterCategory[]>();
+  // Every declaration of a field name seen so far — the shared-fact
+  // uniqueness rule needs the full picture, not just the first declarer.
+  const declarations = new Map<
+    CanonicalFieldName,
+    { fact: string | undefined; categories: AdapterCategory[] }
+  >();
   const tables = new Set<string>();
   const all: CategorySchema[] = [];
 
@@ -212,11 +243,48 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       if (typeof f.name !== "string" || f.name.length === 0) {
         throw new Error(`adapter category data: ${where} has a field with no name`);
       }
-      if (fieldToCategory.has(f.name)) {
+      if (f.fact !== undefined && (typeof f.fact !== "string" || f.fact.length === 0)) {
         throw new Error(
-          `adapter category data: canonical field "${f.name}" declared by more than one category ` +
-            `(${fieldToCategory.get(f.name)} + ${cat.id}) — field names must be globally unique`,
+          `adapter category data: field "${f.name}" (${where}) has an invalid fact — expected a non-empty string`,
         );
+      }
+      // Shared-fact uniqueness rule: a field name may be declared by
+      // more than one category iff EVERY declaration carries the SAME
+      // `fact` id — the declarations are then independent attestations
+      // of one shared real-world fact. A name declared with a fact in
+      // one place and without (or with a different fact) elsewhere is
+      // the SYS-2722 drift pattern and is refused at load time.
+      const prior = declarations.get(f.name);
+      if (prior) {
+        if (prior.categories.includes(cat.id)) {
+          throw new Error(
+            `adapter category data: ${where} declares field "${f.name}" more than once`,
+          );
+        }
+        if (prior.fact === undefined || f.fact === undefined || prior.fact !== f.fact) {
+          const describeFact = (fact: string | undefined): string =>
+            fact === undefined ? "no fact" : `fact "${fact}"`;
+          throw new Error(
+            `adapter category data: canonical field "${f.name}" declared by more than one category ` +
+              `(${prior.categories.join(" + ")} with ${describeFact(prior.fact)} + ${cat.id} with ` +
+              `${describeFact(f.fact)}) — field names must be globally unique unless every ` +
+              `declaring category attests the same fact`,
+          );
+        }
+      }
+      if (f.fact !== undefined) {
+        // A fact id is bound to exactly one field name registry-wide —
+        // two different names attesting "the same fact" is drift by
+        // another name (a fact must be comparable across its attesters
+        // via one canonical field name).
+        for (const [otherName, otherFact] of fieldToFact) {
+          if (otherFact === f.fact && otherName !== f.name) {
+            throw new Error(
+              `adapter category data: fact "${f.fact}" is carried by two different field names ` +
+                `("${otherName}" + "${f.name}") — a fact id must map to exactly one canonical field name`,
+            );
+          }
+        }
       }
       if (!VALID_FIELD_TYPES.includes(f.type)) {
         throw new Error(
@@ -252,9 +320,28 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
+        ...(f.fact !== undefined ? { fact: f.fact } : {}),
       });
       fields.push(spec);
-      fieldToCategory.set(f.name, cat.id);
+      if (prior) {
+        prior.categories.push(cat.id);
+        // The name is now shared — drop it from the unique-owner index
+        // so categoryForField answers null (explicit ambiguity) rather
+        // than silently privileging the first declarer.
+        fieldToCategory.delete(f.name);
+      } else {
+        declarations.set(f.name, { fact: f.fact, categories: [cat.id] });
+        fieldToCategory.set(f.name, cat.id);
+      }
+      if (f.fact !== undefined) {
+        fieldToFact.set(f.name, f.fact);
+        const attesters = factToCategories.get(f.fact);
+        if (attesters) {
+          attesters.push(cat.id);
+        } else {
+          factToCategories.set(f.fact, [cat.id]);
+        }
+      }
     }
 
     const schema: CategorySchema = Object.freeze({
@@ -274,6 +361,13 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     ids: Object.freeze(all.map((c) => c.id)) as ReadonlyArray<AdapterCategory>,
     byId,
     fieldToCategory,
+    fieldToFact,
+    factToCategories: new Map(
+      [...factToCategories].map(([fact, cats]) => [
+        fact,
+        Object.freeze(cats) as ReadonlyArray<AdapterCategory>,
+      ]),
+    ),
   });
 }
 
@@ -326,12 +420,37 @@ export function allCategories(): ReadonlyArray<CategorySchema> {
 /**
  * Reverse lookup: which category declares a given canonical field?
  * Returns null if the field name isn't declared by any category in
- * this version of finsys-core. Useful when the host app is reading
- * canonical field values back from storage + wants to identify the
- * producing category for rendering. O(1).
+ * this version of finsys-core — AND for shared-fact names (declared by
+ * more than one category), where "the" category is genuinely ambiguous.
+ * The null is deliberate: a caller holding a shared-fact name must
+ * decide per-attestation, via `categoriesAttestingFact(factOf(name))`,
+ * rather than being handed one arbitrary declarer. Useful when the
+ * host app is reading canonical field values back from storage + wants
+ * to identify the producing category for rendering. O(1).
  */
 export function categoryForField(field: CanonicalFieldName): AdapterCategory | null {
   return registry.fieldToCategory.get(field) ?? null;
+}
+
+/**
+ * The fact id a canonical field attests, or null when the field
+ * declares no fact (or isn't declared at all). By convention the fact
+ * id equals the field name, but callers must not assume it — read it
+ * from here. O(1).
+ */
+export function factOf(field: CanonicalFieldName): string | null {
+  return registry.fieldToFact.get(field) ?? null;
+}
+
+/**
+ * Every category attesting a given shared fact, in data-file order.
+ * Empty for an unknown fact id. This is the lookup the disagreement-
+ * comparison feature keys on: each attesting category's value for the
+ * fact's field is an independent observation of the same real-world
+ * fact, so cross-category mismatches are surfaceable.
+ */
+export function categoriesAttestingFact(factId: string): ReadonlyArray<AdapterCategory> {
+  return registry.factToCategories.get(factId) ?? [];
 }
 
 /**

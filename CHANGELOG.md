@@ -4,6 +4,54 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.7.0] — 2026-07-23
+
+### Added
+
+- **Shared-fact attestations** in the category registry. A canonical
+  field may now declare an optional `fact` — a global fact identifier
+  marking the field as an ATTESTATION of a shared real-world fact (a
+  company has exactly one incorporation date, no matter which document
+  it was extracted from). The registry's uniqueness rule is refined
+  accordingly: a field name may be declared by more than one category
+  **iff every declaring category carries the same `fact` id**. A name
+  declared with a fact in one place and without (or with a different
+  fact) elsewhere is refused at load time, as is one fact id carried by
+  two different field names — both are the silent-drift patterns this
+  model exists to prevent. Names declared by exactly one category need
+  no `fact` (but may carry one). Two new lookups round out the model:
+  `factOf(field)` returns the fact a field attests (or null), and
+  `categoriesAttestingFact(factId)` enumerates every attesting category
+  — the lookup a future cross-source disagreement comparison keys on.
+  `categoryForField` now answers **null for shared-fact names**: with
+  multiple attesters there is no single owning category, and the
+  explicit null forces callers to reason per-attestation instead of
+  being handed one arbitrary declarer. Uniquely-declared names resolve
+  exactly as before. `CanonicalFieldSpec` gains the optional `fact`
+  property; the data-file schema version moves to 1.1.0.
+
+- **`finxtract-form9` category** — fields extracted from an uploaded
+  SSM Form 9 (certificate of incorporation) document by the host's
+  extraction pipeline. 3 canonical fields (canonical table
+  `ihs_alt_data_form9`): `companyRegNo`, plus the first two shared-fact
+  attestations — `companyName` (also attested by
+  `finxtract-financial-statement`, whose existing declaration now
+  carries the matching `fact`; additive metadata, no behavior change
+  for existing readers) and `companyIncorporationDate` (also attested
+  by `finxtract-ssm`).
+
+- **`finxtract-ssm` category** — fields extracted from an uploaded SSM
+  company-profile document by the host's extraction pipeline. 16
+  canonical fields (canonical table `ihs_alt_data_ssm`) covering
+  registration identity (`ssmCompanyName`, `ssmCompanyRegNo`,
+  `ssmCompanyEntityType`), status and origin, key dates
+  (`companyIncorporationDate` as a shared-fact attestation,
+  `businessCommencementDate`, `companyNameDateOfChange`), nature of
+  business, registered address, capital figures (`totalShareIssued`,
+  `ssmPaidUpCapital` in MYR), the JSON-encoded officer/shareholder
+  registers (`directors`, `shareholders`, `previousDirectors`), and
+  name-change history (`companyLastOldName`).
+
 ## [4.6.0] — 2026-07-23
 
 ### Added

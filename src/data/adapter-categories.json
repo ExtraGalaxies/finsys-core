@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "categories": [
     {
       "id": "telco-carrier",
@@ -653,7 +653,8 @@
         {
           "name": "companyName",
           "type": "string",
-          "description": "Company name as stated on the document."
+          "fact": "companyName",
+          "description": "Company name as stated on the document. Attestation of the shared companyName fact — the SSM Form 9 extraction category attests the same fact from its own document."
         },
         {
           "name": "financialYearEnd",
@@ -1370,6 +1371,121 @@
           "type": "number",
           "unit": "MYR",
           "description": "Cash-flow statement: cash and cash equivalents at the end of the financial year."
+        }
+      ]
+    },
+    {
+      "id": "finxtract-form9",
+      "displayName": "SSM Form 9 (Document Extraction)",
+      "description": "Fields extracted from an uploaded SSM Form 9 (Certificate of Incorporation of Private Company) document by the host's extraction pipeline. One instance per uploaded document. The company name and incorporation date are attestations of shared facts — the company-profile and financial-statement extraction categories attest the same real-world facts from their own documents.",
+      "canonicalTable": "ihs_alt_data_form9",
+      "fields": [
+        {
+          "name": "companyName",
+          "type": "string",
+          "fact": "companyName",
+          "description": "Company name as printed on the certificate. Attestation of the shared companyName fact."
+        },
+        {
+          "name": "companyRegNo",
+          "type": "string",
+          "description": "Company registration number as printed on the certificate."
+        },
+        {
+          "name": "companyIncorporationDate",
+          "type": "string",
+          "fact": "companyIncorporationDate",
+          "description": "Date of incorporation as printed on the certificate, normalized to ISO YYYY-MM-DD. Attestation of the shared companyIncorporationDate fact — a company has exactly one incorporation date regardless of which document it was extracted from."
+        }
+      ]
+    },
+    {
+      "id": "finxtract-ssm",
+      "displayName": "SSM Company Profile (Document Extraction)",
+      "description": "Fields extracted from an uploaded SSM company-profile document (company or business registration extract) by the host's extraction pipeline. One instance per uploaded document. Covers registration identity, status, key dates, registered address, capital, and the officer/shareholder registers. The incorporation date is an attestation of a shared fact — the Form 9 extraction category attests the same real-world fact from its own document.",
+      "canonicalTable": "ihs_alt_data_ssm",
+      "fields": [
+        {
+          "name": "ssmCompanyEntityType",
+          "type": "string",
+          "description": "Entity type stated on the profile (e.g. private limited company, enterprise)."
+        },
+        {
+          "name": "ssmCompanyName",
+          "type": "string",
+          "description": "Business or company name as stated on the profile."
+        },
+        {
+          "name": "ssmCompanyRegNo",
+          "type": "string",
+          "description": "Business or company registration number as stated on the profile."
+        },
+        {
+          "name": "companyStatus",
+          "type": "string",
+          "description": "Registration status as stated on the profile (e.g. existing, dissolved)."
+        },
+        {
+          "name": "businessOrigin",
+          "type": "string",
+          "description": "Business origin as stated on the profile."
+        },
+        {
+          "name": "companyIncorporationDate",
+          "type": "string",
+          "fact": "companyIncorporationDate",
+          "description": "Incorporation (or registration) date as stated on the profile, normalized to ISO YYYY-MM-DD. Attestation of the shared companyIncorporationDate fact — a company has exactly one incorporation date regardless of which document it was extracted from."
+        },
+        {
+          "name": "businessCommencementDate",
+          "type": "string",
+          "description": "Business commencement (or start) date as stated on the profile, normalized to ISO YYYY-MM-DD."
+        },
+        {
+          "name": "businessNature",
+          "type": "string",
+          "description": "Nature of business as stated on the profile."
+        },
+        {
+          "name": "registeredAddress",
+          "type": "string",
+          "description": "Registered business address as stated on the profile."
+        },
+        {
+          "name": "totalShareIssued",
+          "type": "number",
+          "description": "Total shares issued as stated on the profile."
+        },
+        {
+          "name": "ssmPaidUpCapital",
+          "type": "number",
+          "unit": "MYR",
+          "description": "Paid-up capital as stated on the profile (falls back to total shares issued when the profile omits an explicit paid-up figure)."
+        },
+        {
+          "name": "directors",
+          "type": "string",
+          "description": "JSON-encoded list of current directors/officers (for enterprises, the business owner normalized into the same shape)."
+        },
+        {
+          "name": "shareholders",
+          "type": "string",
+          "description": "JSON-encoded list of shareholders (for enterprises, the business owner normalized into the same shape)."
+        },
+        {
+          "name": "previousDirectors",
+          "type": "string",
+          "description": "JSON-encoded list of previous directors/officers."
+        },
+        {
+          "name": "companyLastOldName",
+          "type": "string",
+          "description": "The company's most recent former name, when the profile records a name change."
+        },
+        {
+          "name": "companyNameDateOfChange",
+          "type": "string",
+          "description": "Date of the most recent name change, normalized to ISO YYYY-MM-DD."
         }
       ]
     }

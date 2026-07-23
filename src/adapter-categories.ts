@@ -72,14 +72,51 @@ export type AdapterCategory = string;
 export type CanonicalFieldName = string;
 
 /**
+ * One declared level of an `ordinal` field, e.g. `{ value: 1, label:
+ * "excellent" }`. See {@link CanonicalFieldSpec.levels} for the
+ * ordering convention.
+ */
+export interface OrdinalLevel {
+  /**
+   * The integer stored in the canonical field / persisted column for
+   * this level. Levels for a given field MUST be declared in
+   * ascending `value` order, starting at 1 with no gaps (i.e.
+   * `levels[i].value === i + 1`) — the registry enforces this at load
+   * time so `value` always doubles as the level's 1-based rank.
+   */
+  readonly value: number;
+  /** Short machine-friendly label for the level, e.g. `"excellent"`. */
+  readonly label: string;
+}
+
+/**
  * Per-field metadata for a canonical field declared by a category.
  * Frozen at module load — the data file is authoritative.
+ *
+ * `type: "ordinal"` (SYS-2900-series) is for small, closed, ordered
+ * bucket sets — e.g. a partner returning a 1-4 tier code instead of a
+ * continuous number. It differs from `number` + `range` in kind, not
+ * just presentation: there's no meaningful interpolation between
+ * levels, and the field's entire value space is the finite `levels`
+ * list rather than a continuous span. An ordinal field declares
+ * `levels` instead of `range`; `unit` doesn't apply.
+ *
+ * **Ordering convention**: `value` ascends with severity — `1` is
+ * always the most favorable level, and the highest `value` is always
+ * the least favorable, regardless of what the field measures
+ * (reliability, tenure, distress, ...). This direction is fixed
+ * across every ordinal field (not per-field-configurable) so generic
+ * tooling can reason about it uniformly: `max` aggregation across
+ * instances always selects the worst tier without a per-field
+ * direction lookup, matching this category's existing "worst
+ * suspension count wins" aggregation idiom for continuous fields.
  */
 export interface CanonicalFieldSpec {
   readonly name: CanonicalFieldName;
-  readonly type: "number" | "boolean" | "string";
+  readonly type: "number" | "boolean" | "string" | "ordinal";
   readonly unit?: string;
   readonly range?: readonly [number, number];
+  readonly levels?: ReadonlyArray<OrdinalLevel>;
   readonly description: string;
 }
 
@@ -100,11 +137,17 @@ export interface CategorySchema {
 
 // ── Raw data shape (as it appears in the JSON file) ──────────────────
 
+interface RawOrdinalLevel {
+  value: number;
+  label: string;
+}
+
 interface RawCategoryField {
   name: string;
-  type: "number" | "boolean" | "string";
+  type: "number" | "boolean" | "string" | "ordinal";
   unit?: string;
   range?: [number, number];
+  levels?: RawOrdinalLevel[];
   description: string;
 }
 
@@ -127,6 +170,7 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
   "number",
   "boolean",
   "string",
+  "ordinal",
 ];
 
 /**
@@ -246,11 +290,64 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         }
       }
 
+      // `levels` is required for (and exclusive to) `ordinal` fields.
+      // `range` is a continuous-value concept and doesn't apply to a
+      // closed bucket set — reject it outright rather than silently
+      // ignoring it, so a copy-pasted `range` from a `number` field
+      // fails loudly instead of looking honored.
+      if (f.type === "ordinal") {
+        if (f.range !== undefined) {
+          throw new Error(
+            `adapter category data: field "${f.name}" (${where}) is ordinal and must not declare "range" — use "levels"`,
+          );
+        }
+        if (!Array.isArray(f.levels) || f.levels.length < 2) {
+          throw new Error(
+            `adapter category data: field "${f.name}" (${where}) is ordinal and needs at least 2 "levels"`,
+          );
+        }
+        const seenLabels = new Set<string>();
+        f.levels.forEach((lvl, idx) => {
+          const expectedValue = idx + 1;
+          if (
+            typeof lvl?.value !== "number" ||
+            !Number.isInteger(lvl.value) ||
+            lvl.value !== expectedValue
+          ) {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) levels must be ordered ascending from 1 with no gaps — expected value ${expectedValue} at index ${idx}, got ${lvl?.value}`,
+            );
+          }
+          if (typeof lvl.label !== "string" || lvl.label.length === 0) {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) has a level with no non-empty label (value ${lvl.value})`,
+            );
+          }
+          if (seenLabels.has(lvl.label)) {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) has duplicate level label "${lvl.label}"`,
+            );
+          }
+          seenLabels.add(lvl.label);
+        });
+      } else if (f.levels !== undefined) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) declares "levels" but is not type "ordinal"`,
+        );
+      }
+
       const spec: CanonicalFieldSpec = Object.freeze({
         name: f.name,
         type: f.type,
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
+        ...(f.levels !== undefined
+          ? {
+              levels: Object.freeze(
+                f.levels.map((lvl) => Object.freeze({ value: lvl.value, label: lvl.label })),
+              ) as ReadonlyArray<OrdinalLevel>,
+            }
+          : {}),
         description: f.description,
       });
       fields.push(spec);

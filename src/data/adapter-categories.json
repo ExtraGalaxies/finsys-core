@@ -51,6 +51,38 @@
           "unit": "MYR",
           "range": [0, 10000],
           "description": "Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy."
+        },
+        {
+          "name": "telcoPaymentReliabilityTier",
+          "type": "ordinal",
+          "levels": [
+            { "value": 1, "label": "excellent" },
+            { "value": 2, "label": "good" },
+            { "value": 3, "label": "fair" },
+            { "value": 4, "label": "poor" }
+          ],
+          "description": "Coarse bill-payment reliability bucket, as returned directly by partners that report a tier code instead of a continuous ratio. 1 (excellent) is the most reliable payer, 4 (poor) the least. Parallel signal to telcoOnTimePaymentRatio24m for partners that don't expose the underlying ratio."
+        },
+        {
+          "name": "telcoTenureTier",
+          "type": "ordinal",
+          "levels": [
+            { "value": 1, "label": "established" },
+            { "value": 2, "label": "developing" },
+            { "value": 3, "label": "new" },
+            { "value": 4, "label": "very-new" }
+          ],
+          "description": "Coarse account-age bucket, as returned directly by partners that report a tenure tier code instead of a continuous month count. 1 (established) is the longest-tenured bucket, 4 (very-new) the shortest / thinnest-file. Parallel signal to telcoTenureMonths for partners that don't expose the underlying month count."
+        },
+        {
+          "name": "telcoDistressTier",
+          "type": "ordinal",
+          "levels": [
+            { "value": 1, "label": "none" },
+            { "value": 2, "label": "moderate" },
+            { "value": 3, "label": "severe" }
+          ],
+          "description": "Coarse account-distress bucket, as returned directly by partners that report a distress tier code instead of discrete counts (suspensions, late days). 1 (none) is no observed distress, 3 (severe) the worst. Parallel signal to telcoSuspensionsCount24m / telcoLateDays24m for partners that don't expose the underlying counts."
         }
       ]
     },

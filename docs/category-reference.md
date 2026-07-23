@@ -18,9 +18,10 @@ Each category lists:
 
 Each field has:
 
-- **type** — `number`, `boolean`, or `string`
-- **unit** — `ratio` (0..1), `months`, `days`, `count`, `MYR`, etc. Use the unit in your own conversion logic; FinSys assumes values come in already-converted.
-- **range** — soft hints, not enforced. Wildly out-of-range values are accepted but will look anomalous on operator dashboards.
+- **type** — `number`, `boolean`, `string`, or `ordinal`
+- **unit** — `ratio` (0..1), `months`, `days`, `count`, `MYR`, etc. Use the unit in your own conversion logic; FinSys assumes values come in already-converted. Not applicable to `ordinal` fields.
+- **range** — soft hints, not enforced. Wildly out-of-range values are accepted but will look anomalous on operator dashboards. Not applicable to `ordinal` fields — see **levels** instead.
+- **levels** — only present on `ordinal` fields: the field's closed, ordered bucket set, e.g. `1=excellent, 2=good, 3=fair, 4=poor`. Use this instead of `range`/`unit` for a partner that returns a small discrete tier code (e.g. `1`-`4`) rather than a continuous number. **Ordering convention**: `value` always ascends with severity — `1` is the most favorable level, the highest `value` the least favorable, regardless of what the field measures. This is fixed across every ordinal field so generic aggregation (`max` = worst tier wins) doesn't need a per-field direction lookup. There's no interpolation between levels — an ordinal value is always exactly one of the declared levels, never something in between.
 
 If you need a field that isn't in any category here, talk to FinHero about adding it (or proposing a new category).
 
@@ -41,8 +42,11 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 | `telcoHandsetFinancingActive` | boolean |  |  | Has an active handset-EMI account currently. Proxy for financing capacity already extended. |
 | `telcoHandsetFinancingDelinquent` | boolean |  |  | Recent handset-EMI delinquency in the last 24 months. Distress signal even with otherwise clean bill payment. |
 | `telcoArpuMyr` | number | MYR | 0..10000 | Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy. |
+| `telcoPaymentReliabilityTier` | ordinal | — | levels: `1=excellent, 2=good, 3=fair, 4=poor` | Coarse bill-payment reliability bucket, for partners that return a tier code instead of a continuous ratio. Parallel signal to `telcoOnTimePaymentRatio24m`. |
+| `telcoTenureTier` | ordinal | — | levels: `1=established, 2=developing, 3=new, 4=very-new` | Coarse account-age bucket, for partners that return a tenure tier code instead of a continuous month count. Parallel signal to `telcoTenureMonths`. |
+| `telcoDistressTier` | ordinal | — | levels: `1=none, 2=moderate, 3=severe` | Coarse account-distress bucket, for partners that return a distress tier code instead of discrete counts. Parallel signal to `telcoSuspensionsCount24m` / `telcoLateDays24m`. |
 
-**Multi-instance notes**: A business account with multiple lines is a natural multi-instance fit. Use the MSISDN or line-id as the `instanceKey`. Eval policies that want a single value per applicant typically use the `mean` operator for on-time ratio and `sum` or `latest` for tenure depending on the scoring intent.
+**Multi-instance notes**: A business account with multiple lines is a natural multi-instance fit. Use the MSISDN or line-id as the `instanceKey`. Eval policies that want a single value per applicant typically use the `mean` operator for on-time ratio and `sum` or `latest` for tenure depending on the scoring intent. For the ordinal tier fields, aggregate with `max` (numerically highest level = worst tier across instances) or `latest`; both operate generically on the tier's underlying integer value, same as any other numeric field.
 
 ---
 
@@ -167,6 +171,8 @@ For reference; these aren't called by your adapter but they're what eval policie
 | `count` | ✓ | ✓ | ✓ | Count of non-null instances. Returns `0` if list is empty. |
 
 Operators that don't apply to a type (e.g., `sum` on booleans) throw at evaluation time — the eval engine surfaces this as a policy authoring error, not a silent zero.
+
+**`ordinal` fields**: an ordinal value IS a number under the hood (the level's `value`), so the "Numeric" column above applies unchanged — no special-cased ordinal aggregation exists or is needed. `sum`/`mean` are numerically valid but rarely meaningful for a tier code; `max` (worst tier wins, per the ascending-with-severity convention) and `latest` are the operators eval policies actually want for ordinal fields.
 
 ---
 

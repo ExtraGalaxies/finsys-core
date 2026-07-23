@@ -183,6 +183,7 @@ export type {
   CanonicalFieldName,
   CanonicalFieldSpec,
   CategorySchema,
+  OrdinalLevel,
 } from './adapter-categories.js'
 
 // NB: `buildCategoryRegistry` + the `CategoryRegistry` shape are

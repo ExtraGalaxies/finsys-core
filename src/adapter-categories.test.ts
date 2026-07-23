@@ -40,7 +40,7 @@ describe("Adapter category catalogue", () => {
       expect(cat.fields.length).toBeGreaterThan(0);
       for (const f of cat.fields) {
         expect(f.name).toMatch(/\S/);
-        expect(["number", "boolean", "string"]).toContain(f.type);
+        expect(["number", "boolean", "string", "ordinal"]).toContain(f.type);
         expect(f.description).toMatch(/\S/);
       }
     }
@@ -420,6 +420,185 @@ describe("geolocation category", () => {
     ]) {
       expect(spec(name)?.range, `${name} should be [0,1]`).toEqual([0, 1]);
     }
+  });
+});
+
+// ── SYS-2900-series: the `ordinal` field kind (telco tier codes) ────────
+
+describe("telco-carrier ordinal tier fields", () => {
+  it("declares the three ordinal tier fields", () => {
+    const fields = new Set(categoryFieldsOf("telco-carrier"));
+    for (const f of [
+      "telcoPaymentReliabilityTier",
+      "telcoTenureTier",
+      "telcoDistressTier",
+    ]) {
+      expect(fields.has(f), `expected telco-carrier field "${f}"`).toBe(true);
+    }
+  });
+
+  it("carries type ordinal with no range", () => {
+    const spec = (name: string) =>
+      categorySchemaOf("telco-carrier").fields.find((f) => f.name === name);
+    for (const name of [
+      "telcoPaymentReliabilityTier",
+      "telcoTenureTier",
+      "telcoDistressTier",
+    ]) {
+      expect(spec(name)?.type, `${name} type`).toBe("ordinal");
+      expect(spec(name)?.range, `${name} range`).toBeUndefined();
+    }
+  });
+
+  it("declares levels ascending from 1 with no gaps, worst level last", () => {
+    const spec = (name: string) =>
+      categorySchemaOf("telco-carrier").fields.find((f) => f.name === name);
+
+    const reliability = spec("telcoPaymentReliabilityTier");
+    expect(reliability?.levels?.map((l) => l.value)).toEqual([1, 2, 3, 4]);
+    expect(reliability?.levels?.[0]?.label).toBe("excellent");
+    expect(reliability?.levels?.[reliability!.levels!.length - 1]?.label).toBe("poor");
+
+    const tenure = spec("telcoTenureTier");
+    expect(tenure?.levels?.map((l) => l.value)).toEqual([1, 2, 3, 4]);
+
+    const distress = spec("telcoDistressTier");
+    expect(distress?.levels?.map((l) => l.value)).toEqual([1, 2, 3]);
+    expect(distress?.levels?.[0]?.label).toBe("none");
+    expect(distress?.levels?.[distress!.levels!.length - 1]?.label).toBe("severe");
+  });
+
+  it("maps an ordinal field back to its category", () => {
+    expect(categoryForField("telcoDistressTier")).toBe("telco-carrier");
+  });
+});
+
+describe("buildCategoryRegistry — ordinal field validation", () => {
+  /** A minimal valid ordinal field, for mutation in negative cases. */
+  function ordinalRaw() {
+    return {
+      schemaVersion: "1.0.0",
+      categories: [
+        {
+          id: "fixture-ordinal",
+          displayName: "Fixture Ordinal",
+          description: "A category that exists only in this test.",
+          canonicalTable: "ihs_alt_data_fixture_ordinal",
+          fields: [
+            {
+              name: "fixtureTier",
+              type: "ordinal",
+              levels: [
+                { value: 1, label: "best" },
+                { value: 2, label: "worst" },
+              ],
+              description: "A test ordinal field.",
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("accepts a valid ordinal field", () => {
+    const reg = buildCategoryRegistry(ordinalRaw() as unknown as RawArg);
+    const spec = reg.byId.get("fixture-ordinal")?.fields[0];
+    expect(spec?.type).toBe("ordinal");
+    expect(spec?.levels).toEqual([
+      { value: 1, label: "best" },
+      { value: 2, label: "worst" },
+    ]);
+  });
+
+  it("rejects an ordinal field with fewer than 2 levels", () => {
+    const raw = ordinalRaw();
+    raw.categories[0].fields[0].levels = [{ value: 1, label: "only" }];
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /at least 2 "levels"/,
+    );
+  });
+
+  it("rejects an ordinal field with missing levels", () => {
+    const raw = ordinalRaw() as unknown as { categories: Array<{ fields: Array<Record<string, unknown>> }> };
+    delete raw.categories[0].fields[0].levels;
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /at least 2 "levels"/,
+    );
+  });
+
+  it("rejects levels not starting at 1", () => {
+    const raw = ordinalRaw();
+    raw.categories[0].fields[0].levels = [
+      { value: 0, label: "best" },
+      { value: 1, label: "worst" },
+    ];
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /ordered ascending from 1/,
+    );
+  });
+
+  it("rejects levels with a gap", () => {
+    const raw = ordinalRaw();
+    raw.categories[0].fields[0].levels = [
+      { value: 1, label: "best" },
+      { value: 3, label: "worst" },
+    ];
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /ordered ascending from 1/,
+    );
+  });
+
+  it("rejects levels out of ascending order", () => {
+    const raw = ordinalRaw();
+    raw.categories[0].fields[0].levels = [
+      { value: 2, label: "worst" },
+      { value: 1, label: "best" },
+    ];
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /ordered ascending from 1/,
+    );
+  });
+
+  it("rejects a level with an empty label", () => {
+    const raw = ordinalRaw();
+    raw.categories[0].fields[0].levels = [
+      { value: 1, label: "" },
+      { value: 2, label: "worst" },
+    ];
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /no non-empty label/,
+    );
+  });
+
+  it("rejects duplicate level labels", () => {
+    const raw = ordinalRaw();
+    raw.categories[0].fields[0].levels = [
+      { value: 1, label: "same" },
+      { value: 2, label: "same" },
+    ];
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /duplicate level label/,
+    );
+  });
+
+  it("rejects an ordinal field that also declares range", () => {
+    const raw = ordinalRaw() as unknown as {
+      categories: Array<{ fields: Array<Record<string, unknown>> }>;
+    };
+    raw.categories[0].fields[0].range = [1, 2];
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /must not declare "range"/,
+    );
+  });
+
+  it("rejects a non-ordinal field that declares levels", () => {
+    const raw = validRaw() as unknown as {
+      categories: Array<{ fields: Array<Record<string, unknown>> }>;
+    };
+    raw.categories[0].fields[0].levels = [{ value: 1, label: "x" }];
+    expect(() => buildCategoryRegistry(raw as unknown as RawArg)).toThrow(
+      /declares "levels" but is not type "ordinal"/,
+    );
   });
 });
 

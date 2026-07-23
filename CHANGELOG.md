@@ -4,6 +4,31 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.7.0] — 2026-07-23
+
+### Added
+
+- **`ordinal` canonical field kind** — a first-class alternative to
+  `number` + `range` for a small, closed, ordered bucket set, e.g. a
+  partner that returns a tier code (`1`-`4`) instead of a continuous
+  value. An ordinal field declares `levels` (an ordered array of
+  `{ value, label }`, `value` ascending from 1 with no gaps) instead of
+  `range`/`unit`; there is deliberately no interpolation between
+  levels. **Ordering convention**: `value` always ascends with
+  severity — `1` is the most favorable level, the highest `value` the
+  least favorable — fixed across every ordinal field so generic
+  aggregation (`max` = worst tier wins) needs no per-field direction
+  lookup. `CanonicalFieldValue` is unchanged (`number | boolean |
+  string | null`): an ordinal field's runtime value is just its
+  level's integer `value`, so the existing `max`/`latest`/`sum`/`mean`
+  aggregation operators already work on it with no code changes.
+- **`telco-carrier` ordinal tier fields**: `telcoPaymentReliabilityTier`
+  (4 levels), `telcoTenureTier` (4 levels), `telcoDistressTier` (3
+  levels) — coarse-bucket counterparts to the category's existing
+  continuous fields (`telcoOnTimePaymentRatio24m`, `telcoTenureMonths`,
+  `telcoSuspensionsCount24m`/`telcoLateDays24m`), for partners that
+  report a tier code rather than the underlying continuous number.
+
 ## [4.6.0] — 2026-07-23
 
 ### Added

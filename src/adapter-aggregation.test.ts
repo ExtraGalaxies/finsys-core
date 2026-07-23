@@ -110,6 +110,25 @@ describe("applyAggregation — sum + mean + max + count", () => {
     ];
     expect(() => applyAggregation("sum", bools)).toThrow(/requires numeric/);
   });
+
+  // SYS-2900-series: ordinal canonical fields (e.g. telcoDistressTier)
+  // carry their level's integer `value` as the CanonicalFieldValue — no
+  // special-cased ordinal path exists in this module, so plain numeric
+  // `max` is what an eval policy binds to get "worst tier across
+  // instances", per the ascending-with-severity convention finsys-core
+  // documents for ordinal levels (see adapter-categories.ts).
+  it("max picks the worst ordinal tier across instances (ascending-is-worse convention)", () => {
+    // Multiple telco lines on one applicant: excellent (1), poor (4), fair (3).
+    expect(applyAggregation("max", numericInstances([1, 4, 3]))).toBe(4);
+  });
+
+  it("latest picks the most-recent ordinal tier, independent of its numeric magnitude", () => {
+    const xs: InstanceValue[] = [
+      { value: 1, observedAt: "2026-01-01T00:00:00Z" }, // excellent, stale
+      { value: 4, observedAt: "2026-06-01T00:00:00Z" }, // poor, fresh
+    ];
+    expect(applyAggregation("latest", xs)).toBe(4);
+  });
 });
 
 describe("applyAggregation — latest", () => {

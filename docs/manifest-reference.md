@@ -102,6 +102,8 @@ For straightforward JSONPath-to-canonical mappings with optional simple transfor
 - `to_boolean` — coerces to boolean: truthy non-zero numbers and non-empty strings → `true`; `null`, `undefined`, `0`, `""`, `false` → `false`. Use for boolean canonical fields.
 - `to_integer` — `Math.trunc()` of a number, or `null` if non-numeric.
 
+**Mapping to an `ordinal` canonical field** (see [Category Reference](./category-reference.md) for the field kind): a partner that already returns a small integer tier code (e.g. `1`-`4`) matching the field's declared `levels` maps with `identity` or `to_integer` — same as any other numeric canonical field. finsys-core doesn't validate that the mapped value actually falls within the field's declared level range; a partner value outside the declared levels is stored as-is, and rejecting or flagging it is the host/eval-engine's concern, not the adapter framework's.
+
 Declarative adapters can only produce one canonical instance per applicant. For multi-instance, use TypeScript.
 
 ### `type: "typescript"`

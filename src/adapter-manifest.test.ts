@@ -705,3 +705,77 @@ describe("enumValues declaration surface", () => {
     expect(manifest.enumValues).toBeUndefined();
   });
 });
+
+// ── enumValues: schema lockstep with the AdapterManifest type ──────────
+
+describe("enumValues JSON-schema validation", () => {
+  function tierManifest(enumValues: unknown): unknown {
+    return {
+      manifestVersion: 1,
+      id: "example-telco-tiers-v1",
+      displayName: "Example Telco Tier Adapter v1",
+      category: "telco-carrier",
+      version: 1,
+      produces: ["telcoPaymentReliabilityTier"],
+      enumValues,
+      implementation: { type: "typescript", entryPoint: "extract.ts" },
+    };
+  }
+
+  it("accepts a manifest declaring vendor value sets (the SYS-3016 type/schema lockstep)", () => {
+    // This exact shape was TYPE-legal but SCHEMA-refused before the
+    // lockstep fix — additionalProperties: false silently rejected every
+    // enumValues manifest at host registration. Keep this green.
+    const ok = validate(tierManifest({ telcoPaymentReliabilityTier: ["1", "2", "3", "4"] }));
+    expect(validate.errors ?? []).toEqual([]);
+    expect(ok).toBe(true);
+  });
+
+  it("rejects an empty value set", () => {
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: [] }))).toBe(false);
+  });
+
+  it("rejects duplicate labels in a set", () => {
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["1", "1"] }))).toBe(false);
+  });
+
+  it("rejects non-normalized labels (leading/trailing whitespace, empty)", () => {
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: [" 1"] }))).toBe(false);
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["1 "] }))).toBe(false);
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: [""] }))).toBe(false);
+  });
+
+  it("accepts labels with interior spaces (normalization constrains only the edges)", () => {
+    expect(validate(tierManifest({ telcoHandsetRiskTier: ["no arrears", "in arrears"] }))).toBe(
+      true,
+    );
+  });
+
+  it("a maximal manifest carrying EVERY optional AdapterManifest surface validates — the anti-drift canary", () => {
+    // If a field is added to the AdapterManifest TYPE without a schema
+    // update, extending this fixture (which every type addition should)
+    // turns the drift into a red test instead of a silent registration
+    // refusal in every host.
+    const maximal = {
+      manifestVersion: 1,
+      id: "example-maximal-v1",
+      displayName: "Example Maximal Adapter v1",
+      category: "telco-carrier",
+      version: 2,
+      produces: ["telcoPaymentReliabilityTier", "telcoTenureMonths"],
+      cardinality: "multi",
+      singletonFields: ["telcoPaymentReliabilityTier"],
+      requiredIdentityFields: ["phoneNumber"],
+      fieldAuthorizations: {
+        telcoPaymentReliabilityTier: { lenderRoles: ["LENDER_AGENT"] },
+      },
+      periods: [{ name: "Snapshot month", description: "Monthly refresh window." }],
+      enumValues: { telcoPaymentReliabilityTier: ["1", "2", "3", "4"] },
+      notes: "Exists to keep the schema and the type in lockstep.",
+      implementation: { type: "typescript", entryPoint: "extract.ts" },
+    };
+    const ok = validate(maximal);
+    expect(validate.errors ?? []).toEqual([]);
+    expect(ok).toBe(true);
+  });
+});

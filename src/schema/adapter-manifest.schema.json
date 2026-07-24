@@ -210,6 +210,21 @@
       },
       "description": "SYS-3002 — ordered period declarations: the contract for the category's period axis. Positional identity, 1-BASED: period1 is the FIRST array entry; there is no period0. Declared positions may overlap, nest, vary in length, or be staggered (e.g. period1 = an annual table, periods 2-5 = the four quarters overlapping it) — dates never identify a period. Absent means the single-period convention (exactly one implicit period; single-period categories never need to declare), so a declared list must be non-empty. Any implementation type may declare — the axis is contract-level, not implementation-level."
     },
+    "enumValues": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^\\S(.*\\S)?$"
+        }
+      },
+      "description": "Vendor-specific value sets for the enum-kind fields this adapter produces. The category declares only THAT a field is enumerated (kind 'enum' — no values, no ordering); this map declares WHICH labels this vendor emits. Host-validated at registration: every key must appear in `produces` and be declared kind 'enum' by the category, and every enum-kind field in `produces` must have an entry. Labels are string-normalized (non-empty, no leading/trailing whitespace) and unique per set; the adapter emits them VERBATIM and the host refuses out-of-set values at ingest. Ordering and scoring interpretation belong to the consumer's per-value mapping, never here."
+    },
     "notes": {
       "type": "string",
       "maxLength": 2000,

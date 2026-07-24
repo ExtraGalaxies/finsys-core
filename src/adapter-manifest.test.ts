@@ -670,3 +670,38 @@ describe("SYS-3003: financial-statement manifest fixture against the real catego
     }
   });
 });
+
+// ── enumValues: vendor value sets for enum-kind fields ─────────────────
+
+describe("enumValues declaration surface", () => {
+  it("a manifest carries vendor-specific value sets for its enum-kind fields", () => {
+    // The category says fieldX IS an enum; the manifest says which
+    // labels THIS vendor emits. This test locks the type surface — the
+    // semantic rules (keys ⊆ produces, enum-kind fields require an
+    // entry, normalized unique labels) are host-validated at
+    // registration, same as every other membership rule.
+    const manifest: AdapterManifest = {
+      manifestVersion: 1,
+      id: "example-telco-tiers-v1",
+      displayName: "Example Telco Tier Adapter v1",
+      category: "telco-carrier",
+      version: 1,
+      produces: ["telcoPaymentReliabilityTier", "telcoDistressTier"],
+      enumValues: {
+        telcoPaymentReliabilityTier: ["excellent", "good", "fair", "poor"],
+        telcoDistressTier: ["none", "moderate", "severe"],
+      },
+      implementation: {
+        type: "typescript",
+        entryPoint: "extract.ts",
+      },
+    };
+    expect(manifest.enumValues?.telcoPaymentReliabilityTier).toHaveLength(4);
+    expect(manifest.enumValues?.telcoDistressTier).toContain("severe");
+  });
+
+  it("enumValues is optional — adapters with no enum fields never declare it", () => {
+    const manifest = validDeclarative();
+    expect(manifest.enumValues).toBeUndefined();
+  });
+});

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.1.0",
+  "schemaVersion": "1.2.0",
   "categories": [
     {
       "id": "telco-carrier",
@@ -51,6 +51,30 @@
           "unit": "MYR",
           "range": [0, 10000],
           "description": "Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy."
+        },
+        {
+          "name": "telcoPaymentReliabilityTier",
+          "type": "string",
+          "kind": "enum",
+          "description": "Coarse bill-payment reliability bucket, for partners that return a tier label instead of a continuous ratio. Parallel signal to telcoOnTimePaymentRatio24m. Labels are vendor-declared (see the adapter manifest's enumValues); ordering and scoring live in the consumer's per-value mapping."
+        },
+        {
+          "name": "telcoTenureTier",
+          "type": "string",
+          "kind": "enum",
+          "description": "Coarse account-age bucket, for partners that return a tenure tier label instead of a continuous month count. Parallel signal to telcoTenureMonths. Labels are vendor-declared (see the adapter manifest's enumValues)."
+        },
+        {
+          "name": "telcoDistressTier",
+          "type": "string",
+          "kind": "enum",
+          "description": "Coarse account-distress bucket, for partners that return a distress tier label instead of discrete counts. Parallel signal to telcoSuspensionsCount24m / telcoLateDays24m. Labels are vendor-declared (see the adapter manifest's enumValues)."
+        },
+        {
+          "name": "telcoHandsetRiskTier",
+          "type": "string",
+          "kind": "enum",
+          "description": "Coarse handset-financing risk bucket, for partners that return a tier label instead of the discrete handset flags. Parallel signal to telcoHandsetFinancingActive / telcoHandsetFinancingDelinquent. Labels are vendor-declared (see the adapter manifest's enumValues)."
         }
       ]
     },

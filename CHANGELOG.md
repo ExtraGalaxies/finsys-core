@@ -4,6 +4,30 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.0] — 2026-07-24
+
+### Added
+
+- **The `enum` field kind** in the category registry. A canonical field
+  may now declare `kind: "enum"`, marking its value as one label out of
+  a closed set — with the values themselves deliberately absent from
+  the category. Value sets are vendor territory: each adapter declares
+  the exact labels it emits in its manifest's new `enumValues` map
+  (host-validated at registration — keys must appear in `produces`,
+  enum-kind fields in `produces` must have an entry, and each set must
+  be non-empty, unique, string-normalized labels). Ordering and scoring
+  interpretation live further out still, in the consumer's per-value
+  mapping — an enum label is data; what it is worth is opinion, and
+  opinions don't belong in the data contract. Enum fields must be
+  `type: "string"` and must not declare a `range`; shared-fact
+  attestations must agree on kind (the same drift rule facts already
+  follow).
+- **Four `telco-carrier` tier fields** — `telcoPaymentReliabilityTier`,
+  `telcoTenureTier`, `telcoDistressTier`, `telcoHandsetRiskTier` — the
+  first enum-kind fields in the catalogue, for carriers that return
+  coarse bucket labels instead of (or alongside) the category's
+  continuous signals. Category data `schemaVersion` is now `1.2.0`.
+
 ## [4.7.0] — 2026-07-23
 
 ### Added

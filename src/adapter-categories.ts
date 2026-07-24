@@ -94,6 +94,22 @@ export interface CanonicalFieldSpec {
    * id. Uniquely-declared fields need no `fact` (but may carry one).
    */
   readonly fact?: string;
+  /**
+   * Field kind — a semantic refinement of `type`. Currently the only
+   * kind is `"enum"`: the field's value is one label out of a closed
+   * set. The category declares ONLY that the field is enumerated —
+   * never the values, never an ordering. Value sets are vendor
+   * territory: each adapter declares the exact labels it emits in its
+   * manifest's `enumValues` (host-validated), because two vendors
+   * implementing the same category may bucket differently. Ordering
+   * and scoring interpretation live even further out, in the consumer
+   * (an eval model's per-value mapping) — an enum label is data, what
+   * it is worth is opinion, and opinions don't belong in the data
+   * contract. An enum field MUST be `type: "string"` (labels are
+   * string-normalized) and MUST NOT declare a `range` (labels are
+   * unordered).
+   */
+  readonly kind?: "enum";
 }
 
 /**
@@ -120,6 +136,7 @@ interface RawCategoryField {
   range?: [number, number];
   description: string;
   fact?: string;
+  kind?: "enum";
 }
 
 interface RawCategory {
@@ -142,6 +159,8 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
   "boolean",
   "string",
 ];
+
+const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> = ["enum"];
 
 /**
  * The validated, indexed, immutable category registry. Built once at
@@ -198,7 +217,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
   // uniqueness rule needs the full picture, not just the first declarer.
   const declarations = new Map<
     CanonicalFieldName,
-    { fact: string | undefined; categories: AdapterCategory[] }
+    { fact: string | undefined; kind: "enum" | undefined; categories: AdapterCategory[] }
   >();
   const tables = new Set<string>();
   const all: CategorySchema[] = [];
@@ -271,6 +290,20 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
               `declaring category attests the same fact`,
           );
         }
+        // Same drift class as the fact rule: attestations of one fact
+        // must agree on kind — an enum label in one category and a free
+        // string in another are not comparable values of "the same
+        // fact", and the disagreement-comparison feature would be
+        // comparing apples to labels.
+        if (prior.kind !== f.kind) {
+          const describeKind = (kind: string | undefined): string =>
+            kind === undefined ? "no kind" : `kind "${kind}"`;
+          throw new Error(
+            `adapter category data: canonical field "${f.name}" declared with ${describeKind(prior.kind)} ` +
+              `by ${prior.categories.join(" + ")} but ${describeKind(f.kind)} by ${cat.id} — ` +
+              `shared-fact attestations must agree on kind`,
+          );
+        }
       }
       if (f.fact !== undefined) {
         // A fact id is bound to exactly one field name registry-wide —
@@ -290,6 +323,23 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         throw new Error(
           `adapter category data: field "${f.name}" (${where}) has invalid type "${f.type}"`,
         );
+      }
+      if (f.kind !== undefined) {
+        if (!VALID_FIELD_KINDS.includes(f.kind)) {
+          throw new Error(
+            `adapter category data: field "${f.name}" (${where}) has invalid kind "${String(f.kind)}"`,
+          );
+        }
+        if (f.type !== "string") {
+          throw new Error(
+            `adapter category data: field "${f.name}" (${where}) is kind "enum" but type "${f.type}" — enum labels are string-normalized, so an enum field must be type "string"`,
+          );
+        }
+        if (f.range !== undefined) {
+          throw new Error(
+            `adapter category data: field "${f.name}" (${where}) is kind "enum" but declares a range — enum labels are unordered; ordering belongs to the consumer, never the data contract`,
+          );
+        }
       }
       if (typeof f.description !== "string" || f.description.length === 0) {
         throw new Error(
@@ -321,6 +371,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
         ...(f.fact !== undefined ? { fact: f.fact } : {}),
+        ...(f.kind !== undefined ? { kind: f.kind } : {}),
       });
       fields.push(spec);
       if (prior) {
@@ -330,7 +381,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         // than silently privileging the first declarer.
         fieldToCategory.delete(f.name);
       } else {
-        declarations.set(f.name, { fact: f.fact, categories: [cat.id] });
+        declarations.set(f.name, { fact: f.fact, kind: f.kind, categories: [cat.id] });
         fieldToCategory.set(f.name, cat.id);
       }
       if (f.fact !== undefined) {

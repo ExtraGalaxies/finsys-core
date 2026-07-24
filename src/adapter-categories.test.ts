@@ -797,3 +797,136 @@ describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
     expect(categoriesAttestingFact("not-a-fact")).toEqual([]);
   });
 });
+
+// ── The `enum` field kind (vendor value sets live on manifests) ────────
+
+describe("enum field kind", () => {
+  function rawWithEnumField(overrides: Record<string, unknown> = {}): RawArg {
+    const raw = validRaw();
+    (raw.categories[0].fields as unknown as Record<string, unknown>[]).push({
+      name: "fixtureTier",
+      type: "string",
+      kind: "enum",
+      description: "A tier label whose value set is vendor territory.",
+      ...overrides,
+    });
+    return raw;
+  }
+
+  it("parses kind 'enum' onto the field spec (string type, no range)", () => {
+    const reg = buildCategoryRegistry(rawWithEnumField());
+    const field = reg.byId.get("fixture-source")?.fields.find((f) => f.name === "fixtureTier");
+    expect(field?.kind).toBe("enum");
+    expect(field?.type).toBe("string");
+  });
+
+  it("a field without kind has kind undefined (kind is opt-in)", () => {
+    const reg = buildCategoryRegistry(validRaw());
+    const field = reg.byId.get("fixture-source")?.fields.find((f) => f.name === "fixtureScore");
+    expect(field?.kind).toBeUndefined();
+  });
+
+  it("rejects an unknown kind", () => {
+    expect(() => buildCategoryRegistry(rawWithEnumField({ kind: "ordinal" }))).toThrow(
+      /invalid kind "ordinal"/,
+    );
+  });
+
+  it("rejects kind 'enum' on a non-string type — labels are string-normalized", () => {
+    expect(() => buildCategoryRegistry(rawWithEnumField({ type: "number" }))).toThrow(
+      /enum.*must be type "string"/,
+    );
+  });
+
+  it("rejects kind 'enum' with a range — labels are unordered", () => {
+    expect(() => buildCategoryRegistry(rawWithEnumField({ range: [1, 4] }))).toThrow(
+      /enum.*range/,
+    );
+  });
+
+  it("shared-fact attestations must agree on kind (drift refused at load)", () => {
+    const raw = validRaw();
+    raw.categories.push({
+      id: "fixture-doc-a",
+      displayName: "Fixture Doc A",
+      description: "First attester.",
+      canonicalTable: "ihs_alt_data_fixture_a",
+      fields: [
+        {
+          name: "sharedTier",
+          type: "string",
+          kind: "enum",
+          fact: "sharedTier",
+          description: "Attested as an enum here.",
+        },
+      ],
+    });
+    raw.categories.push({
+      id: "fixture-doc-b",
+      displayName: "Fixture Doc B",
+      description: "Second attester — drifts on kind.",
+      canonicalTable: "ihs_alt_data_fixture_b",
+      fields: [
+        {
+          name: "sharedTier",
+          type: "string",
+          fact: "sharedTier",
+          description: "Attested as a plain string here.",
+        },
+      ],
+    });
+    expect(() => buildCategoryRegistry(raw)).toThrow(/must agree on kind/);
+  });
+
+  it("shared-fact attestations with MATCHING kind load fine", () => {
+    const raw = validRaw();
+    for (const suffix of ["a", "b"] as const) {
+      raw.categories.push({
+        id: `fixture-doc-${suffix}`,
+        displayName: `Fixture Doc ${suffix.toUpperCase()}`,
+        description: "An attester.",
+        canonicalTable: `ihs_alt_data_fixture_${suffix}`,
+        fields: [
+          {
+            name: "sharedTier",
+            type: "string",
+            kind: "enum",
+            fact: "sharedTier",
+            description: "Attested as an enum in both categories.",
+          },
+        ],
+      });
+    }
+    const reg = buildCategoryRegistry(raw);
+    expect(reg.factToCategories.get("sharedTier")).toEqual(["fixture-doc-a", "fixture-doc-b"]);
+  });
+});
+
+describe("telco-carrier enum tier fields", () => {
+  const TIER_FIELDS = [
+    "telcoPaymentReliabilityTier",
+    "telcoTenureTier",
+    "telcoDistressTier",
+    "telcoHandsetRiskTier",
+  ] as const;
+
+  it("declares all four tier fields as enum-kind strings, no range, no baked value sets", () => {
+    const schema = categorySchemaOf("telco-carrier");
+    for (const name of TIER_FIELDS) {
+      const field = schema.fields.find((f) => f.name === name);
+      expect(field, name).toBeDefined();
+      expect(field?.kind, name).toBe("enum");
+      expect(field?.type, name).toBe("string");
+      expect(field?.range, name).toBeUndefined();
+      // The category must not smuggle an ordering or a value list into
+      // the description — vendor labels live on manifests.
+      expect(field?.description, name).not.toMatch(/1=|2=|3=|4=|levels:/);
+    }
+  });
+
+  it("tier fields are uniquely owned by telco-carrier", () => {
+    for (const name of TIER_FIELDS) {
+      expect(categoryForField(name)).toBe("telco-carrier");
+    }
+  });
+});

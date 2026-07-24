@@ -233,6 +233,35 @@ export interface AdapterManifest {
   readonly periods?: ReadonlyArray<PeriodDeclaration>;
 
   /**
+   * Vendor-specific value sets for the enum-kind fields this adapter
+   * produces. The category declares only THAT a field is enumerated
+   * (`kind: "enum"` — no values, no ordering); the manifest declares
+   * exactly WHICH labels this vendor emits, because two vendors
+   * implementing the same category may bucket differently. Scoring
+   * interpretation lives further out still, in the consumer (an eval
+   * model's per-value mapping with a mandatory fallback) — never here.
+   *
+   * Host-validated at registration (same posture as `produces` ⊆
+   * category fields):
+   *   - every key MUST appear in `produces`;
+   *   - every key MUST be declared `kind: "enum"` by the adapter's
+   *     category — a non-enum field with declared values is refused;
+   *   - every enum-kind field in `produces` MUST have an entry here —
+   *     an adapter that promises an enum field but not its labels
+   *     gives clients nothing to render or map against;
+   *   - each value set is a non-empty array of unique, string-
+   *     normalized labels (non-empty, no leading/trailing whitespace).
+   *
+   * At runtime the adapter emits labels from its declared set
+   * VERBATIM; the host refuses out-of-set values at ingest, so a
+   * vendor-side vocabulary change is a loud manifest-version bump,
+   * never silent data drift. Clients (form-spec and eval-model
+   * editors) read these sets through the registry-metadata surface to
+   * offer the labels without hardcoding any vendor's vocabulary.
+   */
+  readonly enumValues?: Readonly<Record<CanonicalFieldName, ReadonlyArray<string>>>;
+
+  /**
    * Optional free-form notes — useful for partner-side documentation
    * (where to find the adapter's source, who owns it, what version of
    * the partner API it expects). Not consumed by the runtime.

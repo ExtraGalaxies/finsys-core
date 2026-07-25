@@ -547,6 +547,17 @@ describe("SYS-3036: executionModeOf classification", () => {
     >;
     expect(() => executionModeOf(bogus)).toThrow(/unknown adapter implementation type/);
   });
+
+  it("pins the enum's literal string values — these are the wire contract, not just symbols", () => {
+    // executionModeOf's callers (host logs, list()-style diagnostics)
+    // serialize this value. Comparing against AdapterExecutionMode.X
+    // elsewhere in this file only proves internal self-consistency; an
+    // edit to the enum's RHS would stay green there while silently
+    // changing what ships on the wire. Pin the literals directly.
+    expect(AdapterExecutionMode.Runnable).toBe("runnable");
+    expect(AdapterExecutionMode.DeclarationOnly).toBe("declaration-only");
+    expect(AdapterExecutionMode.ExternallyAsserted).toBe("externally-asserted");
+  });
 });
 
 /**

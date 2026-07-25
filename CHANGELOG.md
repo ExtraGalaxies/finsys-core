@@ -9,7 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - **`external-assertion` adapter implementation type.** A declaration-only
-  flavour, alongside `form-intake`/`manual-override`/`extraction-pipeline`,
+  flavor, alongside `form-intake`/`manual-override`/`extraction-pipeline`,
   for adapters whose data arrives via an external push rather than
   through the host's own extraction pipeline, a form submission, or a
   dynamic-imported/declarative `extract()` call — an externally-

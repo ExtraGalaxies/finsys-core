@@ -269,6 +269,17 @@ export interface AdapterManifest {
    * never silent data drift. Clients (form-spec and eval-model
    * editors) read these sets through the registry-metadata surface to
    * offer the labels without hardcoding any vendor's vocabulary.
+   *
+   * Matching is EXACT-STRING — case and whitespace variations from a
+   * declared label are treated as distinct (and therefore out-of-set),
+   * deliberately. `uniqueItems` at the schema layer is likewise
+   * exact-match, so e.g. `["High", "high"]` is a legal (if unusual)
+   * two-label set; nothing here folds case or reconciles near-miss
+   * spelling. Silently normalizing would band-aid over a vendor-side
+   * inconsistency instead of surfacing it — a vendor emitting `"high"`
+   * when its manifest declares `"High"` is a vendor bug that should be
+   * refused loudly, not coerced into matching. Vendors own their exact
+   * label byte-for-byte; hosts never guess at reconciliation.
    */
   readonly enumValues?: Readonly<Record<CanonicalFieldName, ReadonlyArray<string>>>;
 

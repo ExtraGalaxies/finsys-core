@@ -28,6 +28,26 @@ const ajv = new Ajv({ allErrors: true });
 const validate = ajv.compile(schema);
 
 /**
+ * SYS-3043: compile-time exhaustiveness helper for the "maximal manifest"
+ * anti-drift canaries below. Every key of T becomes required (`-?` strips
+ * optionality) — assigning a canary fixture (typed narrowly via `satisfies
+ * AdapterManifest`, which preserves the fixture's own literal key set
+ * rather than widening to `AdapterManifest`) to this type fails to
+ * compile if the fixture is missing ANY key AdapterManifest declares,
+ * required or optional.
+ *
+ * This closes the canary's own drift risk: previously, a NEW optional
+ * field added to AdapterManifest without also being added to a maximal
+ * fixture left both canaries green — nothing forced the fixture to grow
+ * with the type, so the "anti-drift" test could itself silently stop
+ * covering the newest surface. Now the fixture and the type are
+ * compile-time locked together: omit a key here and the build breaks
+ * where the fixture is declared, not at some future host's registration
+ * time.
+ */
+type AllKeysRequired<T> = { [K in keyof T]-?: T[K] };
+
+/**
  * Build a minimal valid declarative manifest. Tests mutate copies for
  * negative cases.
  */
@@ -494,7 +514,10 @@ describe("SYS-3036: external-assertion implementation type", () => {
       enumValues: { telcoPaymentReliabilityTier: ["1", "2", "3", "4"] },
       notes: "Exists to keep the schema and the type in lockstep.",
       implementation: { type: "external-assertion" },
-    };
+    } satisfies AdapterManifest;
+    // SYS-3043: same compile-time closure as the typescript-flavor canary
+    // above — see AllKeysRequired's doc comment.
+    const _antiDriftStructuralCheck: AllKeysRequired<AdapterManifest> = maximal;
     const ok = validate(maximal);
     expect(validate.errors ?? []).toEqual([]);
     expect(ok).toBe(true);
@@ -904,10 +927,30 @@ describe("enumValues JSON-schema validation", () => {
     expect(validate(tierManifest({ telcoPaymentReliabilityTier: [""] }))).toBe(false);
   });
 
+  it("rejects an all-whitespace label (SYS-3043: ^\\S(.*\\S)?$ fails on the very first character regardless of what follows)", () => {
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: [" "] }))).toBe(false);
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["   "] }))).toBe(false);
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["\t"] }))).toBe(false);
+  });
+
   it("accepts labels with interior spaces (normalization constrains only the edges)", () => {
     expect(validate(tierManifest({ telcoHandsetRiskTier: ["no arrears", "in arrears"] }))).toBe(
       true,
     );
+  });
+
+  it("SYS-3043: case-varying labels are NOT deduplicated — documents the current non-goal", () => {
+    // `uniqueItems` is exact-string (ajv's default), so two labels that
+    // differ only by case are legally "unique" per the schema, even
+    // though they may be the same vendor label with an inconsistent
+    // typo. This is deliberate (see the enumValues doc comment in
+    // adapter-manifest.ts and this schema field's description): the
+    // host never folds case or reconciles near-miss spelling — a
+    // vendor's exact label IS its identity. This test exists so a
+    // future change to `uniqueItems`/a case-folding step is a
+    // conscious, visible decision (this test goes red) rather than a
+    // silent behavior change.
+    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["High", "high"] }))).toBe(true);
   });
 
   it("a maximal manifest carrying EVERY optional AdapterManifest surface validates — the anti-drift canary", () => {
@@ -932,7 +975,12 @@ describe("enumValues JSON-schema validation", () => {
       enumValues: { telcoPaymentReliabilityTier: ["1", "2", "3", "4"] },
       notes: "Exists to keep the schema and the type in lockstep.",
       implementation: { type: "typescript", entryPoint: "extract.ts" },
-    };
+    } satisfies AdapterManifest;
+    // SYS-3043: compile-time closure of the anti-drift canary itself — see
+    // AllKeysRequired's doc comment. If AdapterManifest gains a new key
+    // that this fixture doesn't populate, the line below fails to
+    // compile.
+    const _antiDriftStructuralCheck: AllKeysRequired<AdapterManifest> = maximal;
     const ok = validate(maximal);
     expect(validate.errors ?? []).toEqual([]);
     expect(ok).toBe(true);

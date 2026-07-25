@@ -213,7 +213,12 @@ export type {
   FormIntakeFieldMapEntry,
   ManualOverrideImplementation,
   ExtractionPipelineImplementation,
+  ExternalAssertionImplementation,
   FieldAuthorization,
   FieldMapEntry,
   PeriodDeclaration,
 } from './adapter-manifest.js'
+
+// SYS-3036: execution-mode classification, published so every host
+// classifies manifests identically instead of re-deriving the switch.
+export { AdapterExecutionMode, executionModeOf } from './adapter-manifest.js'

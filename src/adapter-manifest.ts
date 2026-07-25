@@ -108,13 +108,24 @@ export interface AdapterManifest {
    *     records the adapter runs itself; the manifest exists purely as
    *     the declaration plane (produces, cardinality,
    *     fieldAuthorizations) for data the host was already producing.
+   *   - `external-assertion` — SYS-3036 (ownership moved here from a
+   *     host-local extension): declaration-only adapter that is executed
+   *     entirely OUTSIDE the host. An externally-orchestrated process
+   *     completes its own ceremony/extraction and PUSHES the result to
+   *     the host's assertion-ingest surface. No code is loaded and
+   *     neither fetch() nor extract() ever runs — the same
+   *     declaration-only shape as `form-intake`/`manual-override`/
+   *     `extraction-pipeline`, but data arrives via an external push
+   *     rather than the host's own pipeline, form submission, or a
+   *     dynamic-imported/declarative extract() call.
    */
   readonly implementation:
     | DeclarativeImplementation
     | TypescriptImplementation
     | FormIntakeImplementation
     | ManualOverrideImplementation
-    | ExtractionPipelineImplementation;
+    | ExtractionPipelineImplementation
+    | ExternalAssertionImplementation;
 
   /**
    * SYS-2502: explicit instance cardinality.
@@ -391,6 +402,86 @@ export interface ManualOverrideImplementation {
  */
 export interface ExtractionPipelineImplementation {
   readonly type: "extraction-pipeline";
+}
+
+/**
+ * SYS-3036: declaration-only implementation for adapters that are
+ * executed entirely OUTSIDE the host application. An externally-
+ * orchestrated process (a partner-run ceremony, an out-of-band
+ * verification flow, etc.) completes its own extraction and PUSHES the
+ * result to the host's assertion-ingest surface, rather than the host
+ * pulling it via `fetch()`/`extract()` or a form submission. No code,
+ * no fetch(), no extract(); like `manual-override` and
+ * `extraction-pipeline`, the discriminator alone carries the meaning —
+ * the shape is intentionally empty beyond `type`.
+ *
+ * Ownership note: this type + its schema branch were previously a
+ * host-local extension (a runtime clone of the compiled schema with one
+ * extra `oneOf` branch bolted on) because core hadn't yet published the
+ * concept. Publishing it here means every host validates the SAME
+ * schema — no more per-host schema patches for this discriminator.
+ */
+export interface ExternalAssertionImplementation {
+  readonly type: "external-assertion";
+}
+
+/**
+ * SYS-3036: how a registered adapter participates at execution time,
+ * derived purely from `implementation.type`. Published here (rather than
+ * re-derived per host) so every host classifies manifests identically:
+ *
+ *   - `Runnable` — the host loads (declarative) or dynamic-imports
+ *     (typescript) a `SourceAdapter`; the host's run loop executes it.
+ *   - `DeclarationOnly` — the manifest is pure declaration plane
+ *     (`form-intake`, `manual-override`, `extraction-pipeline`). No code
+ *     exists to load; the entry is registered so `list()`-style
+ *     consumers (field-authorization gating, provenance rendering,
+ *     diagnostics) see the manifest, and every execution path skips it.
+ *   - `ExternallyAsserted` — the manifest declares
+ *     `implementation.type: "external-assertion"`. Same "no code, host
+ *     never calls fetch()/extract()" shape as `DeclarationOnly`, but data
+ *     arrives via an external push rather than the host's own
+ *     extraction pipeline or form intake. Hosts that used to fork on
+ *     this case separately can safely fold it into the same "not
+ *     Runnable" branch that already skips `DeclarationOnly` entries.
+ *
+ * String values mirror the discriminators they classify so a logged
+ * `executionMode` reads naturally alongside `implementation.type`.
+ */
+export enum AdapterExecutionMode {
+  Runnable = "runnable",
+  DeclarationOnly = "declaration-only",
+  ExternallyAsserted = "externally-asserted",
+}
+
+/**
+ * SYS-3036: classify a manifest's `implementation.type` into its
+ * `AdapterExecutionMode`. Exhaustive over every discriminator this
+ * version of `@finsys/core` publishes — the switch has an explicit case
+ * per type and THROWS on anything else (Ajv should already have refused
+ * an unrecognized discriminator at validation time, but a schema/host
+ * version skew must surface as a loud refusal here too, never as a
+ * silently-guessed mode; no fallback branch assigns one).
+ */
+export function executionModeOf(
+  manifest: Pick<AdapterManifest, "implementation">,
+): AdapterExecutionMode {
+  const implementationType = manifest.implementation.type;
+  switch (implementationType) {
+    case "declarative":
+    case "typescript":
+      return AdapterExecutionMode.Runnable;
+    case "form-intake":
+    case "manual-override":
+    case "extraction-pipeline":
+      return AdapterExecutionMode.DeclarationOnly;
+    case "external-assertion":
+      return AdapterExecutionMode.ExternallyAsserted;
+    default: {
+      const unhandled: never = implementationType;
+      throw new Error(`unknown adapter implementation type: ${String(unhandled)}`);
+    }
+  }
 }
 
 export interface FieldMapEntry {

@@ -17,7 +17,11 @@
 import { describe, it, expect } from "vitest";
 import { Ajv } from "ajv";
 import schema from "./schema/adapter-manifest.schema.json" with { type: "json" };
-import type { AdapterManifest } from "./adapter-manifest.js";
+import {
+  AdapterExecutionMode,
+  executionModeOf,
+  type AdapterManifest,
+} from "./adapter-manifest.js";
 import { categoryFieldsOf } from "./adapter-categories.js";
 
 const ajv = new Ajv({ allErrors: true });
@@ -398,6 +402,150 @@ describe("SYS-2998: extraction-pipeline implementation type", () => {
       },
     };
     expect(validate(m)).toBe(false);
+  });
+});
+
+/**
+ * SYS-3036 — `external-assertion` implementation type. Declaration-only,
+ * same empty-beyond-the-discriminator shape as `manual-override` and
+ * `extraction-pipeline`: no code, no fetch(), no extract(). Ownership of
+ * this discriminator moved here from a host-local schema patch — these
+ * tests lock the shape so any host can delete its own copy and validate
+ * against this schema unmodified, with zero behavior change.
+ */
+describe("SYS-3036: external-assertion implementation type", () => {
+  function validExternalAssertion(): AdapterManifest {
+    return {
+      manifestVersion: 1,
+      id: "example-telco-assertion-v1",
+      displayName: "Example Telco External-Assertion Adapter v1",
+      category: "telco-carrier",
+      version: 1,
+      produces: ["telcoOnTimePaymentRatio24m"],
+      implementation: { type: "external-assertion" },
+    };
+  }
+
+  it("accepts a valid external-assertion manifest", () => {
+    expect(validate(validExternalAssertion())).toBe(true);
+  });
+
+  it("rejects an external-assertion implementation carrying any extra property", () => {
+    // No config slot by design — the discriminator alone carries the
+    // meaning, same posture as manual-override/extraction-pipeline.
+    const m = {
+      ...validExternalAssertion(),
+      implementation: { type: "external-assertion", pushEndpoint: "https://example.test" },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects an external-assertion manifest carrying a typescript entryPoint (the contradiction ajv must refuse)", () => {
+    const m = {
+      ...validExternalAssertion(),
+      implementation: { type: "external-assertion", entryPoint: "extract.ts" },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("rejects an external-assertion manifest carrying a declarative fieldMap", () => {
+    const m = {
+      ...validExternalAssertion(),
+      implementation: {
+        type: "external-assertion",
+        fieldMap: [{ source: "$.a", canonical: "telcoOnTimePaymentRatio24m" }],
+      },
+    };
+    expect(validate(m)).toBe(false);
+  });
+
+  it("accepts external-assertion with fieldAuthorizations (the SYS-2503 gating plane still applies)", () => {
+    const m = {
+      ...validExternalAssertion(),
+      fieldAuthorizations: { telcoOnTimePaymentRatio24m: { lenderRoles: ["Lender Agent"] } },
+    };
+    expect(validate(m)).toBe(true);
+  });
+
+  it("existing declarative + typescript + extraction-pipeline manifests are unaffected", () => {
+    expect(validate(validDeclarative())).toBe(true);
+    expect(validate(validTypescript())).toBe(true);
+  });
+
+  it("a maximal manifest carrying EVERY optional AdapterManifest surface validates with external-assertion (the anti-drift canary, external-assertion flavor)", () => {
+    // Same fixture shape as the typescript-flavored canary below, but
+    // exercising the external-assertion branch specifically — the axis
+    // this ticket adds. Keeping both green is what proves a future host
+    // can delete its local schema patch with zero behavior change.
+    const maximal = {
+      manifestVersion: 1,
+      id: "example-maximal-assertion-v1",
+      displayName: "Example Maximal External-Assertion Adapter v1",
+      category: "telco-carrier",
+      version: 2,
+      produces: ["telcoPaymentReliabilityTier", "telcoTenureMonths"],
+      cardinality: "multi",
+      singletonFields: ["telcoPaymentReliabilityTier"],
+      requiredIdentityFields: ["phoneNumber"],
+      fieldAuthorizations: {
+        telcoPaymentReliabilityTier: { lenderRoles: ["LENDER_AGENT"] },
+      },
+      periods: [{ name: "Snapshot month", description: "Monthly refresh window." }],
+      enumValues: { telcoPaymentReliabilityTier: ["1", "2", "3", "4"] },
+      notes: "Exists to keep the schema and the type in lockstep.",
+      implementation: { type: "external-assertion" },
+    };
+    const ok = validate(maximal);
+    expect(validate.errors ?? []).toEqual([]);
+    expect(ok).toBe(true);
+  });
+
+  it("external-assertion is a compile-time-legal AdapterManifest implementation (type-level lockstep)", () => {
+    const manifest: AdapterManifest = validExternalAssertion();
+    expect(manifest.implementation.type).toBe("external-assertion");
+  });
+});
+
+/**
+ * SYS-3036 — `AdapterExecutionMode` + `executionModeOf()`. Published so
+ * every host classifies `implementation.type` identically instead of
+ * re-deriving its own switch (which is exactly how the host-local
+ * `external-assertion` extension diverged from core in the first place).
+ */
+describe("SYS-3036: executionModeOf classification", () => {
+  it("classifies declarative and typescript as Runnable", () => {
+    expect(executionModeOf({ implementation: { type: "declarative", fieldMap: [] } })).toBe(
+      AdapterExecutionMode.Runnable,
+    );
+    expect(
+      executionModeOf({ implementation: { type: "typescript", entryPoint: "extract.ts" } }),
+    ).toBe(AdapterExecutionMode.Runnable);
+  });
+
+  it("classifies form-intake, manual-override, and extraction-pipeline as DeclarationOnly", () => {
+    expect(executionModeOf({ implementation: { type: "form-intake", fieldMap: [] } })).toBe(
+      AdapterExecutionMode.DeclarationOnly,
+    );
+    expect(executionModeOf({ implementation: { type: "manual-override" } })).toBe(
+      AdapterExecutionMode.DeclarationOnly,
+    );
+    expect(executionModeOf({ implementation: { type: "extraction-pipeline" } })).toBe(
+      AdapterExecutionMode.DeclarationOnly,
+    );
+  });
+
+  it("classifies external-assertion as ExternallyAsserted", () => {
+    expect(executionModeOf({ implementation: { type: "external-assertion" } })).toBe(
+      AdapterExecutionMode.ExternallyAsserted,
+    );
+  });
+
+  it("throws loudly on an unrecognized implementation type rather than guessing a mode", () => {
+    const bogus = { implementation: { type: "quantum-flux" } } as unknown as Pick<
+      AdapterManifest,
+      "implementation"
+    >;
+    expect(() => executionModeOf(bogus)).toThrow(/unknown adapter implementation type/);
   });
 });
 

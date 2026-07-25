@@ -4,6 +4,30 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`external-assertion` adapter implementation type.** A declaration-only
+  flavor, alongside `form-intake`/`manual-override`/`extraction-pipeline`,
+  for adapters whose data arrives via an external push rather than
+  through the host's own extraction pipeline, a form submission, or a
+  dynamic-imported/declarative `extract()` call — an externally-
+  orchestrated process completes its own ceremony and pushes the result
+  to the host's ingest surface. No code is loaded and neither `fetch()`
+  nor `extract()` ever runs, the same shape as its declaration-only
+  siblings: empty beyond the discriminator, and every other manifest rule
+  (`produces` ⊆ category, `enumValues` contract, field-authorization
+  gating, periods) still applies unchanged. Previously implemented as a
+  per-host schema patch (a runtime-cloned copy of this package's compiled
+  schema with one extra branch bolted on); publishing it here means every
+  host validates the same schema, with no local patching required.
+- **`AdapterExecutionMode` + `executionModeOf()`.** A three-value closed
+  enum (`Runnable` / `DeclarationOnly` / `ExternallyAsserted`) and a pure
+  classifier that maps any `implementation.type` to its execution mode.
+  Published so hosts read this classification directly instead of
+  re-deriving their own copy of the same switch statement.
+
 ## [4.8.0] — 2026-07-24
 
 ### Added

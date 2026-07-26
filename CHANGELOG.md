@@ -6,6 +6,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [4.9.0] — 2026-07-26
+
 ### Added
 
 - **`external-assertion` adapter implementation type.** A declaration-only

@@ -6,6 +6,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [4.9.1] — 2026-07-27
+
+Removes named third-party companies from documentation and source comments.
+No API, schema or catalog changes.
+
+Three sites named payment-network vendors as examples: the `payment-network`
+category description, a manifest-naming example, and the header comment in
+`adapter-categories.ts`. All now describe the category instead. Both companies
+have since rebranded, so the names were also stale -- and a wrong name is worse
+than none.
+
+Worth noting for anyone auditing similar packages: these survived an earlier
+name-removal pass because published **source maps embed the original source
+text, including comments**. Editing a comment in `src/` does not remove it from
+an already-published `.map`. Verify by unpacking the built tarball, not by
+grepping the source tree.
+
 ## [4.9.0] — 2026-07-26
 
 ### Added
@@ -560,21 +577,4 @@ copy. Example:
     }
   }
 }
-```## 4.9.1
-
-Removes named third-party companies from documentation and source comments.
-No API, schema or catalog changes.
-
-Three sites named payment-network vendors as examples: the `payment-network`
-category description, a manifest-naming example, and the header comment in
-`adapter-categories.ts`. All now describe the category instead. Both companies
-have since rebranded, so the names were also stale -- and a wrong name is worse
-than none.
-
-Worth noting for anyone auditing similar packages: these survived an earlier
-name-removal pass because published **source maps embed the original source
-text, including comments**. Editing a comment in `src/` does not remove it from
-an already-published `.map`. Verify by unpacking the built tarball, not by
-grepping the source tree.
-
-
+```

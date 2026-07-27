@@ -23,8 +23,8 @@
  * finsys-client eval engine, CRA report renderer) read so they know
  * what data shape to expect from a given alt-data source TYPE.
  *
- * Specific vendor implementations (e.g. "example-telco-v1", "iPay88
- * payments v1") live OUTSIDE this open-source package, in private
+ * Specific vendor implementations (e.g. "example-telco-v1",
+ * "example-payments-v1") live OUTSIDE this open-source package, in private
  * extension directories loaded by the host app. The category schemas
  * are the publication boundary — vendors map their raw payload to
  * these canonical fields; clients render against these canonical

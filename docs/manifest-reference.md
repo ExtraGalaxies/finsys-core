@@ -32,7 +32,7 @@ Convention (not enforced): `<vendor>-<category-short>-v<n>`.
 | Good | Why |
 |---|---|
 | `example-telco-v1` | vendor + category-short + version |
-| `ipay88-payments-v3` | clear vendor identity, third major iteration |
+| `example-payments-v3` | vendor + category-short, third major iteration |
 | `acme-bank-v1` | bank statement adapter from Acme |
 
 Bad:

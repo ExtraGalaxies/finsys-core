@@ -48,7 +48,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 ## `payment-network`
 
-**Description**: Merchant-side payment-flow signals from POS / gateway networks (iPay88, GHL, etc.). Captures actual transaction velocity rather than self-reported revenue.
+**Description**: Merchant-side payment-flow signals from POS / gateway networks (payment gateways, POS-terminal networks, etc.). Captures actual transaction velocity rather than self-reported revenue.
 
 **Canonical table**: `ihs_alt_data_payments`
 

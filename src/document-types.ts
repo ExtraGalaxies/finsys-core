@@ -94,6 +94,17 @@ export interface TaggedFieldData extends FieldData {
   document_slot?: number
   /** What unit document_slot's number measures for this field. */
   time_period_unit?: TimePeriodUnit
+  /**
+   * SYS-2873: languages this upload slot's per-file document-language
+   * selector offers (e.g. ["vi", "en"]). Presence of the tag is what makes
+   * a renderer show the selector at all — entries without it (every
+   * Malaysia slot) render no language UI. The uploader's per-file choice
+   * travels with each uploaded file entry (ParsedDocFile.documentLanguage)
+   * and selects the extraction endpoint upstream. This tag is UX metadata:
+   * the server-side endpoint registry stays authoritative for which
+   * languages are actually callable.
+   */
+  document_language_options?: readonly string[]
 }
 
 let cached: readonly DocumentTypeGroup[] | null = null

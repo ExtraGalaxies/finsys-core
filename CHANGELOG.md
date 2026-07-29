@@ -6,6 +6,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **Per-file document-language selector tag (SYS-2873).** New optional catalog
+  tag `document_language_options` on file-type entries (`TaggedFieldData`),
+  plus `ParsedDocFile.documentLanguage` so the per-file choice parses out of
+  IHS doc fields. First carrier: new `financials_vn` catalog entry (Vietnam
+  financial statement — single slot, yearly, no wide-table columns) offering
+  `["vi", "en"]`. Malaysia entries carry no tag, so no selector renders for
+  them. The tag is UX metadata; the server-side endpoint registry remains
+  authoritative for which languages are actually callable (SYS-2875).
+
+### Changed
+
+- Dev-infra: `allowScripts` now covers `fsevents` (strict-allow-scripts was
+  blocking fresh installs on macOS).
+
 ## [4.9.1] — 2026-07-27
 
 Removes named third-party companies from documentation and source comments.

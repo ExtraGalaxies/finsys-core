@@ -111,6 +111,28 @@ describe('document-types', () => {
       expect(finLegacy.time_period_unit).toBe('year')
     })
 
+    it('tags document_language_options on the Vietnam financial-statement slot only (SYS-2873)', () => {
+      const groups = getDocumentTypeGroups()
+
+      const financials = groups.find((g) => g.documentType === 'financialStatements')!
+      const vn = financials.fields.find((f) => f.name === 'financials_vn')!
+      expect(vn.document_language_options).toEqual(['vi', 'en'])
+      expect(vn.document_slot).toBe(1)
+      expect(vn.time_period_unit).toBe('year')
+      // VN skips the wide-table mirror by design -- no ihs columns.
+      expect(vn.ihs_column_names).toEqual([])
+
+      // Leak guard: no other slot (i.e. no Malaysia slot) offers a
+      // language selector -- absence of the tag is what hides the UI.
+      for (const group of groups) {
+        for (const field of group.fields) {
+          if (field.name !== 'financials_vn') {
+            expect(field.document_language_options).toBeUndefined()
+          }
+        }
+      }
+    })
+
     it('leaves document_slot/time_period_unit untagged on singleton document types (form9/ssm/ic)', () => {
       const groups = getDocumentTypeGroups()
       for (const type of ['form9', 'ssm', 'ic']) {

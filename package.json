@@ -82,6 +82,7 @@
     "npm": ">=12.0.1"
   },
   "allowScripts": {
-    "esbuild": false
+    "esbuild": false,
+    "fsevents": false
   }
 }

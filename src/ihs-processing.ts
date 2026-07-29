@@ -574,6 +574,13 @@ interface ParsedDocFile {
   createdAt?: string
   month?: number
   year?: number
+  /**
+   * SYS-2873: the uploader's per-file document-language choice (e.g. "vi",
+   * "en"), present only for slots whose catalog entry carries
+   * document_language_options. Selects the extraction endpoint upstream;
+   * absent on every Malaysia upload.
+   */
+  documentLanguage?: string
 }
 
 /**

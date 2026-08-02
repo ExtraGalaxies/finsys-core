@@ -8,6 +8,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- **Field confidentiality on canonical field specs (SYS-3164).** New optional
+  `confidentiality?: "non-sensitive"` on `CanonicalFieldSpec`, plus
+  `isFieldSensitive(category, field)` and `sensitiveFieldsOf(category)`.
+  **Absence means sensitive** — there is deliberately no `"sensitive"`
+  spelling, so a field is protected unless someone explicitly opted it out
+  and the failure mode of forgetting is over-protection rather than silent
+  exposure. Shared-fact attestations must agree on it (enforced at load,
+  alongside the existing `fact`/`kind` drift rules): one real-world fact
+  cannot be sensitive when a document attests it and non-sensitive when a
+  form does. No field is classified in this release, so the payload
+  `allCategories()` publishes is byte-identical and every field currently
+  reads as sensitive — the intended starting point for a fail-closed
+  default. Consumers honouring it should note two limits: it covers
+  canonical data only (nothing is canonical over the legacy wide `ihs`
+  table), and raw payloads store the same values separately.
+
 - **Per-file document-language selector tag (SYS-2873).** New optional catalog
   tag `document_language_options` on file-type entries (`TaggedFieldData`),
   plus `ParsedDocFile.documentLanguage` so the per-file choice parses out of

@@ -131,6 +131,23 @@ export interface CanonicalFieldSpec {
    * that says who may read a field, this says how it is held when
    * nobody is reading it.
    *
+   * TWO LIMITS, so this is not read as more coverage than it is:
+   *
+   * It reaches CANONICAL data only. `confidentiality` lives on a
+   * category's field spec, and no category is canonical over the legacy
+   * wide `ihs` table — the categories cover the `ihs_alt_data_*` tables
+   * and the promoted document tables. A field still living in an `ihs`
+   * column is untouched by this until the adapter transition relocates
+   * it.
+   *
+   * And the raw payload is a sibling hole. The same values are stored
+   * again, unencrypted, in the host's raw-payload table (see
+   * docs/security-model.md: "Assume the raw payload is durably stored"),
+   * under its own retention window. Encrypting the canonical column
+   * while the identical value sits in the clear next to it makes the
+   * guarantee "at rest, in one of two places" — so the consumer that
+   * honours this must cover both, or say plainly that it does not.
+   *
    * Shared-fact attestations must AGREE on this (enforced at load): one
    * real-world fact cannot be sensitive when a document attests it and
    * non-sensitive when a form does.
@@ -308,6 +325,20 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           `adapter category data: field "${f.name}" (${where}) has an invalid fact — expected a non-empty string`,
         );
       }
+      // Hoisted ABOVE the shared-fact block deliberately. When an invalid
+      // value arrives on a SECOND declarer, the agreement check would fire
+      // first and report `declared sensitive (default) by a but "sensitive"
+      // by b — must agree on confidentiality`, which reads as though
+      // "sensitive" were a legal value that merely disagrees. That is the
+      // exact opposite of the rule, and would cost the next reader an hour.
+      // The value check has no dependency on `prior`, so it belongs first.
+      if (f.confidentiality !== undefined && !VALID_FIELD_CONFIDENTIALITY.includes(f.confidentiality)) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) has invalid confidentiality ` +
+            `"${String(f.confidentiality)}" — the only declarable value is "non-sensitive"; ` +
+            `sensitive is the default and is expressed by omitting the property`,
+        );
+      }
       // Shared-fact uniqueness rule: a field name may be declared by
       // more than one category iff EVERY declaration carries the SAME
       // `fact` id — the declarations are then independent attestations
@@ -395,13 +426,6 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
             `adapter category data: field "${f.name}" (${where}) is kind "enum" but declares a range — enum labels are unordered; ordering belongs to the consumer, never the data contract`,
           );
         }
-      }
-      if (f.confidentiality !== undefined && !VALID_FIELD_CONFIDENTIALITY.includes(f.confidentiality)) {
-        throw new Error(
-          `adapter category data: field "${f.name}" (${where}) has invalid confidentiality ` +
-            `"${String(f.confidentiality)}" — the only declarable value is "non-sensitive"; ` +
-            `sensitive is the default and is expressed by omitting the property`,
-        );
       }
       if (typeof f.description !== "string" || f.description.length === 0) {
         throw new Error(

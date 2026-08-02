@@ -6,6 +6,34 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed — BREAKING (vocabulary)
+
+- **Company name and registration number are now shared facts across all three
+  attesting documents (SYS-3163).** `finxtract-ssm` renames `ssmCompanyName` →
+  `companyName` and `ssmCompanyRegNo` → `companyRegNo`, both carrying the
+  matching `fact` id; `finxtract-form9`'s `companyRegNo` gains `fact:
+  "companyRegNo"`, which the shared-name rule requires (a name declared by two
+  categories where one carries no fact is refused at load).
+
+  **Why:** three documents attest a company's name — Form 9, SSM and the
+  financial statement — but only two shared the fact, because SSM's was a
+  separately-named field. A Form 9 / SSM name conflict was therefore invisible
+  to the disagreement surface, by construction rather than by oversight. Same
+  for the registration number.
+
+  **Breaking for consumers that name these fields.** `ssmCompanyName` and
+  `ssmCompanyRegNo` no longer exist in the category vocabulary, so any adapter
+  manifest listing them in `produces` will be REFUSED at registration
+  (`categoryFieldsOf` membership check). finsys-api's builtin
+  `finxtract-ssm-v1` manifest is one such caller and must be updated in
+  lockstep — its rename is deliberately sequenced AFTER this release, because
+  doing it first would break SSM extraction against the currently-installed
+  core.
+
+  No database change is implied. Canonical rows already decouple the physical
+  column from the field name via TypeORM's `name:` mapping, so consumers rename
+  entity properties and leave their columns alone.
+
 ### Fixed
 
 - **Field-confidentiality follow-ups (SYS-3169).** Corrections to the SYS-3164

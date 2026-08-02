@@ -692,20 +692,26 @@ describe("finxtract-form9 category", () => {
     ]);
   });
 
-  it("declares its two shared-fact attestations and one unique field", () => {
+  it("declares three shared-fact attestations, no unique fields", () => {
+    // SYS-3163: companyRegNo gained a fact when finxtract-ssm was renamed
+    // onto the same name. The shared-name rule REQUIRES it — a name declared
+    // by two categories where one carries no fact is refused at load, so
+    // form9's declaration had to gain the fact in the same change.
     const spec = (name: string) =>
       categorySchemaOf("finxtract-form9").fields.find((f) => f.name === name);
     expect(spec("companyName")?.fact).toBe("companyName");
     expect(spec("companyIncorporationDate")?.fact).toBe("companyIncorporationDate");
-    expect(spec("companyRegNo")?.fact).toBeUndefined();
+    expect(spec("companyRegNo")?.fact).toBe("companyRegNo");
     // All three are document strings.
     for (const name of ["companyName", "companyRegNo", "companyIncorporationDate"]) {
       expect(spec(name)?.type, `${name} type`).toBe("string");
     }
   });
 
-  it("routes the unique field to form9 and leaves the shared names ambiguous", () => {
-    expect(categoryForField("companyRegNo")).toBe("finxtract-form9");
+  it("leaves every one of its names ambiguous — all three are now shared", () => {
+    // categoryForField answers null for a shared name by design (explicit
+    // ambiguity rather than privileging the first declarer).
+    expect(categoryForField("companyRegNo")).toBeNull();
     expect(categoryForField("companyName")).toBeNull();
     expect(categoryForField("companyIncorporationDate")).toBeNull();
   });
@@ -721,15 +727,15 @@ describe("finxtract-ssm category", () => {
       "businessOrigin",
       "companyIncorporationDate",
       "companyLastOldName",
+      "companyName",
       "companyNameDateOfChange",
+      "companyRegNo",
       "companyStatus",
       "directors",
       "previousDirectors",
       "registeredAddress",
       "shareholders",
       "ssmCompanyEntityType",
-      "ssmCompanyName",
-      "ssmCompanyRegNo",
       "ssmPaidUpCapital",
       "totalShareIssued",
     ]);
@@ -748,11 +754,16 @@ describe("finxtract-ssm category", () => {
     expect(cat.fields.find((f) => f.name === "ssmPaidUpCapital")?.unit).toBe("MYR");
   });
 
-  it("attests companyIncorporationDate as its ONLY shared fact; all other names are unique to ssm", () => {
+  it("attests three shared facts; all other names are unique to ssm", () => {
+    // SYS-3163: companyName and companyRegNo joined companyIncorporationDate.
+    // Three documents attest a company's name — Form 9, SSM and the financial
+    // statement — and before this they did not share the fact, so a Form 9 /
+    // SSM conflict was invisible to the disagreement surface.
+    const SHARED = new Set(["companyIncorporationDate", "companyName", "companyRegNo"]);
     const cat = categorySchemaOf("finxtract-ssm");
     for (const f of cat.fields) {
-      if (f.name === "companyIncorporationDate") {
-        expect(f.fact).toBe("companyIncorporationDate");
+      if (SHARED.has(f.name)) {
+        expect(f.fact, `${f.name} should carry its own name as its fact`).toBe(f.name);
         expect(categoryForField(f.name)).toBeNull();
       } else {
         expect(f.fact, `${f.name} should carry no fact`).toBeUndefined();
@@ -763,8 +774,8 @@ describe("finxtract-ssm category", () => {
     }
   });
 
-  it("stays disjoint from every other category except the declared shared fact", () => {
-    const sharedFacts = new Set(["companyIncorporationDate"]);
+  it("stays disjoint from every other category except the declared shared facts", () => {
+    const sharedFacts = new Set(["companyIncorporationDate", "companyName", "companyRegNo"]);
     const mine = new Set(categoryFieldsOf("finxtract-ssm"));
     for (const cat of allCategories()) {
       if (cat.id === "finxtract-ssm") continue;
@@ -780,8 +791,10 @@ describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
   it("factOf returns the fact id for attestation fields and null otherwise", () => {
     expect(factOf("companyIncorporationDate")).toBe("companyIncorporationDate");
     expect(factOf("companyName")).toBe("companyName");
+    // SYS-3163: companyRegNo became a shared fact when finxtract-ssm was
+    // renamed onto the name form9 already used.
+    expect(factOf("companyRegNo")).toBe("companyRegNo");
     // Uniquely-declared, fact-less names → null.
-    expect(factOf("companyRegNo")).toBeNull();
     expect(factOf("telcoOnTimePaymentRatio24m")).toBeNull();
     // Unknown names → null.
     expect(factOf("clearlyNotACanonicalField")).toBeNull();
@@ -792,9 +805,17 @@ describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
       "finxtract-form9",
       "finxtract-ssm",
     ]);
+    // SYS-3163: three documents attest a company's name, and now all three
+    // share the fact. Before this, SSM's was a separate fact-less name, so a
+    // Form 9 / SSM conflict could not be seen at all.
     expect(categoriesAttestingFact("companyName")).toEqual([
       "finxtract-financial-statement",
       "finxtract-form9",
+      "finxtract-ssm",
+    ]);
+    expect(categoriesAttestingFact("companyRegNo")).toEqual([
+      "finxtract-form9",
+      "finxtract-ssm",
     ]);
     expect(categoriesAttestingFact("not-a-fact")).toEqual([]);
   });

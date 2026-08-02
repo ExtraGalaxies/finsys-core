@@ -568,17 +568,51 @@ describe("FinXtract document-extraction categories", () => {
   });
 
   it("ic declares exactly the nine identity fields (unblocks finxtract-ic-v1 registration)", () => {
+    // SYS-3163: five of the nine were renamed off the ic* prefix, because
+    // they are the ones a form-intake applicant-identity category will also
+    // attest — the prefix encoded the SOURCE, which provenance already
+    // records, and a fact id is bound to exactly one field name, so a shared
+    // fact is impossible while the names differ. The remaining four keep the
+    // prefix deliberately: no form collects them, so they have no second
+    // attester and nothing to share with.
     expect([...categoryFieldsOf("ic")].sort()).toEqual([
       "icAddress",
-      "icDateOfBirth",
       "icGender",
-      "icName",
-      "icNationality",
-      "icNumber",
       "icPlaceOfBirth",
-      "icRace",
       "icReligion",
+      "personDateOfBirth",
+      "personIdNumber",
+      "personName",
+      "personNationality",
+      "personRace",
     ]);
+  });
+
+  it("ic pre-declares a fact on each renamed identity field, so applicant-identity is additive", () => {
+    // A uniquely-declared field MAY carry a fact, and declaring it now is
+    // what makes SYS-3166 purely additive: applicant-identity declares the
+    // same name + fact and nothing about `ic` changes. Without it, the
+    // shared-name rule would refuse the pair (a name declared by two
+    // categories where one carries no fact is a load error) and force a
+    // second edit to a published contract — exactly what form9's
+    // companyRegNo required in the company-fact change.
+    const spec = (name: string) =>
+      categorySchemaOf("ic").fields.find((f) => f.name === name);
+    for (const name of [
+      "personName",
+      "personIdNumber",
+      "personDateOfBirth",
+      "personNationality",
+      "personRace",
+    ]) {
+      expect(spec(name)?.fact, `${name} should pre-declare its fact`).toBe(name);
+      // Still single-attester today, so it routes unambiguously to ic.
+      expect(categoryForField(name), `${name} routes to ic`).toBe("ic");
+    }
+    // The four that keep the prefix carry no fact — nothing attests them twice.
+    for (const name of ["icAddress", "icGender", "icReligion", "icPlaceOfBirth"]) {
+      expect(spec(name)?.fact, `${name} should carry no fact`).toBeUndefined();
+    }
   });
 
   it("finxtract-bank-statement is a distinct vocabulary from the partner-API bank-statement category", () => {

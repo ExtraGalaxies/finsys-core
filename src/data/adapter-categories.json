@@ -545,14 +545,16 @@
       "canonicalTable": "ihs_alt_data_ic",
       "fields": [
         {
-          "name": "icName",
+          "name": "personName",
           "type": "string",
-          "description": "Full name as printed on the identity document."
+          "description": "Full name as printed on the identity document.",
+          "fact": "personName"
         },
         {
-          "name": "icNumber",
+          "name": "personIdNumber",
           "type": "string",
-          "description": "IC (MyKad) number, or passport number for passport documents."
+          "description": "IC (MyKad) number, or passport number for passport documents.",
+          "fact": "personIdNumber"
         },
         {
           "name": "icAddress",
@@ -570,9 +572,10 @@
           "description": "Religion as stated on the document (MyKad-only; absent on passports)."
         },
         {
-          "name": "icDateOfBirth",
+          "name": "personDateOfBirth",
           "type": "string",
-          "description": "Date of birth as stated on the document."
+          "description": "Date of birth as stated on the document.",
+          "fact": "personDateOfBirth"
         },
         {
           "name": "icPlaceOfBirth",
@@ -580,14 +583,16 @@
           "description": "Place of birth as stated on the document."
         },
         {
-          "name": "icNationality",
+          "name": "personNationality",
           "type": "string",
-          "description": "Nationality as stated on the document."
+          "description": "Nationality as stated on the document.",
+          "fact": "personNationality"
         },
         {
-          "name": "icRace",
+          "name": "personRace",
           "type": "string",
-          "description": "Race as stated on the document (MyKad-only; absent on passports)."
+          "description": "Race as stated on the document (MyKad-only; absent on passports).",
+          "fact": "personRace"
         }
       ]
     },

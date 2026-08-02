@@ -8,6 +8,33 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed — BREAKING (vocabulary)
 
+- **Five `ic` identity fields lose the source prefix (SYS-3163).** `icName` →
+  `personName`, `icNumber` → `personIdNumber`, `icDateOfBirth` →
+  `personDateOfBirth`, `icNationality` → `personNationality`, `icRace` →
+  `personRace`. Each pre-declares a matching `fact` id.
+
+  **Why these five and not all nine:** the `ic*` prefix encoded the SOURCE of
+  a value, which the adapter model already records far better via manifest
+  identity and adapter runs. A fact id is bound to exactly one field name
+  registry-wide, so two categories can only share a fact by declaring the same
+  name — meaning a borrower-typed name could never share a fact with an
+  IC-extracted one while the names differed. These five are exactly the ones a
+  form-intake `applicant-identity` category will also attest (they have
+  counterparts in the live lead-gen form configs). `icAddress`, `icGender`,
+  `icReligion` and `icPlaceOfBirth` keep the prefix deliberately: no form
+  collects them, so they have no second attester and nothing to share with.
+
+  The `fact` is pre-declared even though `ic` is the only attester today. A
+  uniquely-declared field may carry one, and doing it now makes the eventual
+  `applicant-identity` category purely ADDITIVE — it declares the same name
+  and fact, and nothing about `ic` changes. Without it the shared-name rule
+  would refuse the pair and force a second edit to a published contract.
+
+  **Breaking for consumers that name these fields**, on the same terms as the
+  company-fact change above: a manifest listing an old name in `produces` is
+  refused at registration. finsys-api's builtin `finxtract-ic-v1` is such a
+  caller. No database change implied.
+
 - **Company name and registration number are now shared facts across all three
   attesting documents (SYS-3163).** `finxtract-ssm` renames `ssmCompanyName` →
   `companyName` and `ssmCompanyRegNo` → `companyRegNo`, both carrying the

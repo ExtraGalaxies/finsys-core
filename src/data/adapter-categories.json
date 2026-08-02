@@ -11,28 +11,40 @@
           "name": "telcoOnTimePaymentRatio24m",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Fraction of bills paid on time over the last 24 months. Strongest single telco predictor; ≥0.95 is the clean-history signal."
         },
         {
           "name": "telcoTenureMonths",
           "type": "number",
           "unit": "months",
-          "range": [0, 600],
+          "range": [
+            0,
+            600
+          ],
           "description": "Account age. ≥48 months is the thin-file uplift trigger."
         },
         {
           "name": "telcoSuspensionsCount24m",
           "type": "number",
           "unit": "count",
-          "range": [0, 100],
+          "range": [
+            0,
+            100
+          ],
           "description": "Non-payment-driven account suspensions in the last 24 months. ≥3 is a strong distress signal."
         },
         {
           "name": "telcoLateDays24m",
           "type": "number",
           "unit": "days",
-          "range": [0, 800],
+          "range": [
+            0,
+            800
+          ],
           "description": "Cumulative days late across all bills in the trailing 24-month window."
         },
         {
@@ -49,7 +61,10 @@
           "name": "telcoArpuMyr",
           "type": "number",
           "unit": "MYR",
-          "range": [0, 10000],
+          "range": [
+            0,
+            10000
+          ],
           "description": "Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy."
         },
         {
@@ -88,42 +103,60 @@
           "name": "paymentsMonthlyVolumeMyrT3",
           "type": "number",
           "unit": "MYR",
-          "range": [0, 100000000],
+          "range": [
+            0,
+            100000000
+          ],
           "description": "Mean monthly inbound transaction volume (RM) over the trailing 3 months."
         },
         {
           "name": "paymentsMonthlyVolumeMyrT12",
           "type": "number",
           "unit": "MYR",
-          "range": [0, 100000000],
+          "range": [
+            0,
+            100000000
+          ],
           "description": "Mean monthly inbound transaction volume (RM) over the trailing 12 months. Pair with T3 for trend direction."
         },
         {
           "name": "paymentsArpuStability12m",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Coefficient-of-variation inverse over monthly ARPU in the trailing 12 months. Closer to 1 = steadier; closer to 0 = volatile."
         },
         {
           "name": "paymentsDisputeRate12m",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Fraction of transactions disputed or refunded in the trailing 12 months."
         },
         {
           "name": "paymentsCustomerConcentrationTop5Pct",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Revenue share from the top-5 recurring customers. Above ~0.7 is concentration risk."
         },
         {
           "name": "paymentsActiveTenureMonths",
           "type": "number",
           "unit": "months",
-          "range": [0, 600],
+          "range": [
+            0,
+            600
+          ],
           "description": "Months since first transaction on the payment network. Establishment / continuity proxy."
         }
       ]
@@ -143,35 +176,50 @@
           "name": "bankClosingBalanceMyr",
           "type": "number",
           "unit": "MYR",
-          "range": [-100000000, 100000000],
+          "range": [
+            -100000000,
+            100000000
+          ],
           "description": "Closing balance for the statement period."
         },
         {
           "name": "bankTotalCreditsMyr",
           "type": "number",
           "unit": "MYR",
-          "range": [0, 100000000],
+          "range": [
+            0,
+            100000000
+          ],
           "description": "Sum of credit transactions during the period."
         },
         {
           "name": "bankTotalDebitsMyr",
           "type": "number",
           "unit": "MYR",
-          "range": [0, 100000000],
+          "range": [
+            0,
+            100000000
+          ],
           "description": "Sum of debit transactions during the period."
         },
         {
           "name": "bankLargestSingleCreditMyr",
           "type": "number",
           "unit": "MYR",
-          "range": [0, 100000000],
+          "range": [
+            0,
+            100000000
+          ],
           "description": "Largest single inbound transaction in the period. Useful for spotting one-off injections vs steady revenue."
         },
         {
           "name": "bankBouncedTransactionsCount",
           "type": "number",
           "unit": "count",
-          "range": [0, 1000],
+          "range": [
+            0,
+            1000
+          ],
           "description": "Bounced / returned transactions in the period. Distress signal at counts > 0."
         }
       ]
@@ -186,28 +234,40 @@
           "name": "socialAccountTenureMonths",
           "type": "number",
           "unit": "months",
-          "range": [0, 600],
+          "range": [
+            0,
+            600
+          ],
           "description": "Age of the oldest verified public business presence across linked profiles. Establishment / continuity proxy, parallel to telco + payment-network tenure."
         },
         {
           "name": "socialFollowerCount",
           "type": "number",
           "unit": "count",
-          "range": [0, 100000000],
+          "range": [
+            0,
+            100000000
+          ],
           "description": "Aggregate audience size across linked public profiles. Coarse reach / scale proxy — gameable on its own, so read alongside socialEngagementRate90d."
         },
         {
           "name": "socialEngagementRate90d",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Mean interactions per impression over the trailing 90 days. Authenticity signal: a large follower count with near-zero engagement indicates a bought or dormant audience."
         },
         {
           "name": "socialPostingConsistency12m",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Fraction of weeks in the trailing 12 months with at least one public post. Ongoing-operation signal — distinguishes an active business from a stale listing."
         },
         {
@@ -219,21 +279,30 @@
           "name": "socialCustomerRatingAvg",
           "type": "number",
           "unit": "rating",
-          "range": [0, 5],
+          "range": [
+            0,
+            5
+          ],
           "description": "Mean public customer rating (normalised to a 0–5 scale) across review-bearing profiles. Reputation signal; especially predictive for consumer-facing SMEs."
         },
         {
           "name": "socialNegativeSentimentRatio90d",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Fraction of public mentions / reviews classified as negative over the trailing 90 days. Reputation-risk / distress signal independent of overall rating volume."
         },
         {
           "name": "socialAccountFlags24m",
           "type": "number",
           "unit": "count",
-          "range": [0, 100],
+          "range": [
+            0,
+            100
+          ],
           "description": "Policy strikes, suspensions, or content takedowns across linked profiles in the last 24 months. Distress signal, parallel to telcoSuspensionsCount24m."
         }
       ]
@@ -248,70 +317,100 @@
           "name": "arDaysSalesOutstanding",
           "type": "number",
           "unit": "days",
-          "range": [0, 400],
+          "range": [
+            0,
+            400
+          ],
           "description": "Days Sales Outstanding — average days to collect a receivable. The headline collection-efficiency metric; lower is healthier, and a rising DSO is an early liquidity-stress signal."
         },
         {
           "name": "apDaysPayableOutstanding",
           "type": "number",
           "unit": "days",
-          "range": [0, 400],
+          "range": [
+            0,
+            400
+          ],
           "description": "Days Payable Outstanding — average days the business takes to pay its suppliers. Context for DSO; a very high DPO can indicate the business is stretching its creditors to fund operations."
         },
         {
           "name": "arTotalOutstandingMyr",
           "type": "number",
           "unit": "MYR",
-          "range": [0, 1000000000],
+          "range": [
+            0,
+            1000000000
+          ],
           "description": "Total accounts-receivable balance outstanding (RM). The size of the debtor book the business is carrying."
         },
         {
           "name": "arCurrentRatio",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Fraction of the receivables book that is current (within payment terms, not yet overdue). Higher is healthier; the complement is the overdue share across all aging buckets."
         },
         {
           "name": "arOverdue90PlusRatio",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Fraction of the receivables book aged more than 90 days past terms. The key impairment / bad-debt risk signal from the AR aging report; elevated values indicate collection difficulty."
         },
         {
           "name": "debtorConcentrationTop5Ratio",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Share of total receivables owed by the top-5 debtors. Above ~0.6 is single-customer concentration risk — one debtor default would materially impair cash flow."
         },
         {
           "name": "tradeReferenceDefaults12m",
           "type": "number",
           "unit": "count",
-          "range": [0, 1000],
+          "range": [
+            0,
+            1000
+          ],
           "description": "Count of supplier-reported defaults or dishonoured / returned payments against the business in the trailing 12 months. Direct distress signal, parallel to a bureau default record."
         },
         {
           "name": "accountingRevenue12mMyr",
           "type": "number",
           "unit": "MYR",
-          "range": [0, 1000000000],
+          "range": [
+            0,
+            1000000000
+          ],
           "description": "Trailing-12-month turnover per the general ledger (RM). The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies."
         },
         {
           "name": "grossMarginPct",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Gross margin from the P&L (gross profit / revenue). Profitability-quality signal; a thin or declining margin constrains debt-service capacity even at healthy revenue."
         },
         {
           "name": "cashConversionCycleDays",
           "type": "number",
           "unit": "days",
-          "range": [-200, 600],
+          "range": [
+            -200,
+            600
+          ],
           "description": "Cash Conversion Cycle (DSO + days-inventory-outstanding − DPO). Working-capital efficiency; negative values (collect before paying suppliers) are strongest, very high values indicate cash tied up in operations."
         }
       ]
@@ -326,21 +425,30 @@
           "name": "geoLatitude",
           "type": "number",
           "unit": "deg",
-          "range": [-90, 90],
+          "range": [
+            -90,
+            90
+          ],
           "description": "Observed latitude for this hourly bucket (point instances only)."
         },
         {
           "name": "geoLongitude",
           "type": "number",
           "unit": "deg",
-          "range": [-180, 180],
+          "range": [
+            -180,
+            180
+          ],
           "description": "Observed longitude for this hourly bucket (point instances only)."
         },
         {
           "name": "geoAccuracyM",
           "type": "number",
           "unit": "meters",
-          "range": [0, 100000],
+          "range": [
+            0,
+            100000
+          ],
           "description": "Source-reported horizontal accuracy radius of the observation. Cell-tower fixes are typically hundreds of meters; GPS fixes tens."
         },
         {
@@ -357,42 +465,60 @@
           "name": "geoWorkAttendanceRatio30d",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Fraction of the last 30 weekdays with >= 6 hours of dwell at the inferred work anchor. The income-reliability headline: regular full-time work patterns corroborate declared employment income (summary instance only)."
         },
         {
           "name": "geoWorkDailyHoursAvg30d",
           "type": "number",
           "unit": "hours",
-          "range": [0, 24],
+          "range": [
+            0,
+            24
+          ],
           "description": "Mean daily hours of work-anchor dwell across the last 30 weekdays (summary instance only)."
         },
         {
           "name": "geoLocationStabilityScore",
           "type": "number",
           "unit": "score",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Residential stability: share of nights spent at the primary home anchor over the observation window. 1 = every night at home (summary instance only)."
         },
         {
           "name": "geoCommuteRegularityRatio",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Consistency of the weekday home->work->home rhythm: fraction of weekdays matching the dominant commute pattern within an hour's tolerance (summary instance only)."
         },
         {
           "name": "geoVacationDays90d",
           "type": "number",
           "unit": "days",
-          "range": [0, 90],
+          "range": [
+            0,
+            90
+          ],
           "description": "Days in the last 90 spent fully away from both home and work anchors (contiguous travel windows; summary instance only)."
         },
         {
           "name": "geoHotspotDwellRatio",
           "type": "number",
           "unit": "ratio",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Share of observed buckets spent inside operator-flagged hotspot zones (known fraud / illicit-activity locations supplied to the adapter). Non-zero values warrant review, not automatic decline (summary instance only)."
         },
         {
@@ -404,7 +530,10 @@
           "name": "geoAddressMatchScore",
           "type": "number",
           "unit": "score",
-          "range": [0, 1],
+          "range": [
+            0,
+            1
+          ],
           "description": "Agreement between the inferred home anchor and the applicant's registered residential address. 1 = same premises, 0 = different state (summary instance only)."
         }
       ]
@@ -1413,7 +1542,8 @@
         {
           "name": "companyRegNo",
           "type": "string",
-          "description": "Company registration number as printed on the certificate."
+          "description": "Company registration number as printed on the certificate.",
+          "fact": "companyRegNo"
         },
         {
           "name": "companyIncorporationDate",
@@ -1435,14 +1565,16 @@
           "description": "Entity type stated on the profile (e.g. private limited company, enterprise)."
         },
         {
-          "name": "ssmCompanyName",
+          "name": "companyName",
           "type": "string",
-          "description": "Business or company name as stated on the profile."
+          "description": "Business or company name as stated on the profile.",
+          "fact": "companyName"
         },
         {
-          "name": "ssmCompanyRegNo",
+          "name": "companyRegNo",
           "type": "string",
-          "description": "Business or company registration number as stated on the profile."
+          "description": "Business or company registration number as stated on the profile.",
+          "fact": "companyRegNo"
         },
         {
           "name": "companyStatus",

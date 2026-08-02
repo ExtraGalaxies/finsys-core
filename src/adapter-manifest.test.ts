@@ -58,6 +58,7 @@ function validDeclarative(): AdapterManifest {
     displayName: "Example Telco Adapter v1",
     category: "telco-carrier",
     version: 1,
+    cardinality: "single",
     produces: ["telcoOnTimePaymentRatio24m", "telcoTenureMonths"],
     implementation: {
       type: "declarative",
@@ -86,6 +87,7 @@ function validTypescript(): AdapterManifest {
     displayName: "Example Payments Adapter v1",
     category: "payment-network",
     version: 1,
+    cardinality: "single",
     produces: ["paymentsMonthlyVolumeMyrT3"],
     implementation: {
       type: "typescript",
@@ -295,6 +297,7 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
       displayName: "SME Loan Form Intake v1",
       category: "form-intake-sme",
       version: 1,
+      cardinality: "single",
       produces: ["monthlyIncome", "employerName"],
       implementation: {
         type: "form-intake",
@@ -313,6 +316,7 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
       displayName: "Operator Override — Bank Statement v1",
       category: "bank-statement",
       version: 1,
+      cardinality: "single",
       produces: ["bankClosingBalanceMyr"],
       implementation: { type: "manual-override" },
     };
@@ -441,6 +445,7 @@ describe("SYS-3036: external-assertion implementation type", () => {
       displayName: "Example Telco External-Assertion Adapter v1",
       category: "telco-carrier",
       version: 1,
+      cardinality: "single",
       produces: ["telcoOnTimePaymentRatio24m"],
       implementation: { type: "external-assertion" },
     };
@@ -601,10 +606,16 @@ describe("SYS-2502: cardinality + singletonFields", () => {
     expect(validate(m)).toBe(false);
   });
 
-  it("a manifest with NO cardinality stays valid (backward compat — host infers from the instanceKey convention)", () => {
-    const m = validTypescript();
-    expect("cardinality" in m).toBe(false);
-    expect(validate(m)).toBe(true);
+  it("SYS-3171: a manifest with NO cardinality is now REJECTED", () => {
+    // Was valid until 5.0.0, with the host inferring from the instanceKey
+    // convention ("" -> single, non-empty -> multi). Inference is exactly
+    // the problem: it cannot tell a declared-single adapter emitting a
+    // multi-keyed instance from a legitimately multi one, so the host stored
+    // the mismatch silently instead of rejecting it. Declaring it is what
+    // makes rejection possible at persistence time.
+    const m = { ...validTypescript() } as Record<string, unknown>;
+    delete m.cardinality;
+    expect(validate(m)).toBe(false);
   });
 
   it("accepts singletonFields on a multi-cardinality manifest", () => {
@@ -868,6 +879,7 @@ describe("enumValues declaration surface", () => {
       displayName: "Example Telco Tier Adapter v1",
       category: "telco-carrier",
       version: 1,
+      cardinality: "single",
       produces: ["telcoPaymentReliabilityTier", "telcoDistressTier"],
       enumValues: {
         telcoPaymentReliabilityTier: ["excellent", "good", "fair", "poor"],
@@ -898,6 +910,7 @@ describe("enumValues JSON-schema validation", () => {
       displayName: "Example Telco Tier Adapter v1",
       category: "telco-carrier",
       version: 1,
+      cardinality: "single",
       produces: ["telcoPaymentReliabilityTier"],
       enumValues,
       implementation: { type: "typescript", entryPoint: "extract.ts" },

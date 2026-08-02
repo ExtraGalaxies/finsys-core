@@ -36,7 +36,7 @@ export {
   getStepDefaultValues
 } from "./rhf-generator.js";
 
-export { validateFormConfig, validateFormSpec, validatePagesConfig } from "./validator.js";
+export { validateFormConfig } from "./validator.js";
 
 // Unified Form Config types
 export type {

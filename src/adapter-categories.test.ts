@@ -26,6 +26,8 @@ import {
   factOf,
   categoriesAttestingFact,
   isAdapterCategory,
+  isFieldSensitive,
+  sensitiveFieldsOf,
 } from "./adapter-categories.js";
 
 describe("Adapter category catalogue", () => {
@@ -878,6 +880,61 @@ describe("enum field kind", () => {
     expect(() => buildCategoryRegistry(raw)).toThrow(/must agree on kind/);
   });
 
+  // ── SYS-3164: field confidentiality (fail-closed) ──────────────────
+
+  it("a field with no declared confidentiality is sensitive (the default is not spellable)", () => {
+    const reg = buildCategoryRegistry(validRaw());
+    const cat = reg.all[0];
+    const unclassified = cat.fields.find((f) => f.confidentiality === undefined);
+    expect(unclassified).toBeDefined();
+    // The property is absent, not set to a "sensitive" literal — omission
+    // IS the declaration, which is what makes forgetting safe.
+    expect(unclassified!.confidentiality).toBeUndefined();
+  });
+
+  it("only 'non-sensitive' is declarable — 'sensitive' is refused at load", () => {
+    const raw = validRaw();
+    // The double cast is load-bearing, not laziness: TypeScript ALREADY
+    // refuses `confidentiality: "sensitive"` (the type admits only the
+    // opt-out), so this is the one way to reach the runtime guard. And
+    // the runtime guard is the one that matters — adapter-categories.json
+    // is plain JSON, so no compile-time check ever sees it.
+    raw.categories[0].fields[0] = {
+      ...raw.categories[0].fields[0],
+      confidentiality: "sensitive",
+    } as unknown as RawArg["categories"][number]["fields"][number];
+    expect(() => buildCategoryRegistry(raw)).toThrow(/invalid confidentiality/);
+  });
+
+  it("shared-fact attestations must agree on confidentiality (drift refused at load)", () => {
+    const raw = validRaw();
+    raw.categories.push({
+      id: "fixture-conf-a",
+      displayName: "Fixture Conf A",
+      description: "Attests the fact as sensitive (by omission).",
+      canonicalTable: "ihs_alt_data_fixture_conf_a",
+      fields: [
+        { name: "sharedName", type: "string", fact: "sharedName", description: "Sensitive here." },
+      ],
+    });
+    raw.categories.push({
+      id: "fixture-conf-b",
+      displayName: "Fixture Conf B",
+      description: "Same fact, opted out — incoherent.",
+      canonicalTable: "ihs_alt_data_fixture_conf_b",
+      fields: [
+        {
+          name: "sharedName",
+          type: "string",
+          fact: "sharedName",
+          confidentiality: "non-sensitive",
+          description: "Non-sensitive here.",
+        },
+      ],
+    });
+    expect(() => buildCategoryRegistry(raw)).toThrow(/must agree on confidentiality/);
+  });
+
   it("shared-fact attestations with MATCHING kind load fine", () => {
     const raw = validRaw();
     for (const suffix of ["a", "b"] as const) {
@@ -930,3 +987,41 @@ describe("telco-carrier enum tier fields", () => {
     }
   });
 });
+
+describe("isFieldSensitive / sensitiveFieldsOf (SYS-3164)", () => {
+  const someCategory = ADAPTER_CATEGORY_IDS[0];
+
+  it("treats an undeclared field as sensitive — the safe answer to a name it does not recognise", () => {
+    // Mid-rename callers and plain mistakes both land here. Answering
+    // "no, not sensitive" for a field nobody has heard of is the one
+    // answer that can silently leak.
+    expect(isFieldSensitive(someCategory, "aFieldThatDoesNotExist")).toBe(true);
+  });
+
+  it("treats every field of a category with no classifications as sensitive", () => {
+    const fields = categoryFieldsOf(someCategory);
+    expect(fields.length).toBeGreaterThan(0);
+    for (const f of fields) {
+      expect(isFieldSensitive(someCategory, f)).toBe(true);
+    }
+    expect(sensitiveFieldsOf(someCategory)).toEqual(fields);
+  });
+
+  it("sensitiveFieldsOf is the complement of the declared opt-outs", () => {
+    for (const id of ADAPTER_CATEGORY_IDS) {
+      const schema = categorySchemaOf(id);
+      const optedOut = schema.fields
+        .filter((f) => f.confidentiality === "non-sensitive")
+        .map((f) => f.name);
+      const sensitive = sensitiveFieldsOf(id);
+      expect([...sensitive, ...optedOut].sort()).toEqual(categoryFieldsOf(id).slice().sort());
+      for (const name of optedOut) {
+        expect(isFieldSensitive(id, name)).toBe(false);
+      }
+    }
+  });
+
+  it("throws for an unknown CATEGORY rather than answering — that is a wiring error, not a data question", () => {
+    expect(() => isFieldSensitive("no-such-category", "anything")).toThrow();
+  });
+})

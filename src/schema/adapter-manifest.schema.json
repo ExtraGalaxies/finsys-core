@@ -4,7 +4,16 @@
   "title": "Adapter Manifest",
   "description": "Declarative descriptor every source adapter ships alongside its implementation. Validated by the host app's discovery mechanism at boot. Mirrors the AdapterManifest TypeScript type in adapter-manifest.ts; KEEP IN SYNC.",
   "type": "object",
-  "required": ["manifestVersion", "id", "displayName", "category", "version", "produces", "implementation"],
+  "required": [
+    "manifestVersion",
+    "id",
+    "displayName",
+    "category",
+    "version",
+    "produces",
+    "implementation",
+    "cardinality"
+  ],
   "additionalProperties": false,
   "properties": {
     "manifestVersion": {
@@ -36,7 +45,10 @@
     },
     "produces": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "minItems": 1,
       "uniqueItems": true,
       "description": "Subset of the category's canonical field names that this adapter promises to produce. Validated against categoryFieldsOf(category) at registration."
@@ -45,16 +57,24 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["type", "fieldMap"],
+          "required": [
+            "type",
+            "fieldMap"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": { "const": "declarative" },
+            "type": {
+              "const": "declarative"
+            },
             "fieldMap": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "object",
-                "required": ["source", "canonical"],
+                "required": [
+                  "source",
+                  "canonical"
+                ],
                 "additionalProperties": false,
                 "properties": {
                   "source": {
@@ -69,7 +89,12 @@
                   },
                   "transform": {
                     "type": "string",
-                    "enum": ["identity", "pct_to_ratio01", "to_boolean", "to_integer"],
+                    "enum": [
+                      "identity",
+                      "pct_to_ratio01",
+                      "to_boolean",
+                      "to_integer"
+                    ],
                     "default": "identity"
                   }
                 }
@@ -79,10 +104,15 @@
         },
         {
           "type": "object",
-          "required": ["type", "entryPoint"],
+          "required": [
+            "type",
+            "entryPoint"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": { "const": "typescript" },
+            "type": {
+              "const": "typescript"
+            },
             "entryPoint": {
               "type": "string",
               "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))[^/].*\\.(ts|js|mjs|cjs)$",
@@ -92,16 +122,24 @@
         },
         {
           "type": "object",
-          "required": ["type", "fieldMap"],
+          "required": [
+            "type",
+            "fieldMap"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": { "const": "form-intake" },
+            "type": {
+              "const": "form-intake"
+            },
             "fieldMap": {
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "object",
-                "required": ["formFieldId", "canonical"],
+                "required": [
+                  "formFieldId",
+                  "canonical"
+                ],
                 "additionalProperties": false,
                 "properties": {
                   "formFieldId": {
@@ -122,28 +160,40 @@
         },
         {
           "type": "object",
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": { "const": "manual-override" }
+            "type": {
+              "const": "manual-override"
+            }
           },
           "description": "SYS-2501 — declares that this adapter's `produces` list is operator-overridable post-extraction. `produces` IS the override surface; the shape is intentionally empty beyond the discriminator."
         },
         {
           "type": "object",
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": { "const": "extraction-pipeline" }
+            "type": {
+              "const": "extraction-pipeline"
+            }
           },
           "description": "SYS-2998 — declaration-only: the adapter's implementation IS the host application's own document-extraction pipeline. No code is loaded and neither fetch() nor extract() ever runs; the host's pipeline writes the canonical rows and records the runs. The manifest exists purely as the declaration plane (produces, cardinality, fieldAuthorizations) for data the host was already producing."
         },
         {
           "type": "object",
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": { "const": "external-assertion" }
+            "type": {
+              "const": "external-assertion"
+            }
           },
           "description": "SYS-3036 — declaration-only: the adapter is executed entirely OUTSIDE the host. An externally-orchestrated process completes its own ceremony/extraction and PUSHES the result to the host's assertion-ingest surface. No code is loaded and neither fetch() nor extract() ever runs — same declaration-only shape as form-intake/manual-override/extraction-pipeline, but data arrives via an external push rather than the host's own pipeline, form submission, or extract() call."
         }
@@ -151,12 +201,18 @@
     },
     "cardinality": {
       "type": "string",
-      "enum": ["single", "multi"],
-      "description": "SYS-2502 — explicit instance cardinality. Optional for backward compatibility: when absent the host infers from the original instanceKey convention (empty string → single, non-empty → multi). New manifests should declare it so the host can reject mismatched extractions at persistence time."
+      "enum": [
+        "single",
+        "multi"
+      ],
+      "description": "SYS-2502 / SYS-3171 — explicit instance cardinality. REQUIRED as of 5.0.0. Previously optional, with the host inferring from the instanceKey convention (empty string -> single, non-empty -> multi); inference could not distinguish a declared-single adapter emitting a multi-keyed instance from a legitimately multi one, so mismatches were stored silently rather than rejected."
     },
     "singletonFields": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true,
       "description": "SYS-2502 — per-applicant singleton fields on a multi-instance category (e.g. accountHolderName on bank statements). Every entry must also appear in `produces`; host validates at registration."
     },
@@ -166,7 +222,13 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 100,
-        "not": { "enum": ["ihsId", "ic", "fullName"] }
+        "not": {
+          "enum": [
+            "ihsId",
+            "ic",
+            "fullName"
+          ]
+        }
       },
       "uniqueItems": true,
       "description": "v2.7.0 — partner-specific identity field names required by fetch(). Host validates per-applicant before invoking fetch() and skips the adapter when missing. Omit (or empty) for adapters that don't implement fetch(). Must NOT include core fields ('ihsId', 'ic', 'fullName') — those are always populated, and declaring 'ic' as required would cause the host to skip every non-MY applicant since 'ic' can legitimately be empty."
@@ -174,7 +236,9 @@
     "fieldAuthorizations": {
       "type": "object",
       "minProperties": 1,
-      "propertyNames": { "minLength": 1 },
+      "propertyNames": {
+        "minLength": 1
+      },
       "additionalProperties": {
         "type": "object",
         "minProperties": 1,
@@ -184,13 +248,19 @@
             "type": "array",
             "minItems": 1,
             "uniqueItems": true,
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "programIds": {
             "type": "array",
             "minItems": 1,
             "uniqueItems": true,
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       },
@@ -201,7 +271,9 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "additionalProperties": false,
         "properties": {
           "name": {

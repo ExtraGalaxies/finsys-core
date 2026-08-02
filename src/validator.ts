@@ -51,13 +51,3 @@ export function validateFormConfig(data: unknown): ValidationResult {
   };
 }
 
-// Legacy exports - these now just call validateFormConfig
-/** @deprecated Use validateFormConfig instead */
-export function validateFormSpec(data: unknown): ValidationResult {
-  return validateFormConfig(data);
-}
-
-/** @deprecated Use validateFormConfig instead */
-export function validatePagesConfig(data: unknown): ValidationResult {
-  return validateFormConfig(data);
-}

@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { validateFormConfig, validateFormSpec, validatePagesConfig } from './validator.js';
+import { validateFormConfig } from './validator.js';
 
 describe('validateFormConfig', () => {
   const validConfig = {
@@ -137,23 +137,12 @@ describe('deprecated aliases', () => {
     pages: [{ id: 'p1', fields: ['name'] }]
   };
 
-  it('validateFormSpec should delegate to validateFormConfig', () => {
-    const result = validateFormSpec(validConfig);
-    expect(result.valid).toBe(true);
-  });
-
-  it('validatePagesConfig should delegate to validateFormConfig', () => {
-    const result = validatePagesConfig(validConfig);
-    expect(result.valid).toBe(true);
-  });
-
-  it('deprecated aliases should return same errors as validateFormConfig', () => {
-    const invalid = {};
-    const base = validateFormConfig(invalid);
-    const spec = validateFormSpec(invalid);
-    const pages = validatePagesConfig(invalid);
-
-    expect(spec.valid).toBe(base.valid);
-    expect(pages.valid).toBe(base.valid);
+  // SYS-3171: validateFormSpec / validatePagesConfig were removed in 5.0.0.
+  // They were @deprecated aliases that only called validateFormConfig, and a
+  // sweep of finsys-api, finhub-adonisjs, finsys-client, lead-gen-ui and
+  // finsys-adapter-toolkit found zero consumers — a major is the one moment
+  // removing them is free.
+  it('validateFormConfig accepts the config the removed aliases used to', () => {
+    expect(validateFormConfig(validConfig).valid).toBe(true);
   });
 });

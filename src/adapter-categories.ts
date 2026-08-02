@@ -151,8 +151,19 @@ export interface CanonicalFieldSpec {
    * Shared-fact attestations must AGREE on this (enforced at load): one
    * real-world fact cannot be sensitive when a document attests it and
    * non-sensitive when a form does.
+   *
+   * SYS-3171: ALWAYS PRESENT on a built spec, even though authoring stays
+   * opt-out-only (see RawCategoryField, where it remains optional and
+   * `"sensitive"` is still unspellable). The asymmetry is the point.
+   *
+   * The registry is serialised verbatim to finhub and finsys-client, and
+   * on that wire "absent means sensitive" is carried by NOTHING — a
+   * consumer writing `if (field.confidentiality) protect()` reads exactly
+   * backwards and compiles clean. Emitting the value explicitly makes the
+   * invariant structural rather than documented: every read surface,
+   * including the JSON, states the class outright.
    */
-  readonly confidentiality?: "non-sensitive";
+  readonly confidentiality: "sensitive" | "non-sensitive";
 }
 
 /**
@@ -458,7 +469,9 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         description: f.description,
         ...(f.fact !== undefined ? { fact: f.fact } : {}),
         ...(f.kind !== undefined ? { kind: f.kind } : {}),
-        ...(f.confidentiality !== undefined ? { confidentiality: f.confidentiality } : {}),
+        // SYS-3171: resolved, never conditional — absence in the data file
+        // means sensitive, and the built spec says so out loud.
+        confidentiality: f.confidentiality ?? "sensitive",
       });
       fields.push(spec);
       if (prior) {

@@ -34,6 +34,32 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   company-fact change above: a manifest listing an old name in `produces` is
   refused at registration. finsys-api's builtin `finxtract-ic-v1` is such a
   caller. No database change implied.
+- **`AdapterManifest.cardinality` is now REQUIRED (SYS-3171).** It was optional
+  so pre-existing manifests could rely on the implicit convention (instanceKey
+  `""` → single, non-empty → multi) with the host inferring. Inference is the
+  problem: it cannot distinguish a declared-single adapter emitting a
+  multi-keyed instance from a legitimately multi one, so the host stored the
+  mismatch silently instead of rejecting it. Every in-repo manifest already
+  declared it, so this costs nothing here — the migration is for adapters
+  maintained outside this package.
+
+- **Removed the deprecated `validateFormSpec` and `validatePagesConfig`
+  exports (SYS-3171).** Both only called `validateFormConfig`. A sweep of
+  finsys-api, finhub-adonisjs, finsys-client, lead-gen-ui and
+  finsys-adapter-toolkit found zero consumers; a major is the one moment
+  removing them is free.
+
+- **`CanonicalFieldSpec.confidentiality` is now always present on a built
+  spec (SYS-3171).** Authoring is unchanged and still opt-out-only — the data
+  file omits the property, and `"sensitive"` remains unspellable there — but
+  the registry now resolves it, so every built spec states the class outright
+  (`"sensitive" | "non-sensitive"`). The registry is serialised verbatim to
+  finhub and finsys-client, and on that wire "absent means sensitive" was
+  carried by nothing: a consumer writing `if (field.confidentiality)
+  protect()` read exactly backwards and compiled clean. This makes the
+  invariant structural rather than documented. Breaking only for code that
+  CONSTRUCTS a `CanonicalFieldSpec`; consumers that read or spread are
+  unaffected.
 
 - **Company name and registration number are now shared facts across all three
   attesting documents (SYS-3163).** `finxtract-ssm` renames `ssmCompanyName` →

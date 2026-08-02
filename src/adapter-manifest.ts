@@ -135,15 +135,19 @@ export interface AdapterManifest {
    *   - `multi` — unbounded instances per applicant, each with a stable,
    *     non-empty instanceKey.
    *
-   * OPTIONAL for backward compatibility: manifests written before this
-   * field existed rely on the original implicit convention
-   * (instanceKey `""` → single, non-empty → multi), and the host infers
-   * accordingly when the field is absent. New manifests should declare
-   * it — an explicit declaration lets the host REJECT a mismatched
-   * extraction (a multi-keyed instance from a declared-single adapter,
-   * or vice versa) at persistence time instead of silently storing it.
+   * REQUIRED as of 5.0.0 (SYS-3171). It was optional for backward
+   * compatibility with manifests written before the field existed, which
+   * relied on the implicit convention (instanceKey `""` → single,
+   * non-empty → multi) and let the host infer. Inference is the problem:
+   * it cannot tell a declared-single adapter emitting a multi-keyed
+   * instance from a legitimately multi one, so the host silently stored
+   * the mismatch instead of rejecting it. An explicit declaration is what
+   * makes that rejection possible at persistence time.
+   *
+   * Every in-repo manifest already declared it, so this costs nothing
+   * here; the migration is for adapters maintained outside this package.
    */
-  readonly cardinality?: "single" | "multi";
+  readonly cardinality: "single" | "multi";
 
   /**
    * SYS-2502: per-applicant singleton fields on a multi-instance

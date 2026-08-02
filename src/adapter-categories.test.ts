@@ -937,22 +937,32 @@ describe("enum field kind", () => {
 
   // ── SYS-3164: field confidentiality (fail-closed) ──────────────────
 
-  it("a field with no declared confidentiality is sensitive (the default is not spellable)", () => {
-    const reg = buildCategoryRegistry(validRaw());
-    const cat = reg.all[0];
-    const unclassified = cat.fields.find((f) => f.confidentiality === undefined);
-    expect(unclassified).toBeDefined();
-    // The property is absent, not set to a "sensitive" literal — omission
-    // IS the declaration, which is what makes forgetting safe.
-    expect(unclassified!.confidentiality).toBeUndefined();
+  it("SYS-3171: an unclassified field is RESOLVED to sensitive on the built spec", () => {
+    // The asymmetry is the design. AUTHORING stays opt-out-only — the data
+    // file omits the property and "sensitive" is unspellable there — but the
+    // BUILT spec always states the class outright, because the registry is
+    // serialised verbatim to finhub and finsys-client and on that wire
+    // "absent means sensitive" is carried by nothing.
+    const raw = validRaw();
+    const rawField = raw.categories[0].fields[0];
+    expect(rawField.confidentiality).toBeUndefined();
 
-    // ...and the ACCESSOR must agree, or the assertion above is tautological
-    // (undefined === undefined) and would pass with isFieldSensitive fully
-    // inverted — the one bug it exists to catch. Asserted against a LIVE
-    // category, because isFieldSensitive reads the module-level registry
-    // rather than the fixture one built above.
+    const reg = buildCategoryRegistry(raw);
+    const built = reg.all[0].fields.find((f) => f.name === rawField.name);
+    expect(built?.confidentiality, "built spec resolves the default").toBe("sensitive");
+    // Nothing is left absent — the whole point of resolving it.
+    for (const cat of reg.all) {
+      for (const f of cat.fields) {
+        expect(f.confidentiality, `${cat.id}.${f.name}`).toBeDefined();
+      }
+    }
+
+    // ...and the ACCESSOR must agree, or this is tautological and would pass
+    // with isFieldSensitive fully inverted — the one bug it exists to catch.
+    // Asserted against a LIVE category, because isFieldSensitive reads the
+    // module-level registry rather than the fixture one built above.
     const live = allCategories()[0];
-    const liveUnclassified = live.fields.find((f) => f.confidentiality === undefined);
+    const liveUnclassified = live.fields.find((f) => f.confidentiality === "sensitive");
     expect(liveUnclassified).toBeDefined();
     expect(isFieldSensitive(live.id, liveUnclassified!.name)).toBe(true);
   });

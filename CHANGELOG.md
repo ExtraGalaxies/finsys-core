@@ -6,6 +6,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [5.0.0] — 2026-08-02
+
 ### Changed — BREAKING (vocabulary)
 
 - **Five `ic` identity fields lose the source prefix (SYS-3163).** `icName` →

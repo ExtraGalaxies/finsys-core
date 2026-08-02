@@ -6,7 +6,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [4.10.0] — 2026-08-02
+
 ### Added
+
+- **Manifest-declared field confidentiality (SYS-3164).** New optional
+  canonical-field contract property `confidentiality?: "non-sensitive"` —
+  the at-rest sibling of the existing access-time `fieldAuthorizations`.
+  Absence means sensitive, and `"sensitive"` is deliberately unspellable;
+  the only declarable value is the opt-out, so a field nobody has
+  classified yet defaults to protected rather than exposed. New fail-closed
+  accessors `isFieldSensitive(category, field)` (true for anything not
+  explicitly opted out, including unknown fields) and
+  `sensitiveFieldsOf(category)` (the complement of the declared opt-outs).
+  Shared-fact drift validation extended: attestations of one fact must
+  agree on confidentiality, alongside the existing `fact`/`kind` checks.
+  No field is classified in this release — every existing field reads as
+  sensitive until a consumer opts individual fields out.
 
 - **Per-file document-language selector tag (SYS-2873).** New optional catalog
   tag `document_language_options` on file-type entries (`TaggedFieldData`),

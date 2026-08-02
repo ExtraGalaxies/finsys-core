@@ -110,6 +110,32 @@ export interface CanonicalFieldSpec {
    * unordered).
    */
   readonly kind?: "enum";
+  /**
+   * SYS-3164: the field's confidentiality class. The ONLY way to declare
+   * one is to opt OUT.
+   *
+   * ABSENT MEANS SENSITIVE. There is deliberately no `"sensitive"`
+   * spelling: a field is sensitive unless someone has looked at it and
+   * said otherwise, so the failure mode of forgetting is a field that is
+   * over-protected, never one that is silently exposed. That polarity is
+   * not a preference — it is the lesson already recorded in finhub's
+   * SYS-2806 audit-redaction allowlist, where "a newly added IHS column
+   * that's never classified here defaults to sensitive, not safe" is the
+   * property that makes the list safe to add columns around. An opt-in
+   * `sensitive: true` flag inverts exactly that: every field anyone
+   * forgot to mark ships in the clear, and neither the data nor the
+   * types surface it.
+   *
+   * What consumes it: canonical storage encrypts sensitive fields at
+   * rest. Access-time gating (`fieldAuthorizations`) is its sibling —
+   * that says who may read a field, this says how it is held when
+   * nobody is reading it.
+   *
+   * Shared-fact attestations must AGREE on this (enforced at load): one
+   * real-world fact cannot be sensitive when a document attests it and
+   * non-sensitive when a form does.
+   */
+  readonly confidentiality?: "non-sensitive";
 }
 
 /**
@@ -137,6 +163,7 @@ interface RawCategoryField {
   description: string;
   fact?: string;
   kind?: "enum";
+  confidentiality?: "non-sensitive";
 }
 
 interface RawCategory {
@@ -161,6 +188,15 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
 ];
 
 const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> = ["enum"];
+
+/**
+ * SYS-3164. One entry, and that is the point — see `confidentiality` on
+ * `CanonicalFieldSpec`. "sensitive" is unspellable because it is the
+ * default; the only declarable value is the opt-out.
+ */
+const VALID_FIELD_CONFIDENTIALITY: ReadonlyArray<
+  NonNullable<CanonicalFieldSpec["confidentiality"]>
+> = ["non-sensitive"];
 
 /**
  * The validated, indexed, immutable category registry. Built once at
@@ -217,7 +253,12 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
   // uniqueness rule needs the full picture, not just the first declarer.
   const declarations = new Map<
     CanonicalFieldName,
-    { fact: string | undefined; kind: "enum" | undefined; categories: AdapterCategory[] }
+    {
+      fact: string | undefined;
+      kind: "enum" | undefined;
+      confidentiality: "non-sensitive" | undefined;
+      categories: AdapterCategory[];
+    }
   >();
   const tables = new Set<string>();
   const all: CategorySchema[] = [];
@@ -304,6 +345,20 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
               `shared-fact attestations must agree on kind`,
           );
         }
+        // SYS-3164: same drift class again. One real-world fact cannot be
+        // sensitive when a document attests it and non-sensitive when a
+        // form does — storage would then hold the two attestations of one
+        // fact under different protection, and which one you got would
+        // depend on which source happened to write last.
+        if (prior.confidentiality !== f.confidentiality) {
+          const describeConf = (c: string | undefined): string =>
+            c === undefined ? "sensitive (default)" : `"${c}"`;
+          throw new Error(
+            `adapter category data: canonical field "${f.name}" declared ${describeConf(prior.confidentiality)} ` +
+              `by ${prior.categories.join(" + ")} but ${describeConf(f.confidentiality)} by ${cat.id} — ` +
+              `shared-fact attestations must agree on confidentiality`,
+          );
+        }
       }
       if (f.fact !== undefined) {
         // A fact id is bound to exactly one field name registry-wide —
@@ -341,6 +396,13 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           );
         }
       }
+      if (f.confidentiality !== undefined && !VALID_FIELD_CONFIDENTIALITY.includes(f.confidentiality)) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) has invalid confidentiality ` +
+            `"${String(f.confidentiality)}" — the only declarable value is "non-sensitive"; ` +
+            `sensitive is the default and is expressed by omitting the property`,
+        );
+      }
       if (typeof f.description !== "string" || f.description.length === 0) {
         throw new Error(
           `adapter category data: field "${f.name}" (${where}) needs a non-empty description`,
@@ -372,6 +434,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         description: f.description,
         ...(f.fact !== undefined ? { fact: f.fact } : {}),
         ...(f.kind !== undefined ? { kind: f.kind } : {}),
+        ...(f.confidentiality !== undefined ? { confidentiality: f.confidentiality } : {}),
       });
       fields.push(spec);
       if (prior) {
@@ -381,7 +444,12 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         // than silently privileging the first declarer.
         fieldToCategory.delete(f.name);
       } else {
-        declarations.set(f.name, { fact: f.fact, kind: f.kind, categories: [cat.id] });
+        declarations.set(f.name, {
+          fact: f.fact,
+          kind: f.kind,
+          confidentiality: f.confidentiality,
+          categories: [cat.id],
+        });
         fieldToCategory.set(f.name, cat.id);
       }
       if (f.fact !== undefined) {
@@ -458,6 +526,34 @@ export function categorySchemaOf(id: AdapterCategory): CategorySchema {
  */
 export function categoryFieldsOf(id: AdapterCategory): ReadonlyArray<CanonicalFieldName> {
   return categorySchemaOf(id).fields.map((f) => f.name);
+}
+
+/**
+ * SYS-3164: is this field of this category sensitive?
+ *
+ * Answers TRUE for anything not explicitly declared `"non-sensitive"` —
+ * including a field name the category does not declare at all. That last
+ * part is deliberate: a caller asking about an unknown field is either
+ * mid-rename or wrong, and the safe answer to "should I protect this?"
+ * when you do not recognise it is yes. `categorySchemaOf` still throws
+ * for an unknown CATEGORY, because that is a wiring error rather than a
+ * data question.
+ */
+export function isFieldSensitive(id: AdapterCategory, field: CanonicalFieldName): boolean {
+  const spec = categorySchemaOf(id).fields.find((f) => f.name === field);
+  return spec?.confidentiality !== "non-sensitive";
+}
+
+/**
+ * SYS-3164: every field of this category that is sensitive — i.e. every
+ * field that did not opt out. The complement of the declared
+ * `"non-sensitive"` set, so a newly added field appears here until
+ * someone classifies it.
+ */
+export function sensitiveFieldsOf(id: AdapterCategory): ReadonlyArray<CanonicalFieldName> {
+  return categorySchemaOf(id)
+    .fields.filter((f) => f.confidentiality !== "non-sensitive")
+    .map((f) => f.name);
 }
 
 /**

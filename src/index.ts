@@ -201,6 +201,8 @@ export {
   categoryForField,
   factOf,
   categoriesAttestingFact,
+  isFieldSensitive,
+  sensitiveFieldsOf,
   isAdapterCategory,
   assertAdapterCategory,
 } from './adapter-categories.js'

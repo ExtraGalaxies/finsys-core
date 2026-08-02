@@ -6,23 +6,42 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [4.10.0] — 2026-08-02
+### Fixed
+
+- **Field-confidentiality follow-ups (SYS-3169).** Corrections to the SYS-3164
+  contract that landed after 4.10.0 was cut. The `confidentiality` doc comment
+  claimed more coverage than the mechanism has, and that comment propagates
+  into the published `.d.ts` — it now states the two limits plainly: it reaches
+  CANONICAL data only (no category is canonical over the legacy wide `ihs`
+  table, so a field still living in an `ihs` column is untouched until the
+  adapter transition relocates it), and raw payloads store the same values
+  separately under their own retention window, so encrypting a canonical
+  column alone makes the guarantee "at rest, in one of two places".
+  Repo-side, removed a test that would have gone red the moment anyone
+  classified the first field — it asserted a precondition its title only
+  stated — added the missing positive case for agreeing shared-fact
+  attestations, de-tautologised the default test so it actually exercises
+  `isFieldSensitive`, and moved the value check ahead of the shared-fact
+  agreement check so an invalid value no longer reports as a disagreement.
+  No behaviour change; no field is classified.
 
 ### Added
 
-- **Manifest-declared field confidentiality (SYS-3164).** New optional
-  canonical-field contract property `confidentiality?: "non-sensitive"` —
-  the at-rest sibling of the existing access-time `fieldAuthorizations`.
-  Absence means sensitive, and `"sensitive"` is deliberately unspellable;
-  the only declarable value is the opt-out, so a field nobody has
-  classified yet defaults to protected rather than exposed. New fail-closed
-  accessors `isFieldSensitive(category, field)` (true for anything not
-  explicitly opted out, including unknown fields) and
-  `sensitiveFieldsOf(category)` (the complement of the declared opt-outs).
-  Shared-fact drift validation extended: attestations of one fact must
-  agree on confidentiality, alongside the existing `fact`/`kind` checks.
-  No field is classified in this release — every existing field reads as
-  sensitive until a consumer opts individual fields out.
+- **Field confidentiality on canonical field specs (SYS-3164).** New optional
+  `confidentiality?: "non-sensitive"` on `CanonicalFieldSpec`, plus
+  `isFieldSensitive(category, field)` and `sensitiveFieldsOf(category)`.
+  **Absence means sensitive** — there is deliberately no `"sensitive"`
+  spelling, so a field is protected unless someone explicitly opted it out
+  and the failure mode of forgetting is over-protection rather than silent
+  exposure. Shared-fact attestations must agree on it (enforced at load,
+  alongside the existing `fact`/`kind` drift rules): one real-world fact
+  cannot be sensitive when a document attests it and non-sensitive when a
+  form does. No field is classified in this release, so the payload
+  `allCategories()` publishes is byte-identical and every field currently
+  reads as sensitive — the intended starting point for a fail-closed
+  default. Consumers honouring it should note two limits: it covers
+  canonical data only (nothing is canonical over the legacy wide `ihs`
+  table), and raw payloads store the same values separately.
 
 - **Per-file document-language selector tag (SYS-2873).** New optional catalog
   tag `document_language_options` on file-type entries (`TaggedFieldData`),

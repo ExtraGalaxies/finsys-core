@@ -890,6 +890,16 @@ describe("enum field kind", () => {
     // The property is absent, not set to a "sensitive" literal — omission
     // IS the declaration, which is what makes forgetting safe.
     expect(unclassified!.confidentiality).toBeUndefined();
+
+    // ...and the ACCESSOR must agree, or the assertion above is tautological
+    // (undefined === undefined) and would pass with isFieldSensitive fully
+    // inverted — the one bug it exists to catch. Asserted against a LIVE
+    // category, because isFieldSensitive reads the module-level registry
+    // rather than the fixture one built above.
+    const live = allCategories()[0];
+    const liveUnclassified = live.fields.find((f) => f.confidentiality === undefined);
+    expect(liveUnclassified).toBeDefined();
+    expect(isFieldSensitive(live.id, liveUnclassified!.name)).toBe(true);
   });
 
   it("only 'non-sensitive' is declarable — 'sensitive' is refused at load", () => {
@@ -933,6 +943,36 @@ describe("enum field kind", () => {
       ],
     });
     expect(() => buildCategoryRegistry(raw)).toThrow(/must agree on confidentiality/);
+  });
+
+  it("shared-fact attestations with MATCHING confidentiality load fine", () => {
+    // The negative case above proves drift is refused; without this, a bug
+    // that wrongly refused AGREEING opt-outs would ship green, because the
+    // live data file only ever exercises the both-absent case. Mirrors the
+    // existing positive test for `kind`.
+    const raw = validRaw();
+    for (const id of ["fixture-agree-a", "fixture-agree-b"]) {
+      raw.categories.push({
+        id,
+        displayName: `Fixture Agree ${id.slice(-1).toUpperCase()}`,
+        description: "Attests the shared fact, both opted out.",
+        canonicalTable: `ihs_alt_data_${id.replace(/-/g, "_")}`,
+        fields: [
+          {
+            name: "sharedPublicTier",
+            type: "string",
+            fact: "sharedPublicTier",
+            confidentiality: "non-sensitive",
+            description: "Non-sensitive in both.",
+          },
+        ],
+      });
+    }
+    const reg = buildCategoryRegistry(raw);
+    expect(reg.factToCategories.get("sharedPublicTier")).toEqual([
+      "fixture-agree-a",
+      "fixture-agree-b",
+    ]);
   });
 
   it("shared-fact attestations with MATCHING kind load fine", () => {
@@ -998,15 +1038,6 @@ describe("isFieldSensitive / sensitiveFieldsOf (SYS-3164)", () => {
     expect(isFieldSensitive(someCategory, "aFieldThatDoesNotExist")).toBe(true);
   });
 
-  it("treats every field of a category with no classifications as sensitive", () => {
-    const fields = categoryFieldsOf(someCategory);
-    expect(fields.length).toBeGreaterThan(0);
-    for (const f of fields) {
-      expect(isFieldSensitive(someCategory, f)).toBe(true);
-    }
-    expect(sensitiveFieldsOf(someCategory)).toEqual(fields);
-  });
-
   it("sensitiveFieldsOf is the complement of the declared opt-outs", () => {
     for (const id of ADAPTER_CATEGORY_IDS) {
       const schema = categorySchemaOf(id);
@@ -1022,6 +1053,8 @@ describe("isFieldSensitive / sensitiveFieldsOf (SYS-3164)", () => {
   });
 
   it("throws for an unknown CATEGORY rather than answering — that is a wiring error, not a data question", () => {
-    expect(() => isFieldSensitive("no-such-category", "anything")).toThrow();
+    expect(() => isFieldSensitive("no-such-category", "anything")).toThrow(
+      /Unknown adapter category/,
+    );
   });
 })

@@ -1,0 +1,41 @@
+name: disclosure-scan
+
+# @finsys/core is published to PUBLIC npm and ships `dist`. Generated .d.ts
+# carries JSDoc verbatim, so a comment written in src reaches every consumer's
+# editor and the public registry. That is the exact path by which partner names
+# reached published artifacts before (see the 2026-07-27 audit), which is why
+# the artifact scan below matters more than the diff scan.
+#
+# Advisory by default — flip `fail_on_match: true` to make it blocking.
+# Inert until the org secret PARTNER_NAME_PATTERN exists; when it is unset the
+# scan SKIPS with a loud warning rather than reporting a quiet green.
+
+on:
+  pull_request:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Cheap, early: catches a name before it is even merged.
+  diff:
+    if: github.event_name == 'pull_request'
+    uses: ExtraGalaxies/finhero-devops/.github/workflows/disclosure-scan.yml@master
+    with:
+      mode: diff
+      fail_on_match: false
+    secrets: inherit
+
+  # The one that counts for a published package: scans the actual tarball,
+  # including generated .d.ts and any source maps. Runs on release tags, so it
+  # sits between "tag cut" and "npm publish".
+  artifact:
+    if: github.event_name != 'pull_request'
+    uses: ExtraGalaxies/finhero-devops/.github/workflows/disclosure-scan.yml@master
+    with:
+      mode: artifact
+      fail_on_match: false
+    secrets: inherit

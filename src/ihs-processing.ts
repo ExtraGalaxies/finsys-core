@@ -190,8 +190,26 @@ function isNumericField(fieldName: string): boolean {
  * The locale stays 'en-US' for now and governs only grouping/ordering,
  * not the decimal count. It becomes jurisdiction-driven under SYS-3258.
  */
+/**
+ * SYS-3249: grouping, but NO invented decimals.
+ *
+ * This previously forced `minimumFractionDigits: 2` on everything that
+ * reached the numeric branch. That is a claim about precision, and it is
+ * wrong in two directions:
+ *
+ *  - Not every number here is money. `cashConversionCycleDays` rendered as
+ *    "45.00" days and `totalShareIssued` as "1,000,000.00" shares.
+ *  - Not every currency has two decimal places. VND and JPY have none, so a
+ *    money value whose currency we do NOT know is exactly the value we have
+ *    no basis to render with two decimals — and every row written before
+ *    this change has no recorded currency.
+ *
+ * So the unknown case now groups and preserves what the value actually has,
+ * rather than asserting a precision nobody supplied. Where the currency IS
+ * known the formatter above is used instead, and the currency decides — which
+ * is the only place that decision legitimately comes from.
+ */
 const PLAIN_NUMBER_FORMAT = new Intl.NumberFormat('en-US', {
-  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 })
 

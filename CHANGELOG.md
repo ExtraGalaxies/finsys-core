@@ -33,12 +33,29 @@ document, so no field-level currency can be right for more than one of them.
   Monetary fields are now identified from the category registry rather than a substring
   word list, which had missed 51 of the 143.
 
-**Visible rendering change, currency or not.** Because those 51 fields now reach the numeric
-branch at all, they gain thousands separators and two fraction digits even for existing
-Malaysian data: `payslipGrossPay` renders `15,000,000.00` where it previously rendered
-`15000000`. This affects the IHS detail view in finhub-adonisjs and finsys-client. It is the
-intended correction — they were always monetary and always should have been grouped — but it
-is the one change here that an existing user sees without any new data.
+- **Fraction digits are no longer invented.** The numeric branch previously forced
+  `minimumFractionDigits: 2` on everything. That is a claim about precision, and it was wrong
+  in two directions: not every number here is money (`cashConversionCycleDays` rendered
+  `45.00`, `totalShareIssued` rendered `1,000,000.00`), and not every currency has two decimal
+  places — VND and JPY have none, so a value whose currency we do *not* know is exactly the
+  one we have no basis to render with two decimals. Now: where the currency is known it
+  decides; otherwise the value is grouped and its own precision preserved.
+
+**Visible rendering changes for existing data, currency or not.** Two, both affecting the IHS
+detail view in finhub-adonisjs and finsys-client:
+
+- The 51 previously-invisible money fields gain thousands separators — `payslipGrossPay`
+  renders `15,000,000` where it rendered `15000000`.
+- Amounts no longer gain trailing `.00`. `1234.5` renders `1,234.5` rather than `1,234.50`
+  when no currency is recorded, and `MYR 1,234.50` when it is.
+
+Both are corrections rather than regressions, but they are what an existing user sees without
+any new data arriving.
+
+**A note for consumers that string-match or export.** When a currency IS known, `Intl`
+separates the code from the amount with U+00A0 (a non-breaking space), e.g.
+`MYR 1,234.50`. That is deliberate on Intl's part and is left intact rather than
+rewritten; anything comparing or exporting these strings should normalise whitespace.
 
 **Not breaking.** `unit` appears nowhere in the adapter manifest contract — it exists only
 in this package's own data file — and nothing outside the loader's own validation consumed

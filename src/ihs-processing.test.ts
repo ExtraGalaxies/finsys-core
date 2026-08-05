@@ -588,17 +588,22 @@ describe('currency-aware value formatting', () => {
     expect(cell!.formattedData.T1).toMatch(/MYR|RM/)
   })
 
-  it('an absent currency keeps the pre-SYS-3249 formatting — absence is unknown, never a default', () => {
+  it('an absent currency renders grouped but invents no decimals — absence is unknown, never a default', () => {
     // Every row written before this shipped has no currency. Defaulting one
     // in would render a VND figure as ringgit, which is precisely the
     // failure the denomination exists to prevent — so absence must stay
     // undecorated rather than become a guess.
+    //
+    // And it must not invent PRECISION either. Forcing two fraction digits
+    // is a claim about the currency, and VND and JPY have none — so the one
+    // value we have no basis to render with two decimals is exactly the one
+    // whose currency we do not know. Group; assert nothing.
     const tables = buildFileFieldTables(
       { totalCreditsT1: 1234.5 },
       { totalCreditsT1: prov() }
     )
     const cell = populatedT1(tables)
-    expect(cell!.formattedData.T1).toBe('1,234.50')
+    expect(cell!.formattedData.T1).toBe('1,234.5')
     expect(cell!.formattedData.T1).not.toMatch(/[A-Z]{2,3}|RM|\$|₫/)
   })
 
@@ -613,7 +618,7 @@ describe('currency-aware value formatting', () => {
     )
     const cell = populatedT1(tables)
     expect(cell!.formattedData.T1).toContain('NOTACURRENCY')
-    expect(cell!.formattedData.T1).toContain('1,234.50')
+    expect(cell!.formattedData.T1).toContain('1,234.5')
   })
 })
 
@@ -670,5 +675,52 @@ describe('monetary fields outside the isNumericField word list', () => {
         `${cell.displayName} must carry the denomination like its neighbours`
       ).toContain('VND')
     }
+  })
+})
+
+// ── SYS-3249: precision is never invented ────────────────────────────
+describe('fraction digits come from the currency, or from the value — never from a constant', () => {
+  const P = (currency?: string) => ({
+    source: 'finxtract:ssm',
+    confidence: 0.9,
+    observedAt: '2026-08-05T00:00:00Z',
+    sourceRunId: 'run-1',
+    origin: 'extracted' as const,
+    ...(currency ? { currency } : {}),
+  })
+  // Intl separates the currency code from the number with U+00A0, a
+  // NON-BREAKING space — deliberate on its part (the code should not wrap
+  // away from its amount). Normalised here so assertions compare what a
+  // reader sees rather than which flavour of space Intl chose; the rendered
+  // value keeps the nbsp, which is what consumers receive.
+  const render = (data: Record<string, unknown>, prov: Record<string, unknown>) => {
+    const tables = buildFileFieldTables(data, prov as never)
+    const cell = Object.values(tables)
+      .flatMap((t) => t.items)
+      .find((i) => i.data?.value !== null && i.data?.value !== undefined)
+    return cell!.formattedData.value.replace(/\u00a0/g, ' ')
+  }
+
+  it('a zero-decimal currency gets no decimals; a two-decimal currency gets two', () => {
+    expect(render({ ssmPaidUpCapital: 14004792678863 }, { ssmPaidUpCapital: P('VND') })).toBe(
+      'VND 14,004,792,678,863'
+    )
+    expect(render({ ssmPaidUpCapital: 1234.5 }, { ssmPaidUpCapital: P('MYR') })).toBe('MYR 1,234.50')
+  })
+
+  it('an unknown currency invents no decimals — a VND figure must not gain two', () => {
+    // The regression this pins: forcing minimumFractionDigits: 2 rendered
+    // 14,004,792,678,863 as "...,863.00" — two decimal places that do not
+    // exist in the currency the value is actually denominated in. Every row
+    // predating this change is in exactly this state.
+    expect(render({ ssmPaidUpCapital: 14004792678863 }, { ssmPaidUpCapital: P() })).toBe(
+      '14,004,792,678,863'
+    )
+  })
+
+  it('a non-monetary count is not dressed up as money', () => {
+    // totalShareIssued is a count of shares and reaches the numeric branch
+    // only because its name contains "total". It rendered "1,000,000.00".
+    expect(render({ totalShareIssued: 1000000 }, {})).toBe('1,000,000')
   })
 })

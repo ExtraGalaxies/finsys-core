@@ -61,7 +61,7 @@
           "name": "telcoArpuMyr",
           "type": "number",
           "kind": "money",
-          "description": "Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy."
+          "description": "Average Revenue Per User (monthly). Coarse spending-capacity proxy. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
         },
         {
           "name": "telcoPaymentReliabilityTier",
@@ -99,13 +99,13 @@
           "name": "paymentsMonthlyVolumeMyrT3",
           "type": "number",
           "kind": "money",
-          "description": "Mean monthly inbound transaction volume (RM) over the trailing 3 months."
+          "description": "Mean monthly inbound transaction volume over the trailing 3 months. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
         },
         {
           "name": "paymentsMonthlyVolumeMyrT12",
           "type": "number",
           "kind": "money",
-          "description": "Mean monthly inbound transaction volume (RM) over the trailing 12 months. Pair with T3 for trend direction."
+          "description": "Mean monthly inbound transaction volume over the trailing 12 months. Pair with T3 for trend direction. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
         },
         {
           "name": "paymentsArpuStability12m",
@@ -309,7 +309,7 @@
           "name": "arTotalOutstandingMyr",
           "type": "number",
           "kind": "money",
-          "description": "Total accounts-receivable balance outstanding (RM). The size of the debtor book the business is carrying."
+          "description": "Total accounts-receivable balance outstanding. The size of the debtor book the business is carrying. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
         },
         {
           "name": "arCurrentRatio",
@@ -355,7 +355,7 @@
           "name": "accountingRevenue12mMyr",
           "type": "number",
           "kind": "money",
-          "description": "Trailing-12-month turnover per the general ledger (RM). The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies."
+          "description": "Trailing-12-month turnover per the general ledger. The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
         },
         {
           "name": "grossMarginPct",

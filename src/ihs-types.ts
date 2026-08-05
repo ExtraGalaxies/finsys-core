@@ -81,6 +81,22 @@ export interface IhsFieldProvenance {
    * value silently rendered in the wrong denomination is the failure this
    * field exists to prevent, and defaulting would reintroduce it wearing a
    * different hat.
+   *
+   * PRECEDENCE against the document-level `currency` canonical field.
+   * `finxtract-financial-statement` also declares a canonical field named
+   * `currency` ("Reporting currency stated on the document"). The two are
+   * not rivals and must not be merged:
+   *
+   *   - that field is the DOCUMENT's declared reporting currency, one value
+   *     per statement, and is a data point in its own right;
+   *   - this is the denomination of ONE observed value.
+   *
+   * This wins wherever both exist, because the whole reason currency sits on
+   * the observation is that a single document can report several — an FX
+   * transaction, a foreign-currency balance. When this is absent the document
+   * field is a reasonable SOURCE for a producer populating it, but it is not
+   * a substitute at read time: a reader that falls back to it would state a
+   * denomination the value never claimed.
    */
   currency?: string
 }

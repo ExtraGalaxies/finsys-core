@@ -1161,7 +1161,11 @@ describe("monetary fields and the closed unit set", () => {
     const money = allCategories().flatMap((cat) =>
       cat.fields.filter((f) => f.kind === "money").map((f) => ({ cat: cat.id, f })),
     );
-    expect(money.length).toBeGreaterThan(0);
+    // Pinned, not `toBeGreaterThan(0)`. The 143 were converted by a SCRIPT,
+    // and a script is exactly what can drop 140 of them while leaving 3 —
+    // which a lower bound would wave through. If this number changes, that
+    // is either a new money field (raise it deliberately) or a regression.
+    expect(money.length).toBe(143);
     for (const { cat, f } of money) {
       expect(f.type, `${cat}.${f.name} type`).toBe("number");
       expect(f.unit, `${cat}.${f.name} unit`).toBeUndefined();
@@ -1228,5 +1232,37 @@ describe("monetary fields and the closed unit set", () => {
     const spec = reg.byId.get("fixture-source")?.fields.find((f) => f.name === "fixtureAmount");
     expect(spec?.kind).toBe("money");
     expect(spec?.unit).toBeUndefined();
+  });
+})
+
+// ── SYS-3249: the drift guard the allow-list alone does not give you ─
+describe("monetary declaration cannot be skipped by silence", () => {
+  it("every numeric canonical field declares a unit OR kind money", () => {
+    // The allow-list closes "declares MYR" and the per-kind block closes
+    // "declares money AND a unit". Neither closes the cheapest path of all:
+    // declare NOTHING. A bare { type: "number" } money field loads clean,
+    // gets no denomination forever, and fails no test — and post-change,
+    // saying nothing is the only route that never throws.
+    //
+    // Exactly two numeric fields are legitimately bare, so the counter-
+    // pressure costs almost nothing. Both are named, not pattern-matched:
+    // an exception you have to type is an exception someone has to justify.
+    const LEGITIMATELY_BARE = new Set([
+      "year", // a document ordinal, not a measure
+      "totalShareIssued", // a count of shares, not an amount of money
+    ]);
+    const bare: string[] = [];
+    for (const cat of allCategories()) {
+      for (const f of cat.fields) {
+        if (f.type !== "number") continue;
+        if (f.unit !== undefined || f.kind === "money") continue;
+        if (LEGITIMATELY_BARE.has(f.name)) continue;
+        bare.push(`${cat.id}.${f.name}`);
+      }
+    }
+    expect(
+      bare,
+      `numeric field(s) declaring neither a unit nor kind "money" — if monetary, declare it; if not, add it to LEGITIMATELY_BARE with a reason: ${bare.join(", ")}`,
+    ).toEqual([]);
   });
 })

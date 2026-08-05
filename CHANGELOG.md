@@ -6,6 +6,55 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed — currency belongs to the value, not the field definition (SYS-3249)
+
+143 canonical fields declared `unit: "MYR"`. That asserts a Malaysian denomination as a
+property of the FIELD, on fields a Vietnamese financial statement already writes. Currency
+is a property of the OBSERVATION: one source can report several currencies in a single
+document, so no field-level currency can be right for more than one of them.
+
+- **`kind` gains `"money"`** alongside `"enum"` — still a semantic refinement of `type`,
+  because a monetary value's primitive is a number; what differs is that the number is
+  incomplete without a denomination. A money field must be `type: "number"` and declares
+  neither a `unit` nor a `range`.
+- **`unit` is now a closed, load-validated set** of intrinsic measures (`ratio`, `months`,
+  `days`, `hours`, `count`, `meters`, `deg`, `rating`, `score`). Declaring a currency is a
+  hard load error with an explanation. An allow-list rather than a currency blocklist: a
+  blocklist only catches the shapes someone thought of.
+- **`IhsFieldProvenance.currency`** (optional) carries the ISO 4217 denomination per value.
+  Absence means UNKNOWN, never a default — defaulting would render a VND figure as ringgit,
+  the exact failure this prevents.
+- **`data/adapter-categories.json`**: 143 fields moved `unit: "MYR"` → `kind: "money"`; the
+  9 that also carried a MYR-scaled `range` had it removed (a numeric bound on money is
+  denominated by definition — `telcoArpuMyr [0, 10000]` is sane in ringgit and ~20x too
+  small in dong). `schemaVersion` 1.2.0 → 1.3.0.
+- **Rendering**: `buildFileFieldTables` / `processIhsDetails` format monetary values in
+  their carried currency, so fraction digits come from the currency (VND is zero-decimal).
+  Monetary fields are now identified from the category registry rather than a substring
+  word list, which had missed 51 of the 143.
+
+**Visible rendering change, currency or not.** Because those 51 fields now reach the numeric
+branch at all, they gain thousands separators and two fraction digits even for existing
+Malaysian data: `payslipGrossPay` renders `15,000,000.00` where it previously rendered
+`15000000`. This affects the IHS detail view in finhub-adonisjs and finsys-client. It is the
+intended correction — they were always monetary and always should have been grouped — but it
+is the one change here that an existing user sees without any new data.
+
+**Not breaking.** `unit` appears nowhere in the adapter manifest contract — it exists only
+in this package's own data file — and nothing outside the loader's own validation consumed
+`unit` or `range`. Verified against finsys-api, finhub-adonisjs and finsys-client.
+
+**One behaviour change to expect downstream:** consumers that branch on `kind` see a new
+value. finsys-client's `evaluation_model.ts` warns (`EnumMapFieldKind`) when an eval model
+maps enum labels against a field whose `kind` is neither `string` nor `enum` — so models
+mapping a monetary field will begin emitting that warning once finsys-client bumps. Correct
+and non-blocking, but new.
+
+**Deferred, breaking, needs its own major:** nine field names still carry a `Myr` suffix
+(`telcoArpuMyr`, `bankClosingBalanceMyr`, …). Names are fact ids, so renaming them is a
+major — `icName` → `personName` (SYS-3163) is the precedent. Their descriptions no longer
+claim a denomination.
+
 ## [5.0.0] — 2026-08-02
 
 ### Changed — BREAKING (vocabulary)

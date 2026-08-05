@@ -616,3 +616,59 @@ describe('currency-aware value formatting', () => {
     expect(cell!.formattedData.T1).toContain('1,234.50')
   })
 })
+
+// ── SYS-3249: money the word-list cannot see ─────────────────────────
+describe('monetary fields outside the isNumericField word list', () => {
+  const prov = (currency?: string) => ({
+    source: 'finxtract:ssm',
+    confidence: 0.9,
+    observedAt: '2026-08-05T00:00:00Z',
+    sourceRunId: 'run-1',
+    origin: 'extracted' as const,
+    ...(currency ? { currency } : {}),
+  })
+
+  it('denominates ssmPaidUpCapital — a KEY_VALUE money field that matches no numeric keyword', () => {
+    // The regression this pins: `numeric` came from a 17-word substring match
+    // over the column name, which misses 51 of the 143 money fields.
+    // "ssmPaidUpCapital" contains none of balance/amount/total/... so it fell
+    // straight past the numeric branch and rendered bare — while the commit
+    // claimed to denominate money. It is also the exact field whose category
+    // test asserts kind: "money", and it exercises the KEY_VALUE branch,
+    // which no other currency test touched.
+    const tables = buildFileFieldTables({ ssmPaidUpCapital: 250000 }, { ssmPaidUpCapital: prov('VND') })
+    const cell = Object.values(tables)
+      .flatMap((t) => t.items)
+      .find((i) => i.data?.value !== null && i.data?.value !== undefined)
+    expect(cell, 'expected the ssm KEY_VALUE cell to render').toBeDefined()
+    expect(cell!.isNumeric, 'a money field must reach the numeric branch').toBe(true)
+    expect(cell!.formattedData.value).toContain('VND')
+    expect(cell!.formattedData.value).toContain('250,000')
+  })
+
+  it('renders every money field in one document consistently, not a mix', () => {
+    // The failure mode that makes a PARTIAL denomination worse than none:
+    // payslipVariableIncome matches the word "income" and got a currency,
+    // while payslipGrossPay and payslipBasicPay matched nothing and rendered
+    // as bare integers — same table, same document, same currency. A bare
+    // number that looks authoritative is what the denomination exists to
+    // prevent, so the invariant is CONSISTENCY across the table, not merely
+    // that some cell somewhere is denominated.
+    const cols = ['payslipGrossPayT1', 'payslipBasicPayT1', 'payslipVariableIncomeT1']
+    const tables = buildFileFieldTables(
+      Object.fromEntries(cols.map((c) => [c, 15000000])),
+      Object.fromEntries(cols.map((c) => [c, prov('VND')]))
+    )
+    const rendered = Object.values(tables)
+      .flatMap((t) => t.items)
+      .filter((i) => i.data?.T1 !== null && i.data?.T1 !== undefined)
+    expect(rendered.length, 'expected all three payslip amounts to render').toBe(cols.length)
+    for (const cell of rendered) {
+      expect(cell.isNumeric, `${cell.displayName} must reach the numeric branch`).toBe(true)
+      expect(
+        cell.formattedData.T1,
+        `${cell.displayName} must carry the denomination like its neighbours`
+      ).toContain('VND')
+    }
+  })
+})

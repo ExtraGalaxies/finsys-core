@@ -19,7 +19,9 @@ Each category lists:
 Each field has:
 
 - **type** — `number`, `boolean`, or `string`
-- **unit** — `ratio` (0..1), `months`, `days`, `count`, `MYR`, etc. Use the unit in your own conversion logic; FinSys assumes values come in already-converted.
+- **unit** — an INTRINSIC unit of measure, from a closed set: `ratio` (0..1), `months`, `days`, `hours`, `count`, `meters`, `deg`, `rating`, `score`. Validated at load — anything else is a hard error. Use the unit in your own conversion logic; FinSys assumes values come in already-converted.
+- **kind** — a semantic refinement of `type`. `enum` (one label from a closed set; must be `type: string`, no `range`) or `money` (a monetary amount; must be `type: number`, and declares NEITHER a `unit` NOR a `range`).
+  A currency is **not** a unit and must never be declared as one. It is a property of the OBSERVATION, not of the field: one document can report several currencies, so no field-level currency can be right for more than one of them. The denomination travels with the value on its provenance envelope (`IhsFieldProvenance.currency`). Likewise a `range` on money is denominated by definition, so it can only be correct in one currency — `telcoArpuMyr [0, 10000]` is sane in ringgit and roughly twenty times too small in dong.
 - **range** — soft hints, not enforced. Wildly out-of-range values are accepted but will look anomalous on operator dashboards.
 
 If you need a field that isn't in any category here, talk to FinHero about adding it (or proposing a new category).
@@ -32,7 +34,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 **Canonical table**: `ihs_alt_data_telco`
 
-| Field | Type | Unit | Range | Description |
+| Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
 | `telcoOnTimePaymentRatio24m` | number | ratio | 0..1 | Fraction of bills paid on time over the last 24 months. Strongest single telco predictor; ≥0.95 is the clean-history signal. |
 | `telcoTenureMonths` | number | months | 0..600 | Account age. ≥48 months is the thin-file uplift trigger. |
@@ -40,7 +42,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 | `telcoLateDays24m` | number | days | 0..800 | Cumulative days late across all bills in the trailing 24-month window. |
 | `telcoHandsetFinancingActive` | boolean |  |  | Has an active handset-EMI account currently. Proxy for financing capacity already extended. |
 | `telcoHandsetFinancingDelinquent` | boolean |  |  | Recent handset-EMI delinquency in the last 24 months. Distress signal even with otherwise clean bill payment. |
-| `telcoArpuMyr` | number | MYR | 0..10000 | Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy. |
+| `telcoArpuMyr` | number | money | | Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy. |
 
 **Multi-instance notes**: A business account with multiple lines is a natural multi-instance fit. Use the MSISDN or line-id as the `instanceKey`. Eval policies that want a single value per applicant typically use the `mean` operator for on-time ratio and `sum` or `latest` for tenure depending on the scoring intent.
 
@@ -52,10 +54,10 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 **Canonical table**: `ihs_alt_data_payments`
 
-| Field | Type | Unit | Range | Description |
+| Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
-| `paymentsMonthlyVolumeMyrT3` | number | MYR | 0..100000000 | Mean monthly inbound transaction volume (RM) over the trailing 3 months. |
-| `paymentsMonthlyVolumeMyrT12` | number | MYR | 0..100000000 | Mean monthly inbound transaction volume (RM) over the trailing 12 months. Pair with T3 for trend direction. |
+| `paymentsMonthlyVolumeMyrT3` | number | money | | Mean monthly inbound transaction volume (RM) over the trailing 3 months. |
+| `paymentsMonthlyVolumeMyrT12` | number | money | | Mean monthly inbound transaction volume (RM) over the trailing 12 months. Pair with T3 for trend direction. |
 | `paymentsArpuStability12m` | number | ratio | 0..1 | Coefficient-of-variation inverse over monthly ARPU in the trailing 12 months. Closer to 1 = steadier; closer to 0 = volatile. |
 | `paymentsDisputeRate12m` | number | ratio | 0..1 | Fraction of transactions disputed or refunded in the trailing 12 months. |
 | `paymentsCustomerConcentrationTop5Pct` | number | ratio | 0..1 | Revenue share from the top-5 recurring customers. Above ~0.7 is concentration risk. |
@@ -71,13 +73,13 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 **Canonical table**: `ihs_alt_data_bank_statements`
 
-| Field | Type | Unit | Range | Description |
+| Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
 | `bankStatementMonth` | string |  |  | Statement period in YYYY-MM format. Used as the instance_key discriminator + by the `latest` aggregation operator. |
-| `bankClosingBalanceMyr` | number | MYR | -100000000..100000000 | Closing balance for the statement period. |
-| `bankTotalCreditsMyr` | number | MYR | 0..100000000 | Sum of credit transactions during the period. |
-| `bankTotalDebitsMyr` | number | MYR | 0..100000000 | Sum of debit transactions during the period. |
-| `bankLargestSingleCreditMyr` | number | MYR | 0..100000000 | Largest single inbound transaction in the period. Useful for spotting one-off injections vs steady revenue. |
+| `bankClosingBalanceMyr` | number | money | | Closing balance for the statement period. |
+| `bankTotalCreditsMyr` | number | money | | Sum of credit transactions during the period. |
+| `bankTotalDebitsMyr` | number | money | | Sum of debit transactions during the period. |
+| `bankLargestSingleCreditMyr` | number | money | | Largest single inbound transaction in the period. Useful for spotting one-off injections vs steady revenue. |
 | `bankBouncedTransactionsCount` | number | count | 0..1000 | Bounced / returned transactions in the period. Distress signal at counts > 0. |
 
 **Multi-instance notes**: Inherently multi-instance. Use the statement month (`YYYY-MM`) as the `instanceKey` — it's both the natural discriminator AND a value the `latest` operator can sort lexicographically (ISO month strings are correctly ordered alphanumerically).
@@ -90,7 +92,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 **Canonical table**: `ihs_alt_data_social_media`
 
-| Field | Type | Unit | Range | Description |
+| Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
 | `socialAccountTenureMonths` | number | months | 0..600 | Age of the oldest verified public business presence across linked profiles. Establishment / continuity proxy, parallel to telco + payment-network tenure. |
 | `socialFollowerCount` | number | count | 0..100000000 | Aggregate audience size across linked public profiles. Coarse reach / scale proxy — gameable on its own, so read alongside `socialEngagementRate90d`. |
@@ -111,16 +113,16 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 **Canonical table**: `ihs_alt_data_trade_credit`
 
-| Field | Type | Unit | Range | Description |
+| Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
 | `arDaysSalesOutstanding` | number | days | 0..365 | Average days to collect receivables (DSO). |
 | `apDaysPayableOutstanding` | number | days | 0..365 | Average days taken to pay creditors (DPO). |
-| `arTotalOutstandingMyr` | number | MYR |  | Total receivables currently outstanding. |
+| `arTotalOutstandingMyr` | number | money | | Total receivables currently outstanding. |
 | `arCurrentRatio` | number | ratio | 0..1 | Share of receivables not yet past due. |
 | `arOverdue90PlusRatio` | number | ratio | 0..1 | Share of receivables overdue 90+ days — the distress headline. |
 | `debtorConcentrationTop5Ratio` | number | ratio | 0..1 | Share of receivables owed by the top-5 debtors. |
 | `tradeReferenceDefaults12m` | number | count | 0..100 | Trade-reference defaults in the last 12 months. |
-| `accountingRevenue12mMyr` | number | MYR |  | Self-reported trailing-12-month revenue — cross-checked against bank inflows by consistency tiers. |
+| `accountingRevenue12mMyr` | number | money | | Self-reported trailing-12-month revenue — cross-checked against bank inflows by consistency tiers. |
 | `grossMarginPct` | number | ratio | 0..1 | Gross margin from the P&L summary. |
 | `cashConversionCycleDays` | number | days | -200..600 | Cash Conversion Cycle; negative (collect before paying suppliers) is strongest. |
 
@@ -134,7 +136,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 **Canonical table**: `ihs_alt_data_geolocation`
 
-| Field | Type | Unit | Range | Description |
+| Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
 | `geoLatitude` | number | deg | -90..90 | Observed latitude for the hourly bucket (point instances only). |
 | `geoLongitude` | number | deg | -180..180 | Observed longitude for the hourly bucket (point instances only). |

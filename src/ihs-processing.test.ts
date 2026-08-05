@@ -543,3 +543,76 @@ describe('document-table maps + formatters (SYS-2766)', () => {
     )
   })
 })
+
+// ── SYS-3249: the denomination travels with the value ────────────────
+describe('currency-aware value formatting', () => {
+  const prov = (currency?: string) => ({
+    source: 'finxtract:bank_statement',
+    confidence: 0.9,
+    observedAt: '2026-08-05T00:00:00Z',
+    sourceRunId: 'run-1',
+    origin: 'extracted' as const,
+    ...(currency ? { currency } : {}),
+  })
+
+  // Pick the cell that actually HOLDS the value under test. Selecting the
+  // first item with a T1 key instead returns some unrelated empty field
+  // rendering '-', and every assertion below then fails for a reason that
+  // has nothing to do with currency.
+  const populatedT1 = (tables: Record<string, { items: { data: Record<string, unknown>; formattedData: Record<string, string> }[] }>) =>
+    Object.values(tables)
+      .flatMap((t) => t.items)
+      .find((i) => i.data?.T1 !== null && i.data?.T1 !== undefined)
+
+  it('renders a VND amount with NO decimals — the currency decides, not a constant', () => {
+    // The bug this closes: 'en-US' with minimumFractionDigits: 2 gave every
+    // amount two decimals. VND is a zero-decimal currency, so a Vietnamese
+    // figure gained two digits that do not exist in the currency at all.
+    const tables = buildFileFieldTables(
+      { totalCreditsT1: 14004792678863 },
+      { totalCreditsT1: prov('VND') }
+    )
+    const cell = populatedT1(tables)
+    expect(cell, 'expected a populated T1 cell to render').toBeDefined()
+    expect(cell!.formattedData.T1).not.toMatch(/\.\d\d$/)
+    expect(cell!.formattedData.T1).toMatch(/14,004,792,678,863/)
+  })
+
+  it('renders an MYR amount with two decimals, and says which currency', () => {
+    const tables = buildFileFieldTables(
+      { totalCreditsT1: 1234.5 },
+      { totalCreditsT1: prov('MYR') }
+    )
+    const cell = populatedT1(tables)
+    expect(cell!.formattedData.T1).toMatch(/1,234\.50/)
+    expect(cell!.formattedData.T1).toMatch(/MYR|RM/)
+  })
+
+  it('an absent currency keeps the pre-SYS-3249 formatting — absence is unknown, never a default', () => {
+    // Every row written before this shipped has no currency. Defaulting one
+    // in would render a VND figure as ringgit, which is precisely the
+    // failure the denomination exists to prevent — so absence must stay
+    // undecorated rather than become a guess.
+    const tables = buildFileFieldTables(
+      { totalCreditsT1: 1234.5 },
+      { totalCreditsT1: prov() }
+    )
+    const cell = populatedT1(tables)
+    expect(cell!.formattedData.T1).toBe('1,234.50')
+    expect(cell!.formattedData.T1).not.toMatch(/[A-Z]{2,3}|RM|\$|₫/)
+  })
+
+  it('an unknown currency code degrades visibly instead of crashing the whole render', () => {
+    // Intl throws RangeError on a code it does not know, and this value
+    // comes from extraction, so it can be junk. One bad field must not
+    // take out the entire detail page — but it must not silently present a
+    // bare number that looks authoritative either.
+    const tables = buildFileFieldTables(
+      { totalCreditsT1: 1234.5 },
+      { totalCreditsT1: prov('NOTACURRENCY') }
+    )
+    const cell = populatedT1(tables)
+    expect(cell!.formattedData.T1).toContain('NOTACURRENCY')
+    expect(cell!.formattedData.T1).toContain('1,234.50')
+  })
+})

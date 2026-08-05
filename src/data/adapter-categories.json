@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.2.0",
+  "schemaVersion": "1.3.0",
   "categories": [
     {
       "id": "telco-carrier",
@@ -60,11 +60,7 @@
         {
           "name": "telcoArpuMyr",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            0,
-            10000
-          ],
+          "kind": "money",
           "description": "Average Revenue Per User (monthly) in Malaysian Ringgit. Coarse spending-capacity proxy."
         },
         {
@@ -102,21 +98,13 @@
         {
           "name": "paymentsMonthlyVolumeMyrT3",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            0,
-            100000000
-          ],
+          "kind": "money",
           "description": "Mean monthly inbound transaction volume (RM) over the trailing 3 months."
         },
         {
           "name": "paymentsMonthlyVolumeMyrT12",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            0,
-            100000000
-          ],
+          "kind": "money",
           "description": "Mean monthly inbound transaction volume (RM) over the trailing 12 months. Pair with T3 for trend direction."
         },
         {
@@ -175,41 +163,25 @@
         {
           "name": "bankClosingBalanceMyr",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            -100000000,
-            100000000
-          ],
+          "kind": "money",
           "description": "Closing balance for the statement period."
         },
         {
           "name": "bankTotalCreditsMyr",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            0,
-            100000000
-          ],
+          "kind": "money",
           "description": "Sum of credit transactions during the period."
         },
         {
           "name": "bankTotalDebitsMyr",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            0,
-            100000000
-          ],
+          "kind": "money",
           "description": "Sum of debit transactions during the period."
         },
         {
           "name": "bankLargestSingleCreditMyr",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            0,
-            100000000
-          ],
+          "kind": "money",
           "description": "Largest single inbound transaction in the period. Useful for spotting one-off injections vs steady revenue."
         },
         {
@@ -336,11 +308,7 @@
         {
           "name": "arTotalOutstandingMyr",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            0,
-            1000000000
-          ],
+          "kind": "money",
           "description": "Total accounts-receivable balance outstanding (RM). The size of the debtor book the business is carrying."
         },
         {
@@ -386,11 +354,7 @@
         {
           "name": "accountingRevenue12mMyr",
           "type": "number",
-          "unit": "MYR",
-          "range": [
-            0,
-            1000000000
-          ],
+          "kind": "money",
           "description": "Trailing-12-month turnover per the general ledger (RM). The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies."
         },
         {
@@ -625,25 +589,25 @@
         {
           "name": "openingBalance",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Opening balance for the statement period."
         },
         {
           "name": "bankBalance",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Closing balance for the statement period."
         },
         {
           "name": "totalCredits",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Sum of credit transactions in the statement period."
         },
         {
           "name": "totalDebits",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Sum of debit transactions in the statement period."
         }
       ]
@@ -692,13 +656,13 @@
         {
           "name": "epfTotalContribution",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Cumulative EPF balance as at the statement date."
         },
         {
           "name": "epfTotalCurrentContribution",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Contributions made within the statement's coverage year."
         }
       ]
@@ -732,67 +696,67 @@
         {
           "name": "payslipBasicPay",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Basic salary for the period."
         },
         {
           "name": "payslipGrossPay",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Gross pay for the period."
         },
         {
           "name": "payslipFixedAllowances",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Fixed allowances for the period."
         },
         {
           "name": "payslipVariableIncome",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Variable income (overtime, commission, bonus) for the period."
         },
         {
           "name": "payslipDeduction",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Total statutory deductions for the period."
         },
         {
           "name": "payslipOtherDeduction",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Other (non-statutory) deductions for the period."
         },
         {
           "name": "payslipEmployeeEpfContribution",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Employee EPF contribution for the period."
         },
         {
           "name": "payslipEmployeeSocsoContribution",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Employee SOCSO contribution for the period."
         },
         {
           "name": "payslipEmployeeEisContribution",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Employee EIS contribution for the period."
         },
         {
           "name": "payslipEmployeeTax",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Employee income-tax (PCB) deduction for the period."
         },
         {
           "name": "payslipNetPay",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Net pay for the period."
         }
       ]
@@ -837,697 +801,697 @@
         {
           "name": "nonCurrentAssetsSubsidiaryCompanies",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: subsidiary companies."
         },
         {
           "name": "nonCurrentAssetsAssociatedCompanies",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: associated companies."
         },
         {
           "name": "nonCurrentAssetsDevelopmentPropertiesOrExpenditure",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: development properties or expenditure."
         },
         {
           "name": "nonCurrentAssetInvestmentProperties",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: investment properties."
         },
         {
           "name": "nonCurrentAssetsInvestments",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: investments."
         },
         {
           "name": "nonCurrentAssetInvestmentSecurities",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: investment securities."
         },
         {
           "name": "nonCurrentAssetDeferredAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: deferred assets."
         },
         {
           "name": "nonCurrentAssetDeposits",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: deposits."
         },
         {
           "name": "nonCurrentAssetOwnGoodwill",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: own goodwill."
         },
         {
           "name": "nonCurrentAssetGoodwillOnConsolidation",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: goodwill on consolidation."
         },
         {
           "name": "nonCurrentAssetSinkingFund",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: sinking fund."
         },
         {
           "name": "nonCurrentAssetPropertyPlantEquipment",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: property plant equipment."
         },
         {
           "name": "nonCurrentAssetInventories",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: inventories."
         },
         {
           "name": "nonCurrentAssetRightOfUseAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: right of use assets."
         },
         {
           "name": "nonCurrentAssetIntangibleAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: intangible assets."
         },
         {
           "name": "nonCurrentAssetPrepaidLeasePayments",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: prepaid lease payments."
         },
         {
           "name": "nonCurrentAssetFinancialAssetAtFairValue",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: financial asset at fair value."
         },
         {
           "name": "nonCurrentAssetLandUseRight",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: land use right."
         },
         {
           "name": "nonCurrentAssetTradeReceivables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: trade receivables."
         },
         {
           "name": "nonCurrentAssetOtherReceivables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: other receivables."
         },
         {
           "name": "nonCurrentAssetTradeAndOtherReceivables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: trade and other receivables."
         },
         {
           "name": "nonCurrentAssetOtherReceivablesDepositsAndPrepayments",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current assets: other receivables deposits and prepayments."
         },
         {
           "name": "totalNonCurrentAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Balance-sheet total: non-current assets."
         },
         {
           "name": "currentAssetDevelopmentPropertiesOrExpenditure",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: development properties or expenditure."
         },
         {
           "name": "currentAssetShortTermInvestments",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: short term investments."
         },
         {
           "name": "currentAssetTradeDebtors",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: trade debtors."
         },
         {
           "name": "currentAssetShortTermDeposits",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: short term deposits."
         },
         {
           "name": "currentAssetAmountDueFromHoldingCompany",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: amount due from holding company."
         },
         {
           "name": "currentAssetAmountDueFromSubsidiaryCompanies",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: amount due from subsidiary companies."
         },
         {
           "name": "currentAssetAmountDueFromAssociatedCompanies",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: amount due from associated companies."
         },
         {
           "name": "currentAssetAmountDueFromDirector",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: amount due from director."
         },
         {
           "name": "currentAssetAmountDueFromCustomer",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: amount due from customer."
         },
         {
           "name": "currentAssetAmountOwingByShareholders",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: amount owing by shareholders."
         },
         {
           "name": "currentAssetInventories",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: inventories."
         },
         {
           "name": "currentAssetFinancialAssetAtFairValue",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: financial asset at fair value."
         },
         {
           "name": "currentAssetLandUseRight",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: land use right."
         },
         {
           "name": "currentAssetTaxRecoverable",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: tax recoverable."
         },
         {
           "name": "currentAssetContractAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: contract assets."
         },
         {
           "name": "currentAssetCurrentTaxAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: current tax assets."
         },
         {
           "name": "currentAssetPrepayments",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: prepayments."
         },
         {
           "name": "currentAssetDerivative",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: derivative."
         },
         {
           "name": "currentAssetCashAndBankBalances",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: cash and bank balances."
         },
         {
           "name": "currentAssetOtherReceivables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: other receivables."
         },
         {
           "name": "currentAssetRestrictedCash",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: restricted cash."
         },
         {
           "name": "currentAssetCashAndCashEquivalents",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: cash and cash equivalents."
         },
         {
           "name": "currentAssetDepositsCashAndBankBalances",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: deposits cash and bank balances."
         },
         {
           "name": "currentAssetCashAtBanks",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: cash at banks."
         },
         {
           "name": "currentAssetCashOnHand",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: cash on hand."
         },
         {
           "name": "currentAssetDepositsAndPrepayments",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: deposits and prepayments."
         },
         {
           "name": "currentAssetTradeAndOtherReceivables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: trade and other receivables."
         },
         {
           "name": "currentAssetOtherReceivablesDepositsAndPrepayments",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: other receivables deposits and prepayments."
         },
         {
           "name": "currentAssetOtherReceivablesAndDeposits",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: other receivables and deposits."
         },
         {
           "name": "currentAssetOtherReceivablesAndPrepayments",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current assets: other receivables and prepayments."
         },
         {
           "name": "totalCurrentAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Balance-sheet total: current assets."
         },
         {
           "name": "totalAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Balance-sheet total: assets."
         },
         {
           "name": "currentLiabilitiesTradeCreditors",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: trade creditors."
         },
         {
           "name": "currentLiabilitiesHirePurchasePayables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: hire purchase payables."
         },
         {
           "name": "currentLiabilitiesBankOverdraft",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: bank overdraft."
         },
         {
           "name": "currentLiabilitiesBankAcceptance",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: bank acceptance."
         },
         {
           "name": "currentLiabilitiesBorrowingsOrTermLoans",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: borrowings or term loans."
         },
         {
           "name": "currentLiabilitiesBankborrowings",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: bank borrowings."
         },
         {
           "name": "currentLiabilitiesAmountsOwingToHoldingCompany",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: amounts owing to holding company."
         },
         {
           "name": "currentLiabilitiesAmountsOwingToSubsidiaryCompanies",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: amounts owing to subsidiary companies."
         },
         {
           "name": "currentLiabilitiesAmountOwingToAssociatedCompanies",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: amount owing to associated companies."
         },
         {
           "name": "currentLiabilitiesAmountsOwingToDirector",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: amounts owing to director."
         },
         {
           "name": "currentLiabilitiesProvisionForTaxation",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: provision for taxation."
         },
         {
           "name": "currentLiabilitiesLeasePayables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: lease payables."
         },
         {
           "name": "currentLiabilitiesFinanceLeasePayables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: finance lease payables."
         },
         {
           "name": "currentLiabilitiesOtherPayables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: other payables."
         },
         {
           "name": "currentLiabilitiesDividendPayables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: dividend payables."
         },
         {
           "name": "currentLiabilitiesTradeAndOtherPayables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: trade and other payables."
         },
         {
           "name": "currentLiabilitiesDepositsFromCustomers",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: deposits from customers."
         },
         {
           "name": "currentLiabilitiesOtherPayablesAccrualsAndDeposits",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: other payables accruals and deposits."
         },
         {
           "name": "currentLiabilitiesOtherPayablesAndAccruals",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: other payables and accruals."
         },
         {
           "name": "currentLiabilitiesContractLiabilities",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: contract liabilities."
         },
         {
           "name": "currentLiabilitiesDerivative",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Current liabilities: derivative."
         },
         {
           "name": "totalCurrentLiabilities",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Balance-sheet total: current liabilities."
         },
         {
           "name": "shortTermLiabilities",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Balance-sheet total: short-term liabilities."
         },
         {
           "name": "nonCurrentLiabilitiesBorrowingsOrTermLoans",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: borrowings or term loans."
         },
         {
           "name": "nonCurrentLiabilitiesBankBorrowings",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: bank borrowings."
         },
         {
           "name": "nonCurrentLiabilitiesLeaseObligations",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: lease obligations."
         },
         {
           "name": "nonCurrentLiabilitiesFinanceLeaseObligations",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: finance lease obligations."
         },
         {
           "name": "nonCurrentLiabilitiesDeferredTaxation",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: deferred taxation."
         },
         {
           "name": "nonCurrentLiabilitiesRetirementBenefits",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: retirement benefits."
         },
         {
           "name": "nonCurrentLiabilitiesHirePurchasePayables",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: hire purchase payables."
         },
         {
           "name": "nonCurrentLiabilitiesDepositsFromCustomers",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: deposits from customers."
         },
         {
           "name": "nonCurrentLiabilitiesContractLiabilities",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Non-current liabilities: contract liabilities."
         },
         {
           "name": "totalNonCurrentLiabilities",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Balance-sheet total: non-current liabilities."
         },
         {
           "name": "totalLiabilities",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Balance-sheet total: liabilities."
         },
         {
           "name": "shareCapital",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Equity: share capital."
         },
         {
           "name": "preferenceShareCapital",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Equity: preference share capital."
         },
         {
           "name": "sharePremium",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Equity: share premium."
         },
         {
           "name": "reserves",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Equity: reserves."
         },
         {
           "name": "capitalReserves",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Equity: capital reserves."
         },
         {
           "name": "revaluationReserves",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Equity: revaluation reserves."
         },
         {
           "name": "exchangeEqualisationOrFluctuationReserves",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Equity: exchange equalisation or fluctuation reserves."
         },
         {
           "name": "retainedEarnings",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Equity: retained earnings."
         },
         {
           "name": "totalEquity",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Balance-sheet total: equity."
         },
         {
           "name": "revenue",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: revenue."
         },
         {
           "name": "costOfGoodsSold",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: cost of goods sold."
         },
         {
           "name": "grossProfit",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: gross profit."
         },
         {
           "name": "otherIncome",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: other income."
         },
         {
           "name": "profitFromOperations",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: profit from operations."
         },
         {
           "name": "financeCost",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: finance cost."
         },
         {
           "name": "ebitda",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: profit before tax (extracted from the statement's profit-before-tax line; canonical name kept verbatim from the host vocabulary)."
         },
         {
           "name": "taxes",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: taxes."
         },
         {
           "name": "zakat",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: zakat."
         },
         {
           "name": "profitAfterTax",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: profit after tax."
         },
         {
           "name": "netProfit",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Income statement: total comprehensive income for the financial year."
         },
         {
           "name": "netOperatingCashFlow",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Cash-flow statement: net cash flow used in / generated from operating activities."
         },
         {
           "name": "depreciation",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Cash-flow statement: depreciation."
         },
         {
           "name": "depreciationOfPropertyPlantEquipment",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Cash-flow statement: depreciation of property plant equipment."
         },
         {
           "name": "depreciationRightOfUseAssets",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Cash-flow statement: depreciation right of use assets."
         },
         {
           "name": "depreciationOfInvestmentProperties",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Cash-flow statement: depreciation of investment properties."
         },
         {
           "name": "depreciationOfInvestmentSecurities",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Cash-flow statement: depreciation of investment securities."
         },
         {
           "name": "endOfYearCash",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Cash-flow statement: cash and cash equivalents at the end of the financial year."
         }
       ]
@@ -1620,7 +1584,7 @@
         {
           "name": "ssmPaidUpCapital",
           "type": "number",
-          "unit": "MYR",
+          "kind": "money",
           "description": "Paid-up capital as stated on the profile (falls back to total shares issued when the profile omits an explicit paid-up figure)."
         },
         {

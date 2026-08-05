@@ -140,12 +140,44 @@ function isNumericField(fieldName: string): boolean {
   return patterns.some((p) => lower.includes(p))
 }
 
-function formatValue(value: unknown, numeric: boolean): string {
+/**
+ * SYS-3249: `currency` is the ISO 4217 denomination of THIS value, read
+ * from its provenance envelope — never from the field definition, and
+ * never from a program-level default. It is optional, and absent means
+ * "unknown", not "MYR": every pre-SYS-3249 row is absent, and defaulting
+ * would render a VND amount as if it were ringgit, which is the exact
+ * failure this carries a denomination to prevent.
+ *
+ * The two-fraction-digit default below is therefore kept ONLY for the
+ * unknown case, where it preserves existing behaviour. When a currency IS
+ * known the fraction digits come from the currency itself — VND is
+ * zero-decimal, so 14,004,792,678,863 renders whole rather than gaining
+ * two decimals that do not exist in the currency.
+ *
+ * The locale stays 'en-US' for now and governs only grouping/ordering,
+ * not the decimal count. It becomes jurisdiction-driven under SYS-3258.
+ */
+function formatValue(value: unknown, numeric: boolean, currency?: string): string {
   if (value === null || value === undefined || value === '') return '-'
   if (numeric) {
     const num = Number(value)
-    if (!isNaN(num))
+    if (!isNaN(num)) {
+      if (currency) {
+        try {
+          return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(num)
+        } catch {
+          // Intl throws RangeError on a currency code it does not know.
+          // Degrade visibly rather than either crashing the whole detail
+          // render for one bad field, or silently dropping the code and
+          // presenting a bare number that looks authoritative.
+          return `${num.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })} ${currency}`
+        }
+      }
       return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
   }
   return String(value)
 }
@@ -185,9 +217,11 @@ function buildTableForGroup(
         const colName = periodMap[period]
         const value = colName ? (ihsData[colName] ?? null) : null
         data[period] = value
-        formattedData[period] = formatValue(value, numeric)
         // SYS-2741: colName is the exact ihs_field_metadata key (incl. T{n} suffix).
+        // SYS-3249: resolved BEFORE formatting — the envelope carries this
+        // value's currency, so the formatter needs it in hand.
         const prov = colName ? fieldProvenance?.[colName] : undefined
+        formattedData[period] = formatValue(value, numeric, prov?.currency)
         if (prov) {
           provenance[period] = prov
           if (
@@ -229,7 +263,7 @@ function buildTableForGroup(
         displayName: getDisplayName(colName),
         timePeriods: [],
         data: { value },
-        formattedData: { value: formatValue(value, numeric) },
+        formattedData: { value: formatValue(value, numeric, prov?.currency) },
         type: tableType,
         isNumeric: numeric,
         ...(prov &&
@@ -395,10 +429,12 @@ function buildInstanceTable(
       const label = instanceLabels[i]
       const value = labelMap[label] ?? null
       data[label] = value
-      formattedData[label] = formatValue(value, numeric)
 
       const legacyKey = row.timePeriod ? `${baseName}${row.timePeriod}` : undefined
+      // SYS-3249: hoisted above the format call — the envelope carries
+      // this value's currency.
       const prov = legacyKey ? fieldProvenance?.[legacyKey] : undefined
+      formattedData[label] = formatValue(value, numeric, prov?.currency)
       if (prov) {
         provenance[label] = prov
         if (

@@ -1106,7 +1106,7 @@ describe("telco-carrier enum tier fields", () => {
 describe("isFieldSensitive / sensitiveFieldsOf (SYS-3164)", () => {
   const someCategory = ADAPTER_CATEGORY_IDS[0];
 
-  it("treats an undeclared field as sensitive — the safe answer to a name it does not recognise", () => {
+  it("treats an undeclared field as sensitive — the safe answer to a name it does not recognize", () => {
     // Mid-rename callers and plain mistakes both land here. Answering
     // "no, not sensitive" for a field nobody has heard of is the one
     // answer that can silently leak.
@@ -1183,7 +1183,7 @@ describe("monetary fields and the closed unit set", () => {
     expect(() => buildCategoryRegistry(raw)).toThrow(/a currency is not a unit of measure/);
   });
 
-  it("an unrecognised non-currency unit is refused too — the set is closed, not currency-blocklisted", () => {
+  it("an unrecognized non-currency unit is refused too — the set is closed, not currency-blocklisted", () => {
     // A blocklist of currency codes would only catch the shapes someone
     // thought of. The allow-list catches "furlongs" as readily as "VND".
     const raw = validRaw();

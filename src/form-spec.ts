@@ -119,7 +119,7 @@ export class FormSpec {
 
   /**
    * The jurisdiction that actually applies: the declaration, or Malaysia when
-   * absent — and NULL when the declaration is present but unrecognised.
+   * absent — and NULL when the declaration is present but unrecognized.
    *
    * Delegates rather than using `?? DEFAULT_JURISDICTION`. `??` is nullish-only,
    * so it returned '' for an empty declaration and 'my' for a miscased one —
@@ -128,7 +128,7 @@ export class FormSpec {
    * it was the one place the "unknown is not the default" rule failed open.
    *
    * Callers must handle null. It means "this form declares something we do not
-   * recognise", which is not the same as "this form is Malaysian".
+   * recognize", which is not the same as "this form is Malaysian".
    */
   get effectiveJurisdiction(): Jurisdiction | null {
     return resolveJurisdiction(this._jurisdiction);
@@ -229,7 +229,7 @@ export class FormSpec {
       });
     }
 
-    // SYS-3263: an unrecognised jurisdiction is an ERROR, not a value that
+    // SYS-3263: an unrecognized jurisdiction is an ERROR, not a value that
     // quietly never matches anything. A typo'd "VM" would otherwise sit in
     // the spec looking declared while failing every compatibility check
     // SYS-3265 makes — and failing them for a reason nobody could see.

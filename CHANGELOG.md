@@ -6,6 +6,27 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added — the jurisdiction compatibility predicate (SYS-3266)
+
+`checkJurisdictionCompatibility(formJurisdiction, programJurisdiction)`, plus
+`describeIncompatibility` and the `IncompatibilityReason` enum.
+
+One predicate with three call sites, because the rule is symmetric: filter forms for a chosen
+programme, filter programmes for a chosen form, and refuse a mismatch at submit. The first two
+are the reason nobody reaches the third.
+
+- Consumed by **FinHub** (the manager tier) and **@finsys/borrower-client** (the SDK tier).
+  Raw HTTP callers are unguarded by design.
+- **Absence resolves to Malaysia on both sides**, through `resolveJurisdiction`, so there is
+  one definition of absent rather than another. An empty string is *not* absent.
+- **An unrecognised value is compatible with nothing — including an identical unrecognised
+  value on the other side.** Two sides both declaring `"VM"` is the same typo twice, not
+  agreement; letting a pair of mistakes authorise each other is the silent pass this axis
+  exists to prevent.
+- Returns a result rather than a boolean, so every tier phrases a refusal identically instead
+  of re-deriving it from inputs.
+
+
 ### Added — form specs declare a jurisdiction (SYS-3263)
 
 A form declares the SINGLE jurisdiction it is valid for. A form for jurisdiction X may be

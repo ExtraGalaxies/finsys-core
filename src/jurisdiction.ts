@@ -95,3 +95,112 @@ export function resolveJurisdiction(value: string | null | undefined): Jurisdict
   if (value === null || value === undefined) return DEFAULT_JURISDICTION
   return isJurisdiction(value) ? value : null
 }
+
+/**
+ * SYS-3266: why a form and a program are not compatible.
+ *
+ * An enum rather than a string union — the set will grow (a form declaring a
+ * jurisdiction the deployment has retired is the obvious next member), and a
+ * consumer switching on it should get an exhaustiveness error rather than a
+ * silently-unhandled string.
+ */
+export enum IncompatibilityReason {
+  /** Both resolved, and they are different jurisdictions. */
+  Mismatch = 'mismatch',
+  /** The FORM declares something that is not a jurisdiction we recognise. */
+  UnresolvableForm = 'unresolvable_form',
+  /** The PROGRAM declares something that is not a jurisdiction we recognise. */
+  UnresolvableProgram = 'unresolvable_program',
+}
+
+/**
+ * The outcome of comparing a form's jurisdiction with a program's.
+ *
+ * Deliberately not a boolean. Every caller that refuses a pairing has to tell
+ * somebody WHICH pairing and WHY — "this form is declared MY, that program is
+ * VN" — and a bare boolean makes each of them re-derive that from inputs they
+ * then have to keep in scope. Returning the resolved values means the message
+ * is built from what the decision was actually made on, not from a caller's
+ * second look at the same data.
+ */
+export type JurisdictionCompatibility =
+  | { readonly compatible: true; readonly jurisdiction: Jurisdiction }
+  | {
+      readonly compatible: false
+      readonly reason: IncompatibilityReason
+      /** Resolved where possible; the raw declaration where it could not be. */
+      readonly form: Jurisdiction | string | null | undefined
+      readonly program: Jurisdiction | string | null | undefined
+    }
+
+/**
+ * SYS-3266: is this form usable to submit to this program?
+ *
+ * THE ONE PREDICATE. Kain's rule is symmetric, so this is called from three
+ * places rather than reimplemented in each: filtering forms for a chosen
+ * program, filtering programs for a chosen form, and refusing a mismatch at
+ * submit. The first two are the reason nobody reaches the third.
+ *
+ * Consumed by FinHub (the manager tier, SYS-3265) and @finsys/borrower-client
+ * (the SDK tier, SYS-3269). Raw HTTP callers are unguarded by design.
+ *
+ * ABSENCE resolves to Malaysia on both sides, via `resolveJurisdiction`, so
+ * there is ONE definition of "absent" rather than a fourth — SYS-3263's review
+ * found three implementations of that question disagreeing on null and ''.
+ * Note that an empty string is NOT absent: finsys-api fails closed on it, and
+ * a form or program carrying '' is unresolvable, not Malaysian.
+ *
+ * AN UNRECOGNISED VALUE IS COMPATIBLE WITH NOTHING — including an identical
+ * unrecognised value on the other side. Two forms both declaring "VM" are not
+ * evidence of agreement, they are evidence of the same typo twice, and
+ * treating them as a match would let a pair of mistakes authorise each other.
+ */
+export function checkJurisdictionCompatibility(
+  formJurisdiction: string | null | undefined,
+  programJurisdiction: string | null | undefined
+): JurisdictionCompatibility {
+  const form = resolveJurisdiction(formJurisdiction)
+  const program = resolveJurisdiction(programJurisdiction)
+
+  if (form === null) {
+    return {
+      compatible: false,
+      reason: IncompatibilityReason.UnresolvableForm,
+      form: formJurisdiction,
+      program: program ?? programJurisdiction,
+    }
+  }
+  if (program === null) {
+    return {
+      compatible: false,
+      reason: IncompatibilityReason.UnresolvableProgram,
+      form,
+      program: programJurisdiction,
+    }
+  }
+  if (form !== program) {
+    return { compatible: false, reason: IncompatibilityReason.Mismatch, form, program }
+  }
+  return { compatible: true, jurisdiction: form }
+}
+
+/**
+ * A message a consumer can show without re-deriving the decision.
+ *
+ * Kept beside the predicate so every tier phrases a refusal identically —
+ * FinHub, the SDK and any future caller. A user hitting the same wall in two
+ * products should not have to work out that it is the same wall.
+ */
+export function describeIncompatibility(result: JurisdictionCompatibility): string | null {
+  if (result.compatible) return null
+  const shown = (v: unknown) =>
+    v === null || v === undefined || v === '' ? '(not set)' : `'${String(v)}'`
+  switch (result.reason) {
+    case IncompatibilityReason.Mismatch:
+      return `This form is for ${shown(result.form)} but the selected programme is ${shown(result.program)}.`
+    case IncompatibilityReason.UnresolvableForm:
+      return `This form declares ${shown(result.form)}, which is not a jurisdiction this deployment recognises.`
+    case IncompatibilityReason.UnresolvableProgram:
+      return `The selected programme declares ${shown(result.program)}, which is not a jurisdiction this deployment recognises.`
+  }
+}

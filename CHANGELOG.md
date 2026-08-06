@@ -6,6 +6,40 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added — form specs declare a jurisdiction (SYS-3263)
+
+A form declares the SINGLE jurisdiction it is valid for. A form for jurisdiction X may be
+used by many programs in jurisdiction X; forms are not scoped to a program. The rule — that
+a form's jurisdiction and its target program's jurisdiction must agree — is NOT enforced
+here: that is SYS-3265, blocked on SYS-3264, because a submission does not currently record
+which form produced it.
+
+- `FormSpec.jurisdiction` (optional) and `effectiveJurisdiction`, which returns the
+  declaration, Malaysia when absent, and **null when present but unrecognised**. Callers must
+  handle null: it means "declares something we do not recognise", not "is Malaysian".
+- `UnifiedFormConfig.jurisdiction` — declared here too, because FinHub never constructs a
+  `FormSpec` and handles form configs only as this shape.
+- A new jurisdiction registry: `JURISDICTION`, `DEFAULT_JURISDICTION`, `JURISDICTION_CODES`,
+  `isJurisdiction`, `resolveJurisdiction`, `Jurisdiction`.
+- **Absent means Malaysia** — `undefined` and `null` both. No form authored before this
+  declares anything and none is backfilled, matching the null-means-MY precedent SYS-2872 set.
+  An **empty string is NOT absent**: it is unresolvable, because finsys-api fails closed on it
+  and returning Malaysia would turn "refuse extraction" into "extract as Malaysian".
+
+### Changed — `validateFormConfig` accepts a strictly smaller set
+
+**Not purely additive, despite being a minor.** The unified-form schema has no root
+`additionalProperties: false`, so `jurisdiction` was previously an ignored unknown key and any
+value passed. It is now constrained: an unrecognised code, or a non-string, is rejected.
+Nothing writes the key today so the practical risk is nil — but FinHub is trunk-to-prod and
+rejects form-config uploads on this validator, so the shrink is stated rather than assumed.
+
+The schema's `enum` is a deliberate second source of truth for the code set, kept because
+FinHub validates ONLY through the schema and would otherwise store an unknown jurisdiction
+unchecked. A drift test pins it against `JURISDICTION_CODES`; adding a jurisdiction means
+editing both, and the test fails if you edit one.
+
+
 ## [5.1.0] — 2026-08-06
 
 ### Changed — currency belongs to the value, not the field definition (SYS-3249)

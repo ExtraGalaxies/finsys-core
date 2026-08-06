@@ -23,6 +23,7 @@
 
 // Re-export survey-core types for consumers
 export type { IQuestion, IPage, ISurvey, IPanel, IElement } from "survey-core";
+import type { Jurisdiction } from "./jurisdiction.js";
 import { getPastMonthLabel, getPastYearLabel } from "./utils.js";
 
 // ============ Unified Form Config Types ============
@@ -113,6 +114,15 @@ export interface UnifiedFormConfig {
   categories: Category[];
   fields: Record<string, FieldData>;
   pages?: PageConfig[];  // Optional when used in editor-only mode (no rendered form)
+  /**
+   * SYS-3263: the single jurisdiction this form is valid for; absent means
+   * Malaysia. Declared HERE and not only on FormSpec because FinHub never
+   * constructs a FormSpec — it handles form configs exclusively as raw
+   * UnifiedFormConfig (validates, stores in a JSONB column, ships to React).
+   * Without this the declaration is invisible to two of the three consumers,
+   * and SYS-3265 enforcement would need a cast to read it.
+   */
+  jurisdiction?: Jurisdiction;
 }
 
 

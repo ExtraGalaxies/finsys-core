@@ -84,6 +84,14 @@ export function isJurisdiction(value: unknown): value is Jurisdiction {
  * to prevent.
  */
 export function resolveJurisdiction(value: string | null | undefined): Jurisdiction | null {
-  if (value === null || value === undefined || value === '') return DEFAULT_JURISDICTION
+  // ABSENT is null/undefined only. An EMPTY STRING is deliberately NOT absent.
+  //
+  // finsys-api treats '' as unresolvable and fails closed — financialStatementSpecFor
+  // throws a ValidationError, and extractionApiService refuses the route. If this
+  // helper returned Malaysia for '', then SYS-3258 swapping finsys-api onto it would
+  // silently turn "refuse extraction" into "extract as Malaysian", which is a change
+  // in failure mode disguised as a de-duplication. Program.jurisdiction is a plain
+  // varchar(8), so '' is reachable.
+  if (value === null || value === undefined) return DEFAULT_JURISDICTION
   return isJurisdiction(value) ? value : null
 }

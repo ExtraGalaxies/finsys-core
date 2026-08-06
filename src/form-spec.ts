@@ -19,7 +19,7 @@ import FormField from "./form-field.js";
 import type { FieldData, PageConfig, UnifiedFormConfig } from "./survey-generator.js";
 import { validateFormConfig } from "./validator.js";
 import semver from "semver";
-import { DEFAULT_JURISDICTION, isJurisdiction, JURISDICTION_CODES, type Jurisdiction } from "./jurisdiction.js";
+import { JURISDICTION_CODES, resolveJurisdiction, type Jurisdiction } from "./jurisdiction.js";
 
 export class FormSpec {
   private _categories: FormFieldCategory[] = [];
@@ -117,9 +117,21 @@ export class FormSpec {
     this._jurisdiction = value;
   }
 
-  /** The jurisdiction that actually applies: the declaration, or Malaysia. */
-  get effectiveJurisdiction(): Jurisdiction {
-    return this._jurisdiction ?? DEFAULT_JURISDICTION;
+  /**
+   * The jurisdiction that actually applies: the declaration, or Malaysia when
+   * absent — and NULL when the declaration is present but unrecognised.
+   *
+   * Delegates rather than using `?? DEFAULT_JURISDICTION`. `??` is nullish-only,
+   * so it returned '' for an empty declaration and 'my' for a miscased one —
+   * values outside the Jurisdiction union, handed back typed AS Jurisdiction.
+   * This is the accessor SYS-3265 compares against a program's jurisdiction, so
+   * it was the one place the "unknown is not the default" rule failed open.
+   *
+   * Callers must handle null. It means "this form declares something we do not
+   * recognise", which is not the same as "this form is Malaysian".
+   */
+  get effectiveJurisdiction(): Jurisdiction | null {
+    return resolveJurisdiction(this._jurisdiction);
   }
 
   get templateIcon(): string | undefined {
@@ -223,7 +235,11 @@ export class FormSpec {
     // SYS-3265 makes — and failing them for a reason nobody could see.
     // Absent is fine and means Malaysia; only a PRESENT-but-unknown value
     // is refused.
-    if (this._jurisdiction !== undefined && !isJurisdiction(this._jurisdiction)) {
+    // One predicate, shared with effectiveJurisdiction and resolveJurisdiction,
+    // because three implementations of "is this absent?" disagreed on null and
+    // ''. null is what a JSONB column and a React "not set" actually write, and
+    // it is the shape SYS-2872's own precedent is written in.
+    if (resolveJurisdiction(this._jurisdiction ?? undefined) === null) {
       errors.push({
         message: `jurisdiction: unknown jurisdiction '${String(this._jurisdiction)}' — expected one of ${JURISDICTION_CODES.join(', ')}, or omit it to declare Malaysia`,
         path: 'jurisdiction',

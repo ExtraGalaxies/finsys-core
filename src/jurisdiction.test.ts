@@ -73,7 +73,7 @@ describe('jurisdiction registry', () => {
   it('exposes every declarable code, and no code is three uppercase letters', () => {
     // A guard against the shape confusion that bit the canonical field specs:
     // a currency code is three uppercase letters, a jurisdiction is two.
-    expect([...JURISDICTION_CODES].sort()).toEqual(['MY', 'VN'])
+    expect([...JURISDICTION_CODES].sort()).toEqual(['MY', 'TH', 'VN'])
     for (const c of JURISDICTION_CODES) expect(c).toMatch(/^[A-Z]{2}$/)
   })
 })

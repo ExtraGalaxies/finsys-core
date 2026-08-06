@@ -45,6 +45,7 @@
 export const JURISDICTION = {
   MALAYSIA: 'MY',
   VIETNAM: 'VN',
+  THAILAND: 'TH',
 } as const
 
 export type Jurisdiction = (typeof JURISDICTION)[keyof typeof JURISDICTION]

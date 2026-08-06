@@ -21,11 +21,6 @@
       "type": "string",
       "description": "Icon identifier or path for the form template (used in FinSys editor)"
     },
-    "jurisdiction": {
-      "type": "string",
-      "description": "SYS-3263: the single jurisdiction this form is valid for. Optional; absent means Malaysia. The enum is a SECOND source of truth for the code set and is pinned against JURISDICTION_CODES by a drift test — adding a jurisdiction means editing both. It is kept despite that cost because FinHub validates form configs ONLY through this schema (it never constructs a FormSpec), so without the enum an unknown jurisdiction reaches FinHub storage unchecked.",
-      "enum": ["MY", "VN"]
-    },
     "categories": {
       "type": "array",
       "description": "Category definitions for field organization and grouping",
@@ -49,10 +44,11 @@
     },
     "jurisdiction": {
       "type": "string",
-      "description": "SYS-3263: the single jurisdiction this form is valid for (ISO 3166-1 alpha-2). Optional; absent means Malaysia. A form may be used by many programs sharing its jurisdiction, and must not be used to submit to a program in another.",
+      "description": "SYS-3263: the single jurisdiction this form is valid for (ISO 3166-1 alpha-2). Optional; absent means Malaysia. A form may be used by many programs sharing its jurisdiction, and must not be used to submit to a program in another. The enum is a SECOND source of truth for the code set, pinned against JURISDICTION_CODES by a drift test — adding a jurisdiction means editing both. Kept despite that cost because FinHub validates form configs ONLY through this schema (it never constructs a FormSpec), so without the enum an unknown jurisdiction would reach FinHub storage unchecked.",
       "enum": [
         "MY",
-        "VN"
+        "VN",
+        "TH"
       ]
     }
   },

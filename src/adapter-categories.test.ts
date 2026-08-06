@@ -665,14 +665,20 @@ describe("finxtract-financial-statement category", () => {
     expect(spec("year")?.unit).toBeUndefined();
   });
 
-  it("declares the monetary metrics as number/MYR", () => {
+  it("declares the monetary metrics as kind money, carrying no currency of their own", () => {
+    // SYS-3249: these declared unit: "MYR" until the currency of a value
+    // stopped being a property of its field. The denomination now travels
+    // on the value's provenance envelope, so the field says only THAT it
+    // is money — never WHICH money. A VN financial statement writes these
+    // same columns, which is precisely why the field cannot name one.
     const spec = (name: string) =>
       categorySchemaOf("finxtract-financial-statement").fields.find(
         (f) => f.name === name,
       );
     for (const name of ["totalEquity", "netProfit", "revenue", "totalAssets"]) {
       expect(spec(name)?.type, `${name} type`).toBe("number");
-      expect(spec(name)?.unit, `${name} unit`).toBe("MYR");
+      expect(spec(name)?.kind, `${name} kind`).toBe("money");
+      expect(spec(name)?.unit, `${name} unit`).toBeUndefined();
     }
   });
 
@@ -785,7 +791,11 @@ describe("finxtract-ssm category", () => {
         expect(f.type, `${f.name} type`).toBe("string");
       }
     }
-    expect(cat.fields.find((f) => f.name === "ssmPaidUpCapital")?.unit).toBe("MYR");
+    // SYS-3249: was unit "MYR"; a field declares that it is money, not
+    // which currency the money is in.
+    const paidUp = cat.fields.find((f) => f.name === "ssmPaidUpCapital");
+    expect(paidUp?.kind).toBe("money");
+    expect(paidUp?.unit).toBeUndefined();
   });
 
   it("attests three shared facts; all other names are unique to ssm", () => {
@@ -1121,5 +1131,138 @@ describe("isFieldSensitive / sensitiveFieldsOf (SYS-3164)", () => {
     expect(() => isFieldSensitive("no-such-category", "anything")).toThrow(
       /Unknown adapter category/,
     );
+  });
+})
+
+// ── SYS-3249: currency belongs to the value, not the field ───────────
+describe("monetary fields and the closed unit set", () => {
+  const CURRENCY_CODE = /^[A-Z]{3}$/;
+
+  it("no canonical field anywhere declares a currency as its unit", () => {
+    // The census, and the point of the whole change. 143 fields declared
+    // unit: "MYR" — a statement that was only ever true of Malaysian data,
+    // on fields a Vietnamese financial statement writes too. This fails if
+    // one comes back.
+    const offenders: string[] = [];
+    for (const cat of allCategories()) {
+      for (const f of cat.fields) {
+        if (f.unit !== undefined && CURRENCY_CODE.test(f.unit)) {
+          offenders.push(`${cat.id}.${f.name} (unit "${f.unit}")`);
+        }
+      }
+    }
+    expect(offenders, offenders.join(", ")).toEqual([]);
+  });
+
+  it("every money field is a number, and declares neither unit nor range", () => {
+    // A range on money is denominated by definition — telcoArpuMyr's
+    // [0, 10000] was sane in ringgit and ~20x too small in dong. A unit on
+    // money is the currency wearing a disguise.
+    const money = allCategories().flatMap((cat) =>
+      cat.fields.filter((f) => f.kind === "money").map((f) => ({ cat: cat.id, f })),
+    );
+    // Pinned, not `toBeGreaterThan(0)`. The 143 were converted by a SCRIPT,
+    // and a script is exactly what can drop 140 of them while leaving 3 —
+    // which a lower bound would wave through. If this number changes, that
+    // is either a new money field (raise it deliberately) or a regression.
+    expect(money.length).toBe(143);
+    for (const { cat, f } of money) {
+      expect(f.type, `${cat}.${f.name} type`).toBe("number");
+      expect(f.unit, `${cat}.${f.name} unit`).toBeUndefined();
+      expect(f.range, `${cat}.${f.name} range`).toBeUndefined();
+    }
+  });
+
+  it("a currency unit is refused at load, and says why", () => {
+    const raw = validRaw();
+    raw.categories[0].fields[0] = {
+      ...raw.categories[0].fields[0],
+      unit: "MYR",
+      range: undefined,
+    } as unknown as RawArg["categories"][number]["fields"][number];
+    expect(() => buildCategoryRegistry(raw)).toThrow(/a currency is not a unit of measure/);
+  });
+
+  it("an unrecognised non-currency unit is refused too — the set is closed, not currency-blocklisted", () => {
+    // A blocklist of currency codes would only catch the shapes someone
+    // thought of. The allow-list catches "furlongs" as readily as "VND".
+    const raw = validRaw();
+    raw.categories[0].fields[0] = {
+      ...raw.categories[0].fields[0],
+      unit: "furlongs",
+    } as unknown as RawArg["categories"][number]["fields"][number];
+    expect(() => buildCategoryRegistry(raw)).toThrow(/invalid unit "furlongs"/);
+  });
+
+  it("kind money refuses a non-number type, a unit, and a range", () => {
+    const withMoneyField = (extra: Record<string, unknown>): RawArg => {
+      const raw = validRaw();
+      raw.categories[0].fields[0] = {
+        name: "fixtureAmount",
+        type: "number",
+        kind: "money",
+        description: "A monetary test field.",
+        ...extra,
+      } as unknown as RawArg["categories"][number]["fields"][number];
+      return raw;
+    };
+    expect(() => buildCategoryRegistry(withMoneyField({ type: "string" }))).toThrow(
+      /is kind "money" but type "string"/,
+    );
+    expect(() => buildCategoryRegistry(withMoneyField({ unit: "ratio" }))).toThrow(
+      /is kind "money" and declares unit/,
+    );
+    expect(() => buildCategoryRegistry(withMoneyField({ range: [0, 10000] }))).toThrow(
+      /is kind "money" and declares a range/,
+    );
+  });
+
+  it("a well-formed money field LOADS — the guards above reject the bad case, not every case", () => {
+    // The positive control. Without it, the three rejections above would
+    // pass just as happily if buildCategoryRegistry threw unconditionally,
+    // and the suite would report a working guard that permits nothing.
+    const raw = validRaw();
+    raw.categories[0].fields[0] = {
+      name: "fixtureAmount",
+      type: "number",
+      kind: "money",
+      description: "A monetary test field.",
+    } as unknown as RawArg["categories"][number]["fields"][number];
+    const reg = buildCategoryRegistry(raw);
+    const spec = reg.byId.get("fixture-source")?.fields.find((f) => f.name === "fixtureAmount");
+    expect(spec?.kind).toBe("money");
+    expect(spec?.unit).toBeUndefined();
+  });
+})
+
+// ── SYS-3249: the drift guard the allow-list alone does not give you ─
+describe("monetary declaration cannot be skipped by silence", () => {
+  it("every numeric canonical field declares a unit OR kind money", () => {
+    // The allow-list closes "declares MYR" and the per-kind block closes
+    // "declares money AND a unit". Neither closes the cheapest path of all:
+    // declare NOTHING. A bare { type: "number" } money field loads clean,
+    // gets no denomination forever, and fails no test — and post-change,
+    // saying nothing is the only route that never throws.
+    //
+    // Exactly two numeric fields are legitimately bare, so the counter-
+    // pressure costs almost nothing. Both are named, not pattern-matched:
+    // an exception you have to type is an exception someone has to justify.
+    const LEGITIMATELY_BARE = new Set([
+      "year", // a document ordinal, not a measure
+      "totalShareIssued", // a count of shares, not an amount of money
+    ]);
+    const bare: string[] = [];
+    for (const cat of allCategories()) {
+      for (const f of cat.fields) {
+        if (f.type !== "number") continue;
+        if (f.unit !== undefined || f.kind === "money") continue;
+        if (LEGITIMATELY_BARE.has(f.name)) continue;
+        bare.push(`${cat.id}.${f.name}`);
+      }
+    }
+    expect(
+      bare,
+      `numeric field(s) declaring neither a unit nor kind "money" — if monetary, declare it; if not, add it to LEGITIMATELY_BARE with a reason: ${bare.join(", ")}`,
+    ).toEqual([]);
   });
 })

@@ -23,6 +23,7 @@ import type {
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
+import { allCategories } from './adapter-categories.js'
 import type { TaggedFieldData } from './document-types.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
 
@@ -116,6 +117,38 @@ export function getGroupDisplayNames(): Record<string, string> {
 
 // ── File-field table building ──────────────────────────────────
 
+/**
+ * SYS-3249: the set of canonical field names declared `kind: "money"`.
+ *
+ * `isNumericField` below is a 17-word substring match over the flat column
+ * name, and it misses 51 of the 143 money fields — every `payslip*` amount,
+ * `shareCapital`, `retainedEarnings`, every `*Payables`/`*Borrowings`
+ * liability, all four `depreciation*`, `ebitda`, `zakat`, `ssmPaidUpCapital`.
+ * Those simply never reached the numeric branch, so before this they merely
+ * lost thousands separators.
+ *
+ * Once a value carries a denomination that stops being cosmetic: the
+ * formatter would render `₫2,000,000` for a payslip's variable income (which
+ * matches "income") beside a bare `15000000` for its gross pay (which matches
+ * nothing) — in the same table, from the same document, in the same currency.
+ * A bare number that looks authoritative is exactly what the currency exists
+ * to prevent, so a partial rendering is worse than none.
+ *
+ * The category registry is the authority on what is money, so ask it rather
+ * than extending the word list — a word list would drift from the vocabulary
+ * the moment a category is added. No import cycle: adapter-categories.ts
+ * imports nothing but its own JSON.
+ */
+let cachedMonetaryFieldNames: Set<string> | null = null
+function isMonetaryField(fieldName: string): boolean {
+  if (!cachedMonetaryFieldNames) {
+    cachedMonetaryFieldNames = new Set(
+      allCategories().flatMap((c) => c.fields.filter((f) => f.kind === 'money').map((f) => f.name))
+    )
+  }
+  return cachedMonetaryFieldNames.has(fieldName)
+}
+
 function isNumericField(fieldName: string): boolean {
   const patterns = [
     'balance',
@@ -140,12 +173,94 @@ function isNumericField(fieldName: string): boolean {
   return patterns.some((p) => lower.includes(p))
 }
 
-function formatValue(value: unknown, numeric: boolean): string {
+/**
+ * SYS-3249: `currency` is the ISO 4217 denomination of THIS value, read
+ * from its provenance envelope — never from the field definition, and
+ * never from a program-level default. It is optional, and absent means
+ * "unknown", not "MYR": every pre-SYS-3249 row is absent, and defaulting
+ * would render a VND amount as if it were ringgit, which is the exact
+ * failure this carries a denomination to prevent.
+ *
+ * The two-fraction-digit default below is therefore kept ONLY for the
+ * unknown case, where it preserves existing behaviour. When a currency IS
+ * known the fraction digits come from the currency itself — VND is
+ * zero-decimal, so 14,004,792,678,863 renders whole rather than gaining
+ * two decimals that do not exist in the currency.
+ *
+ * The locale stays 'en-US' for now and governs only grouping/ordering,
+ * not the decimal count. It becomes jurisdiction-driven under SYS-3258.
+ */
+/**
+ * SYS-3249: grouping, but NO invented decimals.
+ *
+ * This previously forced `minimumFractionDigits: 2` on everything that
+ * reached the numeric branch. That is a claim about precision, and it is
+ * wrong in two directions:
+ *
+ *  - Not every number here is money. `cashConversionCycleDays` rendered as
+ *    "45.00" days and `totalShareIssued` as "1,000,000.00" shares.
+ *  - Not every currency has two decimal places. VND and JPY have none, so a
+ *    money value whose currency we do NOT know is exactly the value we have
+ *    no basis to render with two decimals — and every row written before
+ *    this change has no recorded currency.
+ *
+ * So the unknown case now groups and preserves what the value actually has,
+ * rather than asserting a precision nobody supplied. Where the currency IS
+ * known the formatter above is used instead, and the currency decides — which
+ * is the only place that decision legitimately comes from.
+ */
+const PLAIN_NUMBER_FORMAT = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+})
+
+/**
+ * Formatters are cached because a 122-field financial statement across six
+ * periods constructs ~730 of them per render, server-side on the IHS detail
+ * path. Measured: ~22.5ms per 1000 construct+format vs ~0.2ms cached.
+ * `null` caches a code Intl rejects, so a bad value costs one throw, not one
+ * per cell.
+ */
+const currencyFormatters = new Map<string, Intl.NumberFormat | null>()
+function currencyFormatter(code: string): Intl.NumberFormat | null {
+  const cached = currencyFormatters.get(code)
+  if (cached !== undefined) return cached
+  let fmt: Intl.NumberFormat | null = null
+  try {
+    // `currencyDisplay: 'code'` rather than the default symbol, deliberately.
+    // Under en-US, USD renders as "$" while MYR/VND/THB/SGD render as codes —
+    // so the ONE currency that gets a bare glyph is the one whose glyph four
+    // other currencies also use. On a credit-bureau artifact read across
+    // jurisdictions that is the worst possible default. 'code' also makes the
+    // success and degraded paths agree on placement.
+    fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: code, currencyDisplay: 'code' })
+  } catch {
+    fmt = null
+  }
+  currencyFormatters.set(code, fmt)
+  return fmt
+}
+
+function formatValue(value: unknown, numeric: boolean, currency?: string): string {
   if (value === null || value === undefined || value === '') return '-'
   if (numeric) {
     const num = Number(value)
-    if (!isNaN(num))
-      return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    if (!isNaN(num)) {
+      if (currency) {
+        // Normalised before use: extraction output is exactly where stray
+        // whitespace and lowercase come from, and Intl rejects " myr " while
+        // accepting "MYR". Recovering those is free; leaving them to the
+        // degraded path renders a correct value as though it were suspect.
+        const code = currency.trim().toUpperCase()
+        const fmt = code ? currencyFormatter(code) : null
+        if (fmt) return fmt.format(num)
+        // Intl does not know this code. Degrade VISIBLY rather than either
+        // crashing the whole detail render for one bad field, or dropping the
+        // code and presenting a bare number that looks authoritative. Code
+        // first, matching the success path.
+        return `${code || currency} ${PLAIN_NUMBER_FORMAT.format(num)}`
+      }
+      return PLAIN_NUMBER_FORMAT.format(num)
+    }
   }
   return String(value)
 }
@@ -175,7 +290,7 @@ function buildTableForGroup(
     const items: FileFieldTableItem[] = []
 
     for (const [baseName, periodMap] of Object.entries(columnGroups)) {
-      const numeric = isNumericField(baseName)
+      const numeric = isNumericField(baseName) || isMonetaryField(baseName)
       const data: Record<string, unknown> = {}
       const formattedData: Record<string, string> = {}
       const confidence: Record<string, number> = {}
@@ -185,9 +300,11 @@ function buildTableForGroup(
         const colName = periodMap[period]
         const value = colName ? (ihsData[colName] ?? null) : null
         data[period] = value
-        formattedData[period] = formatValue(value, numeric)
         // SYS-2741: colName is the exact ihs_field_metadata key (incl. T{n} suffix).
+        // SYS-3249: resolved BEFORE formatting — the envelope carries this
+        // value's currency, so the formatter needs it in hand.
         const prov = colName ? fieldProvenance?.[colName] : undefined
+        formattedData[period] = formatValue(value, numeric, prov?.currency)
         if (prov) {
           provenance[period] = prov
           if (
@@ -220,7 +337,7 @@ function buildTableForGroup(
     const items: FileFieldTableItem[] = []
     for (const colName of allColumns) {
       const value = ihsData[colName] ?? null
-      const numeric = isNumericField(colName)
+      const numeric = isNumericField(colName) || isMonetaryField(colName)
       // SYS-2741: single-doc columns (ssmCompanyName, companyName, icName, …) are
       // keyed directly in ihs_field_metadata — lit up here (the value-match interim
       // had to skip these because filename-based OCR lookup was unreliable).
@@ -229,7 +346,7 @@ function buildTableForGroup(
         displayName: getDisplayName(colName),
         timePeriods: [],
         data: { value },
-        formattedData: { value: formatValue(value, numeric) },
+        formattedData: { value: formatValue(value, numeric, prov?.currency) },
         type: tableType,
         isNumeric: numeric,
         ...(prov &&
@@ -385,7 +502,7 @@ function buildInstanceTable(
     const hasAny = Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '')
     if (!hasAny) continue
 
-    const numeric = isNumericField(baseName)
+    const numeric = isNumericField(baseName) || isMonetaryField(baseName)
     const data: Record<string, unknown> = {}
     const formattedData: Record<string, string> = {}
     const confidence: Record<string, number> = {}
@@ -395,10 +512,12 @@ function buildInstanceTable(
       const label = instanceLabels[i]
       const value = labelMap[label] ?? null
       data[label] = value
-      formattedData[label] = formatValue(value, numeric)
 
       const legacyKey = row.timePeriod ? `${baseName}${row.timePeriod}` : undefined
+      // SYS-3249: hoisted above the format call — the envelope carries
+      // this value's currency.
       const prov = legacyKey ? fieldProvenance?.[legacyKey] : undefined
+      formattedData[label] = formatValue(value, numeric, prov?.currency)
       if (prov) {
         provenance[label] = prov
         if (

@@ -543,3 +543,184 @@ describe('document-table maps + formatters (SYS-2766)', () => {
     )
   })
 })
+
+// ── SYS-3249: the denomination travels with the value ────────────────
+describe('currency-aware value formatting', () => {
+  const prov = (currency?: string) => ({
+    source: 'finxtract:bank_statement',
+    confidence: 0.9,
+    observedAt: '2026-08-05T00:00:00Z',
+    sourceRunId: 'run-1',
+    origin: 'extracted' as const,
+    ...(currency ? { currency } : {}),
+  })
+
+  // Pick the cell that actually HOLDS the value under test. Selecting the
+  // first item with a T1 key instead returns some unrelated empty field
+  // rendering '-', and every assertion below then fails for a reason that
+  // has nothing to do with currency.
+  const populatedT1 = (tables: Record<string, { items: { data: Record<string, unknown>; formattedData: Record<string, string> }[] }>) =>
+    Object.values(tables)
+      .flatMap((t) => t.items)
+      .find((i) => i.data?.T1 !== null && i.data?.T1 !== undefined)
+
+  it('renders a VND amount with NO decimals — the currency decides, not a constant', () => {
+    // The bug this closes: 'en-US' with minimumFractionDigits: 2 gave every
+    // amount two decimals. VND is a zero-decimal currency, so a Vietnamese
+    // figure gained two digits that do not exist in the currency at all.
+    const tables = buildFileFieldTables(
+      { totalCreditsT1: 14004792678863 },
+      { totalCreditsT1: prov('VND') }
+    )
+    const cell = populatedT1(tables)
+    expect(cell, 'expected a populated T1 cell to render').toBeDefined()
+    expect(cell!.formattedData.T1).not.toMatch(/\.\d\d$/)
+    expect(cell!.formattedData.T1).toMatch(/14,004,792,678,863/)
+  })
+
+  it('renders an MYR amount with two decimals, and says which currency', () => {
+    const tables = buildFileFieldTables(
+      { totalCreditsT1: 1234.5 },
+      { totalCreditsT1: prov('MYR') }
+    )
+    const cell = populatedT1(tables)
+    expect(cell!.formattedData.T1).toMatch(/1,234\.50/)
+    expect(cell!.formattedData.T1).toMatch(/MYR|RM/)
+  })
+
+  it('an absent currency renders grouped but invents no decimals — absence is unknown, never a default', () => {
+    // Every row written before this shipped has no currency. Defaulting one
+    // in would render a VND figure as ringgit, which is precisely the
+    // failure the denomination exists to prevent — so absence must stay
+    // undecorated rather than become a guess.
+    //
+    // And it must not invent PRECISION either. Forcing two fraction digits
+    // is a claim about the currency, and VND and JPY have none — so the one
+    // value we have no basis to render with two decimals is exactly the one
+    // whose currency we do not know. Group; assert nothing.
+    const tables = buildFileFieldTables(
+      { totalCreditsT1: 1234.5 },
+      { totalCreditsT1: prov() }
+    )
+    const cell = populatedT1(tables)
+    expect(cell!.formattedData.T1).toBe('1,234.5')
+    expect(cell!.formattedData.T1).not.toMatch(/[A-Z]{2,3}|RM|\$|₫/)
+  })
+
+  it('an unknown currency code degrades visibly instead of crashing the whole render', () => {
+    // Intl throws RangeError on a code it does not know, and this value
+    // comes from extraction, so it can be junk. One bad field must not
+    // take out the entire detail page — but it must not silently present a
+    // bare number that looks authoritative either.
+    const tables = buildFileFieldTables(
+      { totalCreditsT1: 1234.5 },
+      { totalCreditsT1: prov('NOTACURRENCY') }
+    )
+    const cell = populatedT1(tables)
+    expect(cell!.formattedData.T1).toContain('NOTACURRENCY')
+    expect(cell!.formattedData.T1).toContain('1,234.5')
+  })
+})
+
+// ── SYS-3249: money the word-list cannot see ─────────────────────────
+describe('monetary fields outside the isNumericField word list', () => {
+  const prov = (currency?: string) => ({
+    source: 'finxtract:ssm',
+    confidence: 0.9,
+    observedAt: '2026-08-05T00:00:00Z',
+    sourceRunId: 'run-1',
+    origin: 'extracted' as const,
+    ...(currency ? { currency } : {}),
+  })
+
+  it('denominates ssmPaidUpCapital — a KEY_VALUE money field that matches no numeric keyword', () => {
+    // The regression this pins: `numeric` came from a 17-word substring match
+    // over the column name, which misses 51 of the 143 money fields.
+    // "ssmPaidUpCapital" contains none of balance/amount/total/... so it fell
+    // straight past the numeric branch and rendered bare — while the commit
+    // claimed to denominate money. It is also the exact field whose category
+    // test asserts kind: "money", and it exercises the KEY_VALUE branch,
+    // which no other currency test touched.
+    const tables = buildFileFieldTables({ ssmPaidUpCapital: 250000 }, { ssmPaidUpCapital: prov('VND') })
+    const cell = Object.values(tables)
+      .flatMap((t) => t.items)
+      .find((i) => i.data?.value !== null && i.data?.value !== undefined)
+    expect(cell, 'expected the ssm KEY_VALUE cell to render').toBeDefined()
+    expect(cell!.isNumeric, 'a money field must reach the numeric branch').toBe(true)
+    expect(cell!.formattedData.value).toContain('VND')
+    expect(cell!.formattedData.value).toContain('250,000')
+  })
+
+  it('renders every money field in one document consistently, not a mix', () => {
+    // The failure mode that makes a PARTIAL denomination worse than none:
+    // payslipVariableIncome matches the word "income" and got a currency,
+    // while payslipGrossPay and payslipBasicPay matched nothing and rendered
+    // as bare integers — same table, same document, same currency. A bare
+    // number that looks authoritative is what the denomination exists to
+    // prevent, so the invariant is CONSISTENCY across the table, not merely
+    // that some cell somewhere is denominated.
+    const cols = ['payslipGrossPayT1', 'payslipBasicPayT1', 'payslipVariableIncomeT1']
+    const tables = buildFileFieldTables(
+      Object.fromEntries(cols.map((c) => [c, 15000000])),
+      Object.fromEntries(cols.map((c) => [c, prov('VND')]))
+    )
+    const rendered = Object.values(tables)
+      .flatMap((t) => t.items)
+      .filter((i) => i.data?.T1 !== null && i.data?.T1 !== undefined)
+    expect(rendered.length, 'expected all three payslip amounts to render').toBe(cols.length)
+    for (const cell of rendered) {
+      expect(cell.isNumeric, `${cell.displayName} must reach the numeric branch`).toBe(true)
+      expect(
+        cell.formattedData.T1,
+        `${cell.displayName} must carry the denomination like its neighbours`
+      ).toContain('VND')
+    }
+  })
+})
+
+// ── SYS-3249: precision is never invented ────────────────────────────
+describe('fraction digits come from the currency, or from the value — never from a constant', () => {
+  const P = (currency?: string) => ({
+    source: 'finxtract:ssm',
+    confidence: 0.9,
+    observedAt: '2026-08-05T00:00:00Z',
+    sourceRunId: 'run-1',
+    origin: 'extracted' as const,
+    ...(currency ? { currency } : {}),
+  })
+  // Intl separates the currency code from the number with U+00A0, a
+  // NON-BREAKING space — deliberate on its part (the code should not wrap
+  // away from its amount). Normalised here so assertions compare what a
+  // reader sees rather than which flavour of space Intl chose; the rendered
+  // value keeps the nbsp, which is what consumers receive.
+  const render = (data: Record<string, unknown>, prov: Record<string, unknown>) => {
+    const tables = buildFileFieldTables(data, prov as never)
+    const cell = Object.values(tables)
+      .flatMap((t) => t.items)
+      .find((i) => i.data?.value !== null && i.data?.value !== undefined)
+    return cell!.formattedData.value.replace(/\u00a0/g, ' ')
+  }
+
+  it('a zero-decimal currency gets no decimals; a two-decimal currency gets two', () => {
+    expect(render({ ssmPaidUpCapital: 14004792678863 }, { ssmPaidUpCapital: P('VND') })).toBe(
+      'VND 14,004,792,678,863'
+    )
+    expect(render({ ssmPaidUpCapital: 1234.5 }, { ssmPaidUpCapital: P('MYR') })).toBe('MYR 1,234.50')
+  })
+
+  it('an unknown currency invents no decimals — a VND figure must not gain two', () => {
+    // The regression this pins: forcing minimumFractionDigits: 2 rendered
+    // 14,004,792,678,863 as "...,863.00" — two decimal places that do not
+    // exist in the currency the value is actually denominated in. Every row
+    // predating this change is in exactly this state.
+    expect(render({ ssmPaidUpCapital: 14004792678863 }, { ssmPaidUpCapital: P() })).toBe(
+      '14,004,792,678,863'
+    )
+  })
+
+  it('a non-monetary count is not dressed up as money', () => {
+    // totalShareIssued is a count of shares and reaches the numeric branch
+    // only because its name contains "total". It rendered "1,000,000.00".
+    expect(render({ totalShareIssued: 1000000 }, {})).toBe('1,000,000')
+  })
+})

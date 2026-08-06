@@ -95,21 +95,41 @@ export interface CanonicalFieldSpec {
    */
   readonly fact?: string;
   /**
-   * Field kind — a semantic refinement of `type`. Currently the only
-   * kind is `"enum"`: the field's value is one label out of a closed
-   * set. The category declares ONLY that the field is enumerated —
-   * never the values, never an ordering. Value sets are vendor
-   * territory: each adapter declares the exact labels it emits in its
-   * manifest's `enumValues` (host-validated), because two vendors
-   * implementing the same category may bucket differently. Ordering
-   * and scoring interpretation live even further out, in the consumer
-   * (an eval model's per-value mapping) — an enum label is data, what
-   * it is worth is opinion, and opinions don't belong in the data
-   * contract. An enum field MUST be `type: "string"` (labels are
+   * Field kind — a semantic refinement of `type`.
+   *
+   * `"enum"`: the field's value is one label out of a closed set. The
+   * category declares ONLY that the field is enumerated — never the
+   * values, never an ordering. Value sets are vendor territory: each
+   * adapter declares the exact labels it emits in its manifest's
+   * `enumValues` (host-validated), because two vendors implementing the
+   * same category may bucket differently. Ordering and scoring
+   * interpretation live even further out, in the consumer (an eval
+   * model's per-value mapping) — an enum label is data, what it is
+   * worth is opinion, and opinions don't belong in the data contract.
+   * An enum field MUST be `type: "string"` (labels are
    * string-normalized) and MUST NOT declare a `range` (labels are
    * unordered).
+   *
+   * `"money"` (SYS-3249): the field's value is a monetary amount, and is
+   * therefore INCOMPLETE ON ITS OWN. The primitive is still a number —
+   * which is why this is a refinement of `type` rather than a member of
+   * it — but the number means nothing without a denomination, and the
+   * denomination belongs to the observation, not to the field. One
+   * source can report several currencies in a single document, so a
+   * field-level currency could never be right for more than one of them.
+   * The denomination travels with the value on its provenance envelope
+   * (`IhsFieldProvenance.currency`).
+   *
+   * A money field MUST be `type: "number"`, MUST NOT declare a `unit`
+   * (there is no unit that is true of the quantity — see
+   * `VALID_FIELD_UNITS`), and MUST NOT declare a `range`: a numeric
+   * bound on money is denominated by definition, so it can only ever be
+   * correct in one currency. `telcoArpuMyr [0, 10000]` was a sane
+   * Malaysian bound and is roughly twenty times too small in VND, where
+   * ARPU runs about 200,000 — every non-MY row would have failed a
+   * constraint the data contract asserted about all of them.
    */
-  readonly kind?: "enum";
+  readonly kind?: "enum" | "money";
   /**
    * SYS-3164: the field's confidentiality class. The ONLY way to declare
    * one is to opt OUT.
@@ -190,7 +210,7 @@ interface RawCategoryField {
   range?: [number, number];
   description: string;
   fact?: string;
-  kind?: "enum";
+  kind?: "enum" | "money";
   confidentiality?: "non-sensitive";
 }
 
@@ -215,7 +235,44 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
   "string",
 ];
 
-const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> = ["enum"];
+const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> = [
+  "enum",
+  "money",
+];
+
+/**
+ * SYS-3249: the closed set of units a field may declare, and — more to
+ * the point — the set a currency can never join.
+ *
+ * Every member is an INTRINSIC unit of measure: a property of the
+ * quantity itself, true wherever it is observed. A currency is not that.
+ * It is a property of the OBSERVATION, it varies between two values of
+ * the same field, and one source can report several in a single document
+ * (an FX transaction on a bank statement, cross-border settlement on a
+ * payment network). Declaring `unit: "MYR"` on a field said something
+ * about the field that was only ever true of Malaysian data, and 143
+ * fields said it.
+ *
+ * Money is expressed as `kind: "money"` instead, and the denomination
+ * travels with the value on its provenance envelope.
+ *
+ * The list is closed and validated at load precisely so re-declaring a
+ * currency here — or helpfully adding "VND" alongside — is a load error
+ * rather than something review has to catch. That is the whole control:
+ * `unit` is otherwise documentation-only (its sole consumer is the spec
+ * builder passing it through), so nothing else would ever notice.
+ */
+const VALID_FIELD_UNITS: ReadonlyArray<string> = [
+  "ratio",
+  "months",
+  "days",
+  "hours",
+  "count",
+  "meters",
+  "deg",
+  "rating",
+  "score",
+];
 
 /**
  * SYS-3164. One entry, and that is the point — see `confidentiality` on
@@ -283,7 +340,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     CanonicalFieldName,
     {
       fact: string | undefined;
-      kind: "enum" | undefined;
+      kind: RawCategoryField["kind"];
       confidentiality: "non-sensitive" | undefined;
       categories: AdapterCategory[];
     }
@@ -421,21 +478,62 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           `adapter category data: field "${f.name}" (${where}) has invalid type "${f.type}"`,
         );
       }
+      // SYS-3249: `unit` is checked for EVERY field, kind or not. It was
+      // free-form until now and read by nothing but the spec builder, so
+      // an unusable value could sit in the contract indefinitely without
+      // anything noticing — which is exactly what 143 fields declaring
+      // `unit: "MYR"` did. Closing the set is the control.
+      if (f.unit !== undefined && !VALID_FIELD_UNITS.includes(f.unit)) {
+        const looksLikeCurrency = /^[A-Z]{3}$/.test(f.unit);
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) has invalid unit "${String(f.unit)}" — ` +
+            (looksLikeCurrency
+              ? `a currency is not a unit of measure. It is a property of the OBSERVATION, not of the field: ` +
+                `one source can report several currencies in one document, so no field-level currency can be ` +
+                `right for more than one of them. Declare kind "money" instead and let the denomination travel ` +
+                `with the value on its provenance envelope.`
+              : `expected one of ${VALID_FIELD_UNITS.join(", ")}`),
+        );
+      }
       if (f.kind !== undefined) {
         if (!VALID_FIELD_KINDS.includes(f.kind)) {
           throw new Error(
             `adapter category data: field "${f.name}" (${where}) has invalid kind "${String(f.kind)}"`,
           );
         }
-        if (f.type !== "string") {
-          throw new Error(
-            `adapter category data: field "${f.name}" (${where}) is kind "enum" but type "${f.type}" — enum labels are string-normalized, so an enum field must be type "string"`,
-          );
+        // Per-kind constraints. Split by kind rather than sharing a
+        // block: the two kinds refine `type` in opposite directions
+        // (enum narrows a string, money annotates a number), so a shared
+        // check would have to be written as a disjunction that is true
+        // for neither reason.
+        if (f.kind === "enum") {
+          if (f.type !== "string") {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "enum" but type "${f.type}" — enum labels are string-normalized, so an enum field must be type "string"`,
+            );
+          }
+          if (f.range !== undefined) {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "enum" but declares a range — enum labels are unordered; ordering belongs to the consumer, never the data contract`,
+            );
+          }
         }
-        if (f.range !== undefined) {
-          throw new Error(
-            `adapter category data: field "${f.name}" (${where}) is kind "enum" but declares a range — enum labels are unordered; ordering belongs to the consumer, never the data contract`,
-          );
+        if (f.kind === "money") {
+          if (f.type !== "number") {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "money" but type "${f.type}" — a monetary amount's primitive is a number; the denomination is carried separately, on the value's provenance`,
+            );
+          }
+          if (f.unit !== undefined) {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "money" and declares unit "${String(f.unit)}" — money has no intrinsic unit. The denomination belongs to the observation and travels on its provenance envelope`,
+            );
+          }
+          if (f.range !== undefined) {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "money" and declares a range — a numeric bound on money is denominated by definition, so it can only ever be correct in one currency`,
+            );
+          }
         }
       }
       if (typeof f.description !== "string" || f.description.length === 0) {

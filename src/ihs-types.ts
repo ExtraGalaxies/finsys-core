@@ -63,6 +63,42 @@ export interface IhsFieldProvenance {
   observedAt: string
   sourceRunId: string | null
   origin: IhsFieldOrigin
+  /**
+   * SYS-3249: the denomination of a monetary value (ISO 4217, e.g. "MYR",
+   * "VND", "THB"). Present only for `kind: "money"` canonical fields.
+   *
+   * It lives here rather than on the field definition because currency is
+   * a property of the OBSERVATION, not of the field: one source can report
+   * several currencies in a single document, so a field-level currency
+   * could never be right for more than one of them. This envelope is
+   * already written per-field, by the same call that writes the value, at
+   * the same instant — which is exactly the granularity a denomination
+   * needs.
+   *
+   * OPTIONAL, and absence is not "no currency" — it is "written before
+   * SYS-3249, or by a producer that does not yet record one". Readers must
+   * treat absence as unknown and say so, never as a default currency. A
+   * value silently rendered in the wrong denomination is the failure this
+   * field exists to prevent, and defaulting would reintroduce it wearing a
+   * different hat.
+   *
+   * PRECEDENCE against the document-level `currency` canonical field.
+   * `finxtract-financial-statement` also declares a canonical field named
+   * `currency` ("Reporting currency stated on the document"). The two are
+   * not rivals and must not be merged:
+   *
+   *   - that field is the DOCUMENT's declared reporting currency, one value
+   *     per statement, and is a data point in its own right;
+   *   - this is the denomination of ONE observed value.
+   *
+   * This wins wherever both exist, because the whole reason currency sits on
+   * the observation is that a single document can report several — an FX
+   * transaction, a foreign-currency balance. When this is absent the document
+   * field is a reasonable SOURCE for a producer populating it, but it is not
+   * a substitute at read time: a reader that falls back to it would state a
+   * denomination the value never claimed.
+   */
+  currency?: string
 }
 
 /**

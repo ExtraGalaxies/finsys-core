@@ -62,6 +62,18 @@ export type { IQuestion, IPage, ISurvey, IPanel, IElement } from "./survey-gener
 
 // Form domain classes
 export { FormSpec } from "./form-spec.js";
+
+// SYS-3263: the jurisdiction registry. Shared contract — finsys-api's own
+// copy (src/domain/constants/jurisdiction.ts, SYS-2872) should import from
+// here rather than keep its own; that de-duplication is SYS-3258's.
+export {
+  JURISDICTION,
+  DEFAULT_JURISDICTION,
+  JURISDICTION_CODES,
+  isJurisdiction,
+  resolveJurisdiction,
+  type Jurisdiction,
+} from "./jurisdiction.js";
 export { default as FormField, BasicFormField, FileFormField, FieldType } from "./form-field.js";
 export type { FormFieldType, FormFieldInputType, FormFieldTypeDefinitions, DropdownOption, EditorValidator } from "./form-field.js";
 export { FormFieldCategory } from "./form-field-category.js";

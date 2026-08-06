@@ -19,6 +19,7 @@ import FormField from "./form-field.js";
 import type { FieldData, PageConfig, UnifiedFormConfig } from "./survey-generator.js";
 import { validateFormConfig } from "./validator.js";
 import semver from "semver";
+import { DEFAULT_JURISDICTION, isJurisdiction, JURISDICTION_CODES, type Jurisdiction } from "./jurisdiction.js";
 
 export class FormSpec {
   private _categories: FormFieldCategory[] = [];
@@ -27,6 +28,29 @@ export class FormSpec {
   private _templateIcon?: string;
   private _schemaVersion: string;
   private _pages: PageConfig[] = [];
+  /**
+   * SYS-3263: the single jurisdiction this form is valid for.
+   *
+   * SINGLE, not a list, decided by Kain 2026-08-06: a form for jurisdiction X
+   * may be used by many programs in jurisdiction X. Forms are NOT scoped to a
+   * program and do not become so — the rule is that a form's jurisdiction and
+   * its target program's jurisdiction must AGREE.
+   *
+   * Optional, and absent means Malaysia. Every form authored before this
+   * shipped has no declaration, and none is being backfilled — the same
+   * null-means-MY precedent SYS-2872 set for Program and Ihs.
+   *
+   * The accepted cost of a single value: a genuinely jurisdiction-neutral
+   * form — a pure document-upload flow with no country-specific fields — has
+   * no way to say so, and must either pick one jurisdiction or be duplicated.
+   * No such form exists today. Widening a scalar to a list later is additive
+   * and needs no backfill, which is why the cheaper option is the one taken.
+   *
+   * Nothing ENFORCES agreement yet; SYS-3265 does that, and SYS-3264 supplies
+   * the missing half it needs (a submission does not currently record which
+   * form produced it). This field only makes the fact declarable.
+   */
+  private _jurisdiction?: Jurisdiction;
 
   constructor(
     displayName: string,
@@ -34,7 +58,8 @@ export class FormSpec {
     fields: FormField[],
     pages: PageConfig[] = [],
     templateIcon?: string,
-    schemaVersion: string = FormSpec.MAX_PARSER_SCHEMA_VERSION
+    schemaVersion: string = FormSpec.MAX_PARSER_SCHEMA_VERSION,
+    jurisdiction?: Jurisdiction
   ) {
     this._displayName = displayName;
     this._templateIcon = templateIcon;
@@ -42,6 +67,7 @@ export class FormSpec {
     this._fields = fields;
     this._pages = pages;
     this._schemaVersion = schemaVersion;
+    this._jurisdiction = jurisdiction;
   }
 
   static readonly MIN_PARSER_SCHEMA_VERSION = 'v1.0.0';
@@ -75,6 +101,25 @@ export class FormSpec {
 
   set displayName(newDisplayName: string) {
     this._displayName = newDisplayName;
+  }
+
+  /**
+   * The declared jurisdiction, or undefined if the form does not declare one.
+   * Prefer `effectiveJurisdiction` for any decision — a reader that treats
+   * undefined as "no jurisdiction" rather than "Malaysia" will refuse every
+   * form authored before SYS-3263.
+   */
+  get jurisdiction(): Jurisdiction | undefined {
+    return this._jurisdiction;
+  }
+
+  set jurisdiction(value: Jurisdiction | undefined) {
+    this._jurisdiction = value;
+  }
+
+  /** The jurisdiction that actually applies: the declaration, or Malaysia. */
+  get effectiveJurisdiction(): Jurisdiction {
+    return this._jurisdiction ?? DEFAULT_JURISDICTION;
   }
 
   get templateIcon(): string | undefined {
@@ -172,6 +217,19 @@ export class FormSpec {
       });
     }
 
+    // SYS-3263: an unrecognised jurisdiction is an ERROR, not a value that
+    // quietly never matches anything. A typo'd "VM" would otherwise sit in
+    // the spec looking declared while failing every compatibility check
+    // SYS-3265 makes — and failing them for a reason nobody could see.
+    // Absent is fine and means Malaysia; only a PRESENT-but-unknown value
+    // is refused.
+    if (this._jurisdiction !== undefined && !isJurisdiction(this._jurisdiction)) {
+      errors.push({
+        message: `jurisdiction: unknown jurisdiction '${String(this._jurisdiction)}' — expected one of ${JURISDICTION_CODES.join(', ')}, or omit it to declare Malaysia`,
+        path: 'jurisdiction',
+      });
+    }
+
     if (!this._displayName || this._displayName.trim() === '') {
       errors.push({
         message: 'displayName: Form display name is required',
@@ -257,6 +315,7 @@ export class FormSpec {
       schemaVersion: this._schemaVersion,
       displayName: this._displayName,
       templateIcon: this._templateIcon,
+      jurisdiction: this._jurisdiction,
       categories: this._categories,
       fields: fieldsMap,
       pages: this._pages,
@@ -356,7 +415,8 @@ export class FormSpec {
       fields,
       pages,
       jsonData.templateIcon,
-      jsonData.schemaVersion
+      jsonData.schemaVersion,
+      jsonData.jurisdiction
     );
   }
 }

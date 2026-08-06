@@ -72,7 +72,11 @@ export {
   JURISDICTION_CODES,
   isJurisdiction,
   resolveJurisdiction,
+  checkJurisdictionCompatibility,
+  describeIncompatibility,
+  IncompatibilityReason,
   type Jurisdiction,
+  type JurisdictionCompatibility,
 } from "./jurisdiction.js";
 export { default as FormField, BasicFormField, FileFormField, FieldType } from "./form-field.js";
 export type { FormFieldType, FormFieldInputType, FormFieldTypeDefinitions, DropdownOption, EditorValidator } from "./form-field.js";

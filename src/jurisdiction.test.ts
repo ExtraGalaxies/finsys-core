@@ -21,6 +21,9 @@ import {
   JURISDICTION_CODES,
   isJurisdiction,
   resolveJurisdiction,
+  checkJurisdictionCompatibility,
+  describeIncompatibility,
+  IncompatibilityReason,
 } from './jurisdiction.js'
 import { FormSpec } from './form-spec.js'
 import { FormFieldCategory } from './form-field-category.js'
@@ -172,5 +175,78 @@ describe('FormSpec declares a single jurisdiction', () => {
     expect(spec().validate().valid).toBe(true)
     expect(spec('MY').validate().valid).toBe(true)
     expect(spec('VN').validate().valid).toBe(true)
+  })
+})
+
+// ── SYS-3266: the one predicate every tier shares ────────────────────
+describe('checkJurisdictionCompatibility', () => {
+  it('matching jurisdictions are compatible, and it says which', () => {
+    for (const j of JURISDICTION_CODES) {
+      const r = checkJurisdictionCompatibility(j, j)
+      expect(r.compatible, `${j} vs ${j}`).toBe(true)
+      if (r.compatible) expect(r.jurisdiction).toBe(j)
+    }
+  })
+
+  it('a mismatch is refused, and reports BOTH sides', () => {
+    // The reason this returns a result rather than a boolean: every caller
+    // that refuses has to say which pairing and why, and re-deriving that
+    // from the inputs is how two tiers end up phrasing it differently.
+    const r = checkJurisdictionCompatibility('MY', 'VN')
+    expect(r.compatible).toBe(false)
+    if (!r.compatible) {
+      expect(r.reason).toBe(IncompatibilityReason.Mismatch)
+      expect(r.form).toBe('MY')
+      expect(r.program).toBe('VN')
+    }
+    expect(describeIncompatibility(r)).toContain("'MY'")
+    expect(describeIncompatibility(r)).toContain("'VN'")
+  })
+
+  it('absence on either side means Malaysia — so legacy pairings still work', () => {
+    // Every form authored before SYS-3263 declares nothing, and every
+    // pre-SYS-2872 program is null. If absence did not resolve to Malaysia,
+    // this predicate would refuse all existing production traffic on the day
+    // it shipped.
+    expect(checkJurisdictionCompatibility(undefined, undefined).compatible).toBe(true)
+    expect(checkJurisdictionCompatibility(null, null).compatible).toBe(true)
+    expect(checkJurisdictionCompatibility(undefined, 'MY').compatible).toBe(true)
+    expect(checkJurisdictionCompatibility('MY', null).compatible).toBe(true)
+    // ...but absence does NOT make a non-Malaysian programme compatible.
+    expect(checkJurisdictionCompatibility(undefined, 'VN').compatible).toBe(false)
+  })
+
+  it('an empty string is unresolvable, not absent — on either side', () => {
+    const f = checkJurisdictionCompatibility('', 'MY')
+    expect(f.compatible).toBe(false)
+    if (!f.compatible) expect(f.reason).toBe(IncompatibilityReason.UnresolvableForm)
+    const p = checkJurisdictionCompatibility('MY', '')
+    expect(p.compatible).toBe(false)
+    if (!p.compatible) expect(p.reason).toBe(IncompatibilityReason.UnresolvableProgram)
+  })
+
+  it('the SAME unrecognised value on both sides is NOT a match', () => {
+    // The case worth being deliberate about. Two sides both declaring "VM"
+    // is not agreement — it is the same typo twice, and letting a pair of
+    // mistakes authorise each other is exactly the silent-pass this whole
+    // axis exists to prevent.
+    const r = checkJurisdictionCompatibility('VM', 'VM')
+    expect(r.compatible).toBe(false)
+    if (!r.compatible) expect(r.reason).toBe(IncompatibilityReason.UnresolvableForm)
+  })
+
+  it('is case-strict on both sides', () => {
+    expect(checkJurisdictionCompatibility('my', 'MY').compatible).toBe(false)
+    expect(checkJurisdictionCompatibility('MY', 'my').compatible).toBe(false)
+  })
+
+  it('describeIncompatibility returns null for a compatible pairing, and never leaks a raw enum', () => {
+    expect(describeIncompatibility(checkJurisdictionCompatibility('MY', 'MY'))).toBeNull()
+    for (const [f, p] of [['MY', 'VN'], ['', 'MY'], ['MY', ''], ['VM', 'VM']] as [string, string][]) {
+      const msg = describeIncompatibility(checkJurisdictionCompatibility(f, p))
+      expect(msg, `${f} vs ${p}`).toBeTruthy()
+      // A user-facing string, not a debug dump: no enum values, no underscores.
+      expect(msg!).not.toMatch(/unresolvable_|mismatch/)
+    }
   })
 })

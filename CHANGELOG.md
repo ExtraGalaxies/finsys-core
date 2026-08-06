@@ -6,6 +6,40 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-08-06
+
+### Added — Thailand (SYS-3258)
+
+`JURISDICTION.THAILAND = 'TH'`, plus the matching entry in
+`unified-form.schema.json`'s enum.
+
+Adding a third jurisdiction was an experiment, not a customer requirement: two
+jurisdictions cannot show whether an axis is additive, because the second is
+always special-cased. In core it cost exactly two edits, and **both were named
+by failing tests rather than found by hand** — the registry pin, and the drift
+test that caught the schema enum lagging behind the registry. That duplicate
+enum is a deliberate second source of truth (FinHub validates form configs only
+through the schema, never via `FormSpec`), so it *can* drift; the test is why
+it cannot drift silently.
+
+### Fixed
+
+- `package.json` said `5.2.0` while `package-lock.json` said `5.3.0`. `npm ci`
+  tolerates that silently, but `npm publish` reads `package.json` and would
+  have attempted to republish an existing version.
+- `unified-form.schema.json` declared `jurisdiction` **twice** in the same
+  `properties` object. JSON keeps the last, so the first block — including its
+  explanation of why the enum exists — was authoritative-looking dead text. A
+  future edit touching only that block would have been silently ignored while
+  appearing correct.
+
+### Known limit
+
+Adding a jurisdiction is **not** purely additive for document uploads:
+extraction requires a `documentLanguage` for any non-Malaysian jurisdiction,
+and the only field carrying `document_language_options` is `financials_vn` —
+with `document-types.test.ts` actively forbidding another. Tracked as SYS-3277.
+
 ## [5.2.0] - 2026-08-06
 
 ### Added — the jurisdiction compatibility predicate (SYS-3266)

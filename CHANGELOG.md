@@ -6,6 +6,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [5.1.0] — 2026-08-06
+
 ### Changed — currency belongs to the value, not the field definition (SYS-3249)
 
 143 canonical fields declared `unit: "MYR"`. That asserts a Malaysian denomination as a

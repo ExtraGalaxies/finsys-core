@@ -670,7 +670,7 @@ export function categoryFieldsOf(id: AdapterCategory): ReadonlyArray<CanonicalFi
  * including a field name the category does not declare at all. That last
  * part is deliberate: a caller asking about an unknown field is either
  * mid-rename or wrong, and the safe answer to "should I protect this?"
- * when you do not recognise it is yes. `categorySchemaOf` still throws
+ * when you do not recognize it is yes. `categorySchemaOf` still throws
  * for an unknown CATEGORY, because that is a wiring error rather than a
  * data question.
  */

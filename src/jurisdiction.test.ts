@@ -52,9 +52,9 @@ describe('jurisdiction registry', () => {
     expect(resolveJurisdiction('')).toBeNull()
   })
 
-  it('an UNRECOGNISED jurisdiction resolves to null, never to the default', () => {
+  it('an UNRECOGNIZED jurisdiction resolves to null, never to the default', () => {
     // The distinction that matters: absent is "Malaysia", unknown is an
-    // ERROR. Defaulting an unrecognised value to MY would route a foreign
+    // ERROR. Defaulting an unrecognized value to MY would route a foreign
     // form into Malaysian handling — the exact failure this axis exists to
     // prevent — and it would do so silently.
     expect(resolveJurisdiction('VM')).toBeNull()
@@ -212,7 +212,7 @@ describe('checkJurisdictionCompatibility', () => {
     expect(checkJurisdictionCompatibility(null, null).compatible).toBe(true)
     expect(checkJurisdictionCompatibility(undefined, 'MY').compatible).toBe(true)
     expect(checkJurisdictionCompatibility('MY', null).compatible).toBe(true)
-    // ...but absence does NOT make a non-Malaysian programme compatible.
+    // ...but absence does NOT make a non-Malaysian program compatible.
     expect(checkJurisdictionCompatibility(undefined, 'VN').compatible).toBe(false)
   })
 
@@ -225,7 +225,7 @@ describe('checkJurisdictionCompatibility', () => {
     if (!p.compatible) expect(p.reason).toBe(IncompatibilityReason.UnresolvableProgram)
   })
 
-  it('the SAME unrecognised value on both sides is NOT a match', () => {
+  it('the SAME unrecognized value on both sides is NOT a match', () => {
     // The case worth being deliberate about. Two sides both declaring "VM"
     // is not agreement — it is the same typo twice, and letting a pair of
     // mistakes authorise each other is exactly the silent-pass this whole

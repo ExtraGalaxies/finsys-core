@@ -79,7 +79,7 @@ export function isJurisdiction(value: unknown): value is Jurisdiction {
  * Resolves a possibly-absent declaration to the jurisdiction that actually
  * applies. Absent means Malaysia; a present-but-unknown value is NOT silently
  * defaulted — callers that accept unvalidated input should reject it instead,
- * because defaulting an unrecognised jurisdiction to MY would route a foreign
+ * because defaulting an unrecognized jurisdiction to MY would route a foreign
  * form into Malaysian handling, which is the failure this whole axis exists
  * to prevent.
  */
@@ -107,9 +107,9 @@ export function resolveJurisdiction(value: string | null | undefined): Jurisdict
 export enum IncompatibilityReason {
   /** Both resolved, and they are different jurisdictions. */
   Mismatch = 'mismatch',
-  /** The FORM declares something that is not a jurisdiction we recognise. */
+  /** The FORM declares something that is not a jurisdiction we recognize. */
   UnresolvableForm = 'unresolvable_form',
-  /** The PROGRAM declares something that is not a jurisdiction we recognise. */
+  /** The PROGRAM declares something that is not a jurisdiction we recognize. */
   UnresolvableProgram = 'unresolvable_program',
 }
 
@@ -150,8 +150,8 @@ export type JurisdictionCompatibility =
  * Note that an empty string is NOT absent: finsys-api fails closed on it, and
  * a form or program carrying '' is unresolvable, not Malaysian.
  *
- * AN UNRECOGNISED VALUE IS COMPATIBLE WITH NOTHING — including an identical
- * unrecognised value on the other side. Two forms both declaring "VM" are not
+ * AN UNRECOGNIZED VALUE IS COMPATIBLE WITH NOTHING — including an identical
+ * unrecognized value on the other side. Two forms both declaring "VM" are not
  * evidence of agreement, they are evidence of the same typo twice, and
  * treating them as a match would let a pair of mistakes authorise each other.
  */
@@ -197,10 +197,10 @@ export function describeIncompatibility(result: JurisdictionCompatibility): stri
     v === null || v === undefined || v === '' ? '(not set)' : `'${String(v)}'`
   switch (result.reason) {
     case IncompatibilityReason.Mismatch:
-      return `This form is for ${shown(result.form)} but the selected programme is ${shown(result.program)}.`
+      return `This form is for ${shown(result.form)} but the selected program is ${shown(result.program)}.`
     case IncompatibilityReason.UnresolvableForm:
-      return `This form declares ${shown(result.form)}, which is not a jurisdiction this deployment recognises.`
+      return `This form declares ${shown(result.form)}, which is not a jurisdiction this deployment recognizes.`
     case IncompatibilityReason.UnresolvableProgram:
-      return `The selected programme declares ${shown(result.program)}, which is not a jurisdiction this deployment recognises.`
+      return `The selected program declares ${shown(result.program)}, which is not a jurisdiction this deployment recognizes.`
   }
 }

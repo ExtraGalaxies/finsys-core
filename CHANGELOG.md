@@ -6,20 +6,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [5.2.0] - 2026-08-06
+
 ### Added — the jurisdiction compatibility predicate (SYS-3266)
 
 `checkJurisdictionCompatibility(formJurisdiction, programJurisdiction)`, plus
 `describeIncompatibility` and the `IncompatibilityReason` enum.
 
 One predicate with three call sites, because the rule is symmetric: filter forms for a chosen
-programme, filter programmes for a chosen form, and refuse a mismatch at submit. The first two
+program, filter programs for a chosen form, and refuse a mismatch at submit. The first two
 are the reason nobody reaches the third.
 
 - Consumed by **FinHub** (the manager tier) and **@finsys/borrower-client** (the SDK tier).
   Raw HTTP callers are unguarded by design.
 - **Absence resolves to Malaysia on both sides**, through `resolveJurisdiction`, so there is
   one definition of absent rather than another. An empty string is *not* absent.
-- **An unrecognised value is compatible with nothing — including an identical unrecognised
+- **An unrecognized value is compatible with nothing — including an identical unrecognized
   value on the other side.** Two sides both declaring `"VM"` is the same typo twice, not
   agreement; letting a pair of mistakes authorise each other is the silent pass this axis
   exists to prevent.
@@ -36,8 +38,8 @@ here: that is SYS-3265, blocked on SYS-3264, because a submission does not curre
 which form produced it.
 
 - `FormSpec.jurisdiction` (optional) and `effectiveJurisdiction`, which returns the
-  declaration, Malaysia when absent, and **null when present but unrecognised**. Callers must
-  handle null: it means "declares something we do not recognise", not "is Malaysian".
+  declaration, Malaysia when absent, and **null when present but unrecognized**. Callers must
+  handle null: it means "declares something we do not recognize", not "is Malaysian".
 - `UnifiedFormConfig.jurisdiction` — declared here too, because FinHub never constructs a
   `FormSpec` and handles form configs only as this shape.
 - A new jurisdiction registry: `JURISDICTION`, `DEFAULT_JURISDICTION`, `JURISDICTION_CODES`,
@@ -51,7 +53,7 @@ which form produced it.
 
 **Not purely additive, despite being a minor.** The unified-form schema has no root
 `additionalProperties: false`, so `jurisdiction` was previously an ignored unknown key and any
-value passed. It is now constrained: an unrecognised code, or a non-string, is rejected.
+value passed. It is now constrained: an unrecognized code, or a non-string, is rejected.
 Nothing writes the key today so the practical risk is nil — but FinHub is trunk-to-prod and
 rejects form-config uploads on this validator, so the shrink is stated rather than assumed.
 

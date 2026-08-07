@@ -205,3 +205,65 @@ export function describeIncompatibility(result: JurisdictionCompatibility): stri
       return `The selected program declares ${shown(result.program)}, which is not a jurisdiction this deployment recognizes.`
   }
 }
+
+/**
+ * SYS-3284/SYS-3285: the currency a jurisdiction's amounts are DISPLAYED in
+ * when the value itself does not say.
+ *
+ * READ THIS BEFORE USING IT — it is narrower than it looks.
+ *
+ * SYS-3249 established that a currency belongs to the OBSERVATION, not to a
+ * field, a table or a country: one document can legitimately report several
+ * currencies, so nothing may stamp a currency across a record. That still
+ * holds and this does not weaken it.
+ *
+ * What this map is: a DISPLAY DEFAULT for the case where a value carries no
+ * recorded currency of its own. Today that is every value, because
+ * `IhsFieldProvenance.currency` has no producer yet — so FinHub and
+ * finsys-client were left choosing between printing a hardcoded "RM" (wrong
+ * outside Malaysia) and printing a bare number (ambiguous everywhere). This
+ * gives them a third option that is right in the common case and overridable
+ * in the uncommon one.
+ *
+ * What it is NOT: a fact about the record. It must never be written to a
+ * row, returned from an API as the record's currency, or used to decide
+ * anything but rendering. The moment a value carries its own currency, that
+ * wins — see `resolveDisplayCurrency`.
+ *
+ * A jurisdiction whose amounts are commonly reported in a currency other than
+ * its own is exactly why the override exists rather than why this map should
+ * grow conditionals.
+ */
+export const JURISDICTION_DISPLAY_CURRENCY: Readonly<Record<Jurisdiction, string>> = Object.freeze({
+  [JURISDICTION.MALAYSIA]: 'MYR',
+  [JURISDICTION.VIETNAM]: 'VND',
+  [JURISDICTION.THAILAND]: 'THB',
+})
+
+/**
+ * The currency to render a value in: the value's own if it has one, otherwise
+ * the jurisdiction's display default, otherwise nothing.
+ *
+ * Returning `undefined` is a real answer and callers must handle it — it means
+ * "no basis to name a currency", and printing a bare number is then correct.
+ * Substituting a guess here is how a Vietnamese figure ends up labelled MYR,
+ * which is the bug this exists to fix.
+ *
+ * @param valueCurrency ISO 4217 recorded on the observation, when one exists.
+ * @param jurisdiction  the record's jurisdiction; absence resolves to Malaysia
+ *                      the same way it does everywhere else on this axis.
+ */
+export function resolveDisplayCurrency(
+  valueCurrency: string | null | undefined,
+  jurisdiction: string | null | undefined
+): string | undefined {
+  const own = valueCurrency?.trim().toUpperCase()
+  if (own) return own
+
+  const resolved = resolveJurisdiction(jurisdiction)
+  // An unresolvable jurisdiction gets NO currency rather than Malaysia's.
+  // Defaulting it would be the same class of error as the hardcoded 'MYR'
+  // this replaces, just harder to see.
+  if (resolved === null) return undefined
+  return JURISDICTION_DISPLAY_CURRENCY[resolved]
+}

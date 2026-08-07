@@ -6,6 +6,38 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-08-07
+
+### Added — one money formatter for every app (SYS-3284 / SYS-3285)
+
+`formatMoney(value, { currency?, jurisdiction? })`, plus
+`resolveDisplayCurrency` and `JURISDICTION_DISPLAY_CURRENCY`.
+
+FinHub and finsys-client each had their own. FinHub hardcoded
+`Intl.NumberFormat('en-MY', { currency: 'MYR' })` on the IHS views, so a
+Vietnamese application's amounts read as ringgit. finsys-client had five
+separate no-currency implementations plus two copy-pasted `myr()` helpers that
+stamped `RM` unconditionally — including into the text fed to the AI analyst,
+so the model reasoned about a Vietnamese company in ringgit.
+
+**Precedence:** the value's own recorded currency wins, then the
+jurisdiction's display default (MY→MYR, VN→VND, TH→THB), then *nothing* — and
+nothing prints a grouped number with no denomination, which is honest where a
+guess is not.
+
+**This does not undo SYS-3249.** A currency belongs to the OBSERVATION, because
+one document can legitimately report several. This map is a display default
+for values that do not say — never written to a record, never returned as its
+currency, and always losing to a value that carries its own.
+
+An *unresolvable* jurisdiction yields no currency rather than Malaysia.
+Defaulting there would be the same class of error as the hardcoded literal it
+replaces, only harder to see.
+
+`currencyDisplay: 'code'` is deliberate: under `en-US`, USD renders as a bare
+`$` while MYR/VND/THB/SGD render as codes — symbol display hands the one
+unambiguous-looking glyph to the currency whose glyph several others share.
+
 ## [5.3.0] - 2026-08-06
 
 ### Added — Thailand (SYS-3258)

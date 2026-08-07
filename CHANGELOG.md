@@ -38,6 +38,37 @@ replaces, only harder to see.
 `$` while MYR/VND/THB/SGD render as codes — symbol display hands the one
 unambiguous-looking glyph to the currency whose glyph several others share.
 
+### Changed — a form-field label no longer names a currency (SYS-3289)
+
+`form-field-base-specs.json` shipped `"Financing Amount (RM)"` and
+`"Car Price (MYR)"`. Because the currency was *prose inside the label*, it
+rendered identically under a Vietnamese program — where it is simply false —
+and no rendering code could correct it. Found by running the two-jurisdiction
+demo: a Vietnamese borrower was being asked for ringgit.
+
+Those three labels lose their currency, and the fields that hold money declare
+`kind: "money"` instead. That is the same word `CanonicalFieldSpec.kind`
+already uses (SYS-3249), so both halves of the system say one thing: a field
+says it holds money, and the *denomination* comes from elsewhere — the
+program's jurisdiction at render time, or the value's own provenance envelope
+once it has one.
+
+`FieldData.kind` is typed for the first time here; it previously arrived
+through the interface's index signature.
+
+A guard test refuses a currency token in any `displayName`, `placeholder`,
+`title` or validator message, drawing its token list from
+`JURISDICTION_DISPLAY_CURRENCY` so it widens as jurisdictions are added. One
+string is exempt by name — `"Income must be at least RM 2000."` — because
+there the threshold and the currency are a single statement, and deleting the
+word would only make it less obviously wrong. That is SYS-3290.
+
+**Consumers must move together.** FinHub's `FieldRenderer` decides whether to
+show a currency prefix by substring-matching the label for `RM`, so a consumer
+that takes this catalog without the matching renderer change loses the prefix
+on Malaysian sliders. Form configs already stored in production are not
+migrated; they keep today's behavior through the renderer's legacy fallback.
+
 ## [5.3.0] - 2026-08-06
 
 ### Added — Thailand (SYS-3258)

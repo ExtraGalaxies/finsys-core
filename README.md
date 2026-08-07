@@ -14,6 +14,10 @@ Partner-facing integration documentation lives in [`docs/`](./docs/):
 - 📋 [Manifest Reference](./docs/manifest-reference.md) — every field in `manifest.json`.
 - 🔒 [Security Model](./docs/security-model.md) — sandboxing, secrets, network posture.
 
+Internal engineering runbooks:
+
+- 🌏 [**Adding a Jurisdiction**](./docs/adding-a-jurisdiction.md) — everything it takes to serve a new country, in order, with the additive parts separated from the ones that are not. Read Phase 0 before estimating.
+
 ## Features (form-config surface)
 
 - **Unified Form Configuration** — Single JSON format for defining form fields and multi-step page layouts

@@ -38,6 +38,31 @@ replaces, only harder to see.
 `$` while MYR/VND/THB/SGD render as codes — symbol display hands the one
 unambiguous-looking glyph to the currency whose glyph several others share.
 
+### Added — `NO_JURISDICTION_BASIS`, and `formatMoney` requires a jurisdiction
+
+There are two different "I have no jurisdiction", and 5.4.0 initially
+collapsed them. `formatMoney(v, {})` returned **MYR** — identical to
+`formatMoney(v, { jurisdiction: null })`, which is a different claim:
+
+- a **record** whose jurisdiction column is null *is* Malaysian (every such
+  row predates jurisdictions), so `null` is a real answer;
+- a **call site** with no record — a form with no program selected, a total
+  spanning countries, a page never told — has no basis, and answering that
+  with a confident MYR is the exact bug these helpers replace.
+
+Both consumers built private defenses against this before the release: FinHub
+made its wrapper's parameter required with a warning comment, finsys-client
+defined its own empty-string sentinel. Two independent workarounds for one
+missing idea is what named it.
+
+`jurisdiction` is now a **required** key on `formatMoney`, so the careless call
+does not compile rather than being documented as wrong, and
+`NO_JURISDICTION_BASIS` is the exported way to say there is no basis — giving
+`resolveJurisdiction('')`'s fail-closed behavior a name and a contract instead
+of leaving it an implementation detail two repos happened to discover.
+
+Precedence is unchanged: a currency carried by the value still wins over both.
+
 ### Changed — a form-field label no longer names a currency (SYS-3289)
 
 `form-field-base-specs.json` shipped `"Financing Amount (RM)"` and

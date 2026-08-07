@@ -253,6 +253,31 @@ export const JURISDICTION_DISPLAY_CURRENCY: Readonly<Record<Jurisdiction, string
  * @param jurisdiction  the record's jurisdiction; absence resolves to Malaysia
  *                      the same way it does everywhere else on this axis.
  */
+/**
+ * What a caller passes as `jurisdiction` when it has NO BASIS to name one.
+ *
+ * There are two different "I don't have a jurisdiction", and collapsing them
+ * is a real bug:
+ *
+ *   - A RECORD whose jurisdiction column is null. The platform rule says
+ *     Malaysia, and that rule is right — the column predates jurisdictions
+ *     and every such row is Malaysian. Pass `null`.
+ *
+ *   - A CALL SITE with no record at all: a form with no program selected, a
+ *     total spanning several countries, a page that simply was not given one.
+ *     Malaysia is not a default here, it is a fabrication. Pass this.
+ *
+ * Both consumers of the 5.4.0 money helpers invented this concept privately
+ * before it existed — one made the parameter required with a warning comment,
+ * the other defined its own empty-string sentinel — which is what naming it
+ * here is a response to. Two independent workarounds for one missing idea.
+ *
+ * It is the empty string because `resolveJurisdiction('')` already fails
+ * closed; this gives that behavior a name and a contract instead of leaving
+ * it an implementation detail two repos happened to discover.
+ */
+export const NO_JURISDICTION_BASIS = ''
+
 export function resolveDisplayCurrency(
   valueCurrency: string | null | undefined,
   jurisdiction: string | null | undefined

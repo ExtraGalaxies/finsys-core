@@ -264,7 +264,23 @@ function currencyFormatter(code: string): Intl.NumberFormat | null {
  */
 export function formatMoney(
   value: unknown,
-  opts: { currency?: string | null; jurisdiction?: string | null } = {}
+  opts: {
+    currency?: string | null
+    /**
+     * REQUIRED, and deliberately not optional.
+     *
+     * `formatMoney(v, {})` used to return MYR — indistinguishable from
+     * `formatMoney(v, { jurisdiction: null })`, which is a different claim.
+     * `null` means "a record said nothing, and the platform rule is
+     * Malaysia"; an absent argument means "I was never told", and answering
+     * that with a confident MYR is the exact bug these helpers replace.
+     *
+     * Making the key required does not make the caller think harder — it
+     * makes the careless call fail to compile. Pass `NO_JURISDICTION_BASIS`
+     * when there is genuinely no basis; the result then carries no currency.
+     */
+    jurisdiction: string | null
+  }
 ): string {
   return formatValue(value, true, resolveDisplayCurrency(opts.currency, opts.jurisdiction))
 }

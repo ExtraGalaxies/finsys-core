@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { resolveDisplayCurrency, JURISDICTION_DISPLAY_CURRENCY, formatMoney } from './index.js'
+import {
+  resolveDisplayCurrency,
+  JURISDICTION_DISPLAY_CURRENCY,
+  NO_JURISDICTION_BASIS,
+  formatMoney,
+} from './index.js'
 
 /**
  * SYS-3284/SYS-3285. The rule these pin is a precedence, not a lookup:
@@ -69,7 +74,47 @@ describe('formatMoney', () => {
     // Under en-US, USD would render as "$" — the one glyph four other
     // currencies also use. On a cross-jurisdiction credit artifact that is
     // the worst possible default.
-    expect(formatMoney(10, { currency: 'USD' })).toContain('USD')
-    expect(formatMoney(10, { currency: 'USD' })).not.toBe('$10.00')
+    expect(formatMoney(10, { currency: 'USD', jurisdiction: NO_JURISDICTION_BASIS })).toContain('USD')
+    expect(formatMoney(10, { currency: 'USD', jurisdiction: NO_JURISDICTION_BASIS })).not.toBe('$10.00')
   })
 })
+
+describe("no basis is not the same as no jurisdiction (SYS-3289)", () => {
+  it("a record that declares nothing is Malaysian — the platform rule", () => {
+    // Every row that predates jurisdictions is Malaysian, so null on a RECORD
+    // is a real answer, not a missing one.
+    expect(formatMoney(1000, { jurisdiction: null })).toContain("MYR");
+  });
+
+  it("a caller with no basis gets NO currency, not Malaysia", () => {
+    // A form with no program chosen, a total spanning countries, a page never
+    // told. Malaysia here is not a default, it is a fabrication.
+    const out = formatMoney(1000, { jurisdiction: NO_JURISDICTION_BASIS });
+    expect(out).not.toContain("MYR");
+    expect(out).not.toContain("RM");
+    // Still a readable grouped number — honest, just undenominated.
+    expect(out).toContain("1,000");
+  });
+
+  it("the two are actually distinguishable", () => {
+    // The whole point. Before this, both spellings returned MYR and the
+    // difference existed only in the caller's head.
+    expect(formatMoney(1000, { jurisdiction: null })).not.toBe(
+      formatMoney(1000, { jurisdiction: NO_JURISDICTION_BASIS })
+    );
+  });
+
+  it("a value that carries its own currency keeps it, with or without a basis", () => {
+    // Precedence is unchanged: the value wins. Passing NO_JURISDICTION_BASIS
+    // must not suppress a currency the value actually stated.
+    expect(
+      formatMoney(10, { currency: "USD", jurisdiction: NO_JURISDICTION_BASIS })
+    ).toContain("USD");
+    expect(formatMoney(10, { currency: "USD", jurisdiction: "VN" })).toContain("USD");
+  });
+
+  it("resolveDisplayCurrency agrees, so the two entry points cannot drift", () => {
+    expect(resolveDisplayCurrency(null, null)).toBe("MYR");
+    expect(resolveDisplayCurrency(null, NO_JURISDICTION_BASIS)).toBeUndefined();
+  });
+});

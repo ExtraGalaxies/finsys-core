@@ -16,6 +16,8 @@
 
 import { describe, it, expect } from "vitest";
 import { generateRHFSchema } from "./rhf-generator.js";
+import { JURISDICTION_DISPLAY_CURRENCY } from "./jurisdiction.js";
+import type { FieldData } from "./survey-generator.js";
 import {
   BASE_FIELD_SPECS,
   FIELD_TYPE_DEFINITIONS,
@@ -277,6 +279,99 @@ describe("Field Validators Zod Validation", () => {
       expect.unreachable(
         `Found ${failedValidators.length} invalid validator definitions:\n${errorMsg.substring(0, 2000)}`
       );
+    }
+  });
+});
+
+/**
+ * SYS-3289 — a form-field label must never name a currency.
+ *
+ * The catalog shipped "Financing Amount (RM)" and "Car Price (MYR)". Because
+ * the currency was PROSE inside the label, it rendered identically under a
+ * Vietnamese program, where it was simply false, and no rendering code could
+ * correct it. Money-ness is declared as `kind: "money"` instead — the same
+ * word CanonicalFieldSpec.kind already uses — and the denomination comes
+ * from the program's jurisdiction at render time.
+ *
+ * This guard covers displayName, placeholder AND validator messages: a
+ * currency can be smuggled into any of the three, and the last one is how
+ * "Income must be at least RM 2000." survived the first sweep.
+ */
+describe("no base field label names a currency (SYS-3289)", () => {
+  // Built from the jurisdiction registry so the guard widens automatically
+  // as jurisdictions are added, plus the local abbreviations and symbols
+  // that never appear in an ISO list but do appear in labels.
+  const CURRENCY_TOKENS = [
+    ...Object.values(JURISDICTION_DISPLAY_CURRENCY),
+    "USD",
+    "SGD",
+    "RM",
+    "Rp",
+    "Ringgit",
+    "ringgit",
+  ];
+  const TOKEN_RE = new RegExp(`\\b(${CURRENCY_TOKENS.join("|")})\\b|[$₫฿₱]`);
+
+  /**
+   * SYS-3290 owns this one. The threshold and the currency are a single
+   * statement — "at least 2000" is as Malaysian as "RM" is — so deleting
+   * the word would produce a sentence that is merely less obviously wrong.
+   * Listed explicitly so a NEW currency-bearing message still fails.
+   */
+  const KNOWN_PENDING_SYS_3290 = ["Income must be at least RM 2000."];
+
+  function labelsOf(field: FieldData): string[] {
+    const out: string[] = [];
+    for (const v of [field.displayName, field.placeholder, field.title]) {
+      if (typeof v === "string") out.push(v);
+    }
+    for (const v of field.validators ?? []) {
+      if (typeof v.text === "string") out.push(v.text);
+    }
+    return out;
+  }
+
+  function offenders(fields: FieldData[]): string[] {
+    const found: string[] = [];
+    for (const f of fields) {
+      for (const label of labelsOf(f)) {
+        if (KNOWN_PENDING_SYS_3290.includes(label)) continue;
+        if (TOKEN_RE.test(label)) found.push(`${f.name ?? "?"}: ${JSON.stringify(label)}`);
+      }
+    }
+    return found;
+  }
+
+  it("finds no currency in any displayName, placeholder or validator message", () => {
+    expect(offenders(getBaseFieldSpecs())).toEqual([]);
+  });
+
+  it("the detector fires — a currency-bearing label IS caught", () => {
+    // Without this, the assertion above passes just as happily against a
+    // broken regex as against a clean catalog.
+    expect(offenders([{ name: "synthetic", type: "text", displayName: "Financing Amount (RM)" }]))
+      .toHaveLength(1);
+    expect(offenders([{ name: "synthetic", type: "text", placeholder: "Car Price (MYR)" }]))
+      .toHaveLength(1);
+    expect(
+      offenders([
+        {
+          name: "synthetic",
+          type: "text",
+          validators: [{ type: "expression", text: "Must be at least VND 2000." }],
+        },
+      ])
+    ).toHaveLength(1);
+    // ...and does not fire on ordinary prose that merely contains the letters.
+    expect(
+      offenders([{ name: "synthetic", type: "text", displayName: "Loan Term and Form Details" }])
+    ).toEqual([]);
+  });
+
+  it("the money fields declare kind, since their labels no longer can", () => {
+    const byName = new Map(getBaseFieldSpecs().map((f) => [f.name, f]));
+    for (const name of ["totalFinancing", "purchasePriceOTR", "monthlyGrossIncome"]) {
+      expect(byName.get(name)?.kind).toBe("money");
     }
   });
 });

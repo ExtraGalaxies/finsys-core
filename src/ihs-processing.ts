@@ -26,6 +26,7 @@ import { getDocumentTypeGroups } from './document-types.js'
 import { allCategories } from './adapter-categories.js'
 import type { TaggedFieldData } from './document-types.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
+import { resolveDisplayCurrency } from './jurisdiction.js'
 
 // ── Display names ──────────────────────────────────────────────
 
@@ -238,6 +239,50 @@ function currencyFormatter(code: string): Intl.NumberFormat | null {
   }
   currencyFormatters.set(code, fmt)
   return fmt
+}
+
+/**
+ * SYS-3284/SYS-3285: the ONE money formatter the apps render through.
+ *
+ * FinHub and finsys-client each had their own. FinHub's hardcoded
+ * `Intl.NumberFormat('en-MY', { currency: 'MYR' })` in the IHS views, so a
+ * Vietnamese application's amounts read as ringgit. finsys-client had five
+ * separate no-currency implementations plus two copy-pasted `myr()` helpers
+ * that stamped "RM" unconditionally — including into the text fed to the AI
+ * analyst, so the model reasoned about a Vietnamese company in ringgit.
+ *
+ * Both were reinventing something this package already did correctly for the
+ * IHS detail path: a cached formatter using `currencyDisplay: 'code'`, which
+ * matters more than it sounds — under en-US, USD renders as "$" while
+ * MYR/VND/THB all render as codes, so symbol display gives a bare glyph to
+ * the one currency whose glyph four others also use.
+ *
+ * Currency precedence is `resolveDisplayCurrency`'s: the value's own recorded
+ * currency wins, then the jurisdiction's display default, then nothing — and
+ * "nothing" prints a grouped number with no denomination, which is honest
+ * rather than a guess.
+ */
+export function formatMoney(
+  value: unknown,
+  opts: {
+    currency?: string | null
+    /**
+     * REQUIRED, and deliberately not optional.
+     *
+     * `formatMoney(v, {})` used to return MYR — indistinguishable from
+     * `formatMoney(v, { jurisdiction: null })`, which is a different claim.
+     * `null` means "a record said nothing, and the platform rule is
+     * Malaysia"; an absent argument means "I was never told", and answering
+     * that with a confident MYR is the exact bug these helpers replace.
+     *
+     * Making the key required does not make the caller think harder — it
+     * makes the careless call fail to compile. Pass `NO_JURISDICTION_BASIS`
+     * when there is genuinely no basis; the result then carries no currency.
+     */
+    jurisdiction: string | null
+  }
+): string {
+  return formatValue(value, true, resolveDisplayCurrency(opts.currency, opts.jurisdiction))
 }
 
 function formatValue(value: unknown, numeric: boolean, currency?: string): string {

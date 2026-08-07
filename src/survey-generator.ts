@@ -78,6 +78,23 @@ export interface FieldData {
   startWithNewLine?: boolean;
   enableIf?: string;
   titleLocation?: "default" | "top" | "bottom" | "left" | "hidden";
+  /**
+   * Semantic refinement of `type`, using the SAME vocabulary as the
+   * canonical field registry's `CanonicalFieldSpec.kind` (SYS-3249). One
+   * word, one meaning, on both halves of the system.
+   *
+   * `kind: "money"` says the field holds an amount of money. It does NOT
+   * say WHICH money — the denomination comes from the program's
+   * jurisdiction at render time, or from the value's own provenance
+   * envelope once it has one.
+   *
+   * The point is that a label must never carry the currency. Writing
+   * "Financing Amount (RM)" makes the field Malaysian by typography: it
+   * renders identically under a Vietnamese program, where it is simply
+   * false, and no code can correct it because the currency is prose. A
+   * declared kind is something a renderer can act on.
+   */
+  kind?: "money";
   // FinSys-specific fields
   ihs_column_names?: string[];
   requiredForEvaluation?: boolean;

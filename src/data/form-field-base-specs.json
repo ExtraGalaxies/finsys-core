@@ -2000,6 +2000,7 @@
           "text": "Income must be at least RM 2000."
         }
       ],
+      "kind": "money",
       "category": "4"
     },
     {
@@ -6042,9 +6043,9 @@
       "type": "text",
       "name": "purchasePriceOTR",
       "title": "carPrice",
-      "placeholder": "car Price (MYR)",
+      "placeholder": "Car Price",
       "isRequired": true,
-      "displayName": "Car Price (MYR)",
+      "displayName": "Car Price",
       "maxLength": 23,
       "min": 2000,
       "max": 150000,
@@ -6061,6 +6062,7 @@
           "regex": "^([1-9][0-9]*000|150000)$"
         }
       ],
+      "kind": "money",
       "category": "12"
     },
     {
@@ -6471,7 +6473,7 @@
     },
     {
       "name": "totalFinancing",
-      "displayName": "Financing Amount (RM)",
+      "displayName": "Financing Amount",
       "placeholder": "How much do you want to borrow?",
       "type": "text",
       "maxLength": 15,
@@ -6490,6 +6492,7 @@
         }
       ],
       "inputType": "number",
+      "kind": "money",
       "category": "11"
     },
     {

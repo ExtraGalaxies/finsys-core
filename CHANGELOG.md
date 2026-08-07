@@ -6,6 +6,94 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-08-07
+
+### Added — one money formatter for every app (SYS-3284 / SYS-3285)
+
+`formatMoney(value, { currency?, jurisdiction? })`, plus
+`resolveDisplayCurrency` and `JURISDICTION_DISPLAY_CURRENCY`.
+
+FinHub and finsys-client each had their own. FinHub hardcoded
+`Intl.NumberFormat('en-MY', { currency: 'MYR' })` on the IHS views, so a
+Vietnamese application's amounts read as ringgit. finsys-client had five
+separate no-currency implementations plus two copy-pasted `myr()` helpers that
+stamped `RM` unconditionally — including into the text fed to the AI analyst,
+so the model reasoned about a Vietnamese company in ringgit.
+
+**Precedence:** the value's own recorded currency wins, then the
+jurisdiction's display default (MY→MYR, VN→VND, TH→THB), then *nothing* — and
+nothing prints a grouped number with no denomination, which is honest where a
+guess is not.
+
+**This does not undo SYS-3249.** A currency belongs to the OBSERVATION, because
+one document can legitimately report several. This map is a display default
+for values that do not say — never written to a record, never returned as its
+currency, and always losing to a value that carries its own.
+
+An *unresolvable* jurisdiction yields no currency rather than Malaysia.
+Defaulting there would be the same class of error as the hardcoded literal it
+replaces, only harder to see.
+
+`currencyDisplay: 'code'` is deliberate: under `en-US`, USD renders as a bare
+`$` while MYR/VND/THB/SGD render as codes — symbol display hands the one
+unambiguous-looking glyph to the currency whose glyph several others share.
+
+### Added — `NO_JURISDICTION_BASIS`, and `formatMoney` requires a jurisdiction
+
+There are two different "I have no jurisdiction", and 5.4.0 initially
+collapsed them. `formatMoney(v, {})` returned **MYR** — identical to
+`formatMoney(v, { jurisdiction: null })`, which is a different claim:
+
+- a **record** whose jurisdiction column is null *is* Malaysian (every such
+  row predates jurisdictions), so `null` is a real answer;
+- a **call site** with no record — a form with no program selected, a total
+  spanning countries, a page never told — has no basis, and answering that
+  with a confident MYR is the exact bug these helpers replace.
+
+Both consumers built private defenses against this before the release: FinHub
+made its wrapper's parameter required with a warning comment, finsys-client
+defined its own empty-string sentinel. Two independent workarounds for one
+missing idea is what named it.
+
+`jurisdiction` is now a **required** key on `formatMoney`, so the careless call
+does not compile rather than being documented as wrong, and
+`NO_JURISDICTION_BASIS` is the exported way to say there is no basis — giving
+`resolveJurisdiction('')`'s fail-closed behavior a name and a contract instead
+of leaving it an implementation detail two repos happened to discover.
+
+Precedence is unchanged: a currency carried by the value still wins over both.
+
+### Changed — a form-field label no longer names a currency (SYS-3289)
+
+`form-field-base-specs.json` shipped `"Financing Amount (RM)"` and
+`"Car Price (MYR)"`. Because the currency was *prose inside the label*, it
+rendered identically under a Vietnamese program — where it is simply false —
+and no rendering code could correct it. Found by running the two-jurisdiction
+demo: a Vietnamese borrower was being asked for ringgit.
+
+Those three labels lose their currency, and the fields that hold money declare
+`kind: "money"` instead. That is the same word `CanonicalFieldSpec.kind`
+already uses (SYS-3249), so both halves of the system say one thing: a field
+says it holds money, and the *denomination* comes from elsewhere — the
+program's jurisdiction at render time, or the value's own provenance envelope
+once it has one.
+
+`FieldData.kind` is typed for the first time here; it previously arrived
+through the interface's index signature.
+
+A guard test refuses a currency token in any `displayName`, `placeholder`,
+`title` or validator message, drawing its token list from
+`JURISDICTION_DISPLAY_CURRENCY` so it widens as jurisdictions are added. One
+string is exempt by name — `"Income must be at least RM 2000."` — because
+there the threshold and the currency are a single statement, and deleting the
+word would only make it less obviously wrong. That is SYS-3290.
+
+**Consumers must move together.** FinHub's `FieldRenderer` decides whether to
+show a currency prefix by substring-matching the label for `RM`, so a consumer
+that takes this catalog without the matching renderer change loses the prefix
+on Malaysian sliders. Form configs already stored in production are not
+migrated; they keep today's behavior through the renderer's legacy fallback.
+
 ## [5.3.0] - 2026-08-06
 
 ### Added — Thailand (SYS-3258)

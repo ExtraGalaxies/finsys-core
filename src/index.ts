@@ -119,6 +119,12 @@ export {
 } from './ihs-processing.js'
 
 export { IhsValueFormat, FileFieldTableType, isValidIhsFieldOrigin, IHS_FIELD_ORIGINS } from './ihs-types.js'
+export {
+  JURISDICTION_DISPLAY_CURRENCY,
+  NO_JURISDICTION_BASIS,
+  resolveDisplayCurrency,
+} from './jurisdiction.js'
+export { formatMoney } from './ihs-processing.js'
 export type { IhsFieldOrigin } from './ihs-types.js'
 
 // Roles

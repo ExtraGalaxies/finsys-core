@@ -241,6 +241,58 @@ export const JURISDICTION_DISPLAY_CURRENCY: Readonly<Record<Jurisdiction, string
 })
 
 /**
+ * Whether a jurisdiction's national identity number ENCODES THE HOLDER'S BIRTH
+ * DATE in a position software can read.
+ *
+ * This exists because a Malaysia-specific parsing rule was running on every
+ * application regardless of jurisdiction: the first six digits of an NRIC are
+ * the birth date as YYMMDD, and that is true of no other national id we
+ * accept. Measured against real id shapes (SYS-3257):
+ *
+ *   MY NRIC   900115085432   -> 1990-01-15     correct
+ *   VN CCCD   001201123456   -> 2000-12-01     plausible and WRONG
+ *   TH natID  1103701234567  -> "Invalid date"
+ *   TH natID  5501200098765  -> 2055-01-20     a birth date thirty years hence
+ *
+ * A Vietnamese CCCD leads with a province code, a gender/century digit and a
+ * two-digit birth YEAR — not a date. A Thai national id encodes no birth date
+ * anywhere: digit 1 is person type, 2–5 province and district, the rest
+ * sequence and a check digit. So the failure was silent in both directions —
+ * sometimes an unparseable string written to a date column, sometimes a
+ * believable date that is simply false.
+ *
+ * A registry entry rather than an equality check at the call site, so a fourth
+ * jurisdiction is a line here instead of an edit to whatever function happens
+ * to parse ids that week.
+ */
+export const JURISDICTION_NATIONAL_ID_ENCODES_BIRTH_DATE: Readonly<Record<Jurisdiction, boolean>> =
+  Object.freeze({
+    [JURISDICTION.MALAYSIA]: true,
+    [JURISDICTION.VIETNAM]: false,
+    [JURISDICTION.THAILAND]: false,
+  })
+
+/**
+ * Whether a birth date may be derived from a national id under this
+ * jurisdiction.
+ *
+ * ABSENCE RESOLVES TO MALAYSIA, deliberately, via `resolveJurisdiction` — the
+ * same platform rule the rest of this module follows. That is load-bearing
+ * here rather than merely consistent: rows created without a resolved program
+ * carry `jurisdiction = null`, and every one of them is Malaysian. A literal
+ * `=== 'MY'` check at the call site would silently stop deriving for all of
+ * them, turning a fix for Vietnam into a regression for Malaysia.
+ *
+ * An UNRESOLVABLE jurisdiction returns false. Deriving on a code we do not
+ * recognise is exactly the guess this replaces.
+ */
+export function nationalIdEncodesBirthDate(jurisdiction: string | null | undefined): boolean {
+  const resolved = resolveJurisdiction(jurisdiction)
+  if (resolved === null) return false
+  return JURISDICTION_NATIONAL_ID_ENCODES_BIRTH_DATE[resolved]
+}
+
+/**
  * The currency to render a value in: the value's own if it has one, otherwise
  * the jurisdiction's display default, otherwise nothing.
  *

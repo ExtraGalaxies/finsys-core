@@ -121,7 +121,9 @@ export {
 export { IhsValueFormat, FileFieldTableType, isValidIhsFieldOrigin, IHS_FIELD_ORIGINS } from './ihs-types.js'
 export {
   JURISDICTION_DISPLAY_CURRENCY,
+  JURISDICTION_NATIONAL_ID_ENCODES_BIRTH_DATE,
   NO_JURISDICTION_BASIS,
+  nationalIdEncodesBirthDate,
   resolveDisplayCurrency,
 } from './jurisdiction.js'
 export { formatMoney } from './ihs-processing.js'

@@ -24,6 +24,8 @@ import {
   checkJurisdictionCompatibility,
   describeIncompatibility,
   IncompatibilityReason,
+  JURISDICTION_NATIONAL_ID_ENCODES_BIRTH_DATE,
+  nationalIdEncodesBirthDate,
 } from './jurisdiction.js'
 import { FormSpec } from './form-spec.js'
 import { FormFieldCategory } from './form-field-category.js'
@@ -250,3 +252,43 @@ describe('checkJurisdictionCompatibility', () => {
     }
   })
 })
+
+describe('nationalIdEncodesBirthDate (SYS-3257)', () => {
+  it('derives for Malaysia — the NRIC really does carry YYMMDD', () => {
+    expect(nationalIdEncodesBirthDate(JURISDICTION.MALAYSIA)).toBe(true);
+  });
+
+  it('does NOT derive for Vietnam or Thailand', () => {
+    // A CCCD leads with province + gender/century + a two-digit birth YEAR;
+    // a Thai national id encodes no birth date at all. Deriving produces a
+    // plausible-and-wrong date for VN and either "Invalid date" or a date in
+    // the future for TH.
+    expect(nationalIdEncodesBirthDate(JURISDICTION.VIETNAM)).toBe(false);
+    expect(nationalIdEncodesBirthDate(JURISDICTION.THAILAND)).toBe(false);
+  });
+
+  it('ABSENT resolves to Malaysia and still derives — the regression guard', () => {
+    // Load-bearing, not consistency for its own sake. Rows created without a
+    // resolved program carry jurisdiction = null and are all Malaysian. A
+    // literal === 'MY' check at the call site would stop deriving for every
+    // one of them, turning a fix for Vietnam into a regression for Malaysia.
+    expect(nationalIdEncodesBirthDate(null)).toBe(true);
+    expect(nationalIdEncodesBirthDate(undefined)).toBe(true);
+  });
+
+  it('an UNRESOLVABLE jurisdiction does not derive', () => {
+    // Deriving on a code we do not recognise is the guess this replaces.
+    // Note '' is NO_JURISDICTION_BASIS — no basis, so no derivation.
+    expect(nationalIdEncodesBirthDate('ZZ')).toBe(false);
+    expect(nationalIdEncodesBirthDate('')).toBe(false);
+  });
+
+  it('every registered jurisdiction has an explicit entry', () => {
+    // A new jurisdiction must not inherit `true` by omission. Object.freeze
+    // plus Record<Jurisdiction, boolean> makes that a compile error, and this
+    // catches it at runtime too for anything constructed dynamically.
+    for (const code of JURISDICTION_CODES) {
+      expect(typeof JURISDICTION_NATIONAL_ID_ENCODES_BIRTH_DATE[code]).toBe('boolean');
+    }
+  });
+});

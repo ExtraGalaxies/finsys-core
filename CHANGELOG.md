@@ -6,6 +6,42 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [5.5.0] - 2026-08-08
+
+### Added — a national id does not always carry a birth date (SYS-3257)
+
+`JURISDICTION_NATIONAL_ID_ENCODES_BIRTH_DATE` and `nationalIdEncodesBirthDate`.
+
+A Malaysia-specific parsing rule was running on every application regardless of
+jurisdiction: the first six digits of an NRIC are the birth date as `YYMMDD`,
+and that is true of no other national id we accept. Measured against real id
+shapes rather than reasoned about:
+
+| Jurisdiction | Id | Derived | |
+|---|---|---|---|
+| MY NRIC | `900115085432` | `1990-01-15` | correct |
+| VN CCCD | `001201123456` | `2000-12-01` | **plausible and wrong** |
+| TH natID | `1103701234567` | `"Invalid date"` | |
+| TH natID | `5501200098765` | `2055-01-20` | **thirty years in the future** |
+
+A Vietnamese CCCD leads with a province code, a gender/century digit and a
+two-digit birth *year* — not a date. A Thai national id encodes no birth date
+anywhere. So the failure was silent in both directions: sometimes an
+unparseable string written to a date column, sometimes a believable date that
+is simply false.
+
+**Absence resolves to Malaysia**, via `resolveJurisdiction`, and that is
+load-bearing rather than merely consistent. Rows created without a resolved
+program carry `jurisdiction = null` and every one of them is Malaysian — a
+literal `=== 'MY'` check at the call site would stop deriving for all of them,
+turning a fix for Vietnam into a regression for Malaysia. An **unresolvable**
+jurisdiction returns `false`; deriving on a code we do not recognise is the
+guess this replaces.
+
+A registry entry rather than a check at the call site, so a fourth jurisdiction
+is a line here instead of an edit to whatever function happens to parse ids
+that week.
+
 ## [5.4.0] - 2026-08-07
 
 ### Added — one money formatter for every app (SYS-3284 / SYS-3285)

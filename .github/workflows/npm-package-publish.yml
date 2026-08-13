@@ -49,5 +49,125 @@ jobs:
         run: npm run build
       - name: Test
         run: npm test --if-present
+      # DEVOPS-687: block a release that is not ready, rather than discovering
+      # it afterwards on a public registry where nothing can be taken back.
+      #
+      # Every check here corresponds to something that actually went wrong on
+      # 2026-08-13/14, and every one of them was found by a human noticing
+      # rather than by anything executing. They share one shape: a DECLARED
+      # fact drifting from an ACTUAL one, with nothing comparing the two.
+      #
+      # Lives in the shared workflow on purpose. Both packages already call
+      # this file, so there is one copy to maintain and no per-repo version to
+      # go stale — which is the same failure the checks themselves are about.
+      - name: Preflight — refuse to publish something that is not ready
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          cat > /tmp/preflight.mjs <<'PREFLIGHT'
+          import { readFileSync, existsSync } from "node:fs"
+
+          const fail = []
+          const pkg = JSON.parse(readFileSync("package.json", "utf8"))
+          const { name, version } = pkg
+          console.log(`preflight: ${name}@${version}`)
+
+          const registry = async (n) => {
+            const r = await fetch(`https://registry.npmjs.org/${n}`)
+            if (r.status === 404) return null
+            if (!r.ok) throw new Error(`registry ${r.status} for ${n}`)
+            return r.json()
+          }
+
+          // 1. ALREADY PUBLISHED. npm rejects a duplicate anyway, but it does so
+          //    after build+test have run and with an error that reads like an
+          //    auth problem. Saying it up front is the difference between "you
+          //    forgot the version bump" and ten minutes of log reading.
+          const own = await registry(name)
+          if (own?.versions?.[version]) {
+            fail.push(`${name}@${version} is already on npm. Bump the version — a release cannot republish.`)
+          }
+
+          // 2. TAG vs package.json. A release tagged v7.0.0 against a tree that
+          //    still says 6.0.2 publishes 6.0.2 and reports success, and the tag
+          //    then lies about what shipped forever.
+          const tag = process.env.RELEASE_TAG
+          if (tag && tag.replace(/^v/, "") !== version) {
+            fail.push(`release tag ${tag} does not match package.json version ${version}.`)
+          }
+
+          // 3. CHANGELOG. For a public package this is the primary artifact a
+          //    consumer reads to learn what broke. 7.0.0 was about to publish
+          //    over "## [Unreleased]", and the toolkit's had silently stopped
+          //    three versions earlier.
+          if (!existsSync("CHANGELOG.md")) {
+            fail.push(`no CHANGELOG.md. A public package needs one before it publishes.`)
+          } else {
+            const log = readFileSync("CHANGELOG.md", "utf8")
+            // Accepts "## 1.2.3", "## [1.2.3]", with or without a trailing date.
+            const has = new RegExp(`^##\\s*\\[?${version.replace(/\\./g, "\\\\.")}\\]?`, "m").test(log)
+            if (!has) fail.push(`CHANGELOG.md has no entry for ${version}.`)
+          }
+
+          // 4. PEER RANGES vs what that peer actually publishes. The toolkit
+          //    declared "@finsys/core: >=6.0.1 <7" hours before core released
+          //    7.0.0 — so installing the pair would have produced an
+          //    unsatisfiable peer, which is exactly the breakage the peer
+          //    declaration existed to prevent.
+          //
+          //    Deliberately NOT a full semver implementation, and deliberately
+          //    FAIL-CLOSED on a shape it does not recognise. A range parser
+          //    that silently passes what it cannot read is worse than no check:
+          //    it reports confidence it has not earned.
+          const admitsMajor = (range, major) => {
+            const upper = range.match(/<\s*(\d+)/)
+            if (upper) {
+              const lower = range.match(/>=\s*(\d+)/)
+              const okLower = lower ? major >= Number(lower[1]) : true
+              return okLower && major < Number(upper[1]) ? true : false
+            }
+            const caret = range.match(/^\^\s*(\d+)\./)
+            if (caret) return major === Number(caret[1])
+            const exact = range.match(/^\s*(\d+)\.\d+\.\d+\s*$/)
+            if (exact) return major === Number(exact[1])
+            return null // unrecognised — caller fails closed
+          }
+
+          for (const [peer, range] of Object.entries(pkg.peerDependencies ?? {})) {
+            const meta = await registry(peer)
+            const latest = meta?.["dist-tags"]?.latest
+            if (!latest) {
+              fail.push(`peerDependency ${peer} has no published latest to check against.`)
+              continue
+            }
+            const major = Number(latest.split(".")[0])
+            const verdict = admitsMajor(range, major)
+            if (verdict === null) {
+              fail.push(
+                `peerDependency ${peer} range "${range}" is a shape this preflight cannot read. ` +
+                  `Extend admitsMajor() rather than loosening the check.`
+              )
+            } else if (!verdict) {
+              fail.push(
+                `peerDependency ${peer} range "${range}" excludes its current latest ${latest}. ` +
+                  `Installing this package alongside a current ${peer} would fail to resolve.`
+              )
+            } else {
+              console.log(`  ok: ${peer} "${range}" admits latest ${latest}`)
+            }
+          }
+
+          if (fail.length) {
+            console.error(`\nPREFLIGHT FAILED — not publishing ${name}@${version}:\n`)
+            for (const f of fail) console.error(`  - ${f}`)
+            console.error(
+              `\nNothing was published. Fix the above, then re-run this workflow ` +
+                `(Publish has a workflow_dispatch lever) or recreate the release.\n`
+            )
+            process.exit(1)
+          }
+          console.log("preflight: ok")
+          PREFLIGHT
+          node /tmp/preflight.mjs
       - name: Publish to npm
         run: npm publish --access public --ignore-scripts

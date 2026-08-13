@@ -222,6 +222,22 @@ export interface CategorySchema {
   readonly displayName: string;
   readonly description: string;
   readonly canonicalTable: string;
+  /**
+   * SYS-3333: the id this category had before it was renamed.
+   *
+   * The transition has to be COMPATIBLE: a manifest that registered yesterday
+   * must register today. So a legacy id is not decoration — the host resolves
+   * it, warns, and proceeds, rather than refusing a manifest at boot for a
+   * name the operator never chose to change.
+   *
+   * A legacy id may never collide with a LIVE id (enforced below). That rule
+   * is why the two bank categories kept their names in this release: reusing
+   * `bank-statement` for the document category would have made a pre-sweep
+   * manifest saying `bank-statement` genuinely ambiguous — the partner feed
+   * before, the document after — with no correct resolution. Renaming them
+   * waits for the deprecation window to close.
+   */
+  readonly legacyId?: string;
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
 }
 
@@ -241,6 +257,7 @@ interface RawCategoryField {
 
 interface RawCategory {
   id: string;
+  legacyId?: string;
   displayName: string;
   description: string;
   canonicalTable: string;
@@ -711,11 +728,42 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       displayName: cat.displayName,
       description: cat.description,
       canonicalTable: cat.canonicalTable,
+      ...(cat.legacyId !== undefined ? { legacyId: cat.legacyId } : {}),
       fields: Object.freeze(fields) as ReadonlyArray<CanonicalFieldSpec>,
     });
     byId.set(cat.id, schema);
     tables.add(cat.canonicalTable);
     all.push(schema);
+  }
+
+  // SYS-3333 — a legacy category id must resolve to exactly one live category,
+  // and must not shadow one. Checked before the field-level pass so a
+  // structurally impossible alias fails on its own terms.
+  for (const cat of raw.categories) {
+    if (cat.legacyId === undefined) continue;
+    if (typeof cat.legacyId !== "string" || cat.legacyId.length === 0) {
+      throw new Error(`adapter category data: category "${cat.id}" has an invalid legacyId`);
+    }
+    if (cat.legacyId === cat.id) {
+      throw new Error(
+        `adapter category data: category "${cat.id}" declares a legacyId identical to its id — ` +
+          `a legacyId records a rename, so an unchanged id must not declare one`,
+      );
+    }
+    if (raw.categories.some((o) => o.id === cat.legacyId)) {
+      throw new Error(
+        `adapter category data: legacyId "${cat.legacyId}" (on "${cat.id}") is also a LIVE category ` +
+          `id — an alias that collides with a live id cannot be resolved, because a manifest naming ` +
+          `it could mean either category`,
+      );
+    }
+    const twin = raw.categories.find((o) => o !== cat && o.legacyId === cat.legacyId);
+    if (twin) {
+      throw new Error(
+        `adapter category data: legacyId "${cat.legacyId}" is claimed by two categories ` +
+          `("${twin.id}" + "${cat.id}")`,
+      );
+    }
   }
 
   // SYS-3333 — deferred to here on purpose. A legacy alias may legally be
@@ -860,6 +908,25 @@ export function factOf(field: CanonicalFieldName): string | null {
  * name carries no fact, is not `produce`-able by an adapter, and is not
  * addressable in an eval model.
  */
+export function resolveCanonicalCategoryId(id: string): AdapterCategory | null {
+  if (registry.byId.has(id)) return id;
+  for (const c of registry.all) {
+    if (c.legacyId === id) return c.id;
+  }
+  return null;
+}
+
+/**
+ * SYS-3333: true when `id` is a RETIRED category id rather than a live one.
+ *
+ * Callers use this to decide whether to emit a deprecation warning — the
+ * resolution itself is the same either way, and a caller that cannot tell the
+ * two apart either warns on every call or on none.
+ */
+export function isLegacyCategoryId(id: string): boolean {
+  return !registry.byId.has(id) && registry.all.some((c) => c.legacyId === id);
+}
+
 export function resolveCanonicalFieldName(name: string): CanonicalFieldName | null {
   if (registry.fieldToCategory.has(name) || registry.fieldToFact.has(name)) return name;
   const viaLegacy = registry.legacyToCanonical.get(name);

@@ -71,7 +71,7 @@ describe("AdapterCategory single-source-of-truth guard", () => {
   });
 
   it("includes the baseline categories plus the social-media category", () => {
-    for (const id of ["telco-carrier", "payment-network", "bank-account-activity", "social-media"]) {
+    for (const id of ["telco-carrier", "payment-network", "bank-statement", "social-media"]) {
       expect(ADAPTER_CATEGORY_IDS, `expected "${id}" in registry`).toContain(id);
     }
   });

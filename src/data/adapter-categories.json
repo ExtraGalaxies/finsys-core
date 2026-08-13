@@ -167,7 +167,7 @@
       ]
     },
     {
-      "id": "bank-account-activity",
+      "id": "bank-statement",
       "displayName": "Bank Statement",
       "description": "Per-month bank-statement extractions. Naturally multi-instance: one statement per (account, month). Eval components typically aggregate across instances (sum closing balance, max debit, count of bounced transactions).",
       "canonicalTable": "ihs_alt_data_bank_statements",
@@ -561,13 +561,15 @@
           "name": "personName",
           "type": "string",
           "description": "Full name as printed on the identity document.",
-          "fact": "personName"
+          "fact": "personName",
+          "legacyName": "icName"
         },
         {
           "name": "personIdNumber",
           "type": "string",
           "description": "IC (MyKad) number, or passport number for passport documents.",
-          "fact": "personIdNumber"
+          "fact": "personIdNumber",
+          "legacyName": "icNumber"
         },
         {
           "name": "personAddress",
@@ -594,7 +596,8 @@
           "name": "personDateOfBirth",
           "type": "string",
           "description": "Date of birth as stated on the document.",
-          "fact": "personDateOfBirth"
+          "fact": "personDateOfBirth",
+          "legacyName": "icDateOfBirth"
         },
         {
           "name": "personPlaceOfBirth",
@@ -607,18 +610,21 @@
           "name": "personNationality",
           "type": "string",
           "description": "Nationality as stated on the document.",
-          "fact": "personNationality"
+          "fact": "personNationality",
+          "legacyName": "icNationality"
         },
         {
           "name": "personRace",
           "type": "string",
           "description": "Race as stated on the document (MyKad-only; absent on passports).",
-          "fact": "personRace"
+          "fact": "personRace",
+          "legacyName": "icRace"
         }
-      ]
+      ],
+      "legacyId": "ic"
     },
     {
-      "id": "bank-statement",
+      "id": "finxtract-bank-statement",
       "displayName": "Bank Statement (Document Extraction)",
       "description": "Fields extracted from an uploaded bank-statement document by the host's extraction pipeline. One instance per statement document; each statement covers a single month. Distinct from the partner-API 'bank-statement' category: same real-world domain, different source and different canonical vocabulary.",
       "canonicalTable": "ihsbankstatement",
@@ -741,7 +747,8 @@
           "description": "Contributions made within the statement's coverage year.",
           "legacyName": "epfTotalCurrentContribution"
         }
-      ]
+      ],
+      "legacyId": "finxtract-epf"
     },
     {
       "id": "payslip",
@@ -854,7 +861,8 @@
           "fact": "netPay",
           "legacyName": "payslipNetPay"
         }
-      ]
+      ],
+      "legacyId": "finxtract-payslip"
     },
     {
       "id": "financial-statement",
@@ -1589,7 +1597,8 @@
           "kind": "money",
           "description": "Cash-flow statement: cash and cash equivalents at the end of the financial year."
         }
-      ]
+      ],
+      "legacyId": "finxtract-financial-statement"
     },
     {
       "id": "company-registration",
@@ -1615,7 +1624,8 @@
           "fact": "companyIncorporationDate",
           "description": "Date of incorporation as printed on the certificate, normalized to ISO YYYY-MM-DD. Attestation of the shared companyIncorporationDate fact — a company has exactly one incorporation date regardless of which document it was extracted from."
         }
-      ]
+      ],
+      "legacyId": "finxtract-form9"
     },
     {
       "id": "company-profile",
@@ -1709,7 +1719,8 @@
           "type": "string",
           "description": "Date of the most recent name change, normalized to ISO YYYY-MM-DD."
         }
-      ]
+      ],
+      "legacyId": "finxtract-ssm"
     }
   ]
 }

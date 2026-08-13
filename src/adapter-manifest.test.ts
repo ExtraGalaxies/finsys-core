@@ -314,7 +314,7 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
       manifestVersion: 1,
       id: "operator-override-bank-v1",
       displayName: "Operator Override — Bank Statement v1",
-      category: "bank-account-activity",
+      category: "bank-statement",
       version: 1,
       cardinality: "single",
       produces: ["closingBalance"],

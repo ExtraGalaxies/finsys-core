@@ -96,6 +96,20 @@ function validTypescript(): AdapterManifest {
   };
 }
 
+/**
+ * SYS-3347: a name deliberately OUTSIDE the generated vocabulary.
+ *
+ * The literal unions make a retired or invented name a compile error, which is
+ * the point — but these tests exist to prove the RUNTIME guards reject exactly
+ * such names, and a synthetic fixture registry legitimately declares
+ * categories the shipped data file never will. Both need to say something the
+ * type system is designed to forbid.
+ *
+ * Named rather than a bare `as`, so every deliberate escape is greppable in
+ * one search. A cast that has to be spelled out is reviewable.
+ */
+const outsideVocabulary = <T extends string>(name: string): T => name as T
+
 describe("Adapter manifest JSON-schema validation", () => {
   it("accepts a valid declarative manifest", () => {
     expect(validate(validDeclarative())).toBe(true);
@@ -295,14 +309,14 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
       manifestVersion: 1,
       id: "sme-loan-form-intake-v1",
       displayName: "SME Loan Form Intake v1",
-      category: "form-intake-sme",
+      category: outsideVocabulary("form-intake-sme"),
       version: 1,
       cardinality: "single",
-      produces: ["monthlyIncome", "employerName"],
+      produces: [outsideVocabulary("monthlyIncome"), "employerName"],
       implementation: {
         type: "form-intake",
         fieldMap: [
-          { formFieldId: "monthly_income", canonical: "monthlyIncome" },
+          { formFieldId: "monthly_income", canonical: outsideVocabulary("monthlyIncome") },
           { formFieldId: "employer_name", canonical: "employerName" },
         ],
       },
@@ -340,7 +354,7 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
       ...validFormIntake(),
       implementation: {
         type: "form-intake",
-        fieldMap: [{ canonical: "monthlyIncome" }],
+        fieldMap: [{ canonical: outsideVocabulary("monthlyIncome") }],
       },
     };
     expect(validate(m)).toBe(false);
@@ -352,7 +366,7 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
       implementation: {
         type: "form-intake",
         fieldMap: [
-          { formFieldId: "monthly_income", canonical: "monthlyIncome", transform: "to_integer" },
+          { formFieldId: "monthly_income", canonical: outsideVocabulary("monthlyIncome"), transform: "to_integer" },
         ],
       },
     };
@@ -389,7 +403,7 @@ describe("SYS-2998: extraction-pipeline implementation type", () => {
       displayName: "FinXtract Bank Statement v1",
       category: "bank-statement",
       version: 1,
-      produces: ["bankName", "bankBalance", "totalCredits", "totalDebits"],
+      produces: [outsideVocabulary("bankName"), outsideVocabulary("bankBalance"), "totalCredits", "totalDebits"],
       cardinality: "multi",
       implementation: { type: "extraction-pipeline" },
     };
@@ -422,7 +436,7 @@ describe("SYS-2998: extraction-pipeline implementation type", () => {
       ...validExtractionPipeline(),
       implementation: {
         type: "extraction-pipeline",
-        fieldMap: [{ source: "$.a", canonical: "bankBalance" }],
+        fieldMap: [{ source: "$.a", canonical: outsideVocabulary("bankBalance") }],
       },
     };
     expect(validate(m)).toBe(false);

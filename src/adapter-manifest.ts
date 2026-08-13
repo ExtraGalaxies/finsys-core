@@ -285,7 +285,14 @@ export interface AdapterManifest {
    * refused loudly, not coerced into matching. Vendors own their exact
    * label byte-for-byte; hosts never guess at reconciliation.
    */
-  readonly enumValues?: Readonly<Record<CanonicalFieldName, ReadonlyArray<string>>>;
+  // SYS-3347: PARTIAL. This was a total Record, which only ever type-checked
+  // because the key was `string` — an index signature, so any subset
+  // satisfied it. Under the literal union a total Record demands all 224
+  // canonical fields, which is not and never was the intent: enumValues is a
+  // sparse map naming only the enum-kind fields this adapter produces. Every
+  // other vocabulary-keyed map here is already Partial; this one was the
+  // outlier, and the union is what made that visible.
+  readonly enumValues?: Readonly<Partial<Record<CanonicalFieldName, ReadonlyArray<string>>>>;
 
   /**
    * Optional free-form notes — useful for partner-side documentation

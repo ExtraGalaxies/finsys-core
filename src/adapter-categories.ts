@@ -46,30 +46,45 @@
 
 import categoriesData from "./data/adapter-categories.json" with { type: "json" };
 
+import type {
+  AdapterCategoryId,
+  CanonicalFieldNameLiteral,
+  RetiredFieldName,
+} from "./vocabulary.generated.js";
+
 /**
  * Adapter category identifier.
  *
- * Open `string` type (SYS-2500). The authoritative set lives in the
- * runtime registry built from `data/adapter-categories.json`; there is
- * no compile-time union to enumerate. The trade-off vs. the old
- * literal union is the loss of autocomplete + exhaustiveness on
- * category ids — validate at boundaries with `isAdapterCategory()` /
- * `assertAdapterCategory()` instead, and read the canonical set from
- * `ADAPTER_CATEGORY_IDS` / `allCategories()`.
+ * A LITERAL UNION, generated from the registry (SYS-3347). It was an open
+ * `string` from the registry-loaded rework, on reasoning that was sound while the set only
+ * GREW: growth is backwards-compatible, so a runtime check sufficed.
+ *
+ * That stopped holding the moment names get RETIRED. The registry's own
+ * lookups fail open by design — `resolveCanonicalCategoryId` answers null and
+ * every caller treats null as "not a rename", permissively — so a retired id
+ * left in a consumer is a silent miss at runtime with nothing to observe. A
+ * rename therefore had to be found by hand, which is exactly what it cost.
+ *
+ * Compile-time membership converts that into a build failure at the site that
+ * needs editing, and tsc suggests the replacement by proximity. Boundary
+ * validation with `isAdapterCategory()` / `assertAdapterCategory()` is still
+ * required for values arriving from OUTSIDE the build — types are erased, so
+ * they say nothing about a JSON payload or a database row.
  */
-export type AdapterCategory = string;
+export type AdapterCategory = AdapterCategoryId;
 
 /**
- * Union of all canonical field names declared by any category. Loose-
- * typed (string) because the set grows with each category-added minor;
- * the runtime registry narrows against the data file.
+ * Every canonical field name any category declares — a LITERAL UNION,
+ * generated from the registry (SYS-3347). See `AdapterCategory` above for why
+ * this is no longer `string`.
  *
- * Adapter `produces` lists are typed as ReadonlyArray<CanonicalFieldName>
- * — the host validates membership against the adapter's category at
- * registration time, refusing adapters that promise fields outside
- * their category.
+ * Adapter `produces` lists are typed `ReadonlyArray<CanonicalFieldName>`, so a
+ * manifest naming a retired field now fails to compile. The host still
+ * validates membership against the adapter's CATEGORY at registration — the
+ * union says the name exists somewhere, not that it belongs to this category,
+ * and only the runtime check can say the latter.
  */
-export type CanonicalFieldName = string;
+export type CanonicalFieldName = CanonicalFieldNameLiteral;
 
 /**
  * Per-field metadata for a canonical field declared by a category.
@@ -271,6 +286,29 @@ interface RawCategoryData {
 
 // ── Registry: load-time validation + indexing ────────────────────────
 
+/*
+ * SYS-3347 — the two narrowing points, and why a cast is correct here rather
+ * than a smell.
+ *
+ * `AdapterCategory` and `CanonicalFieldName` are literal unions GENERATED FROM
+ * this very JSON file. So inside the loader, a name read out of it is a member
+ * of the union by construction — the union cannot disagree with its own
+ * source, and the `--check` drift guard is what keeps that true.
+ *
+ * The parameters stay `string` on purpose. `buildCategoryRegistry` is the
+ * extension point for host-side categories, so it must accept names the
+ * shipped union has never heard of; it validates them and then narrows. That
+ * is exactly the boundary/interior split the union exists to draw, and these
+ * two functions are the boundary.
+ *
+ * Named rather than inlined `as` so the narrowing is greppable: a reviewer can
+ * find every place a string becomes vocabulary in one search, which is not
+ * true of a bare cast.
+ */
+const asCategoryId = (id: string): AdapterCategoryId => id as AdapterCategoryId;
+const asFieldName = (name: string): CanonicalFieldNameLiteral =>
+  name as CanonicalFieldNameLiteral;
+
 const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
   "number",
   "boolean",
@@ -345,22 +383,31 @@ const VALID_FIELD_CONFIDENTIALITY: ReadonlyArray<
  * module load from the bundled data file (and rebuildable from any
  * conforming data object in tests via `buildCategoryRegistry`).
  */
+/*
+ * SYS-3347 — the lookup maps are keyed by `string`, deliberately.
+ *
+ * Their whole job is to answer "is this arbitrary value one of ours?", so a
+ * union key would reject the untrusted input they exist to test —
+ * `byId.has(someUserString)` would not compile, which inverts the purpose. The
+ * NARROWING happens on the way out: the public accessors return the union
+ * after the membership check has proved it.
+ */
 export interface CategoryRegistry {
   /** All category schemas, in data-file order. */
   readonly all: ReadonlyArray<CategorySchema>;
   /** Category ids, in data-file order. */
   readonly ids: ReadonlyArray<AdapterCategory>;
   /** id → schema, O(1) lookup. */
-  readonly byId: ReadonlyMap<AdapterCategory, CategorySchema>;
+  readonly byId: ReadonlyMap<string, CategorySchema>;
   /**
    * canonical field name → owning category id, O(1) reverse lookup.
    * Only UNIQUELY-declared names appear here — a shared-fact name
    * (declared by more than one category) is deliberately absent, so
    * `categoryForField` answers null for it (explicit ambiguity).
    */
-  readonly fieldToCategory: ReadonlyMap<CanonicalFieldName, AdapterCategory>;
+  readonly fieldToCategory: ReadonlyMap<string, AdapterCategory>;
   /** canonical field name → fact id, for every field declaring one. */
-  readonly fieldToFact: ReadonlyMap<CanonicalFieldName, string>;
+  readonly fieldToFact: ReadonlyMap<string, string>;
   /** fact id → every category attesting it, in data-file order. */
   readonly factToCategories: ReadonlyMap<string, ReadonlyArray<AdapterCategory>>;
   /**
@@ -396,9 +443,9 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     throw new Error("adapter category data: categories must be a non-empty array");
   }
 
-  const byId = new Map<AdapterCategory, CategorySchema>();
-  const fieldToCategory = new Map<CanonicalFieldName, AdapterCategory>();
-  const fieldToFact = new Map<CanonicalFieldName, string>();
+  const byId = new Map<string, CategorySchema>();
+  const fieldToCategory = new Map<string, AdapterCategory>();
+  const fieldToFact = new Map<string, string>();
   const factToCategories = new Map<string, AdapterCategory[]>();
   // SYS-3333: legacy flat name -> canonical name. Validated below against
   // BOTH namespaces: a legacy name may not shadow a live canonical name
@@ -407,8 +454,11 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
   const legacyToCanonical = new Map<string, CanonicalFieldName>();
   // Every declaration of a field name seen so far — the shared-fact
   // uniqueness rule needs the full picture, not just the first declarer.
+  // Keyed by `string`: this is a working index built from RAW input, so it
+  // must accept a name the shipped union has never seen — that is precisely
+  // what buildCategoryRegistry exists to validate.
   const declarations = new Map<
-    CanonicalFieldName,
+    string,
     {
       fact: string | undefined;
       kind: RawCategoryField["kind"];
@@ -533,7 +583,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       // the SYS-2722 drift pattern and is refused at load time.
       const prior = declarations.get(f.name);
       if (prior) {
-        if (prior.categories.includes(cat.id)) {
+        if (prior.categories.includes(asCategoryId(cat.id))) {
           throw new Error(
             `adapter category data: ${where} declares field "${f.name}" more than once`,
           );
@@ -710,7 +760,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       }
 
       const spec: CanonicalFieldSpec = Object.freeze({
-        name: f.name,
+        name: asFieldName(f.name),
         type: f.type,
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
@@ -724,7 +774,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       });
       fields.push(spec);
       if (prior) {
-        prior.categories.push(cat.id);
+        prior.categories.push(asCategoryId(cat.id));
         // The name is now shared — drop it from the unique-owner index
         // so categoryForField answers null (explicit ambiguity) rather
         // than silently privileging the first declarer.
@@ -736,9 +786,9 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           type: f.type,
           unit: f.unit,
           confidentiality: f.confidentiality,
-          categories: [cat.id],
+          categories: [asCategoryId(cat.id)],
         });
-        fieldToCategory.set(f.name, cat.id);
+        fieldToCategory.set(f.name, asCategoryId(cat.id));
       }
       if (f.legacyName !== undefined) {
         const claimed = legacyToCanonical.get(f.legacyName);
@@ -748,21 +798,21 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
               `fields ("${claimed}" + "${f.name}") — a legacy name must resolve to exactly one canonical field`,
           );
         }
-        legacyToCanonical.set(f.legacyName, f.name);
+        legacyToCanonical.set(f.legacyName, asFieldName(f.name));
       }
       if (f.fact !== undefined) {
         fieldToFact.set(f.name, f.fact);
         const attesters = factToCategories.get(f.fact);
         if (attesters) {
-          attesters.push(cat.id);
+          attesters.push(asCategoryId(cat.id));
         } else {
-          factToCategories.set(f.fact, [cat.id]);
+          factToCategories.set(f.fact, [asCategoryId(cat.id)]);
         }
       }
     }
 
     const schema: CategorySchema = Object.freeze({
-      id: cat.id,
+      id: asCategoryId(cat.id),
       displayName: cat.displayName,
       description: cat.description,
       canonicalTable: cat.canonicalTable,
@@ -949,7 +999,7 @@ export function factOf(field: CanonicalFieldName): string | null {
  * decide whether the resolution deserves a deprecation warning.
  */
 export function resolveCanonicalCategoryId(id: string): AdapterCategory | null {
-  if (registry.byId.has(id)) return id;
+  if (registry.byId.has(id)) return asCategoryId(id);
   for (const c of registry.all) {
     if (c.legacyId === id) return c.id;
   }
@@ -981,7 +1031,7 @@ export function isLegacyCategoryId(id: string): boolean {
  * adapter, and is not addressable in an eval model.
  */
 export function resolveCanonicalFieldName(name: string): CanonicalFieldName | null {
-  if (registry.fieldToCategory.has(name) || registry.fieldToFact.has(name)) return name;
+  if (registry.fieldToCategory.has(name) || registry.fieldToFact.has(name)) return asFieldName(name);
   const viaLegacy = registry.legacyToCanonical.get(name);
   if (viaLegacy !== undefined) return viaLegacy;
   // A name can be canonical, shared-fact, AND absent from both indexes only
@@ -1025,5 +1075,5 @@ export function assertAdapterCategory(id: string): AdapterCategory {
       `Unknown adapter category: ${id}. Available: ${registry.ids.join(", ")}`,
     );
   }
-  return id;
+  return asCategoryId(id);
 }

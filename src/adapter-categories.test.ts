@@ -31,6 +31,20 @@ import {
   sensitiveFieldsOf,
 } from "./adapter-categories.js";
 
+/**
+ * SYS-3347: a name deliberately OUTSIDE the generated vocabulary.
+ *
+ * The literal unions make a retired or invented name a compile error, which is
+ * the point — but these tests exist to prove the RUNTIME guards reject exactly
+ * such names, and a synthetic fixture registry legitimately declares
+ * categories the shipped data file never will. Both need to say something the
+ * type system is designed to forbid.
+ *
+ * Named rather than a bare `as`, so every deliberate escape is greppable in
+ * one search. A cast that has to be spelled out is reviewable.
+ */
+const outsideVocabulary = <T extends string>(name: string): T => name as T
+
 describe("Adapter category catalogue", () => {
   it("declares at least two categories (telco-carrier, payment-network)", () => {
     const cats = allCategories();
@@ -98,7 +112,7 @@ describe("categorySchemaOf", () => {
 
   it("throws on unknown category id", () => {
     expect(() =>
-      categorySchemaOf("absurd-category-that-does-not-exist"),
+      categorySchemaOf(outsideVocabulary("absurd-category-that-does-not-exist")),
     ).toThrow(/Unknown adapter category/);
   });
 });
@@ -134,7 +148,7 @@ describe("categoryForField", () => {
   });
 
   it("returns null for a field not declared by any category", () => {
-    expect(categoryForField("clearlyNotACanonicalField")).toBeNull();
+    expect(categoryForField(outsideVocabulary("clearlyNotACanonicalField"))).toBeNull();
   });
 });
 
@@ -190,7 +204,7 @@ describe("social-media category", () => {
       "negativeSentimentRatio90d",
       "accountFlags24m",
     ]) {
-      expect(fields.has(f), `expected social-media field "${f}"`).toBe(true);
+      expect(fields.has(outsideVocabulary(f)), `expected social-media field "${f}"`).toBe(true);
     }
   });
 
@@ -229,7 +243,7 @@ describe("trade-credit category", () => {
       "grossMarginPct",
       "cashConversionCycleDays",
     ]) {
-      expect(fields.has(f), `expected trade-credit field "${f}"`).toBe(true);
+      expect(fields.has(outsideVocabulary(f)), `expected trade-credit field "${f}"`).toBe(true);
     }
   });
 
@@ -534,7 +548,7 @@ describe("geolocation category", () => {
       "primaryStateCode",
       "addressMatchScore",
     ]) {
-      expect(fields.has(f), `expected geolocation field "${f}"`).toBe(true);
+      expect(fields.has(outsideVocabulary(f)), `expected geolocation field "${f}"`).toBe(true);
     }
   });
 
@@ -621,10 +635,10 @@ describe("FinXtract document-extraction categories", () => {
     // ones route to a category — asserting that keeps this test honest about
     // which names actually gained a second attester in this change.
     for (const shared of ["personName", "personIdNumber", "personAddress"]) {
-      expect(categoryForField(shared), `${shared} is attested by >1 category`).toBeNull();
+      expect(categoryForField(outsideVocabulary(shared)), `${shared} is attested by >1 category`).toBeNull();
     }
     for (const solo of ["personGender", "personReligion", "personPlaceOfBirth"]) {
-      expect(categoryForField(solo), `${solo} still routes to person-identity`).toBe(
+      expect(categoryForField(outsideVocabulary(solo)), `${solo} still routes to person-identity`).toBe(
         "person-identity",
       );
     }
@@ -667,7 +681,7 @@ describe("FinXtract document-extraction categories", () => {
     expect([...categoryFieldsOf("epf-statement")]).toContain("totalContribution");
     // The point of the exercise: one person, several documents, one fact.
     for (const c of ["payslip", "epf-statement", "finxtract-bank-statement"]) {
-      expect([...categoryFieldsOf(c)], `${c} should attest personName`).toContain("personName");
+      expect([...categoryFieldsOf(outsideVocabulary(c))], `${c} should attest personName`).toContain("personName");
     }
   });
 });
@@ -881,7 +895,7 @@ describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
     // Uniquely-declared, fact-less names → null.
     expect(factOf("onTimePaymentRatio24m")).toBeNull();
     // Unknown names → null.
-    expect(factOf("clearlyNotACanonicalField")).toBeNull();
+    expect(factOf(outsideVocabulary("clearlyNotACanonicalField"))).toBeNull();
   });
 
   it("categoriesAttestingFact enumerates every attesting category in data-file order", () => {
@@ -922,14 +936,14 @@ describe("enum field kind", () => {
 
   it("parses kind 'enum' onto the field spec (string type, no range)", () => {
     const reg = buildCategoryRegistry(rawWithEnumField());
-    const field = reg.byId.get("fixture-source")?.fields.find((f) => f.name === "fixtureTier");
+    const field = reg.byId.get("fixture-source")?.fields.find((f) => (f.name as string) === "fixtureTier");
     expect(field?.kind).toBe("enum");
     expect(field?.type).toBe("string");
   });
 
   it("a field without kind has kind undefined (kind is opt-in)", () => {
     const reg = buildCategoryRegistry(validRaw());
-    const field = reg.byId.get("fixture-source")?.fields.find((f) => f.name === "fixtureScore");
+    const field = reg.byId.get("fixture-source")?.fields.find((f) => (f.name as string) === "fixtureScore");
     expect(field?.kind).toBeUndefined();
   });
 
@@ -1197,7 +1211,7 @@ describe("isFieldSensitive / sensitiveFieldsOf (SYS-3164)", () => {
     // Mid-rename callers and plain mistakes both land here. Answering
     // "no, not sensitive" for a field nobody has heard of is the one
     // answer that can silently leak.
-    expect(isFieldSensitive(someCategory, "aFieldThatDoesNotExist")).toBe(true);
+    expect(isFieldSensitive(someCategory, outsideVocabulary("aFieldThatDoesNotExist"))).toBe(true);
   });
 
   it("sensitiveFieldsOf is the complement of the declared opt-outs", () => {
@@ -1215,7 +1229,7 @@ describe("isFieldSensitive / sensitiveFieldsOf (SYS-3164)", () => {
   });
 
   it("throws for an unknown CATEGORY rather than answering — that is a wiring error, not a data question", () => {
-    expect(() => isFieldSensitive("no-such-category", "anything")).toThrow(
+    expect(() => isFieldSensitive(outsideVocabulary("no-such-category"), outsideVocabulary("anything"))).toThrow(
       /Unknown adapter category/,
     );
   });
@@ -1316,7 +1330,7 @@ describe("monetary fields and the closed unit set", () => {
       description: "A monetary test field.",
     } as unknown as RawArg["categories"][number]["fields"][number];
     const reg = buildCategoryRegistry(raw);
-    const spec = reg.byId.get("fixture-source")?.fields.find((f) => f.name === "fixtureAmount");
+    const spec = reg.byId.get("fixture-source")?.fields.find((f) => (f.name as string) === "fixtureAmount");
     expect(spec?.kind).toBe("money");
     expect(spec?.unit).toBeUndefined();
   });

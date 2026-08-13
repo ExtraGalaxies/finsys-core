@@ -6,6 +6,68 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.0.0] - 2026-08-14
+
+### Changed — BREAKING
+
+- **`AdapterCategory` and `CanonicalFieldName` are literal unions, generated from
+  the registry.** Both were aliases to `string`, so every "typed" vocabulary in
+  every consumer was unchecked. The original reasoning held while the set only
+  GREW — growth is backwards-compatible and a runtime check suffices. It stopped
+  holding once names get RETIRED: the registry's lookups fail *open* by design
+  (`resolveCanonical*` answers null and callers read null as "not a rename"), so
+  a retired name left in a consumer is a silent runtime miss. Compile-time
+  membership turns that into a build failure at the site that needs editing, and
+  `tsc` suggests the replacement by proximity.
+
+  **What breaks:** assigning an arbitrary `string` to either type. Boundary
+  functions are unaffected — `resolveCanonicalCategoryId`,
+  `resolveCanonicalFieldName`, `isAdapterCategory` and `assertAdapterCategory`
+  keep `string` parameters (they exist to test untrusted input) and now narrow
+  on return.
+
+  **What does not break:** the vocabulary itself. No field, category or schema
+  changed — verified by diffing 6.0.2's `adapter-categories.json` against this
+  release's: byte-identical. A running service built against 6.x is unaffected;
+  types are erased.
+
+- **`AdapterManifest.enumValues` is now `Partial<Record<…>>`.** It was a total
+  `Record`, which only ever type-checked because the key was `string` — an index
+  signature any subset satisfied. Under a literal union a total record demands
+  all 224 canonical fields, which was never the intent: `enumValues` is a sparse
+  map naming only the enum-kind fields an adapter produces. Every other
+  vocabulary-keyed map was already `Partial`; this was the outlier.
+
+### Added
+
+- **`src/vocabulary.generated.ts`** — `AdapterCategoryId`,
+  `CanonicalFieldNameLiteral` and `RetiredFieldName` as literal unions
+  (13 categories, 224 canonical fields, 84 retired names). Committed rather than
+  built on the fly, because the union diff is the review artifact: retiring a
+  name should be visible in the PR that does it, not discovered later by a
+  consumer's failing build.
+
+- **A generation-drift check.** `npm run gen:vocabulary -- --check` fails when
+  the committed file has drifted from `adapter-categories.json`, and runs in the
+  test suite. A stale generated file is worse than none — it asserts a
+  vocabulary the platform no longer has.
+
+- **A disjointness guarantee.** The generator refuses to emit overlapping
+  unions, and a test asserts the same of the shipped registry: a name cannot be
+  both live and retired, or a consumer cannot tell which meaning applies.
+
+### Migration
+
+Consumers pin with a caret below 7 and commit lockfiles, so nothing upgrades
+automatically — the cutover is the PR that edits `package.json`, not a deploy.
+On upgrading, `tsc` reports every stale vocabulary literal. Deliberate escapes
+(a test asserting a runtime guard rejects an invalid name, a synthetic fixture
+registry) should be named rather than bare casts, so they stay greppable.
+
+Types say nothing about the **wire**: a build against 7 talking to a service on
+6 remains a runtime concern.
+
+
 ## [6.0.2] - 2026-08-13
 
 ### Fixed

@@ -961,7 +961,7 @@ describe("enum field kind", () => {
     // served as a string by three categories and a number by a fourth.
     // Cross-source comparability is the whole reason a fact id exists.
     const raw = validRaw();
-    const attester = (id: string, type: string, desc: string) => ({
+    const attester = (id: string, type: "number" | "boolean" | "string", desc: string) => ({
       id,
       displayName: id,
       description: desc,
@@ -978,7 +978,7 @@ describe("enum field kind", () => {
     // category and a ratio in another, and the disagreement comparison the fact
     // id exists for would be comparing two different quantities.
     const raw = validRaw();
-    const attester = (id: string, unit: string | undefined) => ({
+    const attester = (id: string, unit: string) => ({
       id,
       displayName: id,
       description: "Unit drift fixture.",
@@ -986,10 +986,10 @@ describe("enum field kind", () => {
       fields: [
         {
           name: "sharedCount",
-          type: "number",
+          type: "number" as const,
           fact: "sharedCount",
           description: "Unit drift fixture.",
-          ...(unit ? { unit } : {}),
+          unit,
         },
       ],
     });

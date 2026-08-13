@@ -96,9 +96,9 @@ describe("SYS-3002: AdapterExtraction.periods", () => {
   it("periods is optional — a flat single-period extraction remains valid unchanged (backward compat)", () => {
     const flat: AdapterExtraction = {
       instanceKey: "",
-      values: { telcoTenureMonths: 36 },
+      values: { tenureMonths: 36 },
     };
     expect("periods" in flat).toBe(false);
-    expect(flat.values.telcoTenureMonths).toBe(36);
+    expect(flat.values.tenureMonths).toBe(36);
   });
 });

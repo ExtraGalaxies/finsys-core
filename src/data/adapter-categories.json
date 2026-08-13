@@ -8,84 +8,95 @@
       "canonicalTable": "ihs_alt_data_telco",
       "fields": [
         {
-          "name": "telcoOnTimePaymentRatio24m",
+          "name": "onTimePaymentRatio24m",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Fraction of bills paid on time over the last 24 months. Strongest single telco predictor; ≥0.95 is the clean-history signal."
+          "description": "Fraction of bills paid on time over the last 24 months. Strongest single telco predictor; ≥0.95 is the clean-history signal.",
+          "legacyName": "telcoOnTimePaymentRatio24m"
         },
         {
-          "name": "telcoTenureMonths",
+          "name": "tenureMonths",
           "type": "number",
           "unit": "months",
           "range": [
             0,
             600
           ],
-          "description": "Account age. ≥48 months is the thin-file uplift trigger."
+          "description": "Account age. ≥48 months is the thin-file uplift trigger.",
+          "legacyName": "telcoTenureMonths"
         },
         {
-          "name": "telcoSuspensionsCount24m",
+          "name": "suspensionsCount24m",
           "type": "number",
           "unit": "count",
           "range": [
             0,
             100
           ],
-          "description": "Non-payment-driven account suspensions in the last 24 months. ≥3 is a strong distress signal."
+          "description": "Non-payment-driven account suspensions in the last 24 months. ≥3 is a strong distress signal.",
+          "legacyName": "telcoSuspensionsCount24m"
         },
         {
-          "name": "telcoLateDays24m",
+          "name": "lateDays24m",
           "type": "number",
           "unit": "days",
           "range": [
             0,
             800
           ],
-          "description": "Cumulative days late across all bills in the trailing 24-month window."
+          "description": "Cumulative days late across all bills in the trailing 24-month window.",
+          "legacyName": "telcoLateDays24m"
         },
         {
-          "name": "telcoHandsetFinancingActive",
+          "name": "handsetFinancingActive",
           "type": "boolean",
-          "description": "Has an active handset-EMI account currently. Proxy for financing capacity already extended."
+          "description": "Has an active handset-EMI account currently. Proxy for financing capacity already extended.",
+          "legacyName": "telcoHandsetFinancingActive"
         },
         {
-          "name": "telcoHandsetFinancingDelinquent",
+          "name": "handsetFinancingDelinquent",
           "type": "boolean",
-          "description": "Recent handset-EMI delinquency in the last 24 months. Distress signal even with otherwise clean bill payment."
+          "description": "Recent handset-EMI delinquency in the last 24 months. Distress signal even with otherwise clean bill payment.",
+          "legacyName": "telcoHandsetFinancingDelinquent"
         },
         {
-          "name": "telcoArpuMyr",
+          "name": "arpu",
           "type": "number",
           "kind": "money",
-          "description": "Average Revenue Per User (monthly). Coarse spending-capacity proxy. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
+          "description": "Average Revenue Per User (monthly). Coarse spending-capacity proxy. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "legacyName": "telcoArpuMyr"
         },
         {
-          "name": "telcoPaymentReliabilityTier",
+          "name": "paymentReliabilityTier",
           "type": "string",
           "kind": "enum",
-          "description": "Coarse bill-payment reliability bucket, for partners that return a tier label instead of a continuous ratio. Parallel signal to telcoOnTimePaymentRatio24m. Labels are vendor-declared (see the adapter manifest's enumValues); ordering and scoring live in the consumer's per-value mapping."
+          "description": "Coarse bill-payment reliability bucket, for partners that return a tier label instead of a continuous ratio. Parallel signal to telcoOnTimePaymentRatio24m. Labels are vendor-declared (see the adapter manifest's enumValues); ordering and scoring live in the consumer's per-value mapping.",
+          "legacyName": "telcoPaymentReliabilityTier"
         },
         {
-          "name": "telcoTenureTier",
+          "name": "tenureTier",
           "type": "string",
           "kind": "enum",
-          "description": "Coarse account-age bucket, for partners that return a tenure tier label instead of a continuous month count. Parallel signal to telcoTenureMonths. Labels are vendor-declared (see the adapter manifest's enumValues)."
+          "description": "Coarse account-age bucket, for partners that return a tenure tier label instead of a continuous month count. Parallel signal to telcoTenureMonths. Labels are vendor-declared (see the adapter manifest's enumValues).",
+          "legacyName": "telcoTenureTier"
         },
         {
-          "name": "telcoDistressTier",
+          "name": "distressTier",
           "type": "string",
           "kind": "enum",
-          "description": "Coarse account-distress bucket, for partners that return a distress tier label instead of discrete counts. Parallel signal to telcoSuspensionsCount24m / telcoLateDays24m. Labels are vendor-declared (see the adapter manifest's enumValues)."
+          "description": "Coarse account-distress bucket, for partners that return a distress tier label instead of discrete counts. Parallel signal to telcoSuspensionsCount24m / telcoLateDays24m. Labels are vendor-declared (see the adapter manifest's enumValues).",
+          "legacyName": "telcoDistressTier"
         },
         {
-          "name": "telcoHandsetRiskTier",
+          "name": "handsetRiskTier",
           "type": "string",
           "kind": "enum",
-          "description": "Coarse handset-financing risk bucket, for partners that return a tier label instead of the discrete handset flags. Parallel signal to telcoHandsetFinancingActive / telcoHandsetFinancingDelinquent. Labels are vendor-declared (see the adapter manifest's enumValues)."
+          "description": "Coarse handset-financing risk bucket, for partners that return a tier label instead of the discrete handset flags. Parallel signal to telcoHandsetFinancingActive / telcoHandsetFinancingDelinquent. Labels are vendor-declared (see the adapter manifest's enumValues).",
+          "legacyName": "telcoHandsetRiskTier"
         }
       ]
     },
@@ -96,110 +107,118 @@
       "canonicalTable": "ihs_alt_data_payments",
       "fields": [
         {
-          "name": "paymentsMonthlyVolumeMyrT3",
+          "name": "monthlyVolume3m",
           "type": "number",
           "kind": "money",
-          "description": "Mean monthly inbound transaction volume over the trailing 3 months. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
+          "description": "Mean monthly inbound transaction volume over the trailing 3 months. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "legacyName": "paymentsMonthlyVolumeMyrT3"
         },
         {
-          "name": "paymentsMonthlyVolumeMyrT12",
+          "name": "monthlyVolume12m",
           "type": "number",
           "kind": "money",
-          "description": "Mean monthly inbound transaction volume over the trailing 12 months. Pair with T3 for trend direction. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
+          "description": "Mean monthly inbound transaction volume over the trailing 12 months. Pair with T3 for trend direction. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "legacyName": "paymentsMonthlyVolumeMyrT12"
         },
         {
-          "name": "paymentsArpuStability12m",
+          "name": "arpuStability12m",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Coefficient-of-variation inverse over monthly ARPU in the trailing 12 months. Closer to 1 = steadier; closer to 0 = volatile."
+          "description": "Coefficient-of-variation inverse over monthly ARPU in the trailing 12 months. Closer to 1 = steadier; closer to 0 = volatile.",
+          "legacyName": "paymentsArpuStability12m"
         },
         {
-          "name": "paymentsDisputeRate12m",
+          "name": "disputeRate12m",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Fraction of transactions disputed or refunded in the trailing 12 months."
+          "description": "Fraction of transactions disputed or refunded in the trailing 12 months.",
+          "legacyName": "paymentsDisputeRate12m"
         },
         {
-          "name": "paymentsCustomerConcentrationTop5Pct",
+          "name": "customerConcentrationTop5Pct",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Revenue share from the top-5 recurring customers. Above ~0.7 is concentration risk."
+          "description": "Revenue share from the top-5 recurring customers. Above ~0.7 is concentration risk.",
+          "legacyName": "paymentsCustomerConcentrationTop5Pct"
         },
         {
-          "name": "paymentsActiveTenureMonths",
+          "name": "activeTenureMonths",
           "type": "number",
           "unit": "months",
           "range": [
             0,
             600
           ],
-          "description": "Months since first transaction on the payment network. Establishment / continuity proxy."
+          "description": "Months since first transaction on the payment network. Establishment / continuity proxy.",
+          "legacyName": "paymentsActiveTenureMonths"
         }
       ]
     },
     {
-      "id": "bank-statement",
+      "id": "bank-account-activity",
       "displayName": "Bank Statement",
       "description": "Per-month bank-statement extractions. Naturally multi-instance: one statement per (account, month). Eval components typically aggregate across instances (sum closing balance, max debit, count of bounced transactions).",
       "canonicalTable": "ihs_alt_data_bank_statements",
       "fields": [
         {
-          "name": "bankStatementMonth",
+          "name": "statementMonth",
           "type": "string",
-          "description": "Statement period in YYYY-MM format. Used as the instance_key discriminator + by the `latest` aggregation operator."
+          "description": "Statement period in YYYY-MM format. Used as the instance_key discriminator + by the `latest` aggregation operator.",
+          "legacyName": "bankStatementMonth"
         },
         {
-          "name": "bankClosingBalance",
+          "name": "closingBalance",
           "type": "number",
           "kind": "money",
           "description": "Closing balance for the statement period.",
-          "fact": "bankClosingBalance",
+          "fact": "closingBalance",
           "legacyName": "bankClosingBalanceMyr"
         },
         {
-          "name": "bankTotalCredits",
+          "name": "totalCredits",
           "type": "number",
           "kind": "money",
           "description": "Sum of credit transactions during the period.",
-          "fact": "bankTotalCredits",
+          "fact": "totalCredits",
           "legacyName": "bankTotalCreditsMyr"
         },
         {
-          "name": "bankTotalDebits",
+          "name": "totalDebits",
           "type": "number",
           "kind": "money",
           "description": "Sum of debit transactions during the period.",
-          "fact": "bankTotalDebits",
+          "fact": "totalDebits",
           "legacyName": "bankTotalDebitsMyr"
         },
         {
-          "name": "bankLargestSingleCredit",
+          "name": "largestSingleCredit",
           "type": "number",
           "kind": "money",
           "description": "Largest single inbound transaction in the period. Useful for spotting one-off injections vs steady revenue.",
           "legacyName": "bankLargestSingleCreditMyr"
         },
         {
-          "name": "bankBouncedTransactionsCount",
+          "name": "bouncedTransactionsCount",
           "type": "number",
           "unit": "count",
           "range": [
             0,
             1000
           ],
-          "description": "Bounced / returned transactions in the period. Distress signal at counts > 0."
+          "description": "Bounced / returned transactions in the period. Distress signal at counts > 0.",
+          "legacyName": "bankBouncedTransactionsCount"
         }
       ]
     },
@@ -210,79 +229,87 @@
       "canonicalTable": "ihs_alt_data_social_media",
       "fields": [
         {
-          "name": "socialAccountTenureMonths",
+          "name": "accountTenureMonths",
           "type": "number",
           "unit": "months",
           "range": [
             0,
             600
           ],
-          "description": "Age of the oldest verified public business presence across linked profiles. Establishment / continuity proxy, parallel to telco + payment-network tenure."
+          "description": "Age of the oldest verified public business presence across linked profiles. Establishment / continuity proxy, parallel to telco + payment-network tenure.",
+          "legacyName": "socialAccountTenureMonths"
         },
         {
-          "name": "socialFollowerCount",
+          "name": "followerCount",
           "type": "number",
           "unit": "count",
           "range": [
             0,
             100000000
           ],
-          "description": "Aggregate audience size across linked public profiles. Coarse reach / scale proxy — gameable on its own, so read alongside socialEngagementRate90d."
+          "description": "Aggregate audience size across linked public profiles. Coarse reach / scale proxy — gameable on its own, so read alongside socialEngagementRate90d.",
+          "legacyName": "socialFollowerCount"
         },
         {
-          "name": "socialEngagementRate90d",
+          "name": "engagementRate90d",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Mean interactions per impression over the trailing 90 days. Authenticity signal: a large follower count with near-zero engagement indicates a bought or dormant audience."
+          "description": "Mean interactions per impression over the trailing 90 days. Authenticity signal: a large follower count with near-zero engagement indicates a bought or dormant audience.",
+          "legacyName": "socialEngagementRate90d"
         },
         {
-          "name": "socialPostingConsistency12m",
+          "name": "postingConsistency12m",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Fraction of weeks in the trailing 12 months with at least one public post. Ongoing-operation signal — distinguishes an active business from a stale listing."
+          "description": "Fraction of weeks in the trailing 12 months with at least one public post. Ongoing-operation signal — distinguishes an active business from a stale listing.",
+          "legacyName": "socialPostingConsistency12m"
         },
         {
-          "name": "socialVerifiedBusinessAccount",
+          "name": "verifiedBusinessAccount",
           "type": "boolean",
-          "description": "Has at least one platform-verified business / commerce profile. Legitimacy signal — the platform has performed its own business-identity check."
+          "description": "Has at least one platform-verified business / commerce profile. Legitimacy signal — the platform has performed its own business-identity check.",
+          "legacyName": "socialVerifiedBusinessAccount"
         },
         {
-          "name": "socialCustomerRatingAvg",
+          "name": "customerRatingAvg",
           "type": "number",
           "unit": "rating",
           "range": [
             0,
             5
           ],
-          "description": "Mean public customer rating (normalised to a 0–5 scale) across review-bearing profiles. Reputation signal; especially predictive for consumer-facing SMEs."
+          "description": "Mean public customer rating (normalised to a 0–5 scale) across review-bearing profiles. Reputation signal; especially predictive for consumer-facing SMEs.",
+          "legacyName": "socialCustomerRatingAvg"
         },
         {
-          "name": "socialNegativeSentimentRatio90d",
+          "name": "negativeSentimentRatio90d",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Fraction of public mentions / reviews classified as negative over the trailing 90 days. Reputation-risk / distress signal independent of overall rating volume."
+          "description": "Fraction of public mentions / reviews classified as negative over the trailing 90 days. Reputation-risk / distress signal independent of overall rating volume.",
+          "legacyName": "socialNegativeSentimentRatio90d"
         },
         {
-          "name": "socialAccountFlags24m",
+          "name": "accountFlags24m",
           "type": "number",
           "unit": "count",
           "range": [
             0,
             100
           ],
-          "description": "Policy strikes, suspensions, or content takedowns across linked profiles in the last 24 months. Distress signal, parallel to telcoSuspensionsCount24m."
+          "description": "Policy strikes, suspensions, or content takedowns across linked profiles in the last 24 months. Distress signal, parallel to telcoSuspensionsCount24m.",
+          "legacyName": "socialAccountFlags24m"
         }
       ]
     },
@@ -313,10 +340,11 @@
           "description": "Days Payable Outstanding — average days the business takes to pay its suppliers. Context for DSO; a very high DPO can indicate the business is stretching its creditors to fund operations."
         },
         {
-          "name": "arTotalOutstandingMyr",
+          "name": "arTotalOutstanding",
           "type": "number",
           "kind": "money",
-          "description": "Total accounts-receivable balance outstanding. The size of the debtor book the business is carrying. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
+          "description": "Total accounts-receivable balance outstanding. The size of the debtor book the business is carrying. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "legacyName": "arTotalOutstandingMyr"
         },
         {
           "name": "arCurrentRatio",
@@ -359,10 +387,11 @@
           "description": "Count of supplier-reported defaults or dishonoured / returned payments against the business in the trailing 12 months. Direct distress signal, parallel to a bureau default record."
         },
         {
-          "name": "accountingRevenue12mMyr",
+          "name": "accountingRevenue12m",
           "type": "number",
           "kind": "money",
-          "description": "Trailing-12-month turnover per the general ledger. The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids)."
+          "description": "Trailing-12-month turnover per the general ledger. The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "legacyName": "accountingRevenue12mMyr"
         },
         {
           "name": "grossMarginPct",
@@ -393,119 +422,132 @@
       "canonicalTable": "ihs_alt_data_geolocation",
       "fields": [
         {
-          "name": "geoLatitude",
+          "name": "latitude",
           "type": "number",
           "unit": "deg",
           "range": [
             -90,
             90
           ],
-          "description": "Observed latitude for this hourly bucket (point instances only)."
+          "description": "Observed latitude for this hourly bucket (point instances only).",
+          "legacyName": "geoLatitude"
         },
         {
-          "name": "geoLongitude",
+          "name": "longitude",
           "type": "number",
           "unit": "deg",
           "range": [
             -180,
             180
           ],
-          "description": "Observed longitude for this hourly bucket (point instances only)."
+          "description": "Observed longitude for this hourly bucket (point instances only).",
+          "legacyName": "geoLongitude"
         },
         {
-          "name": "geoAccuracyM",
+          "name": "accuracyMeters",
           "type": "number",
           "unit": "meters",
           "range": [
             0,
             100000
           ],
-          "description": "Source-reported horizontal accuracy radius of the observation. Cell-tower fixes are typically hundreds of meters; GPS fixes tens."
+          "description": "Source-reported horizontal accuracy radius of the observation. Cell-tower fixes are typically hundreds of meters; GPS fixes tens.",
+          "legacyName": "geoAccuracyM"
         },
         {
-          "name": "geoBucket",
+          "name": "bucket",
           "type": "string",
-          "description": "ISO-8601 hour bucket of the observation, e.g. '2026-06-01T08'. Redundant with the instance key (pt:<bucket>) so consumers can query without parsing keys."
+          "description": "ISO-8601 hour bucket of the observation, e.g. '2026-06-01T08'. Redundant with the instance key (pt:<bucket>) so consumers can query without parsing keys.",
+          "legacyName": "geoBucket"
         },
         {
-          "name": "geoPlaceLabel",
+          "name": "placeLabel",
           "type": "string",
-          "description": "Classified place for the bucket: home | work | commute | leisure | travel | hotspot | other. Classified by the source or inferred by the adapter from anchor dwell."
+          "description": "Classified place for the bucket: home | work | commute | leisure | travel | hotspot | other. Classified by the source or inferred by the adapter from anchor dwell.",
+          "legacyName": "geoPlaceLabel"
         },
         {
-          "name": "geoWorkAttendanceRatio30d",
+          "name": "workAttendanceRatio30d",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Fraction of the last 30 weekdays with >= 6 hours of dwell at the inferred work anchor. The income-reliability headline: regular full-time work patterns corroborate declared employment income (summary instance only)."
+          "description": "Fraction of the last 30 weekdays with >= 6 hours of dwell at the inferred work anchor. The income-reliability headline: regular full-time work patterns corroborate declared employment income (summary instance only).",
+          "legacyName": "geoWorkAttendanceRatio30d"
         },
         {
-          "name": "geoWorkDailyHoursAvg30d",
+          "name": "workDailyHoursAvg30d",
           "type": "number",
           "unit": "hours",
           "range": [
             0,
             24
           ],
-          "description": "Mean daily hours of work-anchor dwell across the last 30 weekdays (summary instance only)."
+          "description": "Mean daily hours of work-anchor dwell across the last 30 weekdays (summary instance only).",
+          "legacyName": "geoWorkDailyHoursAvg30d"
         },
         {
-          "name": "geoLocationStabilityScore",
+          "name": "locationStabilityScore",
           "type": "number",
           "unit": "score",
           "range": [
             0,
             1
           ],
-          "description": "Residential stability: share of nights spent at the primary home anchor over the observation window. 1 = every night at home (summary instance only)."
+          "description": "Residential stability: share of nights spent at the primary home anchor over the observation window. 1 = every night at home (summary instance only).",
+          "legacyName": "geoLocationStabilityScore"
         },
         {
-          "name": "geoCommuteRegularityRatio",
+          "name": "commuteRegularityRatio",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Consistency of the weekday home->work->home rhythm: fraction of weekdays matching the dominant commute pattern within an hour's tolerance (summary instance only)."
+          "description": "Consistency of the weekday home->work->home rhythm: fraction of weekdays matching the dominant commute pattern within an hour's tolerance (summary instance only).",
+          "legacyName": "geoCommuteRegularityRatio"
         },
         {
-          "name": "geoVacationDays90d",
+          "name": "vacationDays90d",
           "type": "number",
           "unit": "days",
           "range": [
             0,
             90
           ],
-          "description": "Days in the last 90 spent fully away from both home and work anchors (contiguous travel windows; summary instance only)."
+          "description": "Days in the last 90 spent fully away from both home and work anchors (contiguous travel windows; summary instance only).",
+          "legacyName": "geoVacationDays90d"
         },
         {
-          "name": "geoHotspotDwellRatio",
+          "name": "hotspotDwellRatio",
           "type": "number",
           "unit": "ratio",
           "range": [
             0,
             1
           ],
-          "description": "Share of observed buckets spent inside operator-flagged hotspot zones (known fraud / illicit-activity locations supplied to the adapter). Non-zero values warrant review, not automatic decline (summary instance only)."
+          "description": "Share of observed buckets spent inside operator-flagged hotspot zones (known fraud / illicit-activity locations supplied to the adapter). Non-zero values warrant review, not automatic decline (summary instance only).",
+          "legacyName": "geoHotspotDwellRatio"
         },
         {
-          "name": "geoPrimaryStateCode",
+          "name": "primaryStateCode",
           "type": "string",
-          "description": "Malaysian state / federal-territory code of the primary home anchor, e.g. PNG, KUL, JHR (summary instance only)."
+          "description": "Malaysian state / federal-territory code of the primary home anchor, e.g. PNG, KUL, JHR (summary instance only).",
+          "legacyName": "geoPrimaryStateCode"
         },
         {
-          "name": "geoAddressMatchScore",
+          "name": "addressMatchScore",
           "type": "number",
           "unit": "score",
           "range": [
             0,
             1
           ],
-          "description": "Agreement between the inferred home anchor and the applicant's registered residential address. 1 = same premises, 0 = different state (summary instance only)."
+          "description": "Agreement between the inferred home anchor and the applicant's registered residential address. 1 = same premises, 0 = different state (summary instance only).",
+          "legacyName": "geoAddressMatchScore"
         }
       ]
     },
@@ -576,15 +618,16 @@
       ]
     },
     {
-      "id": "finxtract-bank-statement",
+      "id": "bank-statement",
       "displayName": "Bank Statement (Document Extraction)",
       "description": "Fields extracted from an uploaded bank-statement document by the host's extraction pipeline. One instance per statement document; each statement covers a single month. Distinct from the partner-API 'bank-statement' category: same real-world domain, different source and different canonical vocabulary.",
       "canonicalTable": "ihsbankstatement",
       "fields": [
         {
-          "name": "bankName",
+          "name": "issuingBankName",
           "type": "string",
-          "description": "Issuing bank's name as printed on the statement."
+          "description": "Issuing bank's name as printed on the statement.",
+          "legacyName": "bankName"
         },
         {
           "name": "personName",
@@ -610,28 +653,26 @@
           "description": "Opening balance for the statement period."
         },
         {
-          "name": "bankClosingBalance",
+          "name": "closingBalance",
           "type": "number",
           "kind": "money",
           "description": "Closing balance for the statement period.",
-          "fact": "bankClosingBalance",
+          "fact": "closingBalance",
           "legacyName": "bankBalance"
         },
         {
-          "name": "bankTotalCredits",
+          "name": "totalCredits",
           "type": "number",
           "kind": "money",
           "description": "Sum of credit transactions in the statement period.",
-          "fact": "bankTotalCredits",
-          "legacyName": "totalCredits"
+          "fact": "totalCredits"
         },
         {
-          "name": "bankTotalDebits",
+          "name": "totalDebits",
           "type": "number",
           "kind": "money",
           "description": "Sum of debit transactions in the statement period.",
-          "fact": "bankTotalDebits",
-          "legacyName": "totalDebits"
+          "fact": "totalDebits"
         }
       ]
     },
@@ -816,7 +857,7 @@
       ]
     },
     {
-      "id": "finxtract-financial-statement",
+      "id": "financial-statement",
       "displayName": "Financial Statement (Document Extraction)",
       "description": "Fields extracted from an uploaded audited financial-statement document by the host's extraction pipeline. One document = one audited financial statement carrying TWO declared periods per the period-axis contract: period1 is its current fiscal year, period2 is its prior comparative year. Metric names are bare in the flat vocabulary, like the bank-statement extraction category's.",
       "canonicalTable": "ihsfinancialstatement",
@@ -1551,7 +1592,7 @@
       ]
     },
     {
-      "id": "finxtract-form9",
+      "id": "company-registration",
       "displayName": "SSM Form 9 (Document Extraction)",
       "description": "Fields extracted from an uploaded SSM Form 9 (Certificate of Incorporation of Private Company) document by the host's extraction pipeline. One instance per uploaded document. The company name and incorporation date are attestations of shared facts — the company-profile and financial-statement extraction categories attest the same real-world facts from their own documents.",
       "canonicalTable": "ihs_alt_data_form9",
@@ -1577,7 +1618,7 @@
       ]
     },
     {
-      "id": "finxtract-ssm",
+      "id": "company-profile",
       "displayName": "SSM Company Profile (Document Extraction)",
       "description": "Fields extracted from an uploaded SSM company-profile document (company or business registration extract) by the host's extraction pipeline. One instance per uploaded document. Covers registration identity, status, key dates, registered address, capital, and the officer/shareholder registers. The incorporation date is an attestation of a shared fact — the Form 9 extraction category attests the same real-world fact from its own document.",
       "canonicalTable": "ihs_alt_data_ssm",

@@ -8,7 +8,61 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [6.0.0] - 2026-08-13
 
-### Changed — BREAKING: the canonical vocabulary stops naming its own source (SYS-3333)
+### Changed — BREAKING: the whole-registry naming sweep (SYS-3333)
+
+Widened 2026-08-13 from the document categories to the entire registry, on the
+reasoning that this epic is the one pass over the full field list before a
+CRA-regulated bureau ships, and a half-swept vocabulary is worse than either end
+state because it looks finished.
+
+The sweep, measured rather than estimated:
+
+| class | found | 
+|---|---|
+| category ids naming their vendor | 4 |
+| field names baking in a currency | 5 — all already `kind: "money"` |
+| field names baking in a time window | 15, in **two** conventions (`24m`/`90d` vs `T3`/`T12`) |
+| field names repeating their own source | ~50 |
+
+**Category ids** — `finxtract-` names a vendor and belongs on ADAPTER ids:
+`ic`→`person-identity`, `finxtract-epf`→`epf-statement`,
+`finxtract-payslip`→`payslip`, `finxtract-financial-statement`→`financial-statement`,
+`finxtract-form9`→`company-registration`, `finxtract-ssm`→`company-profile`.
+
+The two bank categories are separated by what they actually are rather than by
+who produced them: the partner feed is derived monthly metrics
+(`bank-statement`→`bank-account-activity`) and the document is a statement
+(`finxtract-bank-statement`→`bank-statement`).
+
+**Fields** — 88 renamed in total. Currencies come off names (SYS-3249: a
+denomination belongs to the observation); `T3`/`T12` become `3m`/`12m`; every
+`telco*`/`payments*`/`social*`/`geo*`/`bank*`/`payslip*`/`epf*`/`ssm*` prefix
+comes off, because the category already says the source and a prefixed name can
+never share a fact.
+
+Two places the mechanical rule produced a WORSE name, listed rather than
+silently applied: `bankName`→`issuingBankName` (not `name`, which is meaningless
+in a report) and `geoAccuracyM`→`accuracyMeters` (not `accuracyM`, which hides a
+unit). `arTotalOutstanding` keeps its `ar`: accounts-receivable is a domain
+term, not a source.
+
+**Shared facts go from 3 to 9.** `personName` is now attested by four
+categories, `closingBalance` / `totalCredits` / `totalDebits` by both bank
+sources. Each is a proposition two sources can visibly disagree about — which is
+the point.
+
+### Added — the conventions are enforced at load
+
+A one-time cleanup with no guard is a cleanup that happens again. `buildCategoryRegistry`
+now refuses a currency-suffixed field name and the retired `T<n>` window form,
+with errors that explain the rule rather than merely citing it.
+
+Only mechanically-decidable rules are enforced. "A name should not repeat its
+source" needs judgement — `statementDate` in a `bank-statement` category is fine
+— so it is asserted in the tests instead. A load-time throw that misfires is
+worse than no rule, because the next person works around it.
+
+### Changed — the document-category half (SYS-3333)
 
 A category is a **field set, not a source**. Until now several categories said
 otherwise in their own ids and field names, and that is what made a shared fact

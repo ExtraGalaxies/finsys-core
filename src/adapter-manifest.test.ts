@@ -59,18 +59,18 @@ function validDeclarative(): AdapterManifest {
     category: "telco-carrier",
     version: 1,
     cardinality: "single",
-    produces: ["telcoOnTimePaymentRatio24m", "telcoTenureMonths"],
+    produces: ["onTimePaymentRatio24m", "tenureMonths"],
     implementation: {
       type: "declarative",
       fieldMap: [
         {
           source: "$.bill.payment_24m_pct",
-          canonical: "telcoOnTimePaymentRatio24m",
+          canonical: "onTimePaymentRatio24m",
           transform: "pct_to_ratio01",
         },
         {
           source: "$.account.tenure_months",
-          canonical: "telcoTenureMonths",
+          canonical: "tenureMonths",
         },
       ],
     },
@@ -88,7 +88,7 @@ function validTypescript(): AdapterManifest {
     category: "payment-network",
     version: 1,
     cardinality: "single",
-    produces: ["paymentsMonthlyVolumeMyrT3"],
+    produces: ["monthlyVolume3m"],
     implementation: {
       type: "typescript",
       entryPoint: "extract.ts",
@@ -147,7 +147,7 @@ describe("Adapter manifest JSON-schema validation", () => {
         ...m,
         implementation: {
           ...m.implementation,
-          fieldMap: [{ source: "bill.payment", canonical: "telcoOnTimePaymentRatio24m" }],
+          fieldMap: [{ source: "bill.payment", canonical: "onTimePaymentRatio24m" }],
         },
       };
       expect(validate(bad)).toBe(false);
@@ -164,7 +164,7 @@ describe("Adapter manifest JSON-schema validation", () => {
           fieldMap: [
             {
               source: "$.x",
-              canonical: "telcoTenureMonths",
+              canonical: "tenureMonths",
               transform: "rot13",
             },
           ],
@@ -314,10 +314,10 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
       manifestVersion: 1,
       id: "operator-override-bank-v1",
       displayName: "Operator Override — Bank Statement v1",
-      category: "bank-statement",
+      category: "bank-account-activity",
       version: 1,
       cardinality: "single",
-      produces: ["bankClosingBalanceMyr"],
+      produces: ["closingBalance"],
       implementation: { type: "manual-override" },
     };
   }
@@ -364,7 +364,7 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
     // duplicate or contradict it, so the shape forbids one existing.
     const m = {
       ...validManualOverride(),
-      implementation: { type: "manual-override", overridableFields: ["bankClosingBalanceMyr"] },
+      implementation: { type: "manual-override", overridableFields: ["closingBalance"] },
     };
     expect(validate(m)).toBe(false);
   });
@@ -387,7 +387,7 @@ describe("SYS-2998: extraction-pipeline implementation type", () => {
       manifestVersion: 1,
       id: "finxtract-bank-statement-v1",
       displayName: "FinXtract Bank Statement v1",
-      category: "finxtract-bank-statement",
+      category: "bank-statement",
       version: 1,
       produces: ["bankName", "bankBalance", "totalCredits", "totalDebits"],
       cardinality: "multi",
@@ -446,7 +446,7 @@ describe("SYS-3036: external-assertion implementation type", () => {
       category: "telco-carrier",
       version: 1,
       cardinality: "single",
-      produces: ["telcoOnTimePaymentRatio24m"],
+      produces: ["onTimePaymentRatio24m"],
       implementation: { type: "external-assertion" },
     };
   }
@@ -478,7 +478,7 @@ describe("SYS-3036: external-assertion implementation type", () => {
       ...validExternalAssertion(),
       implementation: {
         type: "external-assertion",
-        fieldMap: [{ source: "$.a", canonical: "telcoOnTimePaymentRatio24m" }],
+        fieldMap: [{ source: "$.a", canonical: "onTimePaymentRatio24m" }],
       },
     };
     expect(validate(m)).toBe(false);
@@ -487,7 +487,7 @@ describe("SYS-3036: external-assertion implementation type", () => {
   it("accepts external-assertion with fieldAuthorizations (the SYS-2503 gating plane still applies)", () => {
     const m = {
       ...validExternalAssertion(),
-      fieldAuthorizations: { telcoOnTimePaymentRatio24m: { lenderRoles: ["Lender Agent"] } },
+      fieldAuthorizations: { onTimePaymentRatio24m: { lenderRoles: ["Lender Agent"] } },
     };
     expect(validate(m)).toBe(true);
   });
@@ -508,15 +508,15 @@ describe("SYS-3036: external-assertion implementation type", () => {
       displayName: "Example Maximal External-Assertion Adapter v1",
       category: "telco-carrier",
       version: 2,
-      produces: ["telcoPaymentReliabilityTier", "telcoTenureMonths"],
+      produces: ["paymentReliabilityTier", "tenureMonths"],
       cardinality: "multi",
-      singletonFields: ["telcoPaymentReliabilityTier"],
+      singletonFields: ["paymentReliabilityTier"],
       requiredIdentityFields: ["phoneNumber"],
       fieldAuthorizations: {
-        telcoPaymentReliabilityTier: { lenderRoles: ["LENDER_AGENT"] },
+        paymentReliabilityTier: { lenderRoles: ["LENDER_AGENT"] },
       },
       periods: [{ name: "Snapshot month", description: "Monthly refresh window." }],
-      enumValues: { telcoPaymentReliabilityTier: ["1", "2", "3", "4"] },
+      enumValues: { paymentReliabilityTier: ["1", "2", "3", "4"] },
       notes: "Exists to keep the schema and the type in lockstep.",
       implementation: { type: "external-assertion" },
     } satisfies AdapterManifest;
@@ -622,7 +622,7 @@ describe("SYS-2502: cardinality + singletonFields", () => {
     const m = {
       ...validTypescript(),
       cardinality: "multi",
-      singletonFields: ["paymentsMonthlyVolumeMyrT3"],
+      singletonFields: ["monthlyVolume3m"],
     };
     expect(validate(m)).toBe(true);
   });
@@ -649,7 +649,7 @@ describe("SYS-2503: fieldAuthorizations", () => {
     const m = {
       ...validTypescript(),
       fieldAuthorizations: {
-        paymentsMonthlyVolumeMyrT3: { lenderRoles: ["LENDER_AGENT"] },
+        monthlyVolume3m: { lenderRoles: ["LENDER_AGENT"] },
       },
     };
     expect(validate(m)).toBe(true);
@@ -659,7 +659,7 @@ describe("SYS-2503: fieldAuthorizations", () => {
     const m = {
       ...validTypescript(),
       fieldAuthorizations: {
-        paymentsMonthlyVolumeMyrT3: { programIds: ["prog-sme-1"] },
+        monthlyVolume3m: { programIds: ["prog-sme-1"] },
       },
     };
     expect(validate(m)).toBe(true);
@@ -669,7 +669,7 @@ describe("SYS-2503: fieldAuthorizations", () => {
     const m = {
       ...validTypescript(),
       fieldAuthorizations: {
-        paymentsMonthlyVolumeMyrT3: {
+        monthlyVolume3m: {
           lenderRoles: ["LENDER_AGENT", "LENDER_ADMIN"],
           programIds: ["prog-sme-1"],
         },
@@ -692,7 +692,7 @@ describe("SYS-2503: fieldAuthorizations", () => {
   it("rejects an entry declaring NO dimension (would be a no-op gate)", () => {
     const m = {
       ...validTypescript(),
-      fieldAuthorizations: { paymentsMonthlyVolumeMyrT3: {} },
+      fieldAuthorizations: { monthlyVolume3m: {} },
     };
     expect(validate(m)).toBe(false);
   });
@@ -701,7 +701,7 @@ describe("SYS-2503: fieldAuthorizations", () => {
     for (const entry of [{ lenderRoles: [] }, { programIds: [] }]) {
       const m = {
         ...validTypescript(),
-        fieldAuthorizations: { paymentsMonthlyVolumeMyrT3: entry },
+        fieldAuthorizations: { monthlyVolume3m: entry },
       };
       expect(validate(m)).toBe(false);
     }
@@ -711,7 +711,7 @@ describe("SYS-2503: fieldAuthorizations", () => {
     const m = {
       ...validTypescript(),
       fieldAuthorizations: {
-        paymentsMonthlyVolumeMyrT3: { lenderIds: ["456"] },
+        monthlyVolume3m: { lenderIds: ["456"] },
       },
     };
     expect(validate(m)).toBe(false);
@@ -720,7 +720,7 @@ describe("SYS-2503: fieldAuthorizations", () => {
   it("rejects empty-string values inside a dimension list", () => {
     const m = {
       ...validTypescript(),
-      fieldAuthorizations: { paymentsMonthlyVolumeMyrT3: { lenderRoles: [""] } },
+      fieldAuthorizations: { monthlyVolume3m: { lenderRoles: [""] } },
     };
     expect(validate(m)).toBe(false);
   });
@@ -743,7 +743,7 @@ describe("SYS-3002: periods declaration", () => {
       manifestVersion: 1,
       id: "finxtract-financial-statement-v1",
       displayName: "FinXtract Financial Statement v1",
-      category: "finxtract-financial-statement",
+      category: "financial-statement",
       version: 1,
       produces: ["revenue", "netProfit"],
       cardinality: "multi",
@@ -835,7 +835,7 @@ describe("SYS-3003: financial-statement manifest fixture against the real catego
       manifestVersion: 1,
       id: "finxtract-financial-statement-v1",
       displayName: "FinXtract Financial Statement v1",
-      category: "finxtract-financial-statement",
+      category: "financial-statement",
       version: 1,
       produces: [
         "companyName",
@@ -857,7 +857,7 @@ describe("SYS-3003: financial-statement manifest fixture against the real catego
   });
 
   it("its produces list is a subset of the category's canonical fields", () => {
-    const canonical = new Set(categoryFieldsOf("finxtract-financial-statement"));
+    const canonical = new Set(categoryFieldsOf("financial-statement"));
     for (const f of financialStatementManifest().produces) {
       expect(canonical.has(f), `"${f}" is not a canonical field`).toBe(true);
     }
@@ -880,18 +880,18 @@ describe("enumValues declaration surface", () => {
       category: "telco-carrier",
       version: 1,
       cardinality: "single",
-      produces: ["telcoPaymentReliabilityTier", "telcoDistressTier"],
+      produces: ["paymentReliabilityTier", "distressTier"],
       enumValues: {
-        telcoPaymentReliabilityTier: ["excellent", "good", "fair", "poor"],
-        telcoDistressTier: ["none", "moderate", "severe"],
+        paymentReliabilityTier: ["excellent", "good", "fair", "poor"],
+        distressTier: ["none", "moderate", "severe"],
       },
       implementation: {
         type: "typescript",
         entryPoint: "extract.ts",
       },
     };
-    expect(manifest.enumValues?.telcoPaymentReliabilityTier).toHaveLength(4);
-    expect(manifest.enumValues?.telcoDistressTier).toContain("severe");
+    expect(manifest.enumValues?.paymentReliabilityTier).toHaveLength(4);
+    expect(manifest.enumValues?.distressTier).toContain("severe");
   });
 
   it("enumValues is optional — adapters with no enum fields never declare it", () => {
@@ -911,7 +911,7 @@ describe("enumValues JSON-schema validation", () => {
       category: "telco-carrier",
       version: 1,
       cardinality: "single",
-      produces: ["telcoPaymentReliabilityTier"],
+      produces: ["paymentReliabilityTier"],
       enumValues,
       implementation: { type: "typescript", entryPoint: "extract.ts" },
     };
@@ -921,33 +921,33 @@ describe("enumValues JSON-schema validation", () => {
     // This exact shape was TYPE-legal but SCHEMA-refused before the
     // lockstep fix — additionalProperties: false silently rejected every
     // enumValues manifest at host registration. Keep this green.
-    const ok = validate(tierManifest({ telcoPaymentReliabilityTier: ["1", "2", "3", "4"] }));
+    const ok = validate(tierManifest({ paymentReliabilityTier: ["1", "2", "3", "4"] }));
     expect(validate.errors ?? []).toEqual([]);
     expect(ok).toBe(true);
   });
 
   it("rejects an empty value set", () => {
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: [] }))).toBe(false);
+    expect(validate(tierManifest({ paymentReliabilityTier: [] }))).toBe(false);
   });
 
   it("rejects duplicate labels in a set", () => {
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["1", "1"] }))).toBe(false);
+    expect(validate(tierManifest({ paymentReliabilityTier: ["1", "1"] }))).toBe(false);
   });
 
   it("rejects non-normalized labels (leading/trailing whitespace, empty)", () => {
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: [" 1"] }))).toBe(false);
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["1 "] }))).toBe(false);
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: [""] }))).toBe(false);
+    expect(validate(tierManifest({ paymentReliabilityTier: [" 1"] }))).toBe(false);
+    expect(validate(tierManifest({ paymentReliabilityTier: ["1 "] }))).toBe(false);
+    expect(validate(tierManifest({ paymentReliabilityTier: [""] }))).toBe(false);
   });
 
   it("rejects an all-whitespace label (SYS-3043: ^\\S(.*\\S)?$ fails on the very first character regardless of what follows)", () => {
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: [" "] }))).toBe(false);
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["   "] }))).toBe(false);
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["\t"] }))).toBe(false);
+    expect(validate(tierManifest({ paymentReliabilityTier: [" "] }))).toBe(false);
+    expect(validate(tierManifest({ paymentReliabilityTier: ["   "] }))).toBe(false);
+    expect(validate(tierManifest({ paymentReliabilityTier: ["\t"] }))).toBe(false);
   });
 
   it("accepts labels with interior spaces (normalization constrains only the edges)", () => {
-    expect(validate(tierManifest({ telcoHandsetRiskTier: ["no arrears", "in arrears"] }))).toBe(
+    expect(validate(tierManifest({ handsetRiskTier: ["no arrears", "in arrears"] }))).toBe(
       true,
     );
   });
@@ -963,7 +963,7 @@ describe("enumValues JSON-schema validation", () => {
     // future change to `uniqueItems`/a case-folding step is a
     // conscious, visible decision (this test goes red) rather than a
     // silent behavior change.
-    expect(validate(tierManifest({ telcoPaymentReliabilityTier: ["High", "high"] }))).toBe(true);
+    expect(validate(tierManifest({ paymentReliabilityTier: ["High", "high"] }))).toBe(true);
   });
 
   it("a maximal manifest carrying EVERY optional AdapterManifest surface validates — the anti-drift canary", () => {
@@ -977,15 +977,15 @@ describe("enumValues JSON-schema validation", () => {
       displayName: "Example Maximal Adapter v1",
       category: "telco-carrier",
       version: 2,
-      produces: ["telcoPaymentReliabilityTier", "telcoTenureMonths"],
+      produces: ["paymentReliabilityTier", "tenureMonths"],
       cardinality: "multi",
-      singletonFields: ["telcoPaymentReliabilityTier"],
+      singletonFields: ["paymentReliabilityTier"],
       requiredIdentityFields: ["phoneNumber"],
       fieldAuthorizations: {
-        telcoPaymentReliabilityTier: { lenderRoles: ["LENDER_AGENT"] },
+        paymentReliabilityTier: { lenderRoles: ["LENDER_AGENT"] },
       },
       periods: [{ name: "Snapshot month", description: "Monthly refresh window." }],
-      enumValues: { telcoPaymentReliabilityTier: ["1", "2", "3", "4"] },
+      enumValues: { paymentReliabilityTier: ["1", "2", "3", "4"] },
       notes: "Exists to keep the schema and the type in lockstep.",
       implementation: { type: "typescript", entryPoint: "extract.ts" },
     } satisfies AdapterManifest;

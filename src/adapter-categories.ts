@@ -304,6 +304,21 @@ const VALID_FIELD_UNITS: ReadonlyArray<string> = [
  * `CanonicalFieldSpec`. "sensitive" is unspellable because it is the
  * default; the only declarable value is the opt-out.
  */
+/**
+ * SYS-3333: a canonical field name must not encode its denomination.
+ * ISO-4217-shaped suffix, matched title-case because that is how these names
+ * were formed (`telcoArpuMyr`, `arTotalOutstandingMyr`).
+ */
+const CURRENCY_SUFFIXED = /(Myr|Usd|Eur|Gbp|Sgd|Vnd|Thb|Idr|Php|Jpy|Cny|Aud)$/;
+
+/**
+ * SYS-3333: the retired window convention. `T3`/`T12` said the same thing as
+ * `3m`/`12m` in a second dialect, and the T-form additionally collides with
+ * the legacy flat T-suffix (`revenueT1`), which means a period position, not a
+ * window length — two different ideas wearing one spelling.
+ */
+const T_WINDOW_SUFFIXED = /T\d+$/;
+
 const VALID_FIELD_CONFIDENTIALITY: ReadonlyArray<
   NonNullable<CanonicalFieldSpec["confidentiality"]>
 > = ["non-sensitive"];
@@ -444,6 +459,35 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         throw new Error(
           `adapter category data: field "${f.name}" (${where}) declares a legacyName identical to its ` +
             `canonical name — a legacyName records a rename, so an unchanged name must not declare one`,
+        );
+      }
+      // SYS-3333 — the naming conventions, ENFORCED rather than merely applied.
+      //
+      // The sweep that produced this vocabulary found 5 currency-suffixed
+      // names, 15 window-suffixed names in TWO conventions, and ~50 names
+      // repeating their own source. None of that was anyone's decision; it
+      // accumulated because nothing refused it. A one-time cleanup with no
+      // guard is a cleanup that happens again in a year, and this vocabulary
+      // is about to be read by a regulated credit bureau.
+      //
+      // Only mechanically-decidable rules live here. "A name should not repeat
+      // its source" needs judgement (`statementDate` in a bank-statement
+      // category is fine) and is asserted in the tests instead — a load-time
+      // throw that misfires is worse than no rule, because the next person
+      // works around it.
+      if (CURRENCY_SUFFIXED.test(f.name)) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) bakes a currency into its name. A ` +
+            `denomination belongs to the OBSERVATION, not the field (SYS-3249) — one source can report ` +
+            `several currencies in one document, so a field-level currency can only ever be right for ` +
+            `one of them. Declare kind: "money" and carry the currency on the provenance envelope.`,
+        );
+      }
+      if (T_WINDOW_SUFFIXED.test(f.name)) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) uses the T<n> window convention. The ` +
+            `registry has one convention for a time window and it is the unit-suffixed form — 3m, 12m, ` +
+            `24m, 90d. Two conventions for one idea is how a reader stops trusting either.`,
         );
       }
       // Hoisted ABOVE the shared-fact block deliberately. When an invalid

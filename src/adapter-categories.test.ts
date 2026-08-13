@@ -25,6 +25,7 @@ import {
   categoryForField,
   factOf,
   categoriesAttestingFact,
+  resolveCanonicalFieldName,
   isAdapterCategory,
   isFieldSensitive,
   sensitiveFieldsOf,
@@ -91,7 +92,7 @@ describe("categorySchemaOf", () => {
     expect(telco.id).toBe("telco-carrier");
     expect(telco.canonicalTable).toBe("ihs_alt_data_telco");
     expect(telco.fields.map((f) => f.name)).toContain(
-      "telcoOnTimePaymentRatio24m",
+      "onTimePaymentRatio24m",
     );
   });
 
@@ -105,9 +106,9 @@ describe("categorySchemaOf", () => {
 describe("categoryFieldsOf", () => {
   it("returns the canonical field names for telco-carrier", () => {
     const fields = categoryFieldsOf("telco-carrier");
-    expect(fields).toContain("telcoOnTimePaymentRatio24m");
-    expect(fields).toContain("telcoTenureMonths");
-    expect(fields).toContain("telcoSuspensionsCount24m");
+    expect(fields).toContain("onTimePaymentRatio24m");
+    expect(fields).toContain("tenureMonths");
+    expect(fields).toContain("suspensionsCount24m");
   });
 
   it("returns a different field set for payment-network", () => {
@@ -121,13 +122,13 @@ describe("categoryFieldsOf", () => {
 
 describe("categoryForField", () => {
   it("identifies the producing category for a known telco field", () => {
-    expect(categoryForField("telcoOnTimePaymentRatio24m")).toBe(
+    expect(categoryForField("onTimePaymentRatio24m")).toBe(
       "telco-carrier",
     );
   });
 
   it("identifies the producing category for a known payments field", () => {
-    expect(categoryForField("paymentsMonthlyVolumeMyrT3")).toBe(
+    expect(categoryForField("monthlyVolume3m")).toBe(
       "payment-network",
     );
   });
@@ -180,26 +181,26 @@ describe("social-media category", () => {
   it("declares the expected credit-actionable fields", () => {
     const fields = new Set(categoryFieldsOf("social-media"));
     for (const f of [
-      "socialAccountTenureMonths",
-      "socialFollowerCount",
-      "socialEngagementRate90d",
-      "socialPostingConsistency12m",
-      "socialVerifiedBusinessAccount",
-      "socialCustomerRatingAvg",
-      "socialNegativeSentimentRatio90d",
-      "socialAccountFlags24m",
+      "accountTenureMonths",
+      "followerCount",
+      "engagementRate90d",
+      "postingConsistency12m",
+      "verifiedBusinessAccount",
+      "customerRatingAvg",
+      "negativeSentimentRatio90d",
+      "accountFlags24m",
     ]) {
       expect(fields.has(f), `expected social-media field "${f}"`).toBe(true);
     }
   });
 
   it("maps a social field back to its category", () => {
-    expect(categoryForField("socialEngagementRate90d")).toBe("social-media");
+    expect(categoryForField("engagementRate90d")).toBe("social-media");
   });
 
   it("carries a boolean field type for the verified-account flag", () => {
     const spec = categorySchemaOf("social-media").fields.find(
-      (f) => f.name === "socialVerifiedBusinessAccount",
+      (f) => f.name === "verifiedBusinessAccount",
     );
     expect(spec?.type).toBe("boolean");
   });
@@ -219,12 +220,12 @@ describe("trade-credit category", () => {
     for (const f of [
       "arDaysSalesOutstanding",
       "apDaysPayableOutstanding",
-      "arTotalOutstandingMyr",
+      "arTotalOutstanding",
       "arCurrentRatio",
       "arOverdue90PlusRatio",
       "debtorConcentrationTop5Ratio",
       "tradeReferenceDefaults12m",
-      "accountingRevenue12mMyr",
+      "accountingRevenue12m",
       "grossMarginPct",
       "cashConversionCycleDays",
     ]) {
@@ -233,9 +234,9 @@ describe("trade-credit category", () => {
   });
 
   it("carries the cross-reference revenue anchor for bank-statement consistency checks", () => {
-    // accountingRevenue12mMyr is the self-reported figure the dashboard's
+    // accountingRevenue12m is the self-reported figure the dashboard's
     // consistency tier cross-checks against payment-network + bank inflows.
-    expect(categoryForField("accountingRevenue12mMyr")).toBe("trade-credit");
+    expect(categoryForField("accountingRevenue12m")).toBe("trade-credit");
   });
 
   it("allows a negative lower bound on the cash-conversion cycle", () => {
@@ -518,40 +519,40 @@ describe("geolocation category", () => {
     const fields = new Set(categoryFieldsOf("geolocation"));
     for (const f of [
       // point instances (instanceKey "pt:<ISO-hour>")
-      "geoLatitude",
-      "geoLongitude",
-      "geoAccuracyM",
-      "geoBucket",
-      "geoPlaceLabel",
+      "latitude",
+      "longitude",
+      "accuracyMeters",
+      "bucket",
+      "placeLabel",
       // summary instance (instanceKey "summary")
-      "geoWorkAttendanceRatio30d",
-      "geoWorkDailyHoursAvg30d",
-      "geoLocationStabilityScore",
-      "geoCommuteRegularityRatio",
-      "geoVacationDays90d",
-      "geoHotspotDwellRatio",
-      "geoPrimaryStateCode",
-      "geoAddressMatchScore",
+      "workAttendanceRatio30d",
+      "workDailyHoursAvg30d",
+      "locationStabilityScore",
+      "commuteRegularityRatio",
+      "vacationDays90d",
+      "hotspotDwellRatio",
+      "primaryStateCode",
+      "addressMatchScore",
     ]) {
       expect(fields.has(f), `expected geolocation field "${f}"`).toBe(true);
     }
   });
 
   it("routes the income-reliability headline field to geolocation", () => {
-    expect(categoryForField("geoWorkAttendanceRatio30d")).toBe("geolocation");
+    expect(categoryForField("workAttendanceRatio30d")).toBe("geolocation");
   });
 
   it("locks coordinate and ratio range contracts", () => {
     const spec = (name: string) =>
       categorySchemaOf("geolocation").fields.find((f) => f.name === name);
-    expect(spec("geoLatitude")?.range).toEqual([-90, 90]);
-    expect(spec("geoLongitude")?.range).toEqual([-180, 180]);
+    expect(spec("latitude")?.range).toEqual([-90, 90]);
+    expect(spec("longitude")?.range).toEqual([-180, 180]);
     for (const name of [
-      "geoWorkAttendanceRatio30d",
-      "geoLocationStabilityScore",
-      "geoCommuteRegularityRatio",
-      "geoHotspotDwellRatio",
-      "geoAddressMatchScore",
+      "workAttendanceRatio30d",
+      "locationStabilityScore",
+      "commuteRegularityRatio",
+      "hotspotDwellRatio",
+      "addressMatchScore",
     ]) {
       expect(spec(name)?.range, `${name} should be [0,1]`).toEqual([0, 1]);
     }
@@ -561,78 +562,113 @@ describe("geolocation category", () => {
 // ── SYS-2998: FinXtract document-extraction categories ──────────────────
 describe("FinXtract document-extraction categories", () => {
   it("declares the four doc-extraction categories with their canonical tables", () => {
-    expect(categorySchemaOf("ic").canonicalTable).toBe("ihs_alt_data_ic");
-    expect(categorySchemaOf("finxtract-bank-statement").canonicalTable).toBe("ihsbankstatement");
-    expect(categorySchemaOf("finxtract-epf").canonicalTable).toBe("ihsepfstatement");
-    expect(categorySchemaOf("finxtract-payslip").canonicalTable).toBe("ihspayslip");
+    // SYS-3333 de-prefixed three of the four category ids. `finxtract-` names
+    // the VENDOR and stays on the adapter ids (finxtract-payslip-v1 and
+    // friends); a category is a field set, not a source, so the source has no
+    // business in its id. The tables are untouched — no data moved.
+    expect(categorySchemaOf("person-identity").canonicalTable).toBe("ihs_alt_data_ic");
+    // The two bank categories KEEP their ids this release. De-prefixing the
+    // document one would land on `bank-statement`, which the partner feed
+    // already holds — and a legacy alias may never collide with a live id, or
+    // a pre-sweep manifest saying "bank-statement" is unresolvable (partner
+    // feed before, document after). Renaming them waits for the deprecation
+    // window to close. Their FIELDS are swept regardless, which is where the
+    // shared facts come from.
+    expect(categorySchemaOf("epf-statement").canonicalTable).toBe("ihsepfstatement");
+    expect(categorySchemaOf("payslip").canonicalTable).toBe("ihspayslip");
+    // The fourth keeps its id, and the reason is worth stating: de-prefixing
+    // it lands on `bank-statement`, which the partner-feed category already
+    // holds. Resolving that means renaming the PARTNER category (its fields
+    // are monthly account activity, not a statement document), which touches a
+    // partner-facing contract — a separate decision, deliberately not taken
+    // here. The field-level shared facts below do not depend on it.
   });
 
-  it("ic declares exactly the nine identity fields (unblocks finxtract-ic-v1 registration)", () => {
-    // SYS-3163: five of the nine were renamed off the ic* prefix, because
-    // they are the ones a form-intake applicant-identity category will also
-    // attest — the prefix encoded the SOURCE, which provenance already
-    // records, and a fact id is bound to exactly one field name, so a shared
-    // fact is impossible while the names differ. The remaining four keep the
-    // prefix deliberately: no form collects them, so they have no second
-    // attester and nothing to share with.
-    expect([...categoryFieldsOf("ic")].sort()).toEqual([
-      "icAddress",
-      "icGender",
-      "icPlaceOfBirth",
-      "icReligion",
+  it("person-identity declares exactly the nine identity fields (unblocks finxtract-ic-v1 registration)", () => {
+    // SYS-3163 renamed five off the ic* prefix; SYS-3333 finished the job. The
+    // four that kept the prefix did so on the reasoning that "no form collects
+    // them, so they have no second attester and nothing to share with" — which
+    // was true of a form, and false of the EPF statement, which attests the
+    // holder's address. Measured: four sources attest a person's name and one
+    // declared the fact.
+    expect([...categoryFieldsOf("person-identity")].sort()).toEqual([
+      "personAddress",
       "personDateOfBirth",
+      "personGender",
       "personIdNumber",
       "personName",
       "personNationality",
+      "personPlaceOfBirth",
       "personRace",
+      "personReligion",
     ]);
   });
 
-  it("ic pre-declares a fact on each renamed identity field, so applicant-identity is additive", () => {
-    // A uniquely-declared field MAY carry a fact, and declaring it now is
-    // what makes SYS-3166 purely additive: applicant-identity declares the
-    // same name + fact and nothing about `ic` changes. Without it, the
-    // shared-name rule would refuse the pair (a name declared by two
-    // categories where one carries no fact is a load error) and force a
-    // second edit to a published contract — exactly what form9's
-    // companyRegNo required in the company-fact change.
+  it("person-identity declares a fact on every identity field", () => {
+    // A uniquely-declared field MAY carry a fact, and declaring it up front is
+    // what keeps a later attester purely additive: the second category
+    // declares the same name + fact and nothing here changes. Without it the
+    // shared-name rule refuses the pair (a name declared by two categories
+    // where one carries no fact is a load error) and forces a second edit to a
+    // published contract.
     const spec = (name: string) =>
-      categorySchemaOf("ic").fields.find((f) => f.name === name);
-    for (const name of [
-      "personName",
-      "personIdNumber",
-      "personDateOfBirth",
-      "personNationality",
-      "personRace",
-    ]) {
-      expect(spec(name)?.fact, `${name} should pre-declare its fact`).toBe(name);
-      // Still single-attester today, so it routes unambiguously to ic.
-      expect(categoryForField(name), `${name} routes to ic`).toBe("ic");
+      categorySchemaOf("person-identity").fields.find((f) => f.name === name);
+    for (const name of categoryFieldsOf("person-identity")) {
+      expect(spec(name)?.fact, `${name} should declare its fact`).toBe(name);
     }
-    // The four that keep the prefix carry no fact — nothing attests them twice.
-    for (const name of ["icAddress", "icGender", "icReligion", "icPlaceOfBirth"]) {
-      expect(spec(name)?.fact, `${name} should carry no fact`).toBeUndefined();
+    // Routing: a SHARED-fact name has no single owning category, so
+    // categoryForField returns null for it by design. Only the still-unique
+    // ones route to a category — asserting that keeps this test honest about
+    // which names actually gained a second attester in this change.
+    for (const shared of ["personName", "personIdNumber", "personAddress"]) {
+      expect(categoryForField(shared), `${shared} is attested by >1 category`).toBeNull();
+    }
+    for (const solo of ["personGender", "personReligion", "personPlaceOfBirth"]) {
+      expect(categoryForField(solo), `${solo} still routes to person-identity`).toBe(
+        "person-identity",
+      );
     }
   });
 
-  it("finxtract-bank-statement is a distinct vocabulary from the partner-API bank-statement category", () => {
+  it("the bank feed and the bank document share exactly the facts that ARE shared", () => {
+    // REVERSES a prior decision, deliberately. This test used to assert ZERO
+    // shared names between the two, on the reasoning that "a manifest can never
+    // accidentally produce across the two vocabularies". The concern is real
+    // and is now handled by a stronger rule than name-disjointness: core
+    // refuses a shared name UNLESS both declarations carry the same fact id, so
+    // sharing is a written-down decision rather than an accident. `companyName`
+    // has spanned three categories on exactly that basis since SYS-3163.
+    //
+    // The cost of the old rule was that a partner feed and an uploaded
+    // statement reporting DIFFERENT closing balances were structurally
+    // incomparable — which is the signal this whole phase exists to surface.
     const partner = new Set(categoryFieldsOf("bank-statement"));
-    const finxtract = new Set(categoryFieldsOf("finxtract-bank-statement"));
-    expect(finxtract.size).toBe(8);
-    // Same real-world domain, different Source, zero shared canonical names —
-    // a manifest can never accidentally produce across the two vocabularies.
-    for (const name of finxtract) {
-      expect(partner.has(name), `${name} must not collide with the partner category`).toBe(false);
-    }
+    const document = new Set(categoryFieldsOf("finxtract-bank-statement"));
+    expect(document.size).toBe(8);
+
+    const shared = [...document].filter((n) => partner.has(n)).sort();
+    expect(shared).toEqual(["closingBalance", "totalCredits", "totalDebits"]);
+
+    // …and NOT the ones that merely look alike. `statementMonth` is a
+    // PERIOD (YYYY-MM, and the partner category's instance key);
+    // `statementDate` is a POINT on a document. Collapsing them would assert
+    // one fact where there are two.
+    expect(partner.has("statementDate"), "a period is not a date").toBe(false);
+    expect(document.has("statementMonth"), "a date is not a period").toBe(false);
   });
 
-  it("finxtract-epf and finxtract-payslip declare their document field sets", () => {
-    expect(categoryFieldsOf("finxtract-epf")).toHaveLength(9);
-    expect(categoryFieldsOf("finxtract-payslip")).toHaveLength(15);
-    // Prefix-namespaced per the host's established flat/eval vocabulary —
-    // also what keeps canonical names globally unique across categories.
-    expect([...categoryFieldsOf("finxtract-payslip")]).toContain("payslipNetPay");
-    expect([...categoryFieldsOf("finxtract-epf")]).toContain("epfTotalContribution");
+  it("epf-statement and payslip declare their document field sets, unprefixed", () => {
+    expect(categoryFieldsOf("epf-statement")).toHaveLength(9);
+    expect(categoryFieldsOf("payslip")).toHaveLength(15);
+    // The prefixes are gone: they encoded the SOURCE, which provenance already
+    // records, and they made a shared fact inexpressible because a fact id
+    // binds to exactly one field NAME.
+    expect([...categoryFieldsOf("payslip")]).toContain("netPay");
+    expect([...categoryFieldsOf("epf-statement")]).toContain("totalContribution");
+    // The point of the exercise: one person, several documents, one fact.
+    for (const c of ["payslip", "epf-statement", "finxtract-bank-statement"]) {
+      expect([...categoryFieldsOf(c)], `${c} should attest personName`).toContain("personName");
+    }
   });
 });
 
@@ -643,7 +679,7 @@ describe("FinXtract document-extraction categories", () => {
 // comparative year).
 describe("finxtract-financial-statement category", () => {
   it("is declared with the promoted financial-statement sibling table", () => {
-    const cat = categorySchemaOf("finxtract-financial-statement");
+    const cat = categorySchemaOf("financial-statement");
     expect(cat.canonicalTable).toBe("ihsfinancialstatement");
     // The canonical vocabulary is exactly the host's 122 financial
     // metric keys, verbatim and unprefixed.
@@ -652,7 +688,7 @@ describe("finxtract-financial-statement category", () => {
 
   it("declares the header/structural fields with their true types", () => {
     const spec = (name: string) =>
-      categorySchemaOf("finxtract-financial-statement").fields.find(
+      categorySchemaOf("financial-statement").fields.find(
         (f) => f.name === name,
       );
     expect(spec("localNo")?.type).toBe("string");
@@ -672,7 +708,7 @@ describe("finxtract-financial-statement category", () => {
     // is money — never WHICH money. A VN financial statement writes these
     // same columns, which is precisely why the field cannot name one.
     const spec = (name: string) =>
-      categorySchemaOf("finxtract-financial-statement").fields.find(
+      categorySchemaOf("financial-statement").fields.find(
         (f) => f.name === name,
       );
     for (const name of ["totalEquity", "netProfit", "revenue", "totalAssets"]) {
@@ -689,9 +725,9 @@ describe("finxtract-financial-statement category", () => {
     // attestation model landed, `companyName` is the ONE deliberate
     // exception: the form9 extraction category attests the same fact.
     const sharedFacts = new Set(["companyName"]);
-    const mine = new Set(categoryFieldsOf("finxtract-financial-statement"));
+    const mine = new Set(categoryFieldsOf("financial-statement"));
     for (const cat of allCategories()) {
-      if (cat.id === "finxtract-financial-statement") continue;
+      if (cat.id === "financial-statement") continue;
       for (const f of cat.fields) {
         if (sharedFacts.has(f.name)) continue;
         expect(mine.has(f.name), `"${f.name}" (${cat.id}) collides`).toBe(false);
@@ -700,14 +736,14 @@ describe("finxtract-financial-statement category", () => {
   });
 
   it("maps a bare metric back to its category", () => {
-    expect(categoryForField("totalEquity")).toBe("finxtract-financial-statement");
+    expect(categoryForField("totalEquity")).toBe("financial-statement");
     expect(categoryForField("netOperatingCashFlow")).toBe(
-      "finxtract-financial-statement",
+      "financial-statement",
     );
   });
 
   it("companyName is now a shared-fact attestation (form9 attests the same fact)", () => {
-    const spec = categorySchemaOf("finxtract-financial-statement").fields.find(
+    const spec = categorySchemaOf("financial-statement").fields.find(
       (f) => f.name === "companyName",
     );
     expect(spec?.fact).toBe("companyName");
@@ -723,9 +759,9 @@ describe("finxtract-financial-statement category", () => {
 // statement both extract the company's name. One fact, N attestations.
 describe("finxtract-form9 category", () => {
   it("is declared with its canonical alt-data table and exactly three fields", () => {
-    const cat = categorySchemaOf("finxtract-form9");
+    const cat = categorySchemaOf("company-registration");
     expect(cat.canonicalTable).toBe("ihs_alt_data_form9");
-    expect([...categoryFieldsOf("finxtract-form9")].sort()).toEqual([
+    expect([...categoryFieldsOf("company-registration")].sort()).toEqual([
       "companyIncorporationDate",
       "companyName",
       "companyRegNo",
@@ -738,7 +774,7 @@ describe("finxtract-form9 category", () => {
     // by two categories where one carries no fact is refused at load, so
     // form9's declaration had to gain the fact in the same change.
     const spec = (name: string) =>
-      categorySchemaOf("finxtract-form9").fields.find((f) => f.name === name);
+      categorySchemaOf("company-registration").fields.find((f) => f.name === name);
     expect(spec("companyName")?.fact).toBe("companyName");
     expect(spec("companyIncorporationDate")?.fact).toBe("companyIncorporationDate");
     expect(spec("companyRegNo")?.fact).toBe("companyRegNo");
@@ -759,12 +795,17 @@ describe("finxtract-form9 category", () => {
 
 describe("finxtract-ssm category", () => {
   it("is declared with its canonical alt-data table and exactly the sixteen profile fields", () => {
-    const cat = categorySchemaOf("finxtract-ssm");
+    const cat = categorySchemaOf("company-profile");
     expect(cat.canonicalTable).toBe("ihs_alt_data_ssm");
-    expect([...categoryFieldsOf("finxtract-ssm")].sort()).toEqual([
+    // SYS-3333: ssmCompanyEntityType -> companyEntityType and
+    // ssmPaidUpCapital -> paidUpCapital. The ssm* prefix named the SOURCE,
+    // which provenance already records, and it is what would stop a future
+    // subject-company category attesting the same entity type.
+    expect([...categoryFieldsOf("company-profile")].sort()).toEqual([
       "businessCommencementDate",
       "businessNature",
       "businessOrigin",
+      "companyEntityType",
       "companyIncorporationDate",
       "companyLastOldName",
       "companyName",
@@ -772,20 +813,19 @@ describe("finxtract-ssm category", () => {
       "companyRegNo",
       "companyStatus",
       "directors",
+      "paidUpCapital",
       "previousDirectors",
       "registeredAddress",
       "shareholders",
-      "ssmCompanyEntityType",
-      "ssmPaidUpCapital",
       "totalShareIssued",
     ]);
     expect(cat.fields).toHaveLength(16);
   });
 
   it("declares the capital figures as numbers and everything else as strings", () => {
-    const cat = categorySchemaOf("finxtract-ssm");
+    const cat = categorySchemaOf("company-profile");
     for (const f of cat.fields) {
-      if (f.name === "totalShareIssued" || f.name === "ssmPaidUpCapital") {
+      if (f.name === "totalShareIssued" || f.name === "paidUpCapital") {
         expect(f.type, `${f.name} type`).toBe("number");
       } else {
         expect(f.type, `${f.name} type`).toBe("string");
@@ -793,7 +833,7 @@ describe("finxtract-ssm category", () => {
     }
     // SYS-3249: was unit "MYR"; a field declares that it is money, not
     // which currency the money is in.
-    const paidUp = cat.fields.find((f) => f.name === "ssmPaidUpCapital");
+    const paidUp = cat.fields.find((f) => f.name === "paidUpCapital");
     expect(paidUp?.kind).toBe("money");
     expect(paidUp?.unit).toBeUndefined();
   });
@@ -804,7 +844,7 @@ describe("finxtract-ssm category", () => {
     // statement — and before this they did not share the fact, so a Form 9 /
     // SSM conflict was invisible to the disagreement surface.
     const SHARED = new Set(["companyIncorporationDate", "companyName", "companyRegNo"]);
-    const cat = categorySchemaOf("finxtract-ssm");
+    const cat = categorySchemaOf("company-profile");
     for (const f of cat.fields) {
       if (SHARED.has(f.name)) {
         expect(f.fact, `${f.name} should carry its own name as its fact`).toBe(f.name);
@@ -812,7 +852,7 @@ describe("finxtract-ssm category", () => {
       } else {
         expect(f.fact, `${f.name} should carry no fact`).toBeUndefined();
         expect(categoryForField(f.name), `${f.name} should route to finxtract-ssm`).toBe(
-          "finxtract-ssm",
+          "company-profile",
         );
       }
     }
@@ -820,9 +860,9 @@ describe("finxtract-ssm category", () => {
 
   it("stays disjoint from every other category except the declared shared facts", () => {
     const sharedFacts = new Set(["companyIncorporationDate", "companyName", "companyRegNo"]);
-    const mine = new Set(categoryFieldsOf("finxtract-ssm"));
+    const mine = new Set(categoryFieldsOf("company-profile"));
     for (const cat of allCategories()) {
-      if (cat.id === "finxtract-ssm") continue;
+      if (cat.id === "company-profile") continue;
       for (const f of cat.fields) {
         if (sharedFacts.has(f.name)) continue;
         expect(mine.has(f.name), `"${f.name}" (${cat.id}) collides`).toBe(false);
@@ -839,27 +879,27 @@ describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
     // renamed onto the name form9 already used.
     expect(factOf("companyRegNo")).toBe("companyRegNo");
     // Uniquely-declared, fact-less names → null.
-    expect(factOf("telcoOnTimePaymentRatio24m")).toBeNull();
+    expect(factOf("onTimePaymentRatio24m")).toBeNull();
     // Unknown names → null.
     expect(factOf("clearlyNotACanonicalField")).toBeNull();
   });
 
   it("categoriesAttestingFact enumerates every attesting category in data-file order", () => {
     expect(categoriesAttestingFact("companyIncorporationDate")).toEqual([
-      "finxtract-form9",
-      "finxtract-ssm",
+      "company-registration",
+      "company-profile",
     ]);
     // SYS-3163: three documents attest a company's name, and now all three
     // share the fact. Before this, SSM's was a separate fact-less name, so a
     // Form 9 / SSM conflict could not be seen at all.
     expect(categoriesAttestingFact("companyName")).toEqual([
-      "finxtract-financial-statement",
-      "finxtract-form9",
-      "finxtract-ssm",
+      "financial-statement",
+      "company-registration",
+      "company-profile",
     ]);
     expect(categoriesAttestingFact("companyRegNo")).toEqual([
-      "finxtract-form9",
-      "finxtract-ssm",
+      "company-registration",
+      "company-profile",
     ]);
     expect(categoriesAttestingFact("not-a-fact")).toEqual([]);
   });
@@ -1076,10 +1116,10 @@ describe("enum field kind", () => {
 
 describe("telco-carrier enum tier fields", () => {
   const TIER_FIELDS = [
-    "telcoPaymentReliabilityTier",
-    "telcoTenureTier",
-    "telcoDistressTier",
-    "telcoHandsetRiskTier",
+    "paymentReliabilityTier",
+    "tenureTier",
+    "distressTier",
+    "handsetRiskTier",
   ] as const;
 
   it("declares all four tier fields as enum-kind strings, no range, no baked value sets", () => {
@@ -1155,7 +1195,7 @@ describe("monetary fields and the closed unit set", () => {
   });
 
   it("every money field is a number, and declares neither unit nor range", () => {
-    // A range on money is denominated by definition — telcoArpuMyr's
+    // A range on money is denominated by definition — arpu's
     // [0, 10000] was sane in ringgit and ~20x too small in dong. A unit on
     // money is the currency wearing a disguise.
     const money = allCategories().flatMap((cat) =>
@@ -1266,3 +1306,163 @@ describe("monetary declaration cannot be skipped by silence", () => {
     ).toEqual([]);
   });
 })
+
+// ── SYS-3333: the legacy-name bridge ─────────────────────────────────────
+describe("legacyName — the bridge between the canonical and flat vocabularies", () => {
+  it("a renamed money field is still detected as money under its FLAT name", () => {
+    // The regression this contract exists for, stated at the level it broke.
+    // isMonetaryField() in ihs-processing.ts is handed a flat column name and
+    // matches it against canonical names; before legacyName existed, renaming
+    // grossPay left `payslipGrossPay` unrecognised and its value rendered as a
+    // bare number beside denominated neighbours. Silent, and wrong-looking.
+    const money = new Map<string, string | undefined>();
+    for (const cat of allCategories()) {
+      for (const f of cat.fields) {
+        if (f.kind === "money") money.set(f.name, f.legacyName);
+      }
+    }
+    const grossPay = money.get("grossPay");
+    expect(grossPay, "grossPay should be money and should record its flat name").toBe(
+      "payslipGrossPay",
+    );
+    // …and the count is asserted so a future rename that forgets the alias
+    // shows up here rather than as a table of undenominated numbers.
+    const renamedMoney = [...money.values()].filter(Boolean);
+    expect(renamedMoney.length, "renamed money fields must all record a legacyName").toBeGreaterThan(
+      15,
+    );
+  });
+
+  it("resolves a name from either vocabulary, and nothing else", () => {
+    expect(resolveCanonicalFieldName("grossPay")).toBe("grossPay"); // already canonical
+    expect(resolveCanonicalFieldName("payslipGrossPay")).toBe("grossPay"); // legacy
+    expect(resolveCanonicalFieldName("personName")).toBe("personName"); // shared-fact name
+    expect(resolveCanonicalFieldName("epfAccountHolderName")).toBe("personName");
+    expect(resolveCanonicalFieldName("noSuchFieldAnywhere")).toBeNull();
+  });
+
+  it("refuses a legacyName that shadows a live canonical name", () => {
+    // Otherwise a lookup cannot say which field was meant, and it would
+    // resolve to whichever the loader happened to index.
+    const raw = {
+      schemaVersion: "1.0.0",
+      categories: [
+        {
+          id: "fixture-a",
+          displayName: "A",
+          description: "d",
+          canonicalTable: "ihs_fixture_a",
+          fields: [{ name: "alpha", type: "string", description: "d", legacyName: "beta" }],
+        },
+        {
+          id: "fixture-b",
+          displayName: "B",
+          description: "d",
+          canonicalTable: "ihs_fixture_b",
+          fields: [{ name: "beta", type: "string", description: "d" }],
+        },
+      ],
+    };
+    expect(() => buildCategoryRegistry(raw as never)).toThrow(/also a LIVE canonical field name/);
+  });
+
+  it("refuses two canonical fields claiming the same legacyName", () => {
+    const raw = {
+      schemaVersion: "1.0.0",
+      categories: [
+        {
+          id: "fixture-a",
+          displayName: "A",
+          description: "d",
+          canonicalTable: "ihs_fixture_a",
+          fields: [{ name: "alpha", type: "string", description: "d", legacyName: "old" }],
+        },
+        {
+          id: "fixture-b",
+          displayName: "B",
+          description: "d",
+          canonicalTable: "ihs_fixture_b",
+          fields: [{ name: "gamma", type: "string", description: "d", legacyName: "old" }],
+        },
+      ],
+    };
+    expect(() => buildCategoryRegistry(raw as never)).toThrow(/claimed by two different canonical/);
+  });
+
+  it("refuses a legacyName identical to the field's own name", () => {
+    // Not pedantry: it reads as "this was renamed" while recording no rename,
+    // and it would quietly satisfy any drift guard counting aliases.
+    const raw = {
+      schemaVersion: "1.0.0",
+      categories: [
+        {
+          id: "fixture-a",
+          displayName: "A",
+          description: "d",
+          canonicalTable: "ihs_fixture_a",
+          fields: [{ name: "alpha", type: "string", description: "d", legacyName: "alpha" }],
+        },
+      ],
+    };
+    expect(() => buildCategoryRegistry(raw as never)).toThrow(/legacyName identical to its/);
+  });
+});
+
+// ── SYS-3333: the naming conventions, enforced at load ───────────────────
+describe("naming conventions are refused at load, not merely applied once", () => {
+  const one = (field: Record<string, unknown>) => ({
+    schemaVersion: "1.0.0",
+    categories: [
+      {
+        id: "fixture-a",
+        displayName: "A",
+        description: "d",
+        canonicalTable: "ihs_fixture_a",
+        fields: [{ type: "string", description: "d", ...field }],
+      },
+    ],
+  });
+
+  it("refuses a currency baked into a field name", () => {
+    // The sweep found five of these, every one already kind:"money" — so the
+    // name contradicted the field's own declaration. Nothing refused them.
+    expect(() => buildCategoryRegistry(one({ name: "arpuMyr" }) as never)).toThrow(
+      /bakes a currency into its name/,
+    );
+    expect(() => buildCategoryRegistry(one({ name: "volumeUsd" }) as never)).toThrow(
+      /bakes a currency into its name/,
+    );
+  });
+
+  it("refuses the retired T<n> window convention", () => {
+    expect(() => buildCategoryRegistry(one({ name: "monthlyVolumeT12" }) as never)).toThrow(
+      /uses the T<n> window convention/,
+    );
+  });
+
+  it("accepts the conventions the registry actually uses", () => {
+    // The negative cases above prove the guard fires; this proves it is not
+    // simply refusing everything, which a too-greedy regex would.
+    for (const name of ["monthlyVolume12m", "engagementRate90d", "arpu", "closingBalance"]) {
+      expect(() => buildCategoryRegistry(one({ name }) as never), name).not.toThrow();
+    }
+  });
+
+  it("the shipped registry satisfies every convention it enforces", () => {
+    // Belt and braces: the guards run at load, so this can only fail if a
+    // guard is weakened. That is exactly when it should fail.
+    for (const cat of allCategories()) {
+      // `finxtract-bank-statement` is the ONE documented exception, and it is
+      // temporary: see the canonical-tables test above for why the rename is
+      // blocked on the deprecation window rather than on taste. Asserted as a
+      // named exception so a SECOND vendor-named id still fails.
+      if (cat.id !== "finxtract-bank-statement") {
+        expect(cat.id, `${cat.id} names a vendor`).not.toMatch(/^finxtract-/);
+      }
+      for (const f of cat.fields) {
+        expect(f.name, `${cat.id}.${f.name}`).not.toMatch(/(Myr|Usd|Vnd|Thb|Sgd)$/);
+        expect(f.name, `${cat.id}.${f.name}`).not.toMatch(/T\d+$/);
+      }
+    }
+  });
+});

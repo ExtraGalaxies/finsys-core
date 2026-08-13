@@ -6,6 +6,134 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-08-13
+
+### Changed — BREAKING: the whole-registry naming sweep (SYS-3333)
+
+Widened 2026-08-13 from the document categories to the entire registry, on the
+reasoning that this epic is the one pass over the full field list before a
+CRA-regulated bureau ships, and a half-swept vocabulary is worse than either end
+state because it looks finished.
+
+The sweep, measured rather than estimated:
+
+| class | found | 
+|---|---|
+| category ids naming their vendor | 4 |
+| field names baking in a currency | 5 — all already `kind: "money"` |
+| field names baking in a time window | 15, in **two** conventions (`24m`/`90d` vs `T3`/`T12`) |
+| field names repeating their own source | ~50 |
+
+**Category ids** — `finxtract-` names a vendor and belongs on ADAPTER ids:
+`ic`→`person-identity`, `finxtract-epf`→`epf-statement`,
+`finxtract-payslip`→`payslip`, `finxtract-financial-statement`→`financial-statement`,
+`finxtract-form9`→`company-registration`, `finxtract-ssm`→`company-profile`.
+
+The two bank categories are separated by what they actually are rather than by
+who produced them: the partner feed is derived monthly metrics
+(`bank-statement`→`bank-account-activity`) and the document is a statement
+(`finxtract-bank-statement`→`bank-statement`).
+
+**Fields** — 88 renamed in total. Currencies come off names (SYS-3249: a
+denomination belongs to the observation); `T3`/`T12` become `3m`/`12m`; every
+`telco*`/`payments*`/`social*`/`geo*`/`bank*`/`payslip*`/`epf*`/`ssm*` prefix
+comes off, because the category already says the source and a prefixed name can
+never share a fact.
+
+Two places the mechanical rule produced a WORSE name, listed rather than
+silently applied: `bankName`→`issuingBankName` (not `name`, which is meaningless
+in a report) and `geoAccuracyM`→`accuracyMeters` (not `accuracyM`, which hides a
+unit). `arTotalOutstanding` keeps its `ar`: accounts-receivable is a domain
+term, not a source.
+
+**Shared facts go from 3 to 9.** `personName` is now attested by four
+categories, `closingBalance` / `totalCredits` / `totalDebits` by both bank
+sources. Each is a proposition two sources can visibly disagree about — which is
+the point.
+
+### Added — the conventions are enforced at load
+
+A one-time cleanup with no guard is a cleanup that happens again. `buildCategoryRegistry`
+now refuses a currency-suffixed field name and the retired `T<n>` window form,
+with errors that explain the rule rather than merely citing it.
+
+Only mechanically-decidable rules are enforced. "A name should not repeat its
+source" needs judgement — `statementDate` in a `bank-statement` category is fine
+— so it is asserted in the tests instead. A load-time throw that misfires is
+worse than no rule, because the next person works around it.
+
+### Changed — the document-category half (SYS-3333)
+
+A category is a **field set, not a source**. Until now several categories said
+otherwise in their own ids and field names, and that is what made a shared fact
+inexpressible: core binds a fact id to exactly one field NAME, so
+`payslipEmployeeName` could never attest the same fact as `personName` no
+matter how obviously they are the same person.
+
+Measured before the change, against the live registry: **four sources already
+attest an applicant's name** — `ic.personName`, `payslipEmployeeName`,
+`epfAccountHolderName`, `accountHolderName` — and exactly one declared it as a
+fact. A borrower typing a name different from their IC was caught; a payslip in
+a different name was not.
+
+**Category ids** (`finxtract-` names the vendor and stays on *adapter* ids):
+
+| was | now |
+|---|---|
+| `ic` | `person-identity` |
+| `finxtract-epf` | `epf-statement` |
+| `finxtract-payslip` | `payslip` |
+
+`finxtract-bank-statement` deliberately keeps its id: de-prefixing it collides
+with the partner-feed `bank-statement` category, and resolving that means
+renaming the *partner* category — a partner-facing contract, and a separate
+decision. The field-level shared facts below do not depend on it.
+
+**Fields**: 38 renamed off their source prefix across `payslip`,
+`epf-statement`, `person-identity`, `finxtract-bank-statement`,
+`bank-statement` and `finxtract-ssm`. Nine facts are now attested by more than
+one category — `personName` by four.
+
+`bankClosingBalanceMyr` / `bankTotalCreditsMyr` / `bankTotalDebitsMyr` /
+`bankLargestSingleCreditMyr` lose the baked-in currency, per SYS-3249: a
+denomination belongs to the observation, not to the field name.
+
+This reverses a prior deliberate decision that the two bank categories share
+**zero** canonical names, on the reasoning that "a manifest can never
+accidentally produce across the two vocabularies". That concern is now handled
+by a stronger rule than name-disjointness: core refuses a shared name unless
+every declaration carries the same fact id, so sharing is a written-down
+decision rather than an accident.
+
+### Added — `legacyName`, and the silent degrade that required it
+
+Renaming the canonical vocabulary broke something that had nothing to do with
+naming. `isMonetaryField()` is handed a **flat** column name and matched it
+against **canonical** names — which worked only while the two were identical.
+Once `payslipGrossPay` became `grossPay` canonically while the flat column kept
+its own name, the lookup missed and a money value rendered as a bare number
+beside its denominated neighbours. No exception, no log line: exactly the
+failure SYS-3249's denomination work exists to prevent, reintroduced by a
+rename. Caught by core's own tests, not by review.
+
+So a renamed field now records its previous flat name **on itself**, where it
+cannot drift from the rename that created it:
+
+- `CanonicalFieldSpec.legacyName` — the pre-rename flat name.
+- `resolveCanonicalFieldName(name)` — resolves a name from *either* vocabulary,
+  returning it unchanged when already canonical. Transitional: it exists
+  because the flat columns still exist, and goes when they do.
+
+Load-time guards, because an alias that resolves to the wrong field is worse
+than no alias: a legacy name may not shadow a live canonical name, two fields
+may not claim the same legacy name, and a field may not declare a legacy name
+identical to its own.
+
+A `legacyName` is **not** a second canonical name — it never widens what an
+adapter may `produce`, is not addressable in an eval model, and carries no
+fact.
+
+
 ## [5.5.0] - 2026-08-08
 
 ### Added — a national id does not always carry a birth date (SYS-3257)

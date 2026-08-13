@@ -95,6 +95,30 @@ export interface CanonicalFieldSpec {
    */
   readonly fact?: string;
   /**
+   * SYS-3333: the name this field had in the LEGACY flat vocabulary, when
+   * the canonical rename moved it.
+   *
+   * It exists because the two vocabularies were identical until the rename,
+   * and code quietly relied on that. `isMonetaryField` in ihs-processing.ts
+   * is the worked example: it is handed a FLAT column name and matches it
+   * against the set of CANONICAL names declared `kind: "money"`. That worked
+   * only while `payslipGrossPay` was both. Rename the canonical side alone
+   * and the lookup silently misses — a money value renders as a bare number
+   * beside its denominated neighbours, which is the precise failure
+   * SYS-3249's denomination work exists to prevent. No exception, no log
+   * line, just a wrong-looking table.
+   *
+   * So the alias lives ON the field it renames rather than in a side map: a
+   * side map can drift, and this one is load-bearing for as long as the flat
+   * columns exist (Phase 6 drops them, and this goes with them).
+   *
+   * A legacyName is NOT a second canonical name. It never widens what an
+   * adapter may `produce`, it is not addressable in an eval model, and it
+   * carries no fact — it is a one-way lookup for code bridging the two
+   * vocabularies during the transition.
+   */
+  readonly legacyName?: string;
+  /**
    * Field kind — a semantic refinement of `type`.
    *
    * `"enum"`: the field's value is one label out of a closed set. The
@@ -198,6 +222,22 @@ export interface CategorySchema {
   readonly displayName: string;
   readonly description: string;
   readonly canonicalTable: string;
+  /**
+   * SYS-3333: the id this category had before it was renamed.
+   *
+   * The transition has to be COMPATIBLE: a manifest that registered yesterday
+   * must register today. So a legacy id is not decoration — the host resolves
+   * it, warns, and proceeds, rather than refusing a manifest at boot for a
+   * name the operator never chose to change.
+   *
+   * A legacy id may never collide with a LIVE id (enforced below). That rule
+   * is why the two bank categories kept their names in this release: reusing
+   * `bank-statement` for the document category would have made a pre-sweep
+   * manifest saying `bank-statement` genuinely ambiguous — the partner feed
+   * before, the document after — with no correct resolution. Renaming them
+   * waits for the deprecation window to close.
+   */
+  readonly legacyId?: string;
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
 }
 
@@ -210,12 +250,14 @@ interface RawCategoryField {
   range?: [number, number];
   description: string;
   fact?: string;
+  legacyName?: string;
   kind?: "enum" | "money";
   confidentiality?: "non-sensitive";
 }
 
 interface RawCategory {
   id: string;
+  legacyId?: string;
   displayName: string;
   description: string;
   canonicalTable: string;
@@ -279,6 +321,21 @@ const VALID_FIELD_UNITS: ReadonlyArray<string> = [
  * `CanonicalFieldSpec`. "sensitive" is unspellable because it is the
  * default; the only declarable value is the opt-out.
  */
+/**
+ * SYS-3333: a canonical field name must not encode its denomination.
+ * ISO-4217-shaped suffix, matched title-case because that is how these names
+ * were formed (`telcoArpuMyr`, `arTotalOutstandingMyr`).
+ */
+const CURRENCY_SUFFIXED = /(Myr|Usd|Eur|Gbp|Sgd|Vnd|Thb|Idr|Php|Jpy|Cny|Aud)$/;
+
+/**
+ * SYS-3333: the retired window convention. `T3`/`T12` said the same thing as
+ * `3m`/`12m` in a second dialect, and the T-form additionally collides with
+ * the legacy flat T-suffix (`revenueT1`), which means a period position, not a
+ * window length — two different ideas wearing one spelling.
+ */
+const T_WINDOW_SUFFIXED = /T\d+$/;
+
 const VALID_FIELD_CONFIDENTIALITY: ReadonlyArray<
   NonNullable<CanonicalFieldSpec["confidentiality"]>
 > = ["non-sensitive"];
@@ -306,6 +363,15 @@ export interface CategoryRegistry {
   readonly fieldToFact: ReadonlyMap<CanonicalFieldName, string>;
   /** fact id → every category attesting it, in data-file order. */
   readonly factToCategories: ReadonlyMap<string, ReadonlyArray<AdapterCategory>>;
+  /**
+   * SYS-3333: legacy flat name → the canonical name that replaced it.
+   *
+   * One-way and transitional. It exists so code that is handed a FLAT
+   * column name can reach the canonical field's declarations (is it money?
+   * what kind? what fact?) without every such call site growing its own
+   * hardcoded rename table. Empty for a field that was never renamed.
+   */
+  readonly legacyToCanonical: ReadonlyMap<string, CanonicalFieldName>;
 }
 
 /**
@@ -334,6 +400,11 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
   const fieldToCategory = new Map<CanonicalFieldName, AdapterCategory>();
   const fieldToFact = new Map<CanonicalFieldName, string>();
   const factToCategories = new Map<string, AdapterCategory[]>();
+  // SYS-3333: legacy flat name -> canonical name. Validated below against
+  // BOTH namespaces: a legacy name may not shadow a live canonical name
+  // (the lookup would be ambiguous), and two fields may not claim the same
+  // legacy name (the lookup would be wrong for one of them).
+  const legacyToCanonical = new Map<string, CanonicalFieldName>();
   // Every declaration of a field name seen so far — the shared-fact
   // uniqueness rule needs the full picture, not just the first declarer.
   const declarations = new Map<
@@ -391,6 +462,49 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       if (f.fact !== undefined && (typeof f.fact !== "string" || f.fact.length === 0)) {
         throw new Error(
           `adapter category data: field "${f.name}" (${where}) has an invalid fact — expected a non-empty string`,
+        );
+      }
+      if (
+        f.legacyName !== undefined &&
+        (typeof f.legacyName !== "string" || f.legacyName.length === 0)
+      ) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) has an invalid legacyName — expected a non-empty string`,
+        );
+      }
+      if (f.legacyName !== undefined && f.legacyName === f.name) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) declares a legacyName identical to its ` +
+            `canonical name — a legacyName records a rename, so an unchanged name must not declare one`,
+        );
+      }
+      // SYS-3333 — the naming conventions, ENFORCED rather than merely applied.
+      //
+      // The sweep that produced this vocabulary found 5 currency-suffixed
+      // names, 15 window-suffixed names in TWO conventions, and ~50 names
+      // repeating their own source. None of that was anyone's decision; it
+      // accumulated because nothing refused it. A one-time cleanup with no
+      // guard is a cleanup that happens again in a year, and this vocabulary
+      // is about to be read by a regulated credit bureau.
+      //
+      // Only mechanically-decidable rules live here. "A name should not repeat
+      // its source" needs judgement (`statementDate` in a bank-statement
+      // category is fine) and is asserted in the tests instead — a load-time
+      // throw that misfires is worse than no rule, because the next person
+      // works around it.
+      if (CURRENCY_SUFFIXED.test(f.name)) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) bakes a currency into its name. A ` +
+            `denomination belongs to the OBSERVATION, not the field (SYS-3249) — one source can report ` +
+            `several currencies in one document, so a field-level currency can only ever be right for ` +
+            `one of them. Declare kind: "money" and carry the currency on the provenance envelope.`,
+        );
+      }
+      if (T_WINDOW_SUFFIXED.test(f.name)) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) uses the T<n> window convention. The ` +
+            `registry has one convention for a time window and it is the unit-suffixed form — 3m, 12m, ` +
+            `24m, 90d. Two conventions for one idea is how a reader stops trusting either.`,
         );
       }
       // Hoisted ABOVE the shared-fact block deliberately. When an invalid
@@ -566,6 +680,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
         ...(f.fact !== undefined ? { fact: f.fact } : {}),
+        ...(f.legacyName !== undefined ? { legacyName: f.legacyName } : {}),
         ...(f.kind !== undefined ? { kind: f.kind } : {}),
         // SYS-3171: resolved, never conditional — absence in the data file
         // means sensitive, and the built spec says so out loud.
@@ -587,6 +702,16 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         });
         fieldToCategory.set(f.name, cat.id);
       }
+      if (f.legacyName !== undefined) {
+        const claimed = legacyToCanonical.get(f.legacyName);
+        if (claimed !== undefined && claimed !== f.name) {
+          throw new Error(
+            `adapter category data: legacyName "${f.legacyName}" is claimed by two different canonical ` +
+              `fields ("${claimed}" + "${f.name}") — a legacy name must resolve to exactly one canonical field`,
+          );
+        }
+        legacyToCanonical.set(f.legacyName, f.name);
+      }
       if (f.fact !== undefined) {
         fieldToFact.set(f.name, f.fact);
         const attesters = factToCategories.get(f.fact);
@@ -603,11 +728,55 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       displayName: cat.displayName,
       description: cat.description,
       canonicalTable: cat.canonicalTable,
+      ...(cat.legacyId !== undefined ? { legacyId: cat.legacyId } : {}),
       fields: Object.freeze(fields) as ReadonlyArray<CanonicalFieldSpec>,
     });
     byId.set(cat.id, schema);
     tables.add(cat.canonicalTable);
     all.push(schema);
+  }
+
+  // SYS-3333 — a legacy category id must resolve to exactly one live category,
+  // and must not shadow one. Checked before the field-level pass so a
+  // structurally impossible alias fails on its own terms.
+  for (const cat of raw.categories) {
+    if (cat.legacyId === undefined) continue;
+    if (typeof cat.legacyId !== "string" || cat.legacyId.length === 0) {
+      throw new Error(`adapter category data: category "${cat.id}" has an invalid legacyId`);
+    }
+    if (cat.legacyId === cat.id) {
+      throw new Error(
+        `adapter category data: category "${cat.id}" declares a legacyId identical to its id — ` +
+          `a legacyId records a rename, so an unchanged id must not declare one`,
+      );
+    }
+    if (raw.categories.some((o) => o.id === cat.legacyId)) {
+      throw new Error(
+        `adapter category data: legacyId "${cat.legacyId}" (on "${cat.id}") is also a LIVE category ` +
+          `id — an alias that collides with a live id cannot be resolved, because a manifest naming ` +
+          `it could mean either category`,
+      );
+    }
+    const twin = raw.categories.find((o) => o !== cat && o.legacyId === cat.legacyId);
+    if (twin) {
+      throw new Error(
+        `adapter category data: legacyId "${cat.legacyId}" is claimed by two categories ` +
+          `("${twin.id}" + "${cat.id}")`,
+      );
+    }
+  }
+
+  // SYS-3333 — deferred to here on purpose. A legacy alias may legally be
+  // declared BEFORE the canonical field that would shadow it appears later in
+  // the file, so the check is only sound once every category is indexed.
+  for (const [legacy, canonical] of legacyToCanonical) {
+    if (declarations.has(legacy)) {
+      throw new Error(
+        `adapter category data: legacyName "${legacy}" (on "${canonical}") is also a LIVE canonical ` +
+          `field name — a legacy alias must not shadow a name still in the vocabulary, or a lookup ` +
+          `cannot say which one it meant`,
+      );
+    }
   }
 
   return Object.freeze({
@@ -622,6 +791,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         Object.freeze(cats) as ReadonlyArray<AdapterCategory>,
       ]),
     ),
+    legacyToCanonical,
   });
 }
 
@@ -722,6 +892,64 @@ export function categoryForField(field: CanonicalFieldName): AdapterCategory | n
  */
 export function factOf(field: CanonicalFieldName): string | null {
   return registry.fieldToFact.get(field) ?? null;
+}
+
+/**
+ * SYS-3333: resolve a category id from EITHER vocabulary to the canonical one.
+ *
+ * Returns `id` unchanged when it is already a live category id, the canonical
+ * id when `id` is a recorded `legacyId`, and null when it is neither. The
+ * identity case is deliberate: a caller bridging the two vocabularies is handed
+ * a mix, and forcing each one to try live-first-then-alias is how a call site
+ * ends up with its own private rename table.
+ *
+ * The main callers are boundaries where a FOREIGN id arrives and its vintage is
+ * not ours to choose — an adapter manifest submitted by a partner, an adapter
+ * registry read back from another service.
+ *
+ * TRANSITIONAL, and it goes when the legacy ids do. Use `isLegacyCategoryId` to
+ * decide whether the resolution deserves a deprecation warning.
+ */
+export function resolveCanonicalCategoryId(id: string): AdapterCategory | null {
+  if (registry.byId.has(id)) return id;
+  for (const c of registry.all) {
+    if (c.legacyId === id) return c.id;
+  }
+  return null;
+}
+
+/**
+ * SYS-3333: true when `id` is a RETIRED category id rather than a live one.
+ *
+ * Callers use this to decide whether to emit a deprecation warning — the
+ * resolution itself is the same either way, and a caller that cannot tell the
+ * two apart either warns on every call or on none.
+ */
+export function isLegacyCategoryId(id: string): boolean {
+  return !registry.byId.has(id) && registry.all.some((c) => c.legacyId === id);
+}
+
+/**
+ * SYS-3333: resolve a field name from EITHER vocabulary to the canonical one.
+ *
+ * Returns `name` unchanged when it is already canonical, the canonical name
+ * when `name` is a recorded `legacyName`, and null when it is neither — so a
+ * caller can tell a rename it must honour from a typo it must refuse.
+ *
+ * TRANSITIONAL. It exists because artifacts written under the old vocabulary
+ * are still in circulation — partner manifests, pushed assertions, eval models
+ * held by lenders — and none of them move on our schedule. Do not build new
+ * addressing on it: a legacy name carries no fact, is not `produce`-able by an
+ * adapter, and is not addressable in an eval model.
+ */
+export function resolveCanonicalFieldName(name: string): CanonicalFieldName | null {
+  if (registry.fieldToCategory.has(name) || registry.fieldToFact.has(name)) return name;
+  const viaLegacy = registry.legacyToCanonical.get(name);
+  if (viaLegacy !== undefined) return viaLegacy;
+  // A name can be canonical, shared-fact, AND absent from both indexes only
+  // if it is uniquely declared with no fact — fieldToCategory covers that —
+  // so reaching here means genuinely unknown.
+  return null;
 }
 
 /**

@@ -951,6 +951,53 @@ describe("enum field kind", () => {
     );
   });
 
+  it("shared-fact attestations must agree on TYPE — the gap the kind clause only appeared to cover", () => {
+    // SYS-3350. `kind` implies type for money and enum, so that subset was
+    // already caught — which is exactly what made this look covered. The six
+    // KIND-LESS shared facts (personName, personIdNumber, personAddress,
+    // companyName, companyRegNo, companyIncorporationDate) had nothing checking
+    // them at all: a review set epf-statement's personName to type "number"
+    // against the SHIPPED data and it LOADED CLEAN, after which one fact was
+    // served as a string by three categories and a number by a fourth.
+    // Cross-source comparability is the whole reason a fact id exists.
+    const raw = validRaw();
+    const attester = (id: string, type: "number" | "boolean" | "string", desc: string) => ({
+      id,
+      displayName: id,
+      description: desc,
+      canonicalTable: `ihs_alt_data_${id.replace(/-/g, "_")}`,
+      fields: [{ name: "sharedName", type, fact: "sharedName", description: desc }],
+    });
+    raw.categories.push(attester("fixture-type-a", "string", "Attested as a string here."));
+    raw.categories.push(attester("fixture-type-b", "number", "Drifts to a number here."));
+    expect(() => buildCategoryRegistry(raw)).toThrow(/must agree on type/);
+  });
+
+  it("shared-fact attestations must agree on UNIT — one number, two quantities otherwise", () => {
+    // SYS-3350. Same class: without this, one fact could be a count in one
+    // category and a ratio in another, and the disagreement comparison the fact
+    // id exists for would be comparing two different quantities.
+    const raw = validRaw();
+    const attester = (id: string, unit: string) => ({
+      id,
+      displayName: id,
+      description: "Unit drift fixture.",
+      canonicalTable: `ihs_alt_data_${id.replace(/-/g, "_")}`,
+      fields: [
+        {
+          name: "sharedCount",
+          type: "number" as const,
+          fact: "sharedCount",
+          description: "Unit drift fixture.",
+          unit,
+        },
+      ],
+    });
+    raw.categories.push(attester("fixture-unit-a", "months"));
+    raw.categories.push(attester("fixture-unit-b", "days"));
+    expect(() => buildCategoryRegistry(raw)).toThrow(/must agree on unit/);
+  });
+
   it("shared-fact attestations must agree on kind (drift refused at load)", () => {
     const raw = validRaw();
     raw.categories.push({

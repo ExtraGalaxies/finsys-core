@@ -6,7 +6,42 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [6.0.0] - 2026-08-13
+## [6.0.2] - 2026-08-13
+
+### Fixed
+
+- **The 6.0.1 release notes described a category rename that never shipped.** They
+  said the partner feed became `bank-account-activity` and the document became
+  `bank-statement`. Neither happened — it was reverted before release, because
+  reusing `bank-statement` for a different category made it simultaneously a live
+  id and another category's recorded `legacyId`. A partner feeding bank-statement
+  **documents** who followed those notes would have set `category: "bank-statement"`
+  and been silently validated against the partner-feed field set, with no warning,
+  because it is a live id. Corrected, with the revert and its reason recorded.
+- Release notes were filed under `6.0.0`, which was tagged internally and never
+  published. `6.0.1` is the first 6.x release on npm.
+- Three counts in those notes were wrong (88 renamed fields, 4 category ids, 38
+  across the six categories). Measured: **84** of 236 fields, **6** category ids,
+  **44** across those six.
+
+### Changed
+
+- **Shared-fact attestations must now agree on `type` and `unit`**, not only on
+  `fact`, `kind` and `confidentiality`. `kind` implies type for money and enum,
+  so that subset was already refused — which is what made this look covered. The
+  six kind-less shared facts (`personName`, `personIdNumber`, `personAddress`,
+  `companyName`, `companyRegNo`, `companyIncorporationDate`) were unpoliced: one
+  could be declared `string` by three categories and `number` by a fourth and the
+  registry would load clean. Cross-source comparability is the entire reason a
+  fact id exists, so two attestations that cannot be compared as the same
+  primitive are not attestations of the same fact.
+
+  No shipped data changes — the current registry already agrees. This closes the
+  next edit, not this one.
+
+## [6.0.1] - 2026-08-13
+
+_6.0.0 was tagged internally and never published; 6.0.1 is the first 6.x release on npm._
 
 ### Changed — BREAKING: the whole-registry naming sweep (SYS-3333)
 
@@ -19,7 +54,7 @@ The sweep, measured rather than estimated:
 
 | class | found | 
 |---|---|
-| category ids naming their vendor | 4 |
+| category ids renamed | 6 |
 | field names baking in a currency | 5 — all already `kind: "money"` |
 | field names baking in a time window | 15, in **two** conventions (`24m`/`90d` vs `T3`/`T12`) |
 | field names repeating their own source | ~50 |
@@ -29,12 +64,22 @@ The sweep, measured rather than estimated:
 `finxtract-payslip`→`payslip`, `finxtract-financial-statement`→`financial-statement`,
 `finxtract-form9`→`company-registration`, `finxtract-ssm`→`company-profile`.
 
-The two bank categories are separated by what they actually are rather than by
-who produced them: the partner feed is derived monthly metrics
-(`bank-statement`→`bank-account-activity`) and the document is a statement
-(`finxtract-bank-statement`→`bank-statement`).
+The two bank categories keep the ids they have: `bank-statement` is the partner
+feed of derived monthly metrics, and `finxtract-bank-statement` is the statement
+document — the one id in the registry still carrying a vendor prefix.
 
-**Fields** — 88 renamed in total. Currencies come off names (SYS-3249: a
+An earlier draft of this release renamed both (`bank-statement`→
+`bank-account-activity`, `finxtract-bank-statement`→`bank-statement`) and it was
+**reverted before shipping**. Reusing `bank-statement` for a different category
+made it simultaneously a live id and another category's recorded `legacyId`, so
+a pre-existing manifest naming it became genuinely ambiguous with no correct
+resolution. The loader now refuses such a registry outright.
+
+If you feed bank-statement **documents**, your category is
+`finxtract-bank-statement`. Note that `bank-statement` will resolve without a
+warning — it is a live id, just not yours.
+
+**Fields** — 84 renamed, of 236 across 13 categories. Currencies come off names (SYS-3249: a
 denomination belongs to the observation); `T3`/`T12` become `3m`/`12m`; every
 `telco*`/`payments*`/`social*`/`geo*`/`bank*`/`payslip*`/`epf*`/`ssm*` prefix
 comes off, because the category already says the source and a prefixed name can
@@ -89,7 +134,7 @@ with the partner-feed `bank-statement` category, and resolving that means
 renaming the *partner* category — a partner-facing contract, and a separate
 decision. The field-level shared facts below do not depend on it.
 
-**Fields**: 38 renamed off their source prefix across `payslip`,
+**Fields**: 44 renamed off their source prefix across `payslip`,
 `epf-statement`, `person-identity`, `finxtract-bank-statement`,
 `bank-statement` and `finxtract-ssm`. Nine facts are now attested by more than
 one category — `personName` by four.

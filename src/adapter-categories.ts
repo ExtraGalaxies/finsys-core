@@ -412,6 +412,10 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     {
       fact: string | undefined;
       kind: RawCategoryField["kind"];
+      // SYS-3350: carried so shared-fact attestations can be checked for
+      // agreement on them, not just on fact/kind/confidentiality.
+      type: RawCategoryField["type"];
+      unit: RawCategoryField["unit"];
       confidentiality: "non-sensitive" | undefined;
       categories: AdapterCategory[];
     }
@@ -558,6 +562,38 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
               `shared-fact attestations must agree on kind`,
           );
         }
+        // SYS-3350: `type` and `unit` were the last unpoliced properties of a
+        // shared fact, and `type` is the one the `kind` clause above only
+        // APPEARS to cover.
+        //
+        // kind implies type for money and enum, so that subset was already
+        // caught. The six kind-less shared facts — personName, personIdNumber,
+        // personAddress, companyName, companyRegNo, companyIncorporationDate —
+        // had nothing checking them at all. A review demonstrated it by
+        // mutation: setting epf-statement's personName to `type: "number"`
+        // LOADED CLEAN, after which allCategories() served one fact as a string
+        // from three categories and a number from a fourth.
+        //
+        // Cross-source comparability is the entire reason a fact id exists. Two
+        // attestations that cannot be compared as the same primitive are not
+        // attestations of the same fact.
+        if (prior.type !== f.type) {
+          throw new Error(
+            `adapter category data: canonical field "${f.name}" declared type "${prior.type}" ` +
+              `by ${prior.categories.join(" + ")} but "${f.type}" by ${cat.id} — ` +
+              `shared-fact attestations must agree on type`,
+          );
+        }
+        if (prior.unit !== f.unit) {
+          const describeUnit = (u: string | undefined): string =>
+            u === undefined ? "no unit" : `unit "${u}"`;
+          throw new Error(
+            `adapter category data: canonical field "${f.name}" declared with ` +
+              `${describeUnit(prior.unit)} by ${prior.categories.join(" + ")} but ` +
+              `${describeUnit(f.unit)} by ${cat.id} — shared-fact attestations must agree on ` +
+              `unit, or one number means two different quantities`,
+          );
+        }
         // SYS-3164: same drift class again. One real-world fact cannot be
         // sensitive when a document attests it and non-sensitive when a
         // form does — storage would then hold the two attestations of one
@@ -697,6 +733,8 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         declarations.set(f.name, {
           fact: f.fact,
           kind: f.kind,
+          type: f.type,
+          unit: f.unit,
           confidentiality: f.confidentiality,
           categories: [cat.id],
         });

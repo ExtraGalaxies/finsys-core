@@ -161,28 +161,35 @@
           "description": "Statement period in YYYY-MM format. Used as the instance_key discriminator + by the `latest` aggregation operator."
         },
         {
-          "name": "bankClosingBalanceMyr",
+          "name": "bankClosingBalance",
           "type": "number",
           "kind": "money",
-          "description": "Closing balance for the statement period."
+          "description": "Closing balance for the statement period.",
+          "fact": "bankClosingBalance",
+          "legacyName": "bankClosingBalanceMyr"
         },
         {
-          "name": "bankTotalCreditsMyr",
+          "name": "bankTotalCredits",
           "type": "number",
           "kind": "money",
-          "description": "Sum of credit transactions during the period."
+          "description": "Sum of credit transactions during the period.",
+          "fact": "bankTotalCredits",
+          "legacyName": "bankTotalCreditsMyr"
         },
         {
-          "name": "bankTotalDebitsMyr",
+          "name": "bankTotalDebits",
           "type": "number",
           "kind": "money",
-          "description": "Sum of debit transactions during the period."
+          "description": "Sum of debit transactions during the period.",
+          "fact": "bankTotalDebits",
+          "legacyName": "bankTotalDebitsMyr"
         },
         {
-          "name": "bankLargestSingleCreditMyr",
+          "name": "bankLargestSingleCredit",
           "type": "number",
           "kind": "money",
-          "description": "Largest single inbound transaction in the period. Useful for spotting one-off injections vs steady revenue."
+          "description": "Largest single inbound transaction in the period. Useful for spotting one-off injections vs steady revenue.",
+          "legacyName": "bankLargestSingleCreditMyr"
         },
         {
           "name": "bankBouncedTransactionsCount",
@@ -503,7 +510,7 @@
       ]
     },
     {
-      "id": "ic",
+      "id": "person-identity",
       "displayName": "Identity Document (IC / Passport)",
       "description": "Identity fields extracted from a Malaysian IC (MyKad) or passport document. Produced by the host's document-extraction pipeline; one instance per identity document.",
       "canonicalTable": "ihs_alt_data_ic",
@@ -521,19 +528,25 @@
           "fact": "personIdNumber"
         },
         {
-          "name": "icAddress",
+          "name": "personAddress",
           "type": "string",
-          "description": "Registered address as printed on the document."
+          "description": "Registered address as printed on the document.",
+          "fact": "personAddress",
+          "legacyName": "icAddress"
         },
         {
-          "name": "icGender",
+          "name": "personGender",
           "type": "string",
-          "description": "Gender as stated on the document."
+          "description": "Gender as stated on the document.",
+          "fact": "personGender",
+          "legacyName": "icGender"
         },
         {
-          "name": "icReligion",
+          "name": "personReligion",
           "type": "string",
-          "description": "Religion as stated on the document (MyKad-only; absent on passports)."
+          "description": "Religion as stated on the document (MyKad-only; absent on passports).",
+          "fact": "personReligion",
+          "legacyName": "icReligion"
         },
         {
           "name": "personDateOfBirth",
@@ -542,9 +555,11 @@
           "fact": "personDateOfBirth"
         },
         {
-          "name": "icPlaceOfBirth",
+          "name": "personPlaceOfBirth",
           "type": "string",
-          "description": "Place of birth as stated on the document."
+          "description": "Place of birth as stated on the document.",
+          "fact": "personPlaceOfBirth",
+          "legacyName": "icPlaceOfBirth"
         },
         {
           "name": "personNationality",
@@ -572,9 +587,11 @@
           "description": "Issuing bank's name as printed on the statement."
         },
         {
-          "name": "accountHolderName",
+          "name": "personName",
           "type": "string",
-          "description": "Account holder's name as printed on the statement."
+          "description": "Account holder's name as printed on the statement.",
+          "fact": "personName",
+          "legacyName": "accountHolderName"
         },
         {
           "name": "accountNumber",
@@ -593,171 +610,208 @@
           "description": "Opening balance for the statement period."
         },
         {
-          "name": "bankBalance",
+          "name": "bankClosingBalance",
           "type": "number",
           "kind": "money",
-          "description": "Closing balance for the statement period."
+          "description": "Closing balance for the statement period.",
+          "fact": "bankClosingBalance",
+          "legacyName": "bankBalance"
         },
         {
-          "name": "totalCredits",
+          "name": "bankTotalCredits",
           "type": "number",
           "kind": "money",
-          "description": "Sum of credit transactions in the statement period."
+          "description": "Sum of credit transactions in the statement period.",
+          "fact": "bankTotalCredits",
+          "legacyName": "totalCredits"
         },
         {
-          "name": "totalDebits",
+          "name": "bankTotalDebits",
           "type": "number",
           "kind": "money",
-          "description": "Sum of debit transactions in the statement period."
+          "description": "Sum of debit transactions in the statement period.",
+          "fact": "bankTotalDebits",
+          "legacyName": "totalDebits"
         }
       ]
     },
     {
-      "id": "finxtract-epf",
+      "id": "epf-statement",
       "displayName": "EPF Statement (Document Extraction)",
       "description": "Fields extracted from an uploaded EPF (KWSP) statement document by the host's extraction pipeline. One instance per statement document. Field names carry the 'epf' prefix — the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
       "canonicalTable": "ihsepfstatement",
       "fields": [
         {
-          "name": "epfAccountHolderName",
+          "name": "personName",
           "type": "string",
-          "description": "Member's name as printed on the statement."
+          "description": "Member's name as printed on the statement.",
+          "fact": "personName",
+          "legacyName": "epfAccountHolderName"
         },
         {
-          "name": "epfAccountHolderAddress",
+          "name": "personAddress",
           "type": "string",
-          "description": "Member's address as printed on the statement."
+          "description": "Member's address as printed on the statement.",
+          "fact": "personAddress",
+          "legacyName": "epfAccountHolderAddress"
         },
         {
-          "name": "epfStatementYear",
+          "name": "statementYear",
           "type": "string",
-          "description": "The contribution year the statement covers."
+          "description": "The contribution year the statement covers.",
+          "legacyName": "epfStatementYear"
         },
         {
-          "name": "epfKwspMemberNumber",
+          "name": "kwspMemberNumber",
           "type": "string",
-          "description": "KWSP membership number."
+          "description": "KWSP membership number.",
+          "legacyName": "epfKwspMemberNumber"
         },
         {
-          "name": "epfIcNumber",
+          "name": "personIdNumber",
           "type": "string",
-          "description": "Member's IC number as printed on the statement."
+          "description": "Member's IC number as printed on the statement.",
+          "fact": "personIdNumber",
+          "legacyName": "epfIcNumber"
         },
         {
-          "name": "epfEmployerNumber",
+          "name": "employerNumber",
           "type": "string",
-          "description": "Employer's KWSP reference number."
+          "description": "Employer's KWSP reference number.",
+          "legacyName": "epfEmployerNumber"
         },
         {
-          "name": "epfDateOfStatement",
+          "name": "dateOfStatement",
           "type": "string",
-          "description": "Statement issue date, normalized to ISO YYYY-MM-DD."
+          "description": "Statement issue date, normalized to ISO YYYY-MM-DD.",
+          "legacyName": "epfDateOfStatement"
         },
         {
-          "name": "epfTotalContribution",
+          "name": "totalContribution",
           "type": "number",
           "kind": "money",
-          "description": "Cumulative EPF balance as at the statement date."
+          "description": "Cumulative EPF balance as at the statement date.",
+          "legacyName": "epfTotalContribution"
         },
         {
-          "name": "epfTotalCurrentContribution",
+          "name": "totalCurrentContribution",
           "type": "number",
           "kind": "money",
-          "description": "Contributions made within the statement's coverage year."
+          "description": "Contributions made within the statement's coverage year.",
+          "legacyName": "epfTotalCurrentContribution"
         }
       ]
     },
     {
-      "id": "finxtract-payslip",
+      "id": "payslip",
       "displayName": "Payslip (Document Extraction)",
       "description": "Fields extracted from an uploaded payslip document by the host's extraction pipeline. One instance per payslip document; each payslip covers a single pay period. Field names carry the 'payslip' prefix — the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
       "canonicalTable": "ihspayslip",
       "fields": [
         {
-          "name": "payslipEmployerName",
+          "name": "employerName",
           "type": "string",
-          "description": "Employer's name as printed on the payslip."
+          "description": "Employer's name as printed on the payslip.",
+          "fact": "employerName",
+          "legacyName": "payslipEmployerName"
         },
         {
-          "name": "payslipEmployeeName",
+          "name": "personName",
           "type": "string",
-          "description": "Employee's name as printed on the payslip."
+          "description": "Employee's name as printed on the payslip.",
+          "fact": "personName",
+          "legacyName": "payslipEmployeeName"
         },
         {
-          "name": "payslipPayPeriod",
+          "name": "payPeriod",
           "type": "string",
-          "description": "The pay period the payslip covers, as printed."
+          "description": "The pay period the payslip covers, as printed.",
+          "legacyName": "payslipPayPeriod"
         },
         {
-          "name": "payslipPayDate",
+          "name": "payDate",
           "type": "string",
-          "description": "Payment date, as printed."
+          "description": "Payment date, as printed.",
+          "legacyName": "payslipPayDate"
         },
         {
-          "name": "payslipBasicPay",
+          "name": "basicPay",
           "type": "number",
           "kind": "money",
-          "description": "Basic salary for the period."
+          "description": "Basic salary for the period.",
+          "legacyName": "payslipBasicPay"
         },
         {
-          "name": "payslipGrossPay",
+          "name": "grossPay",
           "type": "number",
           "kind": "money",
-          "description": "Gross pay for the period."
+          "description": "Gross pay for the period.",
+          "fact": "grossPay",
+          "legacyName": "payslipGrossPay"
         },
         {
-          "name": "payslipFixedAllowances",
+          "name": "fixedAllowances",
           "type": "number",
           "kind": "money",
-          "description": "Fixed allowances for the period."
+          "description": "Fixed allowances for the period.",
+          "legacyName": "payslipFixedAllowances"
         },
         {
-          "name": "payslipVariableIncome",
+          "name": "variableIncome",
           "type": "number",
           "kind": "money",
-          "description": "Variable income (overtime, commission, bonus) for the period."
+          "description": "Variable income (overtime, commission, bonus) for the period.",
+          "legacyName": "payslipVariableIncome"
         },
         {
-          "name": "payslipDeduction",
+          "name": "deduction",
           "type": "number",
           "kind": "money",
-          "description": "Total statutory deductions for the period."
+          "description": "Total statutory deductions for the period.",
+          "legacyName": "payslipDeduction"
         },
         {
-          "name": "payslipOtherDeduction",
+          "name": "otherDeduction",
           "type": "number",
           "kind": "money",
-          "description": "Other (non-statutory) deductions for the period."
+          "description": "Other (non-statutory) deductions for the period.",
+          "legacyName": "payslipOtherDeduction"
         },
         {
-          "name": "payslipEmployeeEpfContribution",
+          "name": "employeeEpfContribution",
           "type": "number",
           "kind": "money",
-          "description": "Employee EPF contribution for the period."
+          "description": "Employee EPF contribution for the period.",
+          "legacyName": "payslipEmployeeEpfContribution"
         },
         {
-          "name": "payslipEmployeeSocsoContribution",
+          "name": "employeeSocsoContribution",
           "type": "number",
           "kind": "money",
-          "description": "Employee SOCSO contribution for the period."
+          "description": "Employee SOCSO contribution for the period.",
+          "legacyName": "payslipEmployeeSocsoContribution"
         },
         {
-          "name": "payslipEmployeeEisContribution",
+          "name": "employeeEisContribution",
           "type": "number",
           "kind": "money",
-          "description": "Employee EIS contribution for the period."
+          "description": "Employee EIS contribution for the period.",
+          "legacyName": "payslipEmployeeEisContribution"
         },
         {
-          "name": "payslipEmployeeTax",
+          "name": "employeeTax",
           "type": "number",
           "kind": "money",
-          "description": "Employee income-tax (PCB) deduction for the period."
+          "description": "Employee income-tax (PCB) deduction for the period.",
+          "legacyName": "payslipEmployeeTax"
         },
         {
-          "name": "payslipNetPay",
+          "name": "netPay",
           "type": "number",
           "kind": "money",
-          "description": "Net pay for the period."
+          "description": "Net pay for the period.",
+          "fact": "netPay",
+          "legacyName": "payslipNetPay"
         }
       ]
     },
@@ -1529,9 +1583,10 @@
       "canonicalTable": "ihs_alt_data_ssm",
       "fields": [
         {
-          "name": "ssmCompanyEntityType",
+          "name": "companyEntityType",
           "type": "string",
-          "description": "Entity type stated on the profile (e.g. private limited company, enterprise)."
+          "description": "Entity type stated on the profile (e.g. private limited company, enterprise).",
+          "legacyName": "ssmCompanyEntityType"
         },
         {
           "name": "companyName",
@@ -1582,10 +1637,11 @@
           "description": "Total shares issued as stated on the profile."
         },
         {
-          "name": "ssmPaidUpCapital",
+          "name": "paidUpCapital",
           "type": "number",
           "kind": "money",
-          "description": "Paid-up capital as stated on the profile (falls back to total shares issued when the profile omits an explicit paid-up figure)."
+          "description": "Paid-up capital as stated on the profile (falls back to total shares issued when the profile omits an explicit paid-up figure).",
+          "legacyName": "ssmPaidUpCapital"
         },
         {
           "name": "directors",

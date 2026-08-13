@@ -143,8 +143,25 @@ export function getGroupDisplayNames(): Record<string, string> {
 let cachedMonetaryFieldNames: Set<string> | null = null
 function isMonetaryField(fieldName: string): boolean {
   if (!cachedMonetaryFieldNames) {
+    // SYS-3333: BOTH spellings, and the legacy half is not optional.
+    //
+    // This function is handed a FLAT column name and matches it against
+    // CANONICAL names — which worked only while the two vocabularies were
+    // identical. The moment `payslipGrossPay` became `grossPay` canonically
+    // while the flat column kept its own name, the lookup missed and the
+    // value rendered as a bare number beside its denominated neighbours. No
+    // exception, no log line: exactly the silent degrade SYS-3249's
+    // denomination work exists to prevent, reintroduced by a rename.
+    //
+    // The legacy half is read off each field's own `legacyName`, so it cannot
+    // drift from the rename that created it, and it disappears with the flat
+    // columns at Phase 6.
     cachedMonetaryFieldNames = new Set(
-      allCategories().flatMap((c) => c.fields.filter((f) => f.kind === 'money').map((f) => f.name))
+      allCategories().flatMap((c) =>
+        c.fields
+          .filter((f) => f.kind === 'money')
+          .flatMap((f) => (f.legacyName ? [f.name, f.legacyName] : [f.name]))
+      )
     )
   }
   return cachedMonetaryFieldNames.has(fieldName)

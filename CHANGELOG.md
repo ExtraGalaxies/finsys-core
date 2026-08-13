@@ -6,6 +6,80 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-08-13
+
+### Changed — BREAKING: the canonical vocabulary stops naming its own source (SYS-3333)
+
+A category is a **field set, not a source**. Until now several categories said
+otherwise in their own ids and field names, and that is what made a shared fact
+inexpressible: core binds a fact id to exactly one field NAME, so
+`payslipEmployeeName` could never attest the same fact as `personName` no
+matter how obviously they are the same person.
+
+Measured before the change, against the live registry: **four sources already
+attest an applicant's name** — `ic.personName`, `payslipEmployeeName`,
+`epfAccountHolderName`, `accountHolderName` — and exactly one declared it as a
+fact. A borrower typing a name different from their IC was caught; a payslip in
+a different name was not.
+
+**Category ids** (`finxtract-` names the vendor and stays on *adapter* ids):
+
+| was | now |
+|---|---|
+| `ic` | `person-identity` |
+| `finxtract-epf` | `epf-statement` |
+| `finxtract-payslip` | `payslip` |
+
+`finxtract-bank-statement` deliberately keeps its id: de-prefixing it collides
+with the partner-feed `bank-statement` category, and resolving that means
+renaming the *partner* category — a partner-facing contract, and a separate
+decision. The field-level shared facts below do not depend on it.
+
+**Fields**: 38 renamed off their source prefix across `payslip`,
+`epf-statement`, `person-identity`, `finxtract-bank-statement`,
+`bank-statement` and `finxtract-ssm`. Nine facts are now attested by more than
+one category — `personName` by four.
+
+`bankClosingBalanceMyr` / `bankTotalCreditsMyr` / `bankTotalDebitsMyr` /
+`bankLargestSingleCreditMyr` lose the baked-in currency, per SYS-3249: a
+denomination belongs to the observation, not to the field name.
+
+This reverses a prior deliberate decision that the two bank categories share
+**zero** canonical names, on the reasoning that "a manifest can never
+accidentally produce across the two vocabularies". That concern is now handled
+by a stronger rule than name-disjointness: core refuses a shared name unless
+every declaration carries the same fact id, so sharing is a written-down
+decision rather than an accident.
+
+### Added — `legacyName`, and the silent degrade that required it
+
+Renaming the canonical vocabulary broke something that had nothing to do with
+naming. `isMonetaryField()` is handed a **flat** column name and matched it
+against **canonical** names — which worked only while the two were identical.
+Once `payslipGrossPay` became `grossPay` canonically while the flat column kept
+its own name, the lookup missed and a money value rendered as a bare number
+beside its denominated neighbours. No exception, no log line: exactly the
+failure SYS-3249's denomination work exists to prevent, reintroduced by a
+rename. Caught by core's own tests, not by review.
+
+So a renamed field now records its previous flat name **on itself**, where it
+cannot drift from the rename that created it:
+
+- `CanonicalFieldSpec.legacyName` — the pre-rename flat name.
+- `resolveCanonicalFieldName(name)` — resolves a name from *either* vocabulary,
+  returning it unchanged when already canonical. Transitional: it exists
+  because the flat columns still exist, and goes when they do.
+
+Load-time guards, because an alias that resolves to the wrong field is worse
+than no alias: a legacy name may not shadow a live canonical name, two fields
+may not claim the same legacy name, and a field may not declare a legacy name
+identical to its own.
+
+A `legacyName` is **not** a second canonical name — it never widens what an
+adapter may `produce`, is not addressable in an eval model, and carries no
+fact.
+
+
 ## [5.5.0] - 2026-08-08
 
 ### Added — a national id does not always carry a birth date (SYS-3257)

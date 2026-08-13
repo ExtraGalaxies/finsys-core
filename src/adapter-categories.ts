@@ -95,6 +95,30 @@ export interface CanonicalFieldSpec {
    */
   readonly fact?: string;
   /**
+   * SYS-3333: the name this field had in the LEGACY flat vocabulary, when
+   * the canonical rename moved it.
+   *
+   * It exists because the two vocabularies were identical until the rename,
+   * and code quietly relied on that. `isMonetaryField` in ihs-processing.ts
+   * is the worked example: it is handed a FLAT column name and matches it
+   * against the set of CANONICAL names declared `kind: "money"`. That worked
+   * only while `payslipGrossPay` was both. Rename the canonical side alone
+   * and the lookup silently misses — a money value renders as a bare number
+   * beside its denominated neighbours, which is the precise failure
+   * SYS-3249's denomination work exists to prevent. No exception, no log
+   * line, just a wrong-looking table.
+   *
+   * So the alias lives ON the field it renames rather than in a side map: a
+   * side map can drift, and this one is load-bearing for as long as the flat
+   * columns exist (Phase 6 drops them, and this goes with them).
+   *
+   * A legacyName is NOT a second canonical name. It never widens what an
+   * adapter may `produce`, it is not addressable in an eval model, and it
+   * carries no fact — it is a one-way lookup for code bridging the two
+   * vocabularies during the transition.
+   */
+  readonly legacyName?: string;
+  /**
    * Field kind — a semantic refinement of `type`.
    *
    * `"enum"`: the field's value is one label out of a closed set. The
@@ -210,6 +234,7 @@ interface RawCategoryField {
   range?: [number, number];
   description: string;
   fact?: string;
+  legacyName?: string;
   kind?: "enum" | "money";
   confidentiality?: "non-sensitive";
 }
@@ -306,6 +331,15 @@ export interface CategoryRegistry {
   readonly fieldToFact: ReadonlyMap<CanonicalFieldName, string>;
   /** fact id → every category attesting it, in data-file order. */
   readonly factToCategories: ReadonlyMap<string, ReadonlyArray<AdapterCategory>>;
+  /**
+   * SYS-3333: legacy flat name → the canonical name that replaced it.
+   *
+   * One-way and transitional. It exists so code that is handed a FLAT
+   * column name can reach the canonical field's declarations (is it money?
+   * what kind? what fact?) without every such call site growing its own
+   * hardcoded rename table. Empty for a field that was never renamed.
+   */
+  readonly legacyToCanonical: ReadonlyMap<string, CanonicalFieldName>;
 }
 
 /**
@@ -334,6 +368,11 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
   const fieldToCategory = new Map<CanonicalFieldName, AdapterCategory>();
   const fieldToFact = new Map<CanonicalFieldName, string>();
   const factToCategories = new Map<string, AdapterCategory[]>();
+  // SYS-3333: legacy flat name -> canonical name. Validated below against
+  // BOTH namespaces: a legacy name may not shadow a live canonical name
+  // (the lookup would be ambiguous), and two fields may not claim the same
+  // legacy name (the lookup would be wrong for one of them).
+  const legacyToCanonical = new Map<string, CanonicalFieldName>();
   // Every declaration of a field name seen so far — the shared-fact
   // uniqueness rule needs the full picture, not just the first declarer.
   const declarations = new Map<
@@ -391,6 +430,20 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       if (f.fact !== undefined && (typeof f.fact !== "string" || f.fact.length === 0)) {
         throw new Error(
           `adapter category data: field "${f.name}" (${where}) has an invalid fact — expected a non-empty string`,
+        );
+      }
+      if (
+        f.legacyName !== undefined &&
+        (typeof f.legacyName !== "string" || f.legacyName.length === 0)
+      ) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) has an invalid legacyName — expected a non-empty string`,
+        );
+      }
+      if (f.legacyName !== undefined && f.legacyName === f.name) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) declares a legacyName identical to its ` +
+            `canonical name — a legacyName records a rename, so an unchanged name must not declare one`,
         );
       }
       // Hoisted ABOVE the shared-fact block deliberately. When an invalid
@@ -566,6 +619,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
         ...(f.fact !== undefined ? { fact: f.fact } : {}),
+        ...(f.legacyName !== undefined ? { legacyName: f.legacyName } : {}),
         ...(f.kind !== undefined ? { kind: f.kind } : {}),
         // SYS-3171: resolved, never conditional — absence in the data file
         // means sensitive, and the built spec says so out loud.
@@ -586,6 +640,16 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           categories: [cat.id],
         });
         fieldToCategory.set(f.name, cat.id);
+      }
+      if (f.legacyName !== undefined) {
+        const claimed = legacyToCanonical.get(f.legacyName);
+        if (claimed !== undefined && claimed !== f.name) {
+          throw new Error(
+            `adapter category data: legacyName "${f.legacyName}" is claimed by two different canonical ` +
+              `fields ("${claimed}" + "${f.name}") — a legacy name must resolve to exactly one canonical field`,
+          );
+        }
+        legacyToCanonical.set(f.legacyName, f.name);
       }
       if (f.fact !== undefined) {
         fieldToFact.set(f.name, f.fact);
@@ -610,6 +674,19 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     all.push(schema);
   }
 
+  // SYS-3333 — deferred to here on purpose. A legacy alias may legally be
+  // declared BEFORE the canonical field that would shadow it appears later in
+  // the file, so the check is only sound once every category is indexed.
+  for (const [legacy, canonical] of legacyToCanonical) {
+    if (declarations.has(legacy)) {
+      throw new Error(
+        `adapter category data: legacyName "${legacy}" (on "${canonical}") is also a LIVE canonical ` +
+          `field name — a legacy alias must not shadow a name still in the vocabulary, or a lookup ` +
+          `cannot say which one it meant`,
+      );
+    }
+  }
+
   return Object.freeze({
     all: Object.freeze(all) as ReadonlyArray<CategorySchema>,
     ids: Object.freeze(all.map((c) => c.id)) as ReadonlyArray<AdapterCategory>,
@@ -622,6 +699,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         Object.freeze(cats) as ReadonlyArray<AdapterCategory>,
       ]),
     ),
+    legacyToCanonical,
   });
 }
 
@@ -722,6 +800,30 @@ export function categoryForField(field: CanonicalFieldName): AdapterCategory | n
  */
 export function factOf(field: CanonicalFieldName): string | null {
   return registry.fieldToFact.get(field) ?? null;
+}
+
+/**
+ * SYS-3333: resolve a name from EITHER vocabulary to the canonical one.
+ *
+ * Returns `name` unchanged when it is already canonical, the canonical name
+ * when `name` is a recorded legacy alias, and null when it is neither. The
+ * identity case is deliberate: callers bridging the two vocabularies are
+ * handed a mix, and forcing each one to try canonical-first-then-alias is how
+ * a call site ends up with its own private rename table.
+ *
+ * TRANSITIONAL. It exists because the legacy flat columns still exist; it
+ * goes when they do (Phase 6). Do not build new addressing on it — a legacy
+ * name carries no fact, is not `produce`-able by an adapter, and is not
+ * addressable in an eval model.
+ */
+export function resolveCanonicalFieldName(name: string): CanonicalFieldName | null {
+  if (registry.fieldToCategory.has(name) || registry.fieldToFact.has(name)) return name;
+  const viaLegacy = registry.legacyToCanonical.get(name);
+  if (viaLegacy !== undefined) return viaLegacy;
+  // A name can be canonical, shared-fact, AND absent from both indexes only
+  // if it is uniquely declared with no fact — fieldToCategory covers that —
+  // so reaching here means genuinely unknown.
+  return null;
 }
 
 /**

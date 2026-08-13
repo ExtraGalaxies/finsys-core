@@ -225,6 +225,7 @@ export {
   categoryForField,
   factOf,
   categoriesAttestingFact,
+  resolveCanonicalFieldName,
   isFieldSensitive,
   sensitiveFieldsOf,
   isAdapterCategory,

@@ -895,18 +895,20 @@ export function factOf(field: CanonicalFieldName): string | null {
 }
 
 /**
- * SYS-3333: resolve a name from EITHER vocabulary to the canonical one.
+ * SYS-3333: resolve a category id from EITHER vocabulary to the canonical one.
  *
- * Returns `name` unchanged when it is already canonical, the canonical name
- * when `name` is a recorded legacy alias, and null when it is neither. The
- * identity case is deliberate: callers bridging the two vocabularies are
- * handed a mix, and forcing each one to try canonical-first-then-alias is how
- * a call site ends up with its own private rename table.
+ * Returns `id` unchanged when it is already a live category id, the canonical
+ * id when `id` is a recorded `legacyId`, and null when it is neither. The
+ * identity case is deliberate: a caller bridging the two vocabularies is handed
+ * a mix, and forcing each one to try live-first-then-alias is how a call site
+ * ends up with its own private rename table.
  *
- * TRANSITIONAL. It exists because the legacy flat columns still exist; it
- * goes when they do (Phase 6). Do not build new addressing on it — a legacy
- * name carries no fact, is not `produce`-able by an adapter, and is not
- * addressable in an eval model.
+ * The main callers are boundaries where a FOREIGN id arrives and its vintage is
+ * not ours to choose — an adapter manifest submitted by a partner, an adapter
+ * registry read back from another service.
+ *
+ * TRANSITIONAL, and it goes when the legacy ids do. Use `isLegacyCategoryId` to
+ * decide whether the resolution deserves a deprecation warning.
  */
 export function resolveCanonicalCategoryId(id: string): AdapterCategory | null {
   if (registry.byId.has(id)) return id;
@@ -927,6 +929,19 @@ export function isLegacyCategoryId(id: string): boolean {
   return !registry.byId.has(id) && registry.all.some((c) => c.legacyId === id);
 }
 
+/**
+ * SYS-3333: resolve a field name from EITHER vocabulary to the canonical one.
+ *
+ * Returns `name` unchanged when it is already canonical, the canonical name
+ * when `name` is a recorded `legacyName`, and null when it is neither — so a
+ * caller can tell a rename it must honour from a typo it must refuse.
+ *
+ * TRANSITIONAL. It exists because artifacts written under the old vocabulary
+ * are still in circulation — partner manifests, pushed assertions, eval models
+ * held by lenders — and none of them move on our schedule. Do not build new
+ * addressing on it: a legacy name carries no fact, is not `produce`-able by an
+ * adapter, and is not addressable in an eval model.
+ */
 export function resolveCanonicalFieldName(name: string): CanonicalFieldName | null {
   if (registry.fieldToCategory.has(name) || registry.fieldToFact.has(name)) return name;
   const viaLegacy = registry.legacyToCanonical.get(name);

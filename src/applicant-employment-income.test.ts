@@ -104,6 +104,47 @@ describe("applicant-income (SYS-3337)", () => {
   });
 
   /**
+   * The field-list anchor every OTHER category in this phase has, and that
+   * applicant-income was missing.
+   *
+   * Without it, four of its six fields — sourceOfFund, sourceOfWealth,
+   * computationMode, statementType — were referenced by NO test anywhere in
+   * the suite. Deleting one, retyping it, or misspelling it left all 621
+   * green. The regex check below ("no field describes one job") was the only
+   * assertion touching the field set as a whole, and a keyword pattern is not
+   * a field list: a field named `role` or `position` would be a per-job
+   * attribute violating the single-instance contract and would sail straight
+   * through it.
+   */
+  it("declares exactly the six income columns", () => {
+    expect(
+      categorySchemaOf("applicant-income")
+        .fields.map((f) => f.name)
+        .sort(),
+    ).toEqual([
+      "computationMode",
+      "grossPay",
+      "netPay",
+      "sourceOfFund",
+      "sourceOfWealth",
+      "statementType",
+    ]);
+  });
+
+  it("leaves the stated-source dropdowns kind-less, like every other per-form choice set", () => {
+    // The JSON already carries this reasoning for these two fields, and
+    // applicant-demographics and applicant-employment each got a test for it.
+    // applicant-income did not.
+    const by = new Map<string, CategoryField>(
+      categorySchemaOf("applicant-income").fields.map((f) => [f.name, f] as const),
+    );
+    for (const n of ["sourceOfFund", "sourceOfWealth"]) {
+      expect(by.get(n)?.type, `${n} type`).toBe("string");
+      expect(by.get(n)?.kind, `${n} kind`).toBeUndefined();
+    }
+  });
+
+  /**
    * grossPay and netPay are money AND shared with the payslip, which makes
    * three separate contracts land on one field. All three are asserted,
    * because the failure modes are different and independent:

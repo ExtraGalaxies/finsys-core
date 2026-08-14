@@ -1409,10 +1409,15 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
     expect(knownAsMoney.has("grossPay")).toBe(true);
     // …and the count is asserted so a future rename that forgets the alias
     // shows up here rather than as a table of undenominated numbers.
+    //
+    // PINNED, not a lower bound — the same reasoning as money.length two hunks
+    // above, which this assertion sat beside while quietly contradicting. It
+    // was toBeGreaterThan(15) against a true count of 26, so a regression
+    // stripping legacyName from any TEN money fields stayed green. A lower
+    // bound is precisely what waves through the script that drops most of a
+    // set and leaves a few.
     const renamedMoney = legacyNames;
-    expect(renamedMoney.length, "renamed money fields must all record a legacyName").toBeGreaterThan(
-      15,
-    );
+    expect(renamedMoney.length, "renamed money fields must all record a legacyName").toBe(26);
   });
 
   it("resolves a name from either vocabulary, and nothing else", () => {

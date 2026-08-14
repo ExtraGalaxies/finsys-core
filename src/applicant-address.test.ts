@@ -5,6 +5,10 @@ import {
   categorySchemaOf,
 } from "./adapter-categories.js";
 
+/** One field of a category schema — the map lookups below are keyed on plain
+ * strings, so the Map has to be widened off the literal union. */
+type CategoryField = ReturnType<typeof categorySchemaOf>["fields"][number];
+
 /**
  * SYS-3336 — applicant-address.
  *

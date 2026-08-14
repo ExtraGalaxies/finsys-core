@@ -5,6 +5,10 @@ import {
   categorySchemaOf,
 } from "./adapter-categories.js";
 
+/** One field of a category schema — the map lookups below are keyed on plain
+ * strings, so the Map has to be widened off the literal union. */
+type CategoryField = ReturnType<typeof categorySchemaOf>["fields"][number];
+
 /**
  * SYS-3337 — applicant-employment and applicant-income.
  *
@@ -64,7 +68,7 @@ describe("applicant-employment (SYS-3337)", () => {
   });
 
   it("keeps length of service as two figures, each with its own unit", () => {
-    const by = new Map(
+    const by = new Map<string, CategoryField>(
       categorySchemaOf("applicant-employment").fields.map((f) => [f.name, f] as const),
     );
     expect(by.get("lengthOfServiceYears")?.unit).toBe("years");
@@ -76,7 +80,7 @@ describe("applicant-employment (SYS-3337)", () => {
     // measured — but a form config can add a choice without the manifest
     // knowing, and kind "enum" makes each producing adapter enumerate what it
     // emits. The closure is not the category's to promise.
-    const by = new Map(
+    const by = new Map<string, CategoryField>(
       categorySchemaOf("applicant-employment").fields.map((f) => [f.name, f] as const),
     );
     for (const n of [

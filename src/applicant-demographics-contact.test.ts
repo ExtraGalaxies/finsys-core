@@ -5,6 +5,10 @@ import {
   categorySchemaOf,
 } from "./adapter-categories.js";
 
+/** One field of a category schema — the map lookups below are keyed on plain
+ * strings, so the Map has to be widened off the literal union. */
+type CategoryField = ReturnType<typeof categorySchemaOf>["fields"][number];
+
 /**
  * SYS-3338 — applicant-demographics and applicant-contact, the two categories
  * that finish the applicant-typed identity set alongside applicant-identity
@@ -85,7 +89,7 @@ describe("applicant-demographics (SYS-3338)", () => {
   });
 
   it("leaves the dropdown fields kind-less and gives the count a unit", () => {
-    const by = new Map(
+    const by = new Map<string, CategoryField>(
       categorySchemaOf("applicant-demographics").fields.map((f) => [f.name, f] as const),
     );
     // NOT enum-kind. That promises a closed label set, and the host makes the

@@ -80,9 +80,12 @@ describe("applicant-identity (SYS-3166)", () => {
     // "01" — while person-identity attests whatever is printed on the card, as
     // free text off an OCR read. Same concept, two vocabularies.
     //
-    // NOT a missing code-to-label mapping: this package already ships one in
-    // BASE_FIELD_SPECS ("M" -> Male, "01" -> Malaysian - Chinese). Two narrower
-    // things block it.
+    // NOT simply a missing code-to-label mapping. BASE_FIELD_SPECS seeds one
+    // ("M" -> Male, "01" -> Malaysian - Chinese), but it is a DEFAULT, not an
+    // authority: a form config may override and extend those choices, and 30 of
+    // the 60 live forms carry choices that differ from the base spec. So the
+    // mapping that applies to a value is the one on the form that captured it —
+    // a per-attestation lookup, not a constant. Three things block it.
     //
     //   1. Shared facts must agree on `kind`, and person-identity declares
     //      these as free strings because OCR text is not a closed set. So

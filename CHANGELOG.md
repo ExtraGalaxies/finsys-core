@@ -31,16 +31,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     whatever is printed on the card, as free text off an OCR read. Same concept,
     two vocabularies.
 
-    Note this is *not* for want of a code-to-label mapping — this package
-    already ships one in `BASE_FIELD_SPECS` (`M` → Male, `01` → Malaysian -
-    Chinese). Two narrower things block it. First, shared facts must agree on
-    `kind`, and `person-identity` declares these as free strings because OCR
-    text is not a closed set — so declaring the form side `enum` throws, and
-    declaring it a free string would be false about a dropdown. Second, even
-    after resolving the code, the label has to be compared against what the card
-    actually prints, which is Malay on a MyKad — a second, different mapping
-    that does not exist. Until both are settled, a comparison would report
-    disagreement on every row and train everyone to ignore the surface.
+    A code-to-label mapping does exist — `BASE_FIELD_SPECS` seeds one (`M` →
+    Male, `01` → Malaysian - Chinese) — but it is not authoritative, because a
+    form config may override and extend those choices and 30 of the live ones
+    do. So the mapping that applies to any given value is *that form's*, which
+    means resolving a code is a per-attestation lookup rather than a constant.
+
+    Two further things block it. Shared facts must agree on `kind`, and
+    `person-identity` declares these as free strings because OCR text is not a
+    closed set — so declaring the form side `enum` throws, and declaring it a
+    free string would be false about a dropdown. And even once the code is
+    resolved, the label has to be compared against what the card actually
+    prints, which is Malay on a MyKad — a second mapping that does not exist.
+    Until those are settled, a comparison would report disagreement on every row
+    and train everyone to ignore the surface.
 
   Adding a category was previously invisible to the test suite — count, field
   set and attestor sets were all unasserted. `applicant-identity.test.ts` closes

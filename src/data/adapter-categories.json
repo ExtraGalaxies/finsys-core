@@ -1890,6 +1890,111 @@
           "description": "The remainder months of the residency duration above. See occupancyYears for why the pair is not collapsed."
         }
       ]
+    },
+    {
+      "id": "applicant-employment",
+      "displayName": "Applicant-Provided Employment",
+      "canonicalTable": "ihs_alt_data_applicant_employment",
+      "description": "One job the applicant described on a lending application form. MULTI-instance: a person can hold two jobs and the wide ihs table, which has exactly one unprefixed employment block, cannot say so. Today's form collects only the current one, so the sole adapter emits a single instance under the key \"current\" — an explicit key rather than the empty one, because \"\" reads as \"the single instance a single-cardinality category has\" and this category is not that. A second job becomes another row.",
+      "fields": [
+        {
+          "name": "employerName",
+          "type": "string",
+          "fact": "employerName",
+          "description": "Employer name as the applicant entered it. Attestation of the shared employerName fact — the PAYSLIP attests the same fact from the document side (SYS-3333 de-prefixed it from payslipEmployerName). This is the pairing the disagreement surface exists for: a borrower naming an employer their payslip does not, or naming it differently, is worth seeing. Free text on both sides, so comparable after normalization."
+        },
+        {
+          "name": "employmentStatus",
+          "type": "string",
+          "description": "Employment status as selected (permanent, contract, probation, …). NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+        },
+        {
+          "name": "employmentType",
+          "type": "string",
+          "description": "Employment type as selected. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+        },
+        {
+          "name": "occupation",
+          "type": "string",
+          "description": "Occupation as selected. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+        },
+        {
+          "name": "employmentSector",
+          "type": "string",
+          "description": "Employment sector as selected. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+        },
+        {
+          "name": "subEmploymentSector",
+          "type": "string",
+          "description": "Sub-sector within employmentSector, as selected. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+        },
+        {
+          "name": "businessSector",
+          "type": "string",
+          "description": "Business sector of the employer. Modeled because the wide table carries the column; NO live form collects it, so no manifest maps it."
+        },
+        {
+          "name": "dateJoined",
+          "type": "string",
+          "description": "Date the applicant joined this employer, as entered. A string, matching the source column's varchar(50) and the same treatment personDateOfBirth gets: forms accept a range of spellings and narrowing here would reject values the form already takes."
+        },
+        {
+          "name": "lengthOfServiceYears",
+          "type": "number",
+          "unit": "years",
+          "description": "Length of service, whole years. Modeled because the wide table carries the column; no live form collects it. Kept separate from lengthOfServiceMonths for the same reason applicant-address keeps occupancy years and months apart — form intake has no transform slot, so folding two figures into one would invent a value nobody gave."
+        },
+        {
+          "name": "lengthOfServiceMonths",
+          "type": "number",
+          "unit": "months",
+          "description": "Remainder months of the length of service. See lengthOfServiceYears."
+        }
+      ]
+    },
+    {
+      "id": "applicant-income",
+      "displayName": "Applicant-Provided Income",
+      "canonicalTable": "ihs_alt_data_applicant_income",
+      "description": "The applicant's stated income position. SINGLE-instance: unlike employment, these describe the person overall rather than one job, and the wide table's single block is not a limitation being inherited here — it matches what is being said.",
+      "fields": [
+        {
+          "name": "grossPay",
+          "type": "number",
+          "kind": "money",
+          "fact": "grossPay",
+          "legacyName": "monthlyGrossIncome",
+          "description": "Gross pay as the applicant stated it, monthly. Attestation of the shared grossPay fact, which the PAYSLIP attests from the document side. COMPARISON MUST CHECK THE PERIOD FIRST: a payslip's grossPay is the gross for ITS pay period, and the payslip category carries payPeriod for exactly that reason — a monthly statement compared against a fortnightly payslip disagrees by construction, not because anyone was wrong. The fact is shared because the two ARE the same quantity once the period is known, which is what distinguishes this from applicant-demographics' genderCode, where no resolution between the two sides exists at all."
+        },
+        {
+          "name": "netPay",
+          "type": "number",
+          "kind": "money",
+          "fact": "netPay",
+          "legacyName": "monthlyNetIncome",
+          "description": "Net pay as the applicant stated it, monthly. Attestation of the shared netPay fact, also attested by the payslip. Same period caveat as grossPay. Modeled but NOT mapped by any manifest: the wide table carries monthlyNetIncome and no live form collects it."
+        },
+        {
+          "name": "sourceOfFund",
+          "type": "string",
+          "description": "Stated source of funds. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+        },
+        {
+          "name": "sourceOfWealth",
+          "type": "string",
+          "description": "Stated source of wealth. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+        },
+        {
+          "name": "computationMode",
+          "type": "string",
+          "description": "How the stated income was computed. Modeled because the wide table carries the column; no live form collects it."
+        },
+        {
+          "name": "statementType",
+          "type": "string",
+          "description": "Statement type backing the stated income. Modeled because the wide table carries the column; no live form collects it."
+        }
+      ]
     }
   ]
 }

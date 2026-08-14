@@ -10,7 +10,7 @@
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * 17 categories · 246 canonical fields · 84 retired names
+ * 19 categories · 259 canonical fields · 86 retired names
  */
 
 /** Every category id the registry declares. */
@@ -18,7 +18,9 @@ export type AdapterCategoryId =
   | "applicant-address"
   | "applicant-contact"
   | "applicant-demographics"
+  | "applicant-employment"
   | "applicant-identity"
+  | "applicant-income"
   | "bank-statement"
   | "company-profile"
   | "company-registration"
@@ -62,6 +64,7 @@ export type CanonicalFieldNameLiteral =
   | "businessCommencementDate"
   | "businessNature"
   | "businessOrigin"
+  | "businessSector"
   | "capitalReserves"
   | "cashConversionCycleDays"
   | "closingBalance"
@@ -73,6 +76,7 @@ export type CanonicalFieldNameLiteral =
   | "companyNameDateOfChange"
   | "companyRegNo"
   | "companyStatus"
+  | "computationMode"
   | "consolidated"
   | "contactAreaCode"
   | "contactExtension"
@@ -134,6 +138,7 @@ export type CanonicalFieldNameLiteral =
   | "currentLiabilitiesTradeCreditors"
   | "customerConcentrationTop5Pct"
   | "customerRatingAvg"
+  | "dateJoined"
   | "dateOfStatement"
   | "debtorConcentrationTop5Ratio"
   | "deduction"
@@ -154,6 +159,9 @@ export type CanonicalFieldNameLiteral =
   | "employeeTax"
   | "employerName"
   | "employerNumber"
+  | "employmentSector"
+  | "employmentStatus"
+  | "employmentType"
   | "endOfYearCash"
   | "engagementRate90d"
   | "exchangeEqualisationOrFluctuationReserves"
@@ -174,6 +182,8 @@ export type CanonicalFieldNameLiteral =
   | "largestSingleCredit"
   | "lateDays24m"
   | "latitude"
+  | "lengthOfServiceMonths"
+  | "lengthOfServiceYears"
   | "localNo"
   | "locationStabilityScore"
   | "longitude"
@@ -217,6 +227,7 @@ export type CanonicalFieldNameLiteral =
   | "nonCurrentLiabilitiesRetirementBenefits"
   | "occupancyMonths"
   | "occupancyYears"
+  | "occupation"
   | "onTimePaymentRatio24m"
   | "openingBalance"
   | "otherDeduction"
@@ -253,10 +264,14 @@ export type CanonicalFieldNameLiteral =
   | "sharePremium"
   | "shareholders"
   | "shortTermLiabilities"
+  | "sourceOfFund"
+  | "sourceOfWealth"
   | "statedAge"
   | "statementDate"
   | "statementMonth"
+  | "statementType"
   | "statementYear"
+  | "subEmploymentSector"
   | "suspensionsCount24m"
   | "taxes"
   | "tenureMonths"
@@ -332,6 +347,8 @@ export type RetiredFieldName =
   | "icPlaceOfBirth"
   | "icRace"
   | "icReligion"
+  | "monthlyGrossIncome"
+  | "monthlyNetIncome"
   | "paymentsActiveTenureMonths"
   | "paymentsArpuStability12m"
   | "paymentsCustomerConcentrationTop5Pct"

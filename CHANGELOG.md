@@ -127,8 +127,8 @@ _Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and 
 
   - **`genderCode` / `raceCode` do not co-attest `personGender` / `personRace`.**
     The identity document attests OCR text off a MyKad; a form emits a dropdown
-    code whose meaning is per-form (30 of 60 live configs override the base
-    choice set). One fact would seat `M` against `LELAKI` in the disagreement
+    code whose meaning is per-form — a form config carries its own choices, so
+    the value set is not closed. One fact would seat `M` against `LELAKI` in the disagreement
     surface as a permanent false positive on a high-volume field. They are
     named apart as well as fact-free, since a field name is bound to one fact
     registry-wide and sharing the name would drag the fact along.

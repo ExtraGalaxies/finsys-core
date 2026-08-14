@@ -52,7 +52,7 @@ describe("applicant-demographics (SYS-3338)", () => {
   /**
    * The load-bearing one. person-identity attests personGender and personRace
    * as OCR TEXT off a MyKad; a form emits a dropdown CODE whose meaning is
-   * per-form (30 of 60 live configs override the base choice set). Declaring
+   * per-form. Declaring
    * them one fact would seat "M" against "LELAKI" in the disagreement surface
    * as a permanent false positive, on one of its highest-volume fields.
    *

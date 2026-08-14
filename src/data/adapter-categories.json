@@ -1768,17 +1768,17 @@
         {
           "name": "genderCode",
           "type": "string",
-          "description": "Gender as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from person-identity's personGender, and carrying no shared fact, on purpose. The document attests OCR text off a MyKad while the form emits a code ('M', '01') whose meaning is per-form: 30 of 60 live form configs override the base choice set. Declaring them one fact would put 'M' and 'LELAKI' in the disagreement surface as a permanent false positive on one of its highest-volume fields, and the registry's kind-agreement rule refuses the shortcut anyway. Comparing the two needs a per-form code-to-label resolution that does not exist yet; when it does, the comparison belongs there and not in the field name. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
+          "description": "Gender as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from person-identity's personGender, and carrying no shared fact, on purpose. The document attests OCR text off a MyKad while the form emits a code ('M', '01') whose meaning is per-form. Collected by 6 of the 60 live form configs, all 6 sharing one choice set today — measured per field. Declaring them one fact would put 'M' and 'LELAKI' in the disagreement surface as a permanent false positive on one of its highest-volume fields, and the registry's kind-agreement rule refuses the shortcut anyway. Comparing the two needs a per-form code-to-label resolution that does not exist yet; when it does, the comparison belongs there and not in the field name. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and the declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "raceCode",
           "type": "string",
-          "description": "Race as the applicant selected it from a dropdown. Same reasoning as genderCode, and the same deliberate absence of a shared fact with person-identity's personRace. 12 of 60 live forms collect it. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
+          "description": "Race as the applicant selected it from a dropdown. Same reasoning as genderCode, and the same deliberate absence of a shared fact with person-identity's personRace. Collected by 12 of the 60 live form configs, all 12 sharing one choice set today — measured per field. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and the declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "maritalStatus",
           "type": "string",
-          "description": "Marital status as selected. Uniquely declared, so it needs no fact. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
+          "description": "Marital status as selected. Uniquely declared, so it needs no fact. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
         },
         {
           "name": "dependantsCount",
@@ -1789,17 +1789,17 @@
         {
           "name": "educationLevel",
           "type": "string",
-          "description": "Highest education level as selected. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
+          "description": "Highest education level as selected. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
         },
         {
           "name": "preferredLanguage",
           "type": "string",
-          "description": "Preferred correspondence language as selected. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
+          "description": "Preferred correspondence language as selected. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
         },
         {
           "name": "residenceType",
           "type": "string",
-          "description": "Residence type (owned, rented, family-owned, …) as selected. A housing-tenure signal, which is why it sits here rather than with applicant-address: it describes the person, not a place. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
+          "description": "Residence type (owned, rented, family-owned, …) as selected. A housing-tenure signal, which is why it sits here rather than with applicant-address: it describes the person, not a place. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
         }
       ]
     },
@@ -1832,7 +1832,7 @@
         {
           "name": "contactRelationship",
           "type": "string",
-          "description": "How the named person relates to the applicant (spouse, parent, employer, …). Meaningful only alongside contactName. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
+          "description": "How the named person relates to the applicant (spouse, parent, employer, …). Meaningful only alongside contactName. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
         }
       ]
     },
@@ -1906,27 +1906,27 @@
         {
           "name": "employmentStatus",
           "type": "string",
-          "description": "Employment status as selected (permanent, contract, probation, …). NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+          "description": "Employment status as selected (permanent, contract, probation, …). NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "employmentType",
           "type": "string",
-          "description": "Employment type as selected. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+          "description": "Employment type as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "occupation",
           "type": "string",
-          "description": "Occupation as selected. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+          "description": "Occupation as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "employmentSector",
           "type": "string",
-          "description": "Employment sector as selected. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+          "description": "Employment sector as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "subEmploymentSector",
           "type": "string",
-          "description": "Sub-sector within employmentSector, as selected. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+          "description": "Sub-sector within employmentSector, as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "businessSector",
@@ -1977,12 +1977,12 @@
         {
           "name": "sourceOfFund",
           "type": "string",
-          "description": "Stated source of funds. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+          "description": "Stated source of funds. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "sourceOfWealth",
           "type": "string",
-          "description": "Stated source of wealth. NOT declared kind \"enum\". The choice sets are identical across all six forms that collect this today — measured, not assumed — but a form config can add a choice tomorrow without the manifest knowing, and kind \"enum\" makes each producing adapter enumerate the labels it emits. The closure is therefore not the category's to promise: it would be a declaration that goes quietly false the first time someone edits a form."
+          "description": "Stated source of wealth. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "computationMode",

@@ -10,11 +10,13 @@
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * 14 categories · 224 canonical fields · 84 retired names
+ * 16 categories · 237 canonical fields · 84 retired names
  */
 
 /** Every category id the registry declares. */
 export type AdapterCategoryId =
+  | "applicant-contact"
+  | "applicant-demographics"
   | "applicant-identity"
   | "bank-statement"
   | "company-profile"
@@ -64,6 +66,11 @@ export type CanonicalFieldNameLiteral =
   | "companyRegNo"
   | "companyStatus"
   | "consolidated"
+  | "contactAreaCode"
+  | "contactExtension"
+  | "contactName"
+  | "contactRelationship"
+  | "contactValue"
   | "costOfGoodsSold"
   | "currency"
   | "currentAssetAmountDueFromAssociatedCompanies"
@@ -122,6 +129,7 @@ export type CanonicalFieldNameLiteral =
   | "dateOfStatement"
   | "debtorConcentrationTop5Ratio"
   | "deduction"
+  | "dependantsCount"
   | "depreciation"
   | "depreciationOfInvestmentProperties"
   | "depreciationOfInvestmentSecurities"
@@ -131,6 +139,7 @@ export type CanonicalFieldNameLiteral =
   | "disputeRate12m"
   | "distressTier"
   | "ebitda"
+  | "educationLevel"
   | "employeeEisContribution"
   | "employeeEpfContribution"
   | "employeeSocsoContribution"
@@ -144,6 +153,7 @@ export type CanonicalFieldNameLiteral =
   | "financialYearEnd"
   | "fixedAllowances"
   | "followerCount"
+  | "genderCode"
   | "grossMarginPct"
   | "grossPay"
   | "grossProfit"
@@ -159,6 +169,7 @@ export type CanonicalFieldNameLiteral =
   | "localNo"
   | "locationStabilityScore"
   | "longitude"
+  | "maritalStatus"
   | "monthlyVolume12m"
   | "monthlyVolume3m"
   | "negativeSentimentRatio90d"
@@ -216,12 +227,15 @@ export type CanonicalFieldNameLiteral =
   | "placeLabel"
   | "postingConsistency12m"
   | "preferenceShareCapital"
+  | "preferredLanguage"
   | "previousDirectors"
   | "primaryStateCode"
   | "profitAfterTax"
   | "profitFromOperations"
+  | "raceCode"
   | "registeredAddress"
   | "reserves"
+  | "residenceType"
   | "retainedEarnings"
   | "revaluationReserves"
   | "revenue"
@@ -229,6 +243,7 @@ export type CanonicalFieldNameLiteral =
   | "sharePremium"
   | "shareholders"
   | "shortTermLiabilities"
+  | "statedAge"
   | "statementDate"
   | "statementMonth"
   | "statementYear"

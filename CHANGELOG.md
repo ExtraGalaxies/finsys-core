@@ -6,6 +6,64 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.2.0] - 2026-08-14
+
+### Added
+
+- **`instanceKey` on a form-intake `fieldMap` entry (SYS-3358).** A form-intake
+  adapter could previously produce only ONE instance per category, which would
+  have re-encoded the wide `ihs` table's central limitation — the suffixed
+  column family (`bankBalanceT1..T6`, `mobilePhoneNo` beside `officePhoneNo`) —
+  into the canonical model that exists to replace it. The suffix IS the
+  instance, and it is why a third address or a second job is uncapturable
+  today.
+
+  Omitted means the single instance (`""`), so every existing manifest is
+  unchanged and this is purely additive.
+
+  Two decisions worth stating, because both are load-bearing:
+
+  - **The key is declared per entry, not derived from the column name.** A rule
+    reading `T1` off the end of a suffix groups `bankBalanceT1` with
+    `totalCreditsT1` correctly and `emerContactTelNo1` with them wrongly, and
+    nothing in the resulting data records which it did.
+  - **An explicitly empty `instanceKey` is refused** (`minLength: 1`). Absent
+    and `""` land in the same row, so permitting both spellings would make two
+    manifests that differ on paper indistinguishable in storage.
+
+  The schema governs SHAPE only. The invariant that a manifest declaring
+  `cardinality: "single"` must carry no `instanceKey` is the HOST's to enforce,
+  because JSON Schema cannot relate a sibling property to an array element's
+  contents. That split is stated on `FormIntakeFieldMapEntry` so neither side
+  assumes the other did it.
+
+- **`applicant-demographics` and `applicant-contact` categories (SYS-3338).**
+  They complete the applicant-typed identity set alongside `applicant-identity`.
+  Scope was measured against the 60 live form configs rather than the column
+  list: all 8 demographic columns are collected by a typed input on a live
+  form, while 7 of the 13 contact columns (every `*AreaCode`, the three
+  `international*` ones, the unqualified `phoneNumber`) are collected by none.
+  The categories still model those fields — a category describes the domain,
+  while a manifest maps what a form actually asks.
+
+  `applicant-contact` is **multi-instance**, keyed by the kind of contact point,
+  and is the first category to use `instanceKey` above.
+
+  Three deliberate ABSENCES of shared facts, each pinned by a test:
+
+  - **`genderCode` / `raceCode` do not co-attest `personGender` / `personRace`.**
+    The identity document attests OCR text off a MyKad; a form emits a dropdown
+    code whose meaning is per-form (30 of 60 live configs override the base
+    choice set). One fact would seat `M` against `LELAKI` in the disagreement
+    surface as a permanent false positive on a high-volume field. They are
+    named apart as well as fact-free, since a field name is bound to one fact
+    registry-wide and sharing the name would drag the fact along.
+  - **`statedAge` does not reconcile against `personDateOfBirth`.** An age is
+    true only on the day it was given.
+  - **`contactName` does not attest `personName`.** It is an emergency
+    contact — a third party — and attesting it as the subject's name is a
+    genuine identity error, not a formatting one.
+
 ## [7.1.0] - 2026-08-14
 
 ### Added

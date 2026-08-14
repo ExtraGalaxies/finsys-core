@@ -1753,6 +1753,95 @@
           "description": "Nationality as the applicant entered it. Attestation of the shared personNationality fact; free text on both sides, so comparable after normalization."
         }
       ]
+    },
+    {
+      "id": "applicant-demographics",
+      "displayName": "Applicant-Provided Demographics",
+      "canonicalTable": "ihs_alt_data_applicant_demographics",
+      "description": "Demographic attributes the applicant selected on a lending application form. Split out of applicant-identity (SYS-3166) rather than merged into it, and not cosmetically: every field here is uniformly sensitive, so confidentiality is decided once for the category instead of being re-argued per field a few hundred times over. applicant-identity keeps the legally-identifying facts — name, id number, date of birth, nationality — which are the subject key under Act 710 s.28. One instance per application.",
+      "fields": [
+        {
+          "name": "statedAge",
+          "type": "string",
+          "description": "Age as the applicant entered it. Deliberately NOT a shared fact with personDateOfBirth, and deliberately a string: the column is varchar(10) and forms accept free text, so a value may be a range or a non-numeric answer. An age is also true only on the day it was given — observedAt is what makes it interpretable, and it must never be reconciled against a date of birth as though the two were the same claim."
+        },
+        {
+          "name": "genderCode",
+          "type": "string",
+          "kind": "enum",
+          "description": "Gender as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from person-identity's personGender, and carrying no shared fact, on purpose. The document attests OCR text off a MyKad while the form emits a code ('M', '01') whose meaning is per-form: 30 of 60 live form configs override the base choice set. Declaring them one fact would put 'M' and 'LELAKI' in the disagreement surface as a permanent false positive on one of its highest-volume fields, and the registry's kind-agreement rule refuses the shortcut anyway. Comparing the two needs a per-form code-to-label resolution that does not exist yet; when it does, the comparison belongs there and not in the field name."
+        },
+        {
+          "name": "raceCode",
+          "type": "string",
+          "kind": "enum",
+          "description": "Race as the applicant selected it from a dropdown. Same reasoning as genderCode, and the same deliberate absence of a shared fact with person-identity's personRace. 12 of 60 live forms collect it."
+        },
+        {
+          "name": "maritalStatus",
+          "type": "string",
+          "kind": "enum",
+          "description": "Marital status as selected. Uniquely declared, so it needs no fact."
+        },
+        {
+          "name": "dependantsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of dependants as the applicant entered it."
+        },
+        {
+          "name": "educationLevel",
+          "type": "string",
+          "kind": "enum",
+          "description": "Highest education level as selected."
+        },
+        {
+          "name": "preferredLanguage",
+          "type": "string",
+          "kind": "enum",
+          "description": "Preferred correspondence language as selected."
+        },
+        {
+          "name": "residenceType",
+          "type": "string",
+          "kind": "enum",
+          "description": "Residence type (owned, rented, family-owned, …) as selected. A housing-tenure signal, which is why it sits here rather than with applicant-address: it describes the person, not a place."
+        }
+      ]
+    },
+    {
+      "id": "applicant-contact",
+      "displayName": "Applicant-Provided Contact Point",
+      "canonicalTable": "ihs_alt_data_applicant_contact",
+      "description": "One way to reach the applicant — a phone line, an email address, or an emergency contact. MULTI-instance, keyed by the kind of contact point, because the wide ihs table flattens five phone lines into five column families (mobile, office, international, emergency, and an unqualified phoneNumber) and therefore cannot hold a sixth. The instance key IS what the column suffix was encoding. Fields absent for a given kind are simply absent on that instance rather than being null columns for everyone.",
+      "fields": [
+        {
+          "name": "contactValue",
+          "type": "string",
+          "description": "The number or address itself, as the applicant entered it. One field rather than one per kind: what distinguishes a mobile from an office line is the instance, not the column."
+        },
+        {
+          "name": "contactAreaCode",
+          "type": "string",
+          "description": "Area or country code, where the form captures it separately from the number. Modeled because the wide table carries a matching AreaCode column for four of the five phone families; NO live form config collects any of them today, so no manifest maps it yet. The category describes the domain; a manifest describes what a form actually asks."
+        },
+        {
+          "name": "contactExtension",
+          "type": "string",
+          "description": "Phone extension. Same status as contactAreaCode — one wide column exists (internationalExtensionPhoneNo), no live form collects it."
+        },
+        {
+          "name": "contactName",
+          "type": "string",
+          "description": "The name of the person reached at this contact point, where that is someone other than the applicant. Populated for the emergency instance. Deliberately NOT sharing personName's fact: this is a THIRD PARTY's name, and attesting it as the subject's would be a genuine identity error, not a formatting one."
+        },
+        {
+          "name": "contactRelationship",
+          "type": "string",
+          "kind": "enum",
+          "description": "How the named person relates to the applicant (spouse, parent, employer, …). Meaningful only alongside contactName."
+        }
+      ]
     }
   ]
 }

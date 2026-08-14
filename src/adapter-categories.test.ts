@@ -1266,7 +1266,10 @@ describe("monetary fields and the closed unit set", () => {
     // and a script is exactly what can drop 140 of them while leaving 3 —
     // which a lower bound would wave through. If this number changes, that
     // is either a new money field (raise it deliberately) or a regression.
-    expect(money.length).toBe(143);
+    // 145 since SYS-3337: applicant-income declares grossPay and netPay,
+    // co-attesting the payslip's. Raised deliberately, which is what this
+    // pin asks for.
+    expect(money.length).toBe(145);
     for (const { cat, f } of money) {
       expect(f.type, `${cat}.${f.name} type`).toBe("number");
       expect(f.unit, `${cat}.${f.name} unit`).toBeUndefined();
@@ -1376,22 +1379,45 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
     // matches it against canonical names; before legacyName existed, renaming
     // grossPay left `payslipGrossPay` unrecognised and its value rendered as a
     // bare number beside denominated neighbours. Silent, and wrong-looking.
-    const money = new Map<string, string | undefined>();
+    // A SET of every name isMonetaryField will answer to, built the way
+    // isMonetaryField builds it. It used to be a Map keyed on field name,
+    // which was fine while each money field was declared by one category and
+    // silently wrong the moment two shared a name: SYS-3337's
+    // applicant-income.grossPay co-attests the payslip's, with its own flat
+    // name (monthlyGrossIncome), and a Map keeps only whichever was iterated
+    // last. The product was never wrong — isMonetaryField accumulates into a
+    // Set and holds both — so this was the test under-specifying the contract,
+    // and it would have started hiding a missing alias rather than reporting
+    // one.
+    const knownAsMoney = new Set<string>();
+    const legacyNames: Array<string> = [];
     for (const cat of allCategories()) {
       for (const f of cat.fields) {
-        if (f.kind === "money") money.set(f.name, f.legacyName);
+        if (f.kind !== "money") continue;
+        knownAsMoney.add(f.name);
+        if (f.legacyName) {
+          knownAsMoney.add(f.legacyName);
+          legacyNames.push(f.legacyName);
+        }
       }
     }
-    const grossPay = money.get("grossPay");
-    expect(grossPay, "grossPay should be money and should record its flat name").toBe(
-      "payslipGrossPay",
+    // BOTH flat spellings must resolve — the payslip's and the form's.
+    expect(knownAsMoney.has("payslipGrossPay"), "payslipGrossPay must resolve as money").toBe(true);
+    expect(knownAsMoney.has("monthlyGrossIncome"), "monthlyGrossIncome must resolve as money").toBe(
+      true,
     );
+    expect(knownAsMoney.has("grossPay")).toBe(true);
     // …and the count is asserted so a future rename that forgets the alias
     // shows up here rather than as a table of undenominated numbers.
-    const renamedMoney = [...money.values()].filter(Boolean);
-    expect(renamedMoney.length, "renamed money fields must all record a legacyName").toBeGreaterThan(
-      15,
-    );
+    //
+    // PINNED, not a lower bound — the same reasoning as money.length two hunks
+    // above, which this assertion sat beside while quietly contradicting. It
+    // was toBeGreaterThan(15) against a true count of 26, so a regression
+    // stripping legacyName from any TEN money fields stayed green. A lower
+    // bound is precisely what waves through the script that drops most of a
+    // set and leaves a few.
+    const renamedMoney = legacyNames;
+    expect(renamedMoney.length, "renamed money fields must all record a legacyName").toBe(26);
   });
 
   it("resolves a name from either vocabulary, and nothing else", () => {

@@ -6,6 +6,185 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.4.0] - 2026-08-14
+
+### Added
+
+- **`applicant-employment` and `applicant-income` categories (SYS-3337).** The
+  first applicant-typed categories that share facts with a DOCUMENT category on
+  purpose: `employerName` co-attests the payslip's, and `grossPay` / `netPay`
+  co-attest the payslip's. That pairing is the point — a borrower's stated
+  employer or income competing with what their payslip says.
+
+  Both money fields declare a `legacyName` (`monthlyGrossIncome`,
+  `monthlyNetIncome`) so `isMonetaryField` still answers to the FLAT column
+  name. Without it a stated income renders as a bare number beside denominated
+  neighbours, which is the exact regression the alias exists to prevent.
+
+  **Why these share a fact when `genderCode` does not:** both sides here are
+  numbers in the same space, so a comparator has something to work with — it
+  just has to read the payslip instance's `payPeriod` first, since a monthly
+  statement against a fortnightly payslip differs by construction rather than
+  by error. `genderCode` had no resolution between the two sides at all.
+
+  `applicant-employment` is `multi` (a person can hold two jobs; the wide table
+  cannot say so). `applicant-income` is `single` — nothing in it is job-scoped.
+
+## [7.3.0] - 2026-08-14
+
+_Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and never released to npm. Superseded by 7.4.0; `npm install @finsys/core@7.3.0` will 404._
+
+### Added
+
+- **`applicant-address` category (SYS-3336).** ONE address shape —
+  `addressLine1..3`, city, postcode, `addressStateCode`, country — distinguished
+  by instance key rather than by column prefix. The wide `ihs` table spends a
+  whole column family on each of permanent, residential and office and cannot
+  hold a fourth; declaring this `single` would have re-encoded that limit
+  permanently, and unlike a wrong field name it is not repairable later because
+  the information would never have been captured.
+
+- **`years` as a valid field unit.** A residency duration arrives as two inputs
+  (years and months) and form intake has no transform slot to fold them into
+  one figure, so both have to be expressible.
+
+### Notes
+
+- No field co-attests `personAddress`. Two categories already do —
+  `person-identity` AND `epf-statement` — and they share it legitimately because
+  both attest the same free-text blob. This category attests a STRUCTURED
+  address across up to three instances, none obviously the one a document names;
+  co-attesting would need an address normalizer and an instance correspondence,
+  neither of which exists.
+
+## [7.2.1] - 2026-08-14
+
+_Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and never released to npm. Superseded by 7.4.0; `npm install @finsys/core@7.2.1` will 404._
+
+### Fixed
+
+- **Removed `kind: "enum"` from the per-form dropdown fields** on
+  `applicant-demographics` and `applicant-contact`. The host REFUSES an adapter
+  whose produced enum-kind fields do not enumerate their labels, and it was
+  right to: `kind: "enum"` promises a CLOSED label set, while these choice sets
+  are defined per form config. A form-intake adapter spanning 60 heterogeneous
+  forms cannot enumerate them, so the closure was never the category's to
+  promise. The declaration, not the refusal, was the defect.
+
+## [7.2.0] - 2026-08-14
+
+_Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and never released to npm. Superseded by 7.4.0; `npm install @finsys/core@7.2.0` will 404._
+
+### Added
+
+- **`instanceKey` on a form-intake `fieldMap` entry (SYS-3358).** A form-intake
+  adapter could previously produce only ONE instance per category, which would
+  have re-encoded the wide `ihs` table's central limitation — the suffixed
+  column family (`bankBalanceT1..T6`, `mobilePhoneNo` beside `officePhoneNo`) —
+  into the canonical model that exists to replace it. The suffix IS the
+  instance, and it is why a third address or a second job is uncapturable
+  today.
+
+  Omitted means the single instance (`""`), so every existing manifest is
+  unchanged and this is purely additive.
+
+  Two decisions worth stating, because both are load-bearing:
+
+  - **The key is declared per entry, not derived from the column name.** A rule
+    reading `T1` off the end of a suffix groups `bankBalanceT1` with
+    `totalCreditsT1` correctly and `emerContactTelNo1` with them wrongly, and
+    nothing in the resulting data records which it did.
+  - **An explicitly empty `instanceKey` is refused** (`minLength: 1`). Absent
+    and `""` land in the same row, so permitting both spellings would make two
+    manifests that differ on paper indistinguishable in storage.
+
+  The schema governs SHAPE only. The invariant that a manifest declaring
+  `cardinality: "single"` must carry no `instanceKey` is the HOST's to enforce.
+  Not because JSON Schema is incapable — draft-07 `if`/`then` expresses it
+  correctly, which a review of this release proved by execution — but because
+  doing so requires restating the `fieldMap` item shape outside its
+  `oneOf` branch, leaving two copies of one shape that must stay in step, and
+  degrades the error from naming the adapter and its offending keys to
+  "must NOT be valid". Every other cross-referencing invariant in this file
+  (`produces` ⊆ category fields, `singletonFields` ⊆ `produces`,
+  `fieldAuthorizations` keys ⊆ `produces`) is host-validated for the same
+  reason. The split is stated on `FormIntakeFieldMapEntry` so neither side
+  assumes the other did it.
+
+- **`applicant-demographics` and `applicant-contact` categories (SYS-3338).**
+  They complete the applicant-typed identity set alongside `applicant-identity`.
+  Scope was measured against the 60 live form configs rather than the column
+  list: all 8 demographic columns are collected by a typed input on a live
+  form, while 7 of the 13 contact columns (every `*AreaCode`, the three
+  `international*` ones, the unqualified `phoneNumber`) are collected by none.
+  The categories still model those fields — a category describes the domain,
+  while a manifest maps what a form actually asks.
+
+  `applicant-contact` is **multi-instance**, keyed by the kind of contact point,
+  and is the first category to use `instanceKey` above.
+
+  Three deliberate ABSENCES of shared facts, each pinned by a test:
+
+  - **`genderCode` / `raceCode` do not co-attest `personGender` / `personRace`.**
+    The identity document attests OCR text off a MyKad; a form emits a dropdown
+    code whose meaning is per-form — a form config carries its own choices, so
+    the value set is not closed. One fact would seat `M` against `LELAKI` in the disagreement
+    surface as a permanent false positive on a high-volume field. They are
+    named apart as well as fact-free, since a field name is bound to one fact
+    registry-wide and sharing the name would drag the fact along.
+  - **`statedAge` does not reconcile against `personDateOfBirth`.** An age is
+    true only on the day it was given.
+  - **`contactName` does not attest `personName`.** It is an emergency
+    contact — a third party — and attesting it as the subject's name is a
+    genuine identity error, not a formatting one.
+
+## [7.1.0] - 2026-08-14
+
+_Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and never released to npm. Superseded by 7.4.0; `npm install @finsys/core@7.1.0` will 404._
+
+### Added
+
+- **`applicant-identity` category — the registry's first non-document attestor.**
+  Every existing category is an extraction pipeline reading a document; this one
+  carries values a person typed about themselves on an application form. It is
+  what makes the disagreement surface mean something on identity data: a
+  borrower's spelling of their own name competing with an OCR read of their IC.
+
+  Four fields, each co-attesting an existing fact — `personName`,
+  `personIdNumber`, `personDateOfBirth`, `personNationality` — written to
+  `ihs_alt_data_applicant_identity`. Additive: no existing category, field or
+  fact changed, so `7.0.x` consumers are unaffected until they opt in.
+
+  The field set was confirmed against the **60 live form configs**, not assumed.
+  Two findings shaped it:
+
+  - `personAddress`, `personReligion` and `personPlaceOfBirth` are collected by
+    no form, so applicant-identity attests 4 of person-identity's 9 fields.
+  - **`gender` and `race` are deliberately excluded.** Forms collect them as
+    dropdowns carrying codes (`M`, `01`) while the identity document attests
+    whatever is printed on the card, as free text off an OCR read. Same concept,
+    two vocabularies.
+
+    A code-to-label mapping does exist — `BASE_FIELD_SPECS` seeds one (`M` →
+    Male, `01` → Malaysian - Chinese) — but it is not authoritative, because a
+    form config may override and extend those choices and 30 of the live ones
+    do. So the mapping that applies to any given value is *that form's*, which
+    means resolving a code is a per-attestation lookup rather than a constant.
+
+    Two further things block it. Shared facts must agree on `kind`, and
+    `person-identity` declares these as free strings because OCR text is not a
+    closed set — so declaring the form side `enum` throws, and declaring it a
+    free string would be false about a dropdown. And even once the code is
+    resolved, the label has to be compared against what the card actually
+    prints, which is Malay on a MyKad — a second mapping that does not exist.
+    Until those are settled, a comparison would report disagreement on every row
+    and train everyone to ignore the surface.
+
+  Adding a category was previously invisible to the test suite — count, field
+  set and attestor sets were all unasserted. `applicant-identity.test.ts` closes
+  that, and pins the gender/race exclusion so it is not later "completed" by
+  someone who reads it as an omission.
+
 ## [7.0.1] - 2026-08-14
 
 ### Fixed

@@ -387,6 +387,79 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
     expect(validate(validDeclarative())).toBe(true);
     expect(validate(validTypescript())).toBe(true);
   });
+
+  /**
+   * SYS-3358 — the instanceKey slot. The schema governs SHAPE only; the
+   * cardinality invariant (a "single" manifest must carry no instanceKey)
+   * is the HOST's.
+   *
+   * An earlier version of this comment said JSON Schema "cannot" relate a
+   * sibling property to an array element's contents. That is false, and a
+   * review disproved it by execution: draft-07 `if`/`then` expresses the
+   * invariant correctly on the first try, accepting single-without-key and
+   * multi-with-key while rejecting single-with-key, with no collateral
+   * damage to the other `oneOf` branches.
+   *
+   * The split is still right, for the reason that actually applies. The
+   * `then` branch has to RESTATE properties.implementation.properties.
+   * fieldMap.items outside the form-intake `oneOf` branch — a second copy
+   * of a nested shape that must then stay in step with the first, which is
+   * the duplication this file's own header warns about and the exact
+   * declared-vs-actual shape the rest of this phase exists to remove. It
+   * also degrades the error from "adapter X declares single but carries
+   * instanceKeys [a, b]" to "must NOT be valid".
+   *
+   * Every other cross-referencing invariant here is host-validated for the
+   * same reason: produces ⊆ category fields, singletonFields ⊆ produces,
+   * fieldAuthorizations keys ⊆ produces, enumValues keys ⊆ produces.
+   */
+  describe("SYS-3358: instanceKey on a form-intake fieldMap entry", () => {
+    function withFieldMap(fieldMap: unknown[]): unknown {
+      return {
+        ...validFormIntake(),
+        cardinality: "multi",
+        implementation: { type: "form-intake", fieldMap },
+      };
+    }
+
+    it("accepts an entry carrying an instanceKey", () => {
+      expect(
+        validate(
+          withFieldMap([
+            { formFieldId: "bank_balance_t1", canonical: "employerName", instanceKey: "T1" },
+            { formFieldId: "bank_balance_t2", canonical: "employerName", instanceKey: "T2" },
+          ]),
+        ),
+      ).toBe(true);
+    });
+
+    it("still accepts an entry without one — omitted means the single instance", () => {
+      expect(validate(validFormIntake())).toBe(true);
+    });
+
+    it("rejects an explicitly empty instanceKey", () => {
+      // Absent and "" land in the same row, so permitting both spellings
+      // would make two manifests that differ on paper indistinguishable
+      // in storage.
+      expect(
+        validate(withFieldMap([{ formFieldId: "bank_balance_t1", canonical: "employerName", instanceKey: "" }])),
+      ).toBe(false);
+    });
+
+    it("rejects a non-string instanceKey", () => {
+      expect(
+        validate(withFieldMap([{ formFieldId: "bank_balance_t1", canonical: "employerName", instanceKey: 1 }])),
+      ).toBe(false);
+    });
+
+    it("still refuses an unrecognized sibling property", () => {
+      // Proves additionalProperties:false survived the edit — adding one
+      // permitted key must not open the object to typos of it.
+      expect(
+        validate(withFieldMap([{ formFieldId: "bank_balance_t1", canonical: "employerName", instancekey: "T1" }])),
+      ).toBe(false);
+    });
+  });
 });
 
 /**

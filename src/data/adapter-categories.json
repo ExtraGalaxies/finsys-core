@@ -1721,6 +1721,280 @@
         }
       ],
       "legacyId": "finxtract-ssm"
+    },
+    {
+      "id": "applicant-identity",
+      "displayName": "Applicant-Provided Identity",
+      "description": "Identity values the applicant typed into a lending application form. The first NON-DOCUMENT attestor in the registry: every other category is an extraction pipeline reading a document, while these are values a person entered about themselves. One instance per application.",
+      "canonicalTable": "ihs_alt_data_applicant_identity",
+      "fields": [
+        {
+          "name": "personName",
+          "type": "string",
+          "fact": "personName",
+          "description": "Full name as the applicant entered it. Attestation of the shared personName fact — the identity-document, payslip, EPF and bank-statement categories attest the same fact from their own sources. A borrower typing their name differently from their IC is normal, not an error."
+        },
+        {
+          "name": "personIdNumber",
+          "type": "string",
+          "fact": "personIdNumber",
+          "description": "IC or passport number as the applicant entered it. Attestation of the shared personIdNumber fact. Forms validate 12 digits with no separators, while the identity document attests it as printed and commonly hyphenated — so comparison must normalize before concluding disagreement."
+        },
+        {
+          "name": "personDateOfBirth",
+          "type": "string",
+          "fact": "personDateOfBirth",
+          "description": "Date of birth as the applicant entered it, normalized to ISO YYYY-MM-DD. Attestation of the shared personDateOfBirth fact."
+        },
+        {
+          "name": "personNationality",
+          "type": "string",
+          "fact": "personNationality",
+          "description": "Nationality as the applicant entered it. Attestation of the shared personNationality fact; free text on both sides, so comparable after normalization."
+        }
+      ]
+    },
+    {
+      "id": "applicant-demographics",
+      "displayName": "Applicant-Provided Demographics",
+      "canonicalTable": "ihs_alt_data_applicant_demographics",
+      "description": "Demographic attributes the applicant selected on a lending application form. Split out of applicant-identity (SYS-3166) rather than merged into it, and not cosmetically: every field here is uniformly sensitive, so confidentiality is decided once for the category instead of being re-argued per field a few hundred times over. applicant-identity keeps the legally-identifying facts — name, id number, date of birth, nationality — which are the subject key under Act 710 s.28. One instance per application.",
+      "fields": [
+        {
+          "name": "statedAge",
+          "type": "string",
+          "description": "Age as the applicant entered it. Deliberately NOT a shared fact with personDateOfBirth, and deliberately a string: the column is varchar(10) and forms accept free text, so a value may be a range or a non-numeric answer. An age is also true only on the day it was given — observedAt is what makes it interpretable, and it must never be reconciled against a date of birth as though the two were the same claim."
+        },
+        {
+          "name": "genderCode",
+          "type": "string",
+          "description": "Gender as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from person-identity's personGender, and carrying no shared fact, on purpose. The document attests OCR text off a MyKad while the form emits a code ('M', '01') whose meaning is per-form. Collected by 6 of the 60 live form configs, all 6 sharing one choice set today — measured per field. Declaring them one fact would put 'M' and 'LELAKI' in the disagreement surface as a permanent false positive on one of its highest-volume fields, and the registry's kind-agreement rule refuses the shortcut anyway. Comparing the two needs a per-form code-to-label resolution that does not exist yet; when it does, the comparison belongs there and not in the field name. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and the declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "raceCode",
+          "type": "string",
+          "description": "Race as the applicant selected it from a dropdown. Same reasoning as genderCode, and the same deliberate absence of a shared fact with person-identity's personRace. Collected by 12 of the 60 live form configs, all 12 sharing one choice set today — measured per field. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and the declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "maritalStatus",
+          "type": "string",
+          "description": "Marital status as selected. Uniquely declared, so it needs no fact. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
+        },
+        {
+          "name": "dependantsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of dependants as the applicant entered it."
+        },
+        {
+          "name": "educationLevel",
+          "type": "string",
+          "description": "Highest education level as selected. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
+        },
+        {
+          "name": "preferredLanguage",
+          "type": "string",
+          "description": "Preferred correspondence language as selected. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
+        },
+        {
+          "name": "residenceType",
+          "type": "string",
+          "description": "Residence type (owned, rented, family-owned, …) as selected. A housing-tenure signal, which is why it sits here rather than with applicant-address: it describes the person, not a place. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
+        }
+      ]
+    },
+    {
+      "id": "applicant-contact",
+      "displayName": "Applicant-Provided Contact Point",
+      "canonicalTable": "ihs_alt_data_applicant_contact",
+      "description": "One way to reach the applicant — a phone line, an email address, or an emergency contact. MULTI-instance, keyed by the kind of contact point, because the wide ihs table flattens five phone lines into five column families (mobile, office, international, emergency, and an unqualified phoneNumber) and therefore cannot hold a sixth. The instance key IS what the column suffix was encoding. Fields absent for a given kind are simply absent on that instance rather than being null columns for everyone.",
+      "fields": [
+        {
+          "name": "contactValue",
+          "type": "string",
+          "description": "The number or address itself, as the applicant entered it. One field rather than one per kind: what distinguishes a mobile from an office line is the instance, not the column."
+        },
+        {
+          "name": "contactAreaCode",
+          "type": "string",
+          "description": "Area or country code, where the form captures it separately from the number. Modeled because the wide table carries a matching AreaCode column for four of the five phone families; NO live form config collects any of them today, so no manifest maps it yet. The category describes the domain; a manifest describes what a form actually asks."
+        },
+        {
+          "name": "contactExtension",
+          "type": "string",
+          "description": "Phone extension. Same status as contactAreaCode — one wide column exists (internationalExtensionPhoneNo), no live form collects it."
+        },
+        {
+          "name": "contactName",
+          "type": "string",
+          "description": "The name of the person reached at this contact point, where that is someone other than the applicant. Populated for the emergency instance. Deliberately NOT sharing personName's fact: this is a THIRD PARTY's name, and attesting it as the subject's would be a genuine identity error, not a formatting one."
+        },
+        {
+          "name": "contactRelationship",
+          "type": "string",
+          "description": "How the named person relates to the applicant (spouse, parent, employer, …). Meaningful only alongside contactName. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
+        }
+      ]
+    },
+    {
+      "id": "applicant-address",
+      "displayName": "Applicant-Provided Address",
+      "canonicalTable": "ihs_alt_data_applicant_address",
+      "description": "One address the applicant entered on a lending application form. MULTI-instance, keyed by which address it is (\"permanent\", \"residential\", \"office\"), because the wide ihs table spends a whole column family on each and therefore cannot hold a fourth. Declaring this single would re-encode that limit permanently, and unlike a wrong field name it is not repairable later — the information would never have been captured. Ragged coverage across the three becomes ABSENT FIELDS on an instance rather than null columns for everyone: the permanent block has no state column of its own (its state landed in the unprefixed `state`), and only the residential block carries an occupancy duration.",
+      "fields": [
+        {
+          "name": "addressLine1",
+          "type": "string",
+          "description": "First line of the address, as entered."
+        },
+        {
+          "name": "addressLine2",
+          "type": "string",
+          "description": "Second line of the address, as entered."
+        },
+        {
+          "name": "addressLine3",
+          "type": "string",
+          "description": "Third line of the address, as entered."
+        },
+        {
+          "name": "addressCity",
+          "type": "string",
+          "description": "City or town, as entered."
+        },
+        {
+          "name": "addressPostcode",
+          "type": "string",
+          "description": "Postcode, as entered. A string rather than a number: Malaysian postcodes are five digits and a leading zero is significant."
+        },
+        {
+          "name": "addressStateCode",
+          "type": "string",
+          "description": "State as the applicant SELECTED IT FROM A DROPDOWN — a code ('A' = PERAK, 'B' = SELANGOR), not a label. Named for what it holds, and carrying no shared fact, for the same reason as applicant-demographics' genderCode: the choice set is defined per form config, so no single adapter can enumerate it and no comparison against a free-text state is meaningful without a per-form resolution that does not exist. NOT declared kind \"enum\" — that promises a closed label set the host makes each producing adapter enumerate, which a form-intake adapter spanning 60 heterogeneous forms cannot do."
+        },
+        {
+          "name": "addressCountry",
+          "type": "string",
+          "description": "Country, as entered. Modeled because the wide table carries an unprefixed `country` column; NO live form config collects it, so no manifest maps it. The category describes the domain, a manifest describes what a form actually asks."
+        },
+        {
+          "name": "occupancyYears",
+          "type": "number",
+          "unit": "years",
+          "description": "How long the applicant has lived at this address, whole years. Meaningful only on the residential instance — it is the one block the wide table gives a duration. Kept separate from occupancyMonths rather than folded into a single figure because the form collects two inputs and form intake has no transform slot by design; combining them is a consumer's job, and doing it here would invent a value the applicant never gave."
+        },
+        {
+          "name": "occupancyMonths",
+          "type": "number",
+          "unit": "months",
+          "description": "The remainder months of the residency duration above. See occupancyYears for why the pair is not collapsed."
+        }
+      ]
+    },
+    {
+      "id": "applicant-employment",
+      "displayName": "Applicant-Provided Employment",
+      "canonicalTable": "ihs_alt_data_applicant_employment",
+      "description": "One job the applicant described on a lending application form. MULTI-instance: a person can hold two jobs and the wide ihs table, which has exactly one unprefixed employment block, cannot say so. Today's form collects only the current one, so the sole adapter emits a single instance under the key \"current\" — an explicit key rather than the empty one, because \"\" reads as \"the single instance a single-cardinality category has\" and this category is not that. A second job becomes another row.",
+      "fields": [
+        {
+          "name": "employerName",
+          "type": "string",
+          "fact": "employerName",
+          "description": "Employer name as the applicant entered it. Attestation of the shared employerName fact — the PAYSLIP attests the same fact from the document side (SYS-3333 de-prefixed it from payslipEmployerName). This is the pairing the disagreement surface exists for: a borrower naming an employer their payslip does not, or naming it differently, is worth seeing. Free text on both sides, so comparable after normalization."
+        },
+        {
+          "name": "employmentStatus",
+          "type": "string",
+          "description": "Employment status as selected (permanent, contract, probation, …). NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "employmentType",
+          "type": "string",
+          "description": "Employment type as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "occupation",
+          "type": "string",
+          "description": "Occupation as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "employmentSector",
+          "type": "string",
+          "description": "Employment sector as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "subEmploymentSector",
+          "type": "string",
+          "description": "Sub-sector within employmentSector, as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "businessSector",
+          "type": "string",
+          "description": "Business sector of the employer. Modeled because the wide table carries the column; NO live form collects it, so no manifest maps it."
+        },
+        {
+          "name": "dateJoined",
+          "type": "string",
+          "description": "Date the applicant joined this employer, as entered. A string, matching the source column's varchar(50) and the same treatment personDateOfBirth gets: forms accept a range of spellings and narrowing here would reject values the form already takes."
+        },
+        {
+          "name": "lengthOfServiceYears",
+          "type": "number",
+          "unit": "years",
+          "description": "Length of service, whole years. Modeled because the wide table carries the column; no live form collects it. Kept separate from lengthOfServiceMonths for the same reason applicant-address keeps occupancy years and months apart — form intake has no transform slot, so folding two figures into one would invent a value nobody gave."
+        },
+        {
+          "name": "lengthOfServiceMonths",
+          "type": "number",
+          "unit": "months",
+          "description": "Remainder months of the length of service. See lengthOfServiceYears."
+        }
+      ]
+    },
+    {
+      "id": "applicant-income",
+      "displayName": "Applicant-Provided Income",
+      "canonicalTable": "ihs_alt_data_applicant_income",
+      "description": "The applicant's stated income position. SINGLE-instance: unlike employment, these describe the person overall rather than one job, and the wide table's single block is not a limitation being inherited here — it matches what is being said.",
+      "fields": [
+        {
+          "name": "grossPay",
+          "type": "number",
+          "kind": "money",
+          "fact": "grossPay",
+          "legacyName": "monthlyGrossIncome",
+          "description": "Gross pay as the applicant stated it, monthly. Attestation of the shared grossPay fact, which the PAYSLIP attests from the document side. COMPARISON MUST CHECK THE PERIOD FIRST: a payslip's grossPay is the gross for ITS pay period, and the payslip category carries payPeriod for exactly that reason — a monthly statement compared against a fortnightly payslip disagrees by construction, not because anyone was wrong. The fact is shared because the two ARE the same quantity once the period is known, which is what distinguishes this from applicant-demographics' genderCode, where no resolution between the two sides exists at all."
+        },
+        {
+          "name": "netPay",
+          "type": "number",
+          "kind": "money",
+          "fact": "netPay",
+          "legacyName": "monthlyNetIncome",
+          "description": "Net pay as the applicant stated it, monthly. Attestation of the shared netPay fact, also attested by the payslip. Same period caveat as grossPay. Modeled but NOT mapped by any manifest: the wide table carries monthlyNetIncome and no live form collects it."
+        },
+        {
+          "name": "sourceOfFund",
+          "type": "string",
+          "description": "Stated source of funds. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "sourceOfWealth",
+          "type": "string",
+          "description": "Stated source of wealth. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+        },
+        {
+          "name": "computationMode",
+          "type": "string",
+          "description": "How the stated income was computed. Modeled because the wide table carries the column; no live form collects it."
+        },
+        {
+          "name": "statementType",
+          "type": "string",
+          "description": "Statement type backing the stated income. Modeled because the wide table carries the column; no live form collects it."
+        }
+      ]
     }
   ]
 }

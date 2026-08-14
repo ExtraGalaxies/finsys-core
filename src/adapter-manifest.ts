@@ -391,6 +391,44 @@ export interface FormIntakeFieldMapEntry {
    * adapter's category. Host validates at registration.
    */
   readonly canonical: CanonicalFieldName;
+
+  /**
+   * SYS-3358: which INSTANCE of a multi-cardinality category this form
+   * field feeds. Omitted means the single instance (`""`).
+   *
+   * WHY IT LIVES ON THE ENTRY, not on a rule
+   *
+   * The wide `ihs` table flattens every repeat of a thing into suffixed
+   * columns — `bankBalanceT1..T6`, `revenueT1` beside `revenueT3`,
+   * `mobilePhoneNo` beside `officePhoneNo`. The suffix IS the instance,
+   * and it is the whole reason a third bank statement or a second job
+   * cannot be recorded today. A form-intake adapter that could only
+   * produce one instance would re-encode that limitation into the
+   * canonical model, which is precisely what the transition exists to
+   * undo.
+   *
+   * The alternative — deriving the instance from a suffix convention —
+   * was rejected. A rule that reads `T1` off the end of a column name
+   * is a parser of someone else's naming accident: it silently maps
+   * `bankBalanceT1` and `totalCreditsT1` together (correct) and
+   * `emerContactTelNo1` too (wrong), and nothing in the data says which
+   * it did. An explicit key per entry is verbose and cannot be wrong
+   * about what it meant.
+   *
+   * INVARIANT, enforced by the host at derivation time: a manifest
+   * declaring `cardinality: "single"` MUST NOT carry an instanceKey on
+   * any entry. Since SYS-3171 the host infers nothing from instanceKey
+   * shape, so a single-cardinality adapter quietly emitting keyed
+   * instances would store rows no single-instance reader ever looks at —
+   * a declaration and a behavior disagreeing, with nothing comparing
+   * them.
+   *
+   * The value is opaque to the host: it is stored verbatim as the row's
+   * `instanceKey` and is only ever compared for equality. Choose
+   * something a human reading a row can interpret ("T1", "mobile") over
+   * an ordinal.
+   */
+  readonly instanceKey?: string;
 }
 
 /**

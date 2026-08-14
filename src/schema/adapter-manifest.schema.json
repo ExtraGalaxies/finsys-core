@@ -151,6 +151,11 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Canonical field name (must be in the category's field set)."
+                  },
+                  "instanceKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "SYS-3358 — which instance of a multi-cardinality category this form field feeds. Omitted means the single instance (\"\"). Explicitly empty is refused: an absent key and a key that is the empty string would be indistinguishable in the row, so only one spelling of \"the single instance\" is permitted. A manifest declaring cardinality \"single\" must not carry this on any entry."
                   }
                 }
               },

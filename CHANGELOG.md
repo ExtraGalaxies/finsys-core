@@ -99,9 +99,16 @@ _Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and 
     manifests that differ on paper indistinguishable in storage.
 
   The schema governs SHAPE only. The invariant that a manifest declaring
-  `cardinality: "single"` must carry no `instanceKey` is the HOST's to enforce,
-  because JSON Schema cannot relate a sibling property to an array element's
-  contents. That split is stated on `FormIntakeFieldMapEntry` so neither side
+  `cardinality: "single"` must carry no `instanceKey` is the HOST's to enforce.
+  Not because JSON Schema is incapable — draft-07 `if`/`then` expresses it
+  correctly, which a review of this release proved by execution — but because
+  doing so requires restating the `fieldMap` item shape outside its
+  `oneOf` branch, leaving two copies of one shape that must stay in step, and
+  degrades the error from naming the adapter and its offending keys to
+  "must NOT be valid". Every other cross-referencing invariant in this file
+  (`produces` ⊆ category fields, `singletonFields` ⊆ `produces`,
+  `fieldAuthorizations` keys ⊆ `produces`) is host-validated for the same
+  reason. The split is stated on `FormIntakeFieldMapEntry` so neither side
   assumes the other did it.
 
 - **`applicant-demographics` and `applicant-contact` categories (SYS-3338).**

@@ -32,6 +32,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [7.3.0] - 2026-08-14
 
+_Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and never released to npm. Superseded by 7.4.0; `npm install @finsys/core@7.3.0` will 404._
+
 ### Added
 
 - **`applicant-address` category (SYS-3336).** ONE address shape —
@@ -57,6 +59,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [7.2.1] - 2026-08-14
 
+_Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and never released to npm. Superseded by 7.4.0; `npm install @finsys/core@7.2.1` will 404._
+
 ### Fixed
 
 - **Removed `kind: "enum"` from the per-form dropdown fields** on
@@ -68,6 +72,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   promise. The declaration, not the refusal, was the defect.
 
 ## [7.2.0] - 2026-08-14
+
+_Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and never released to npm. Superseded by 7.4.0; `npm install @finsys/core@7.2.0` will 404._
 
 ### Added
 
@@ -126,6 +132,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     genuine identity error, not a formatting one.
 
 ## [7.1.0] - 2026-08-14
+
+_Internal only — published to a local Verdaccio during SYS-2499 Phase 2.6 and never released to npm. Superseded by 7.4.0; `npm install @finsys/core@7.1.0` will 404._
 
 ### Added
 

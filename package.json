@@ -1,6 +1,6 @@
 {
   "name": "@finsys/core",
-  "version": "7.0.0",
+  "version": "7.0.1",
   "description": "Convert unified form configurations into Zod schemas, React Hook Form defaults, and SurveyJS JSON",
   "repository": {
     "type": "git",
@@ -45,7 +45,7 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "survey-core": "^2.5.0"
+    "survey-core": ">=2.5.0 <4"
   },
   "peerDependenciesMeta": {
     "survey-core": {

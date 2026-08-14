@@ -6,6 +6,38 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.0.1] - 2026-08-14
+
+### Fixed
+
+- **`survey-core` peer range widened to `>=2.5.0 <4`.** survey-core 3.0.0
+  published on 2026-08-11; 7.0.0 shipped two days later still declaring
+  `^2.5.0`, so `npm install @finsys/core` **failed outright** for anyone with a
+  current survey-core:
+
+  ```
+  npm error Conflicting peer dependency: survey-core@2.5.38
+  npm error   peerOptional survey-core@"^2.5.0" from @finsys/core@7.0.0
+  ```
+
+  Note `peerDependenciesMeta.optional` does **not** rescue this. Optional means
+  npm tolerates the peer being *absent*; a peer that is present and out of range
+  is still a hard `ERESOLVE`. 7.0.0 cannot be repaired in place (npm unpublish is
+  restricted) — use 7.0.1.
+
+  Both ends of the new range are exercised, not assumed: 2.5.x by CI, and 3.0.0
+  by a full `tsc --noEmit` + build + 586-test run. Core's only coupling to
+  survey-core is a type re-export (`IQuestion`, `IPage`, `ISurvey`, `IPanel`,
+  `IElement`) and SurveyJS-shaped JSON generation; all five types exist
+  unchanged in 3.x.
+
+- **The release preflight mis-read `||` ranges.** `admitsMajor()` matched only
+  the first clause of a union, so a valid `^2.5.0 || ^3.0.0` was reported as
+  excluding a latest of 3 — a wrong verdict rather than the fail-closed the
+  parser is documented to produce. It now splits on `||`, admits when any clause
+  admits, and returns "unreadable" only when no clause admits and one cannot be
+  parsed.
+
 ## [7.0.0] - 2026-08-14
 
 ### Changed — BREAKING

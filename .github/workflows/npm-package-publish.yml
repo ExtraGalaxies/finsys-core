@@ -119,18 +119,34 @@ jobs:
           //    FAIL-CLOSED on a shape it does not recognise. A range parser
           //    that silently passes what it cannot read is worse than no check:
           //    it reports confidence it has not earned.
-          const admitsMajor = (range, major) => {
-            const upper = range.match(/<\s*(\d+)/)
+          const admitsMajorClause = (clause, major) => {
+            const upper = clause.match(/<\s*(\d+)/)
             if (upper) {
-              const lower = range.match(/>=\s*(\d+)/)
+              const lower = clause.match(/>=\s*(\d+)/)
               const okLower = lower ? major >= Number(lower[1]) : true
               return okLower && major < Number(upper[1]) ? true : false
             }
-            const caret = range.match(/^\^\s*(\d+)\./)
+            const caret = clause.match(/^\^\s*(\d+)\./)
             if (caret) return major === Number(caret[1])
-            const exact = range.match(/^\s*(\d+)\.\d+\.\d+\s*$/)
+            const exact = clause.match(/^\s*(\d+)\.\d+\.\d+\s*$/)
             if (exact) return major === Number(exact[1])
             return null // unrecognised — caller fails closed
+          }
+
+          //    A union ("^2.5.0 || ^3.0.0") admits `major` if ANY clause does.
+          //    Splitting first is not cosmetic: run against the whole string,
+          //    the `<` and `^` probes above match the FIRST clause only and
+          //    return a confident verdict for the union — so "^2.5.0 || ^3.0.0"
+          //    was reported as excluding a latest of 3. That is a WRONG ANSWER,
+          //    not a fail-closed, which is the one thing this parser is not
+          //    allowed to produce. (DEVOPS-688)
+          const admitsMajor = (range, major) => {
+            const clauses = String(range).split("||").map((c) => c.trim()).filter(Boolean)
+            if (clauses.length === 0) return null
+            const verdicts = clauses.map((c) => admitsMajorClause(c, major))
+            if (verdicts.some((v) => v === true)) return true // one satisfied clause is enough
+            if (verdicts.some((v) => v === null)) return null // otherwise an unreadable clause is decisive
+            return false
           }
 
           for (const [peer, range] of Object.entries(pkg.peerDependencies ?? {})) {

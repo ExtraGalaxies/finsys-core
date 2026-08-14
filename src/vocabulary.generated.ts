@@ -10,11 +10,12 @@
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * 13 categories · 224 canonical fields · 84 retired names
+ * 14 categories · 224 canonical fields · 84 retired names
  */
 
 /** Every category id the registry declares. */
 export type AdapterCategoryId =
+  | "applicant-identity"
   | "bank-statement"
   | "company-profile"
   | "company-registration"

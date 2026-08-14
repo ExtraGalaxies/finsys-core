@@ -1721,6 +1721,38 @@
         }
       ],
       "legacyId": "finxtract-ssm"
+    },
+    {
+      "id": "applicant-identity",
+      "displayName": "Applicant-Provided Identity",
+      "description": "Identity values the applicant typed into a lending application form. The first NON-DOCUMENT attestor in the registry: every other category is an extraction pipeline reading a document, while these are values a person entered about themselves. One instance per application.",
+      "canonicalTable": "ihs_alt_data_applicant_identity",
+      "fields": [
+        {
+          "name": "personName",
+          "type": "string",
+          "fact": "personName",
+          "description": "Full name as the applicant entered it. Attestation of the shared personName fact — the identity-document, payslip, EPF and bank-statement categories attest the same fact from their own sources. A borrower typing their name differently from their IC is normal, not an error."
+        },
+        {
+          "name": "personIdNumber",
+          "type": "string",
+          "fact": "personIdNumber",
+          "description": "IC or passport number as the applicant entered it. Attestation of the shared personIdNumber fact. Forms validate 12 digits with no separators, while the identity document attests it as printed and commonly hyphenated — so comparison must normalize before concluding disagreement."
+        },
+        {
+          "name": "personDateOfBirth",
+          "type": "string",
+          "fact": "personDateOfBirth",
+          "description": "Date of birth as the applicant entered it, normalized to ISO YYYY-MM-DD. Attestation of the shared personDateOfBirth fact."
+        },
+        {
+          "name": "personNationality",
+          "type": "string",
+          "fact": "personNationality",
+          "description": "Nationality as the applicant entered it. Attestation of the shared personNationality fact; free text on both sides, so comparable after normalization."
+        }
+      ]
     }
   ]
 }

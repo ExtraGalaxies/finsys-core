@@ -6,6 +6,47 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.1.0] - 2026-08-14
+
+### Added
+
+- **`applicant-identity` category — the registry's first non-document attestor.**
+  Every existing category is an extraction pipeline reading a document; this one
+  carries values a person typed about themselves on an application form. It is
+  what makes the disagreement surface mean something on identity data: a
+  borrower's spelling of their own name competing with an OCR read of their IC.
+
+  Four fields, each co-attesting an existing fact — `personName`,
+  `personIdNumber`, `personDateOfBirth`, `personNationality` — written to
+  `ihs_alt_data_applicant_identity`. Additive: no existing category, field or
+  fact changed, so `7.0.x` consumers are unaffected until they opt in.
+
+  The field set was confirmed against the **60 live form configs**, not assumed.
+  Two findings shaped it:
+
+  - `personAddress`, `personReligion` and `personPlaceOfBirth` are collected by
+    no form, so applicant-identity attests 4 of person-identity's 9 fields.
+  - **`gender` and `race` are deliberately excluded.** Forms collect them as
+    dropdowns carrying codes (`M`, `01`) while the identity document attests
+    whatever is printed on the card, as free text off an OCR read. Same concept,
+    two vocabularies.
+
+    Note this is *not* for want of a code-to-label mapping — this package
+    already ships one in `BASE_FIELD_SPECS` (`M` → Male, `01` → Malaysian -
+    Chinese). Two narrower things block it. First, shared facts must agree on
+    `kind`, and `person-identity` declares these as free strings because OCR
+    text is not a closed set — so declaring the form side `enum` throws, and
+    declaring it a free string would be false about a dropdown. Second, even
+    after resolving the code, the label has to be compared against what the card
+    actually prints, which is Malay on a MyKad — a second, different mapping
+    that does not exist. Until both are settled, a comparison would report
+    disagreement on every row and train everyone to ignore the surface.
+
+  Adding a category was previously invisible to the test suite — count, field
+  set and attestor sets were all unasserted. `applicant-identity.test.ts` closes
+  that, and pins the gender/race exclusion so it is not later "completed" by
+  someone who reads it as an omission.
+
 ## [7.0.1] - 2026-08-14
 
 ### Fixed

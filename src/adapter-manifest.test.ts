@@ -387,6 +387,61 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
     expect(validate(validDeclarative())).toBe(true);
     expect(validate(validTypescript())).toBe(true);
   });
+
+  /**
+   * SYS-3358 — the instanceKey slot. The schema governs SHAPE only; the
+   * cardinality invariant (a "single" manifest must carry no instanceKey)
+   * is the host's, because JSON Schema cannot relate a sibling property
+   * to an array element's contents. That split is deliberate and stated
+   * on FormIntakeFieldMapEntry so neither side assumes the other did it.
+   */
+  describe("SYS-3358: instanceKey on a form-intake fieldMap entry", () => {
+    function withFieldMap(fieldMap: unknown[]): unknown {
+      return {
+        ...validFormIntake(),
+        cardinality: "multi",
+        implementation: { type: "form-intake", fieldMap },
+      };
+    }
+
+    it("accepts an entry carrying an instanceKey", () => {
+      expect(
+        validate(
+          withFieldMap([
+            { formFieldId: "bank_balance_t1", canonical: "employerName", instanceKey: "T1" },
+            { formFieldId: "bank_balance_t2", canonical: "employerName", instanceKey: "T2" },
+          ]),
+        ),
+      ).toBe(true);
+    });
+
+    it("still accepts an entry without one — omitted means the single instance", () => {
+      expect(validate(validFormIntake())).toBe(true);
+    });
+
+    it("rejects an explicitly empty instanceKey", () => {
+      // Absent and "" land in the same row, so permitting both spellings
+      // would make two manifests that differ on paper indistinguishable
+      // in storage.
+      expect(
+        validate(withFieldMap([{ formFieldId: "bank_balance_t1", canonical: "employerName", instanceKey: "" }])),
+      ).toBe(false);
+    });
+
+    it("rejects a non-string instanceKey", () => {
+      expect(
+        validate(withFieldMap([{ formFieldId: "bank_balance_t1", canonical: "employerName", instanceKey: 1 }])),
+      ).toBe(false);
+    });
+
+    it("still refuses an unrecognized sibling property", () => {
+      // Proves additionalProperties:false survived the edit — adding one
+      // permitted key must not open the object to typos of it.
+      expect(
+        validate(withFieldMap([{ formFieldId: "bank_balance_t1", canonical: "employerName", instancekey: "T1" }])),
+      ).toBe(false);
+    });
+  });
 });
 
 /**

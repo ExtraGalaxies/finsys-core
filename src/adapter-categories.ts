@@ -344,6 +344,12 @@ const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> 
  */
 const VALID_FIELD_UNITS: ReadonlyArray<string> = [
   "ratio",
+  // SYS-3336: a residency duration is collected as YEARS and MONTHS in two
+  // separate inputs, and form intake has no transform slot to fold them into
+  // one figure — so both have to be expressible. The numeric-unit guard asking
+  // for this is the guard working: a bare number of years beside a number of
+  // months is exactly the ambiguity it exists to refuse.
+  "years",
   "months",
   "days",
   "hours",

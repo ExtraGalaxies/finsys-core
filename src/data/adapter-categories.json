@@ -1835,6 +1835,61 @@
           "description": "How the named person relates to the applicant (spouse, parent, employer, …). Meaningful only alongside contactName. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
         }
       ]
+    },
+    {
+      "id": "applicant-address",
+      "displayName": "Applicant-Provided Address",
+      "canonicalTable": "ihs_alt_data_applicant_address",
+      "description": "One address the applicant entered on a lending application form. MULTI-instance, keyed by which address it is (\"permanent\", \"residential\", \"office\"), because the wide ihs table spends a whole column family on each and therefore cannot hold a fourth. Declaring this single would re-encode that limit permanently, and unlike a wrong field name it is not repairable later — the information would never have been captured. Ragged coverage across the three becomes ABSENT FIELDS on an instance rather than null columns for everyone: the permanent block has no state column of its own (its state landed in the unprefixed `state`), and only the residential block carries an occupancy duration.",
+      "fields": [
+        {
+          "name": "addressLine1",
+          "type": "string",
+          "description": "First line of the address, as entered."
+        },
+        {
+          "name": "addressLine2",
+          "type": "string",
+          "description": "Second line of the address, as entered."
+        },
+        {
+          "name": "addressLine3",
+          "type": "string",
+          "description": "Third line of the address, as entered."
+        },
+        {
+          "name": "addressCity",
+          "type": "string",
+          "description": "City or town, as entered."
+        },
+        {
+          "name": "addressPostcode",
+          "type": "string",
+          "description": "Postcode, as entered. A string rather than a number: Malaysian postcodes are five digits and a leading zero is significant."
+        },
+        {
+          "name": "addressStateCode",
+          "type": "string",
+          "description": "State as the applicant SELECTED IT FROM A DROPDOWN — a code ('A' = PERAK, 'B' = SELANGOR), not a label. Named for what it holds, and carrying no shared fact, for the same reason as applicant-demographics' genderCode: the choice set is defined per form config, so no single adapter can enumerate it and no comparison against a free-text state is meaningful without a per-form resolution that does not exist. NOT declared kind \"enum\" — that promises a closed label set the host makes each producing adapter enumerate, which a form-intake adapter spanning 60 heterogeneous forms cannot do."
+        },
+        {
+          "name": "addressCountry",
+          "type": "string",
+          "description": "Country, as entered. Modeled because the wide table carries an unprefixed `country` column; NO live form config collects it, so no manifest maps it. The category describes the domain, a manifest describes what a form actually asks."
+        },
+        {
+          "name": "occupancyYears",
+          "type": "number",
+          "unit": "years",
+          "description": "How long the applicant has lived at this address, whole years. Meaningful only on the residential instance — it is the one block the wide table gives a duration. Kept separate from occupancyMonths rather than folded into a single figure because the form collects two inputs and form intake has no transform slot by design; combining them is a consumer's job, and doing it here would invent a value the applicant never gave."
+        },
+        {
+          "name": "occupancyMonths",
+          "type": "number",
+          "unit": "months",
+          "description": "The remainder months of the residency duration above. See occupancyYears for why the pair is not collapsed."
+        }
+      ]
     }
   ]
 }

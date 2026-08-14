@@ -10,11 +10,12 @@
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * 16 categories · 237 canonical fields · 84 retired names
+ * 17 categories · 246 canonical fields · 84 retired names
  */
 
 /** Every category id the registry declares. */
 export type AdapterCategoryId =
+  | "applicant-address"
   | "applicant-contact"
   | "applicant-demographics"
   | "applicant-identity"
@@ -40,7 +41,14 @@ export type CanonicalFieldNameLiteral =
   | "accountingRevenue12m"
   | "accuracyMeters"
   | "activeTenureMonths"
+  | "addressCity"
+  | "addressCountry"
+  | "addressLine1"
+  | "addressLine2"
+  | "addressLine3"
   | "addressMatchScore"
+  | "addressPostcode"
+  | "addressStateCode"
   | "apDaysPayableOutstanding"
   | "arCurrentRatio"
   | "arDaysSalesOutstanding"
@@ -207,6 +215,8 @@ export type CanonicalFieldNameLiteral =
   | "nonCurrentLiabilitiesHirePurchasePayables"
   | "nonCurrentLiabilitiesLeaseObligations"
   | "nonCurrentLiabilitiesRetirementBenefits"
+  | "occupancyMonths"
+  | "occupancyYears"
   | "onTimePaymentRatio24m"
   | "openingBalance"
   | "otherDeduction"

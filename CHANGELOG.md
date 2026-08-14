@@ -6,6 +6,67 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.4.0] - 2026-08-14
+
+### Added
+
+- **`applicant-employment` and `applicant-income` categories (SYS-3337).** The
+  first applicant-typed categories that share facts with a DOCUMENT category on
+  purpose: `employerName` co-attests the payslip's, and `grossPay` / `netPay`
+  co-attest the payslip's. That pairing is the point — a borrower's stated
+  employer or income competing with what their payslip says.
+
+  Both money fields declare a `legacyName` (`monthlyGrossIncome`,
+  `monthlyNetIncome`) so `isMonetaryField` still answers to the FLAT column
+  name. Without it a stated income renders as a bare number beside denominated
+  neighbours, which is the exact regression the alias exists to prevent.
+
+  **Why these share a fact when `genderCode` does not:** both sides here are
+  numbers in the same space, so a comparator has something to work with — it
+  just has to read the payslip instance's `payPeriod` first, since a monthly
+  statement against a fortnightly payslip differs by construction rather than
+  by error. `genderCode` had no resolution between the two sides at all.
+
+  `applicant-employment` is `multi` (a person can hold two jobs; the wide table
+  cannot say so). `applicant-income` is `single` — nothing in it is job-scoped.
+
+## [7.3.0] - 2026-08-14
+
+### Added
+
+- **`applicant-address` category (SYS-3336).** ONE address shape —
+  `addressLine1..3`, city, postcode, `addressStateCode`, country — distinguished
+  by instance key rather than by column prefix. The wide `ihs` table spends a
+  whole column family on each of permanent, residential and office and cannot
+  hold a fourth; declaring this `single` would have re-encoded that limit
+  permanently, and unlike a wrong field name it is not repairable later because
+  the information would never have been captured.
+
+- **`years` as a valid field unit.** A residency duration arrives as two inputs
+  (years and months) and form intake has no transform slot to fold them into
+  one figure, so both have to be expressible.
+
+### Notes
+
+- No field co-attests `personAddress`. Two categories already do —
+  `person-identity` AND `epf-statement` — and they share it legitimately because
+  both attest the same free-text blob. This category attests a STRUCTURED
+  address across up to three instances, none obviously the one a document names;
+  co-attesting would need an address normalizer and an instance correspondence,
+  neither of which exists.
+
+## [7.2.1] - 2026-08-14
+
+### Fixed
+
+- **Removed `kind: "enum"` from the per-form dropdown fields** on
+  `applicant-demographics` and `applicant-contact`. The host REFUSES an adapter
+  whose produced enum-kind fields do not enumerate their labels, and it was
+  right to: `kind: "enum"` promises a CLOSED label set, while these choice sets
+  are defined per form config. A form-intake adapter spanning 60 heterogeneous
+  forms cannot enumerate them, so the closure was never the category's to
+  promise. The declaration, not the refusal, was the defect.
+
 ## [7.2.0] - 2026-08-14
 
 ### Added

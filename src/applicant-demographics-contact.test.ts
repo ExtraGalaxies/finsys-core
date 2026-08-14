@@ -84,10 +84,15 @@ describe("applicant-demographics (SYS-3338)", () => {
     expect(categoriesAttestingFact("personDateOfBirth")).not.toContain("applicant-demographics");
   });
 
-  it("declares the dropdown fields as enums and the count with a unit", () => {
+  it("leaves the dropdown fields kind-less and gives the count a unit", () => {
     const by = new Map(
       categorySchemaOf("applicant-demographics").fields.map((f) => [f.name, f] as const),
     );
+    // NOT enum-kind. That promises a closed label set, and the host makes the
+    // producing adapter enumerate it — which a form-intake adapter spanning 60
+    // heterogeneous forms cannot do, since each defines its own choices. The
+    // host refused both adapters until this was corrected; the refusal was
+    // right and the category declaration was the overclaim.
     for (const n of [
       "genderCode",
       "raceCode",
@@ -96,7 +101,7 @@ describe("applicant-demographics (SYS-3338)", () => {
       "preferredLanguage",
       "residenceType",
     ]) {
-      expect(by.get(n)?.kind).toBe("enum");
+      expect(by.get(n)?.kind).toBeUndefined();
     }
     expect(by.get("dependantsCount")?.type).toBe("number");
     expect(by.get("dependantsCount")?.unit).toBe("count");

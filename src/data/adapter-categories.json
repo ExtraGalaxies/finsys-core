@@ -1768,20 +1768,17 @@
         {
           "name": "genderCode",
           "type": "string",
-          "kind": "enum",
-          "description": "Gender as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from person-identity's personGender, and carrying no shared fact, on purpose. The document attests OCR text off a MyKad while the form emits a code ('M', '01') whose meaning is per-form: 30 of 60 live form configs override the base choice set. Declaring them one fact would put 'M' and 'LELAKI' in the disagreement surface as a permanent false positive on one of its highest-volume fields, and the registry's kind-agreement rule refuses the shortcut anyway. Comparing the two needs a per-form code-to-label resolution that does not exist yet; when it does, the comparison belongs there and not in the field name."
+          "description": "Gender as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from person-identity's personGender, and carrying no shared fact, on purpose. The document attests OCR text off a MyKad while the form emits a code ('M', '01') whose meaning is per-form: 30 of 60 live form configs override the base choice set. Declaring them one fact would put 'M' and 'LELAKI' in the disagreement surface as a permanent false positive on one of its highest-volume fields, and the registry's kind-agreement rule refuses the shortcut anyway. Comparing the two needs a per-form code-to-label resolution that does not exist yet; when it does, the comparison belongs there and not in the field name. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
         },
         {
           "name": "raceCode",
           "type": "string",
-          "kind": "enum",
-          "description": "Race as the applicant selected it from a dropdown. Same reasoning as genderCode, and the same deliberate absence of a shared fact with person-identity's personRace. 12 of 60 live forms collect it."
+          "description": "Race as the applicant selected it from a dropdown. Same reasoning as genderCode, and the same deliberate absence of a shared fact with person-identity's personRace. 12 of 60 live forms collect it. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
         },
         {
           "name": "maritalStatus",
           "type": "string",
-          "kind": "enum",
-          "description": "Marital status as selected. Uniquely declared, so it needs no fact."
+          "description": "Marital status as selected. Uniquely declared, so it needs no fact. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
         },
         {
           "name": "dependantsCount",
@@ -1792,20 +1789,17 @@
         {
           "name": "educationLevel",
           "type": "string",
-          "kind": "enum",
-          "description": "Highest education level as selected."
+          "description": "Highest education level as selected. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
         },
         {
           "name": "preferredLanguage",
           "type": "string",
-          "kind": "enum",
-          "description": "Preferred correspondence language as selected."
+          "description": "Preferred correspondence language as selected. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
         },
         {
           "name": "residenceType",
           "type": "string",
-          "kind": "enum",
-          "description": "Residence type (owned, rented, family-owned, …) as selected. A housing-tenure signal, which is why it sits here rather than with applicant-address: it describes the person, not a place."
+          "description": "Residence type (owned, rented, family-owned, …) as selected. A housing-tenure signal, which is why it sits here rather than with applicant-address: it describes the person, not a place. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
         }
       ]
     },
@@ -1838,8 +1832,7 @@
         {
           "name": "contactRelationship",
           "type": "string",
-          "kind": "enum",
-          "description": "How the named person relates to the applicant (spouse, parent, employer, …). Meaningful only alongside contactName."
+          "description": "How the named person relates to the applicant (spouse, parent, employer, …). Meaningful only alongside contactName. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter spanning 60 heterogeneous form configs cannot — each form defines its own choices, and 30 of 60 override the base set. The value set is genuinely not closed at the category level, so claiming it is would be an overclaim the registry is right to refuse."
         }
       ]
     }

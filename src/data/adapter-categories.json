@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.3.0",
+  "schemaVersion": "1.4.0",
   "categories": [
     {
       "id": "telco-carrier",
@@ -1993,6 +1993,162 @@
           "name": "statementType",
           "type": "string",
           "description": "Statement type backing the stated income. Modeled because the wide table carries the column; no live form collects it."
+        }
+      ]
+    },
+    {
+      "id": "applicant-collateral",
+      "displayName": "Applicant-Provided Collateral",
+      "canonicalTable": "ihs_alt_data_applicant_collateral",
+      "description": "The asset offered as security on a lending application, as the applicant (or the lender's own Open API caller) stated it. MULTI-instance, and not speculatively: finsys-api's lender Open API already models this block as `collateral[0]` — an ARRAY (see COLLATERAL_FIELDS in src/utils/ihsFieldDefs.ts) — so more than one collateral item is the EXISTING published contract, while the wide `ihs` table has exactly one column per attribute and can therefore hold exactly one item. The instance key is the array index the contract already uses, so a second collateral is one more row rather than eleven more columns. Every field describes a MOTOR VEHICLE, and is named for that rather than for the generic role, because the category's whole field set is vehicle-specific (a chassis number, an engine number and a laden-weight flag say nothing about a property or a machine). Naming them collateralIdentifier / collateralAttribute would buy a generality the data cannot honour; property or equipment collateral gets its own category with its own facts, and this one stays honest about what it can describe.",
+      "fields": [
+        {
+          "name": "vehicleMake",
+          "type": "string",
+          "description": "Manufacturer of the vehicle offered as collateral, as stated. No live form config collects it today — measured across BOTH form-spec populations on 2026-08-15 (0 of the 60 FinHub form_configs, 0 of the four lead-gen SPA bundles) and 0 of 4,624 rows in the sim's `ihs`. It is declared anyway, on the applicant-contact precedent (contactAreaCode / contactExtension), and on a stronger basis than that precedent had: the wide column exists AND `makeOfVehicle` is an authorable field in @finsys/core's own v2 form catalog (form-field-base-specs.json, category 12 'Vehicle Information'), so a lender can put it on a form today without any change here. A category describes the domain; a manifest describes what a form actually asks.",
+          "legacyName": "makeOfVehicle"
+        },
+        {
+          "name": "vehicleModel",
+          "type": "string",
+          "description": "Model of the vehicle offered as collateral. COLLECTED — by the finhero-auto lead-gen SPA, whose form spec is compiled into the SPA bundle and is therefore invisible to any query over FinHub's form_configs table. That second population is why this field is mapped and vehicleMake is not: measuring form_configs alone reports `modelOfVehicle` as collected by nobody, while the sim's `ihs` carries 8 rows of it. On the finhero-auto form the field is `visible: false` — a hidden input the page fills rather than a question the applicant answers. It is still an applicant-side statement submitted through the form save, so it is attested; the hidden-ness is a UX fact, not a provenance one.",
+          "legacyName": "modelOfVehicle"
+        },
+        {
+          "name": "vehicleYearMake",
+          "type": "number",
+          "unit": "count",
+          "range": [
+            1900,
+            2100
+          ],
+          "description": "Model year of the vehicle, as a four-digit year. Not collected by any live form (0/60 form_configs, 0/4 SPAs, 0/4,624 `ihs` rows) and declared for the same reason as vehicleMake — `yearMake` is authorable in the v2 catalog, which bounds it [2014, 2100] per-form. The range here is deliberately WIDER than any one form's: a category bound must hold for every lender, and a used-vehicle programme can legitimately accept a 1998 model. The unit is `count` rather than `years` because this is a calendar year — a position on a timeline — not a duration; `years` on this field would read as an age and be wrong by about two thousand.",
+          "legacyName": "yearMake"
+        },
+        {
+          "name": "vehicleConditionCode",
+          "type": "string",
+          "description": "Condition of the vehicle as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. COLLECTED: 6 of the 60 FinHub form_configs plus the finhero-auto SPA, all seven carrying the same choice set today ('N', 'U', 'UN', 'UR', 'PR'), measured 2026-08-15. Named `...Code` on the genderCode / raceCode precedent, and for the same reason: a future document attestor (a JPJ registration card, a valuation report) would attest the printed condition TEXT, and fusing a per-form code with OCR'd prose puts a permanent false positive into the disagreement surface. When the two need comparing, the comparison belongs in a per-form code-to-label resolution, not in a shared field name. NOT declared kind \"enum\": that promises a CLOSED label set and obliges every producing adapter to enumerate its labels in its manifest. A form-intake adapter cannot honour that — the choice set lives in a form config a lender can edit, so the promise goes quietly false the first time someone adds a sixth condition. That the seven live forms agree today is precisely the kind of measurement that expires.",
+          "legacyName": "vehicleCondition"
+        },
+        {
+          "name": "vehicleChassisNo",
+          "type": "string",
+          "description": "Chassis / VIN of the vehicle. Not collected by any live form today (0/60, 0/4, 0/4,624) and authorable in the v2 catalog. Declared rather than deferred because it is the vehicle's IDENTITY: it is the field a second attestor (a registration document extraction, a JPJ lookup) would key on, and reserving the canonical name now is what lets that attestor arrive as a manifest rather than as a registry change.",
+          "legacyName": "chassisNo"
+        },
+        {
+          "name": "vehicleEngineNo",
+          "type": "string",
+          "description": "Engine number of the vehicle. Same status and same reasoning as vehicleChassisNo: uncollected today, authorable in the v2 catalog, and an identity fact a document attestor would key on.",
+          "legacyName": "engineNo"
+        },
+        {
+          "name": "vehicleRegistrationNo",
+          "type": "string",
+          "description": "Registration (plate) number of the vehicle. Uncollected today, authorable in the v2 catalog. The third identity fact, and the one a human would actually use to tell two collateral instances apart — worth noting that it CANNOT serve as the instance key, because form intake has no transform slot and an instance key must be a literal in the manifest.",
+          "legacyName": "registrationNo"
+        },
+        {
+          "name": "vehicleRegistrationDate",
+          "type": "string",
+          "description": "Date the vehicle was first registered, as stated. Typed `string`, not a date primitive, and deliberately: the source column `ihs.registrationDate` is varchar(50), the v2 catalog authors it as a text input with inputType date, and neither constrains the format. Declaring it a narrower type here would assert a normalization that nothing performs — the value is whatever the form sent, and observedAt is what makes it interpretable.",
+          "legacyName": "registrationDate"
+        },
+        {
+          "name": "vehicleLadenWeightOver2500kg",
+          "type": "string",
+          "description": "Whether the vehicle's BDM (berat dengan muatan — laden weight) exceeds 2,500 kg, as stated. A commercial-vehicle discriminator that changes the applicable financing rules. Typed `string` and NOT `boolean`, which is the non-obvious call: the fact is boolean-shaped, but `ihs.bdmMoreThan2500kg` is varchar(10) and the v2 catalog authors it as a free TEXT input, so the values that actually arrive are whatever a form emits — 'Y', 'N', 'Yes', ''. Declaring `boolean` would make the contract assert a coercion nobody performs, and the coercion's failure mode is silent: a truthiness test turns the string 'N' into true. Uncollected by any live form today.",
+          "legacyName": "bdmMoreThan2500kg"
+        },
+        {
+          "name": "collateralMarketValue",
+          "type": "number",
+          "kind": "money",
+          "description": "Assessed market value of the collateral. Prefixed `collateral` rather than named bare `marketValue` because a bare one would be a name a company valuation, a property appraisal or a share price could all claim later — and under this registry's rules a second category claiming the name would have to attest the SAME fact, which they do not. kind \"money\": the number is meaningless without a denomination, and the denomination belongs to the observation, not the field. Uncollected by any live form today; authorable in the v2 catalog.",
+          "legacyName": "marketValue"
+        },
+        {
+          "name": "collateralPurchasePriceOnTheRoad",
+          "type": "number",
+          "kind": "money",
+          "description": "On-the-road purchase price of the collateral — the price including registration, road tax and insurance, which is the figure Malaysian motor financing is actually written against. COLLECTED, and the most widely collected field in this category: 6 of the 60 FinHub form_configs plus the finhero-auto SPA (where it is the loan calculator's primary input), 8 of 4,624 `ihs` rows, measured 2026-08-15. Spelled out rather than left as the acronym OTR so the contract is readable by a consumer who has never seen a Malaysian motor quote; the legacy flat column keeps its `purchasePriceOTR` spelling. kind \"money\" — and note the v2 form catalog already declares this same field kind \"money\", so the two vocabularies agree on it.",
+          "legacyName": "purchasePriceOTR"
+        }
+      ]
+    },
+    {
+      "id": "applicant-obligations",
+      "displayName": "Applicant-Declared Monthly Obligations",
+      "canonicalTable": "ihs_alt_data_applicant_obligations",
+      "description": "One existing monthly debt commitment the applicant declared — the input to a debt-service ratio. MULTI-instance, keyed by the kind of obligation, and this is the textbook case for the whole transition: the wide `ihs` table spends five columns on five FIXED kinds (housing loan, hire purchase, personal loan, credit card, other financing), so an applicant with a SIXTH commitment has nowhere to put it and the DSR is computed from an amount that is knowably incomplete. Five columns collapse to two fields; the kind moves from the column NAME into a value, and a sixth obligation becomes one more row. NO adapter maps this category today and that is deliberate rather than unfinished — no live form collects any of the five columns (measured 2026-08-15 across both form-spec populations: 0 of 60 FinHub form_configs, 0 of the four lead-gen SPA bundles, and 0 of 4,624 rows in the sim's `ihs`), so a form-intake manifest over them would mint an APPLICANT attestation for a value no applicant ever gave. The declaration is the useful half: it reserves the vocabulary, states the shape, and lets the manifest arrive as a declaration when a lender authors the fields (all five are already authorable in @finsys/core's v2 form catalog, category 4 'Financial Information').",
+      "fields": [
+        {
+          "name": "obligationType",
+          "type": "string",
+          "description": "What kind of commitment this instance is — housing loan, hire purchase, personal loan, credit card, other financing, or something none of those five named. Carries no legacyName ON PURPOSE: there is no flat column it renames, because in the flat shape this value was not stored at all — it was encoded in WHICH of the five columns held a number. That is the specific thing this category changes. NOT declared kind \"enum\": the five wide columns look like a closed set and are exactly the set that proved too small, so promising closure here would re-create the defect in the contract that the schema change exists to remove."
+        },
+        {
+          "name": "obligationMonthlyInstallment",
+          "type": "number",
+          "kind": "money",
+          "description": "The monthly amount payable on this commitment. Carries no legacyName, and could not: FIVE flat columns (housingLoanMonthlyInstallment, hirePurchaseMonthlyInstallment, personalLoanMonthlyInstallment, creditCardMonthlyInstallment, otherFinancingMonthlyInstallment) all collapse into this one field, so any single legacy name would be correct for one of them and a lie about the other four. The mapping back to the flat vocabulary is (obligationType, obligationMonthlyInstallment) -> column, which is a per-instance function and not a field rename. kind \"money\"."
+        }
+      ]
+    },
+    {
+      "id": "related-person",
+      "displayName": "Related Person",
+      "canonicalTable": "ihs_alt_data_related_person",
+      "description": "A person other than the applicant who stands in a declared ROLE to the application — a company's named contact person, a director, a guarantor, a next of kin. MULTI-instance, keyed by role. Distinct from applicant-contact, which is the nearest neighbour and the one worth drawing the line against: applicant-contact models a CHANNEL (a phone line, an email address) and carries contactName / contactRelationship so an emergency contact's channel can say whose it is. It cannot carry an id number, an id type or a date of birth, and it should not — a contact POINT that carried identity facts would be two things at once. This category models the PERSON, with identity, and lets their contact details hang off them. NO adapter maps it today, and the reason is stronger here than for applicant-obligations: the eight wide `ihs` columns behind it (contactPersonName, contactPersonEmail, contactPersonPhoneNo, contactPersonPhoneNoAreaCode, contactPersonDateOfBirth, contactPersonPosition, contactPersonIdNo, contactPersonIdType) are ABSENT FROM @finsys/core's v2 form-authoring catalog entirely — verified 2026-08-15 against src/data/form-field-base-specs.json, where all 173 authorable fields were checked and none of the eight appears. So unlike applicant-collateral's unused fields, a lender CANNOT put these on a form today even if they wanted to: the columns are reachable only through the lender Open API's own payload, not through any form a borrower fills. 0 of 4,624 rows in the sim's `ihs` carry any of them. Declaring the category without a manifest states the shape and reserves the names; adding the fields to the authoring catalog is what would make a manifest meaningful, and that is a form-authoring change, not this one.",
+      "fields": [
+        {
+          "name": "relatedPersonName",
+          "type": "string",
+          "description": "The related person's name, as given. Deliberately does NOT share person-identity's personName fact — the same call applicant-contact made for contactName, and for the same reason: this is a THIRD PARTY's name, and attesting it as the subject's would be a genuine identity error rather than a formatting disagreement. A shared fact means 'two sources describing one real-world thing'; these are two different people.",
+          "legacyName": "contactPersonName"
+        },
+        {
+          "name": "relatedPersonIdNumber",
+          "type": "string",
+          "description": "The related person's identification number (NRIC, passport, or whatever relatedPersonIdType names). Same third-party reasoning as relatedPersonName: no shared fact with personIdNumber.",
+          "legacyName": "contactPersonIdNo"
+        },
+        {
+          "name": "relatedPersonIdType",
+          "type": "string",
+          "description": "Which kind of identification relatedPersonIdNumber is. NOT declared kind \"enum\": that promises a CLOSED label set and obliges every producing adapter to enumerate its labels, and there is no adapter to consult — the value arrives through the lender Open API from a caller whose vocabulary is its own.",
+          "legacyName": "contactPersonIdType"
+        },
+        {
+          "name": "relatedPersonDateOfBirth",
+          "type": "string",
+          "description": "The related person's date of birth, as given. Typed `string` because the source column is a DATE but the value arriving through the Open API is unnormalized text, and because no shared fact ties it to personDateOfBirth — a different person's birthday is not a competing attestation of the applicant's.",
+          "legacyName": "contactPersonDateOfBirth"
+        },
+        {
+          "name": "relatedPersonRole",
+          "type": "string",
+          "description": "How this person relates to the application — director, authorized contact, guarantor, next of kin. This is the instance key's meaning made explicit as a value, on the same reasoning as obligationType: a role encoded only in the key is invisible to a reader holding one row. NOT declared kind \"enum\". Renames the wide column contactPersonPosition, which named the person's job title within a company; `role` is the wider and more accurate word, since a guarantor holds no position.",
+          "legacyName": "contactPersonPosition"
+        },
+        {
+          "name": "relatedPersonEmail",
+          "type": "string",
+          "description": "Email address for the related person.",
+          "legacyName": "contactPersonEmail"
+        },
+        {
+          "name": "relatedPersonPhone",
+          "type": "string",
+          "description": "Phone number for the related person, as given.",
+          "legacyName": "contactPersonPhoneNo"
+        },
+        {
+          "name": "relatedPersonPhoneAreaCode",
+          "type": "string",
+          "description": "Area or country code, where it is captured separately from the number. Kept as its own field rather than folded into relatedPersonPhone because the wide table captures the two separately and there is no transform slot anywhere on the intake path that could join them — joining here would invent a value nobody gave.",
+          "legacyName": "contactPersonPhoneNoAreaCode"
         }
       ]
     }

@@ -6,6 +6,50 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.5.0] - 2026-08-15
+
+### Added
+
+- **`subject-company` category (SYS-3359).** The company an application is
+  about, as the applicant describes it. THREE fields — `entityTypeCode`,
+  `companySizeCode`, `businessNatureCode` — single-instance, because one
+  application has one subject company.
+
+  **Three and not the six the transition plan grouped here.**
+  `companyBackground`, `noOfEmployees` and `companyWebsite` are collected by no
+  live form and are non-null on 0 of the sim's 4,622 `ihs` rows. A field no
+  form can feed is worse than a missing one: an adapter over it would mint an
+  APPLICANT attestation, carrying provenance saying somebody stated a value
+  nobody stated.
+
+  **This category was dropped once already, on a measurement wrong in its
+  population rather than its arithmetic.** The earlier reading — all six
+  columns collected by no live form — was taken against FinHub's
+  `form_configs` table, 60 active rows, the corpus every Phase 2.6 manifest was
+  built from. It cannot see the four lead-gen SPAs, whose form configs are
+  compiled into the SPA bundle rather than stored as rows, and those are
+  customer-facing. Measured across BOTH populations, `companyEntityType` is
+  non-null on 507 rows, `natureOfBusiness` on 453, `companySize` on 34. Any
+  future "no live form collects this" claim has to name which population it
+  queried.
+
+  **Every field is named apart from company-profile's equivalent, and none
+  shares a fact with it** — the `genderCode` / `personGender` split, for the
+  same reason: a per-form dropdown code and a value OCR-read off an SSM
+  document are not the same fact until somebody maps the vocabularies. The
+  registry enforces this for `entityTypeCode`, refusing one name across two
+  categories that do not share a fact. It does NOT enforce it for
+  `businessNatureCode` vs `businessNature`, where the spellings happen to
+  differ — so a test pins that one, because a distinction resting on an
+  accident disappears the first time someone tidies a name.
+
+  No field declares kind `enum`. That promises a closed label set and obliges
+  every producing adapter to enumerate what it emits; the only producer is a
+  lead-gen SPA whose config ships from a separate repo, so the promise could go
+  false on a release this registry never sees.
+
+  `schemaVersion` 1.3.0 → 1.4.0 (additive).
+
 ## [7.4.0] - 2026-08-14
 
 ### Added

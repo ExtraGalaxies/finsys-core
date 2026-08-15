@@ -19,10 +19,21 @@ type CategoryField = ReturnType<typeof categorySchemaOf>["fields"][number];
  * what their payslip says is the highest-value comparison the disagreement
  * surface will see on this data.
  *
- * subject-company is deliberately NOT in this file. The ticket scopes it
- * alongside these two, but all six of its columns are collected by no live
- * form, so a form-intake adapter over them could only ever attest values the
- * applicant never gave.
+ * subject-company is NOT in this file, and the reason recorded here was wrong.
+ * It said all six of its columns are collected by no live form. Three of them
+ * are: measured on the live sim over 4,622 ihs rows, companyEntityType is
+ * non-null on 507, natureOfBusiness on 453 and companySize on 34. Only
+ * companyBackground, noOfEmployees and companyWebsite are genuinely at zero.
+ *
+ * The original measurement queried FinHub's form_configs table, which holds 60
+ * active rows and is the corpus these six shipped manifests were built from.
+ * It cannot see the four lead-gen SPAs, whose form configs are compiled into
+ * the SPA bundle rather than stored as rows — and those three columns arrive
+ * only from there. Customer-facing forms, invisible to the query of record.
+ *
+ * SYS-3359 carries subject-company at its measured three fields. Any future
+ * "no live form collects this" claim has to name WHICH population it queried,
+ * or it will be this same mistake wearing a different column name.
  */
 describe("applicant-employment (SYS-3337)", () => {
   it("is registered, with its own canonical table", () => {

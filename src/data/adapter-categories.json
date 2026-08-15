@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.3.0",
+  "schemaVersion": "1.4.0",
   "categories": [
     {
       "id": "telco-carrier",
@@ -1993,6 +1993,29 @@
           "name": "statementType",
           "type": "string",
           "description": "Statement type backing the stated income. Modeled because the wide table carries the column; no live form collects it."
+        }
+      ]
+    },
+    {
+      "id": "subject-company",
+      "displayName": "Applicant-Provided Company Profile",
+      "canonicalTable": "ihs_alt_data_subject_company",
+      "description": "The company an application is about, as the applicant describes it. SINGLE-instance: one application has one subject company. THREE fields, not the six wide columns the transition plan grouped here — companyBackground, noOfEmployees and companyWebsite are collected by no live form in either population (0 of 4,622 ihs rows), and a field no form can feed is a promise this category cannot keep. They stay wide-table-only until something collects them. The three that ARE collected arrive from the lead-gen SPAs, not from FinHub's form_configs; a measurement over form_configs alone reports all six as uncollected, which is exactly how this category came to be dropped once already.",
+      "fields": [
+        {
+          "name": "entityTypeCode",
+          "type": "string",
+          "description": "Legal entity type of the subject company as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from company-profile's companyEntityType, and carrying no shared fact, on purpose: that one is OCR-read off the SSM document, this one is a code whose meaning is per-form. Exactly the genderCode / personGender split, for exactly the same reason — the registry enforces it, refusing one name across two categories unless both attest the same fact. NOT declared kind \"enum\": that promises a CLOSED label set, and the only form collecting this is a lead-gen SPA whose config is compiled into a bundle shipped from a separate repo, so the choice set can change without this registry or any manifest knowing."
+        },
+        {
+          "name": "companySizeCode",
+          "type": "string",
+          "description": "Stated size band of the subject company, as a per-form dropdown code. Same naming and enum reasoning as entityTypeCode. A band, not a count: noOfEmployees is the count, nothing collects it, so this can be neither derived from nor checked against one."
+        },
+        {
+          "name": "businessNatureCode",
+          "type": "string",
+          "description": "Stated nature of the subject company's business, as a per-form dropdown code. Named apart from company-profile's businessNature — which is OCR-read off the SSM document — for the same reason entityTypeCode is named apart, even though the two spellings do not collide and the registry would not have objected. Relying on a spelling difference nobody chose deliberately is how a shared fact gets asserted by accident."
         }
       ]
     }

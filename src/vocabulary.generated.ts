@@ -10,7 +10,7 @@
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * 19 categories · 259 canonical fields · 86 retired names
+ * 20 categories · 262 canonical fields · 86 retired names
  */
 
 /** Every category id the registry declares. */
@@ -32,6 +32,7 @@ export type AdapterCategoryId =
   | "payslip"
   | "person-identity"
   | "social-media"
+  | "subject-company"
   | "telco-carrier"
   | "trade-credit";
 
@@ -63,6 +64,7 @@ export type CanonicalFieldNameLiteral =
   | "bucket"
   | "businessCommencementDate"
   | "businessNature"
+  | "businessNatureCode"
   | "businessOrigin"
   | "businessSector"
   | "capitalReserves"
@@ -75,6 +77,7 @@ export type CanonicalFieldNameLiteral =
   | "companyName"
   | "companyNameDateOfChange"
   | "companyRegNo"
+  | "companySizeCode"
   | "companyStatus"
   | "computationMode"
   | "consolidated"
@@ -164,6 +167,7 @@ export type CanonicalFieldNameLiteral =
   | "employmentType"
   | "endOfYearCash"
   | "engagementRate90d"
+  | "entityTypeCode"
   | "exchangeEqualisationOrFluctuationReserves"
   | "financeCost"
   | "financialYearEnd"

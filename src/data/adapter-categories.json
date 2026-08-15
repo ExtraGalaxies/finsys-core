@@ -15,7 +15,7 @@
             0,
             1
           ],
-          "description": "Fraction of bills paid on time over the last 24 months. Strongest single telco predictor; ≥0.95 is the clean-history signal.",
+          "description": "Fraction of bills paid on time over the last 24 months. Strongest single telco predictor; \u22650.95 is the clean-history signal.",
           "legacyName": "telcoOnTimePaymentRatio24m"
         },
         {
@@ -26,7 +26,7 @@
             0,
             600
           ],
-          "description": "Account age. ≥48 months is the thin-file uplift trigger.",
+          "description": "Account age. \u226548 months is the thin-file uplift trigger.",
           "legacyName": "telcoTenureMonths"
         },
         {
@@ -37,7 +37,7 @@
             0,
             100
           ],
-          "description": "Non-payment-driven account suspensions in the last 24 months. ≥3 is a strong distress signal.",
+          "description": "Non-payment-driven account suspensions in the last 24 months. \u22653 is a strong distress signal.",
           "legacyName": "telcoSuspensionsCount24m"
         },
         {
@@ -67,7 +67,7 @@
           "name": "arpu",
           "type": "number",
           "kind": "money",
-          "description": "Average Revenue Per User (monthly). Coarse spending-capacity proxy. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "description": "Average Revenue Per User (monthly). Coarse spending-capacity proxy. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking \u2014 field names are fact ids).",
           "legacyName": "telcoArpuMyr"
         },
         {
@@ -110,14 +110,14 @@
           "name": "monthlyVolume3m",
           "type": "number",
           "kind": "money",
-          "description": "Mean monthly inbound transaction volume over the trailing 3 months. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "description": "Mean monthly inbound transaction volume over the trailing 3 months. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking \u2014 field names are fact ids).",
           "legacyName": "paymentsMonthlyVolumeMyrT3"
         },
         {
           "name": "monthlyVolume12m",
           "type": "number",
           "kind": "money",
-          "description": "Mean monthly inbound transaction volume over the trailing 12 months. Pair with T3 for trend direction. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "description": "Mean monthly inbound transaction volume over the trailing 12 months. Pair with T3 for trend direction. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking \u2014 field names are fact ids).",
           "legacyName": "paymentsMonthlyVolumeMyrT12"
         },
         {
@@ -225,7 +225,7 @@
     {
       "id": "social-media",
       "displayName": "Social Media Presence",
-      "description": "Public business-presence signals from social / commerce platforms — establishment, reach, engagement authenticity, customer reputation, and account standing. Vendor-agnostic: any platform exposing a public business profile maps its data to this canonical field set. Useful as thin-file corroboration of a borrower's operating reality where formal financials are sparse.",
+      "description": "Public business-presence signals from social / commerce platforms \u2014 establishment, reach, engagement authenticity, customer reputation, and account standing. Vendor-agnostic: any platform exposing a public business profile maps its data to this canonical field set. Useful as thin-file corroboration of a borrower's operating reality where formal financials are sparse.",
       "canonicalTable": "ihs_alt_data_social_media",
       "fields": [
         {
@@ -247,7 +247,7 @@
             0,
             100000000
           ],
-          "description": "Aggregate audience size across linked public profiles. Coarse reach / scale proxy — gameable on its own, so read alongside socialEngagementRate90d.",
+          "description": "Aggregate audience size across linked public profiles. Coarse reach / scale proxy \u2014 gameable on its own, so read alongside socialEngagementRate90d.",
           "legacyName": "socialFollowerCount"
         },
         {
@@ -269,13 +269,13 @@
             0,
             1
           ],
-          "description": "Fraction of weeks in the trailing 12 months with at least one public post. Ongoing-operation signal — distinguishes an active business from a stale listing.",
+          "description": "Fraction of weeks in the trailing 12 months with at least one public post. Ongoing-operation signal \u2014 distinguishes an active business from a stale listing.",
           "legacyName": "socialPostingConsistency12m"
         },
         {
           "name": "verifiedBusinessAccount",
           "type": "boolean",
-          "description": "Has at least one platform-verified business / commerce profile. Legitimacy signal — the platform has performed its own business-identity check.",
+          "description": "Has at least one platform-verified business / commerce profile. Legitimacy signal \u2014 the platform has performed its own business-identity check.",
           "legacyName": "socialVerifiedBusinessAccount"
         },
         {
@@ -286,7 +286,7 @@
             0,
             5
           ],
-          "description": "Mean public customer rating (normalised to a 0–5 scale) across review-bearing profiles. Reputation signal; especially predictive for consumer-facing SMEs.",
+          "description": "Mean public customer rating (normalised to a 0\u20135 scale) across review-bearing profiles. Reputation signal; especially predictive for consumer-facing SMEs.",
           "legacyName": "socialCustomerRatingAvg"
         },
         {
@@ -316,7 +316,7 @@
     {
       "id": "trade-credit",
       "displayName": "Trade Credit (Accounting)",
-      "description": "Accounts-receivable / accounts-payable aging and ledger-derived working-capital signals sourced from a business's accounting / ERP system. Captures how promptly the business collects from its debtors and pays its creditors, the aging profile and concentration of its receivables, and P&L / cash-conversion efficiency. Vendor-agnostic: any accounting or ERP system that exposes an AR/AP aging report plus a P&L summary maps its data to this canonical field set. A direct, high-signal view of trade-obligation behaviour — closer to formal credit history than most alternative data — and the anchor for cross-referencing self-reported accounting figures against bank-statement reality.",
+      "description": "Accounts-receivable / accounts-payable aging and ledger-derived working-capital signals sourced from a business's accounting / ERP system. Captures how promptly the business collects from its debtors and pays its creditors, the aging profile and concentration of its receivables, and P&L / cash-conversion efficiency. Vendor-agnostic: any accounting or ERP system that exposes an AR/AP aging report plus a P&L summary maps its data to this canonical field set. A direct, high-signal view of trade-obligation behaviour \u2014 closer to formal credit history than most alternative data \u2014 and the anchor for cross-referencing self-reported accounting figures against bank-statement reality.",
       "canonicalTable": "ihs_alt_data_trade_credit",
       "fields": [
         {
@@ -327,7 +327,7 @@
             0,
             400
           ],
-          "description": "Days Sales Outstanding — average days to collect a receivable. The headline collection-efficiency metric; lower is healthier, and a rising DSO is an early liquidity-stress signal."
+          "description": "Days Sales Outstanding \u2014 average days to collect a receivable. The headline collection-efficiency metric; lower is healthier, and a rising DSO is an early liquidity-stress signal."
         },
         {
           "name": "apDaysPayableOutstanding",
@@ -337,13 +337,13 @@
             0,
             400
           ],
-          "description": "Days Payable Outstanding — average days the business takes to pay its suppliers. Context for DSO; a very high DPO can indicate the business is stretching its creditors to fund operations."
+          "description": "Days Payable Outstanding \u2014 average days the business takes to pay its suppliers. Context for DSO; a very high DPO can indicate the business is stretching its creditors to fund operations."
         },
         {
           "name": "arTotalOutstanding",
           "type": "number",
           "kind": "money",
-          "description": "Total accounts-receivable balance outstanding. The size of the debtor book the business is carrying. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "description": "Total accounts-receivable balance outstanding. The size of the debtor book the business is carrying. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking \u2014 field names are fact ids).",
           "legacyName": "arTotalOutstandingMyr"
         },
         {
@@ -374,7 +374,7 @@
             0,
             1
           ],
-          "description": "Share of total receivables owed by the top-5 debtors. Above ~0.6 is single-customer concentration risk — one debtor default would materially impair cash flow."
+          "description": "Share of total receivables owed by the top-5 debtors. Above ~0.6 is single-customer concentration risk \u2014 one debtor default would materially impair cash flow."
         },
         {
           "name": "tradeReferenceDefaults12m",
@@ -390,7 +390,7 @@
           "name": "accountingRevenue12m",
           "type": "number",
           "kind": "money",
-          "description": "Trailing-12-month turnover per the general ledger. The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking — field names are fact ids).",
+          "description": "Trailing-12-month turnover per the general ledger. The cross-reference anchor: comparing this self-reported accounting revenue against payment-network volume and bank-statement inflows surfaces book-vs-reality inconsistencies. The Myr suffix in the field name is legacy: the denomination is carried per value, not fixed by the field. Rename deferred (breaking \u2014 field names are fact ids).",
           "legacyName": "accountingRevenue12mMyr"
         },
         {
@@ -411,14 +411,14 @@
             -200,
             600
           ],
-          "description": "Cash Conversion Cycle (DSO + days-inventory-outstanding − DPO). Working-capital efficiency; negative values (collect before paying suppliers) are strongest, very high values indicate cash tied up in operations."
+          "description": "Cash Conversion Cycle (DSO + days-inventory-outstanding \u2212 DPO). Working-capital efficiency; negative values (collect before paying suppliers) are strongest, very high values indicate cash tied up in operations."
         }
       ]
     },
     {
       "id": "geolocation",
       "displayName": "Geolocation",
-      "description": "Hourly-granularity movement track plus derived mobility signals for an applicant, sourced from any location-capable provider (telco network location, mobile-SDK GPS, GIS / address-verification services). Two instance kinds share this category: point instances (instanceKey 'pt:<ISO-hour>') carry one observed position per hourly bucket, mirroring the bank-statement multi-instance pattern; a single summary instance (instanceKey 'summary') carries adapter-derived behaviour signals — most importantly work-pattern regularity (sustained weekday dwell at a stable work anchor corroborates income reliability), residential stability, vacation windows, and dwell in operator-flagged hotspot zones. Vendor-agnostic: the source classifies or the adapter infers place labels; no provider-specific semantics leak into the field set. Raw coordinates are sensitive personal data — product-plane persistence is gated on PDPA consent + CRA Act 710 s25 retention review.",
+      "description": "Hourly-granularity movement track plus derived mobility signals for an applicant, sourced from any location-capable provider (telco network location, mobile-SDK GPS, GIS / address-verification services). Two instance kinds share this category: point instances (instanceKey 'pt:<ISO-hour>') carry one observed position per hourly bucket, mirroring the bank-statement multi-instance pattern; a single summary instance (instanceKey 'summary') carries adapter-derived behaviour signals \u2014 most importantly work-pattern regularity (sustained weekday dwell at a stable work anchor corroborates income reliability), residential stability, vacation windows, and dwell in operator-flagged hotspot zones. Vendor-agnostic: the source classifies or the adapter infers place labels; no provider-specific semantics leak into the field set. Raw coordinates are sensitive personal data \u2014 product-plane persistence is gated on PDPA consent + CRA Act 710 s25 retention review.",
       "canonicalTable": "ihs_alt_data_geolocation",
       "fields": [
         {
@@ -685,7 +685,7 @@
     {
       "id": "epf-statement",
       "displayName": "EPF Statement (Document Extraction)",
-      "description": "Fields extracted from an uploaded EPF (KWSP) statement document by the host's extraction pipeline. One instance per statement document. Field names carry the 'epf' prefix — the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
+      "description": "Fields extracted from an uploaded EPF (KWSP) statement document by the host's extraction pipeline. One instance per statement document. Field names carry the 'epf' prefix \u2014 the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
       "canonicalTable": "ihsepfstatement",
       "fields": [
         {
@@ -753,7 +753,7 @@
     {
       "id": "payslip",
       "displayName": "Payslip (Document Extraction)",
-      "description": "Fields extracted from an uploaded payslip document by the host's extraction pipeline. One instance per payslip document; each payslip covers a single pay period. Field names carry the 'payslip' prefix — the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
+      "description": "Fields extracted from an uploaded payslip document by the host's extraction pipeline. One instance per payslip document; each payslip covers a single pay period. Field names carry the 'payslip' prefix \u2014 the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
       "canonicalTable": "ihspayslip",
       "fields": [
         {
@@ -879,12 +879,12 @@
           "name": "companyName",
           "type": "string",
           "fact": "companyName",
-          "description": "Company name as stated on the document. Attestation of the shared companyName fact — the SSM Form 9 extraction category attests the same fact from its own document."
+          "description": "Company name as stated on the document. Attestation of the shared companyName fact \u2014 the SSM Form 9 extraction category attests the same fact from its own document."
         },
         {
           "name": "financialYearEnd",
           "type": "string",
-          "description": "Financial year end stated by the source document, normalized to ISO YYYY-MM-DD. Shared verbatim by every period the document carries — period identity comes from declared position, never from this date."
+          "description": "Financial year end stated by the source document, normalized to ISO YYYY-MM-DD. Shared verbatim by every period the document carries \u2014 period identity comes from declared position, never from this date."
         },
         {
           "name": "consolidated",
@@ -1603,7 +1603,7 @@
     {
       "id": "company-registration",
       "displayName": "SSM Form 9 (Document Extraction)",
-      "description": "Fields extracted from an uploaded SSM Form 9 (Certificate of Incorporation of Private Company) document by the host's extraction pipeline. One instance per uploaded document. The company name and incorporation date are attestations of shared facts — the company-profile and financial-statement extraction categories attest the same real-world facts from their own documents.",
+      "description": "Fields extracted from an uploaded SSM Form 9 (Certificate of Incorporation of Private Company) document by the host's extraction pipeline. One instance per uploaded document. The company name and incorporation date are attestations of shared facts \u2014 the company-profile and financial-statement extraction categories attest the same real-world facts from their own documents.",
       "canonicalTable": "ihs_alt_data_form9",
       "fields": [
         {
@@ -1622,7 +1622,7 @@
           "name": "companyIncorporationDate",
           "type": "string",
           "fact": "companyIncorporationDate",
-          "description": "Date of incorporation as printed on the certificate, normalized to ISO YYYY-MM-DD. Attestation of the shared companyIncorporationDate fact — a company has exactly one incorporation date regardless of which document it was extracted from."
+          "description": "Date of incorporation as printed on the certificate, normalized to ISO YYYY-MM-DD. Attestation of the shared companyIncorporationDate fact \u2014 a company has exactly one incorporation date regardless of which document it was extracted from."
         }
       ],
       "legacyId": "finxtract-form9"
@@ -1630,7 +1630,7 @@
     {
       "id": "company-profile",
       "displayName": "SSM Company Profile (Document Extraction)",
-      "description": "Fields extracted from an uploaded SSM company-profile document (company or business registration extract) by the host's extraction pipeline. One instance per uploaded document. Covers registration identity, status, key dates, registered address, capital, and the officer/shareholder registers. The incorporation date is an attestation of a shared fact — the Form 9 extraction category attests the same real-world fact from its own document.",
+      "description": "Fields extracted from an uploaded SSM company-profile document (company or business registration extract) by the host's extraction pipeline. One instance per uploaded document. Covers registration identity, status, key dates, registered address, capital, and the officer/shareholder registers. The incorporation date is an attestation of a shared fact \u2014 the Form 9 extraction category attests the same real-world fact from its own document.",
       "canonicalTable": "ihs_alt_data_ssm",
       "fields": [
         {
@@ -1665,7 +1665,7 @@
           "name": "companyIncorporationDate",
           "type": "string",
           "fact": "companyIncorporationDate",
-          "description": "Incorporation (or registration) date as stated on the profile, normalized to ISO YYYY-MM-DD. Attestation of the shared companyIncorporationDate fact — a company has exactly one incorporation date regardless of which document it was extracted from."
+          "description": "Incorporation (or registration) date as stated on the profile, normalized to ISO YYYY-MM-DD. Attestation of the shared companyIncorporationDate fact \u2014 a company has exactly one incorporation date regardless of which document it was extracted from."
         },
         {
           "name": "businessCommencementDate",
@@ -1732,13 +1732,13 @@
           "name": "personName",
           "type": "string",
           "fact": "personName",
-          "description": "Full name as the applicant entered it. Attestation of the shared personName fact — the identity-document, payslip, EPF and bank-statement categories attest the same fact from their own sources. A borrower typing their name differently from their IC is normal, not an error."
+          "description": "Full name as the applicant entered it. Attestation of the shared personName fact \u2014 the identity-document, payslip, EPF and bank-statement categories attest the same fact from their own sources. A borrower typing their name differently from their IC is normal, not an error."
         },
         {
           "name": "personIdNumber",
           "type": "string",
           "fact": "personIdNumber",
-          "description": "IC or passport number as the applicant entered it. Attestation of the shared personIdNumber fact. Forms validate 12 digits with no separators, while the identity document attests it as printed and commonly hyphenated — so comparison must normalize before concluding disagreement."
+          "description": "IC or passport number as the applicant entered it. Attestation of the shared personIdNumber fact. Forms validate 12 digits with no separators, while the identity document attests it as printed and commonly hyphenated \u2014 so comparison must normalize before concluding disagreement."
         },
         {
           "name": "personDateOfBirth",
@@ -1758,22 +1758,22 @@
       "id": "applicant-demographics",
       "displayName": "Applicant-Provided Demographics",
       "canonicalTable": "ihs_alt_data_applicant_demographics",
-      "description": "Demographic attributes the applicant selected on a lending application form. Split out of applicant-identity (SYS-3166) rather than merged into it, and not cosmetically: every field here is uniformly sensitive, so confidentiality is decided once for the category instead of being re-argued per field a few hundred times over. applicant-identity keeps the legally-identifying facts — name, id number, date of birth, nationality — which are the subject key under Act 710 s.28. One instance per application.",
+      "description": "Demographic attributes the applicant selected on a lending application form. Split out of applicant-identity (SYS-3166) rather than merged into it, and not cosmetically: every field here is uniformly sensitive, so confidentiality is decided once for the category instead of being re-argued per field a few hundred times over. applicant-identity keeps the legally-identifying facts \u2014 name, id number, date of birth, nationality \u2014 which are the subject key under Act 710 s.28. One instance per application.",
       "fields": [
         {
           "name": "statedAge",
           "type": "string",
-          "description": "Age as the applicant entered it. Deliberately NOT a shared fact with personDateOfBirth, and deliberately a string: the column is varchar(10) and forms accept free text, so a value may be a range or a non-numeric answer. An age is also true only on the day it was given — observedAt is what makes it interpretable, and it must never be reconciled against a date of birth as though the two were the same claim."
+          "description": "Age as the applicant entered it. Deliberately NOT a shared fact with personDateOfBirth, and deliberately a string: the column is varchar(10) and forms accept free text, so a value may be a range or a non-numeric answer. An age is also true only on the day it was given \u2014 observedAt is what makes it interpretable, and it must never be reconciled against a date of birth as though the two were the same claim."
         },
         {
           "name": "genderCode",
           "type": "string",
-          "description": "Gender as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from person-identity's personGender, and carrying no shared fact, on purpose. The document attests OCR text off a MyKad while the form emits a code ('M', '01') whose meaning is per-form. Collected by 6 of the 60 live form configs, all 6 sharing one choice set today — measured per field. Declaring them one fact would put 'M' and 'LELAKI' in the disagreement surface as a permanent false positive on one of its highest-volume fields, and the registry's kind-agreement rule refuses the shortcut anyway. Comparing the two needs a per-form code-to-label resolution that does not exist yet; when it does, the comparison belongs there and not in the field name. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and the declaration would go quietly false the first time someone edits a form."
+          "description": "Gender as the applicant SELECTED IT FROM A DROPDOWN \u2014 a code, not a label. Named apart from person-identity's personGender, and carrying no shared fact, on purpose. The document attests OCR text off a MyKad while the form emits a code ('M', '01') whose meaning is per-form. Collected by 6 of the 60 live form configs, all 6 sharing one choice set today \u2014 measured per field. Declaring them one fact would put 'M' and 'LELAKI' in the disagreement surface as a permanent false positive on one of its highest-volume fields, and the registry's kind-agreement rule refuses the shortcut anyway. Comparing the two needs a per-form code-to-label resolution that does not exist yet; when it does, the comparison belongs there and not in the field name. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and the declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "raceCode",
           "type": "string",
-          "description": "Race as the applicant selected it from a dropdown. Same reasoning as genderCode, and the same deliberate absence of a shared fact with person-identity's personRace. Collected by 12 of the 60 live form configs, all 12 sharing one choice set today — measured per field. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and the declaration would go quietly false the first time someone edits a form."
+          "description": "Race as the applicant selected it from a dropdown. Same reasoning as genderCode, and the same deliberate absence of a shared fact with person-identity's personRace. Collected by 12 of the 60 live form configs, all 12 sharing one choice set today \u2014 measured per field. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and the declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "maritalStatus",
@@ -1799,7 +1799,7 @@
         {
           "name": "residenceType",
           "type": "string",
-          "description": "Residence type (owned, rented, family-owned, …) as selected. A housing-tenure signal, which is why it sits here rather than with applicant-address: it describes the person, not a place. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
+          "description": "Residence type (owned, rented, family-owned, \u2026) as selected. A housing-tenure signal, which is why it sits here rather than with applicant-address: it describes the person, not a place. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
         }
       ]
     },
@@ -1807,7 +1807,7 @@
       "id": "applicant-contact",
       "displayName": "Applicant-Provided Contact Point",
       "canonicalTable": "ihs_alt_data_applicant_contact",
-      "description": "One way to reach the applicant — a phone line, an email address, or an emergency contact. MULTI-instance, keyed by the kind of contact point, because the wide ihs table flattens five phone lines into five column families (mobile, office, international, emergency, and an unqualified phoneNumber) and therefore cannot hold a sixth. The instance key IS what the column suffix was encoding. Fields absent for a given kind are simply absent on that instance rather than being null columns for everyone.",
+      "description": "One way to reach the applicant \u2014 a phone line, an email address, or an emergency contact. MULTI-instance, keyed by the kind of contact point, because the wide ihs table flattens five phone lines into five column families (mobile, office, international, emergency, and an unqualified phoneNumber) and therefore cannot hold a sixth. The instance key IS what the column suffix was encoding. Fields absent for a given kind are simply absent on that instance rather than being null columns for everyone.",
       "fields": [
         {
           "name": "contactValue",
@@ -1822,7 +1822,7 @@
         {
           "name": "contactExtension",
           "type": "string",
-          "description": "Phone extension. Same status as contactAreaCode — one wide column exists (internationalExtensionPhoneNo), no live form collects it."
+          "description": "Phone extension. Same status as contactAreaCode \u2014 one wide column exists (internationalExtensionPhoneNo), no live form collects it."
         },
         {
           "name": "contactName",
@@ -1832,7 +1832,7 @@
         {
           "name": "contactRelationship",
           "type": "string",
-          "description": "How the named person relates to the applicant (spouse, parent, employer, …). Meaningful only alongside contactName. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
+          "description": "How the named person relates to the applicant (spouse, parent, employer, \u2026). Meaningful only alongside contactName. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest."
         }
       ]
     },
@@ -1840,7 +1840,7 @@
       "id": "applicant-address",
       "displayName": "Applicant-Provided Address",
       "canonicalTable": "ihs_alt_data_applicant_address",
-      "description": "One address the applicant entered on a lending application form. MULTI-instance, keyed by which address it is (\"permanent\", \"residential\", \"office\"), because the wide ihs table spends a whole column family on each and therefore cannot hold a fourth. Declaring this single would re-encode that limit permanently, and unlike a wrong field name it is not repairable later — the information would never have been captured. Ragged coverage across the three becomes ABSENT FIELDS on an instance rather than null columns for everyone: the permanent block has no state column of its own (its state landed in the unprefixed `state`), and only the residential block carries an occupancy duration.",
+      "description": "One address the applicant entered on a lending application form. MULTI-instance, keyed by which address it is (\"permanent\", \"residential\", \"office\"), because the wide ihs table spends a whole column family on each and therefore cannot hold a fourth. Declaring this single would re-encode that limit permanently, and unlike a wrong field name it is not repairable later \u2014 the information would never have been captured. Ragged coverage across the three becomes ABSENT FIELDS on an instance rather than null columns for everyone: the permanent block has no state column of its own (its state landed in the unprefixed `state`), and only the residential block carries an occupancy duration.",
       "fields": [
         {
           "name": "addressLine1",
@@ -1870,7 +1870,7 @@
         {
           "name": "addressStateCode",
           "type": "string",
-          "description": "State as the applicant SELECTED IT FROM A DROPDOWN — a code ('A' = PERAK, 'B' = SELANGOR), not a label. Named for what it holds, and carrying no shared fact, for the same reason as applicant-demographics' genderCode: the choice set is defined per form config, so no single adapter can enumerate it and no comparison against a free-text state is meaningful without a per-form resolution that does not exist. NOT declared kind \"enum\" — that promises a closed label set the host makes each producing adapter enumerate, which a form-intake adapter spanning 60 heterogeneous forms cannot do."
+          "description": "State as the applicant SELECTED IT FROM A DROPDOWN \u2014 a code ('A' = PERAK, 'B' = SELANGOR), not a label. Named for what it holds, and carrying no shared fact, for the same reason as applicant-demographics' genderCode: the choice set is defined per form config, so no single adapter can enumerate it and no comparison against a free-text state is meaningful without a per-form resolution that does not exist. NOT declared kind \"enum\" \u2014 that promises a closed label set the host makes each producing adapter enumerate, which a form-intake adapter spanning 60 heterogeneous forms cannot do."
         },
         {
           "name": "addressCountry",
@@ -1881,7 +1881,7 @@
           "name": "occupancyYears",
           "type": "number",
           "unit": "years",
-          "description": "How long the applicant has lived at this address, whole years. Meaningful only on the residential instance — it is the one block the wide table gives a duration. Kept separate from occupancyMonths rather than folded into a single figure because the form collects two inputs and form intake has no transform slot by design; combining them is a consumer's job, and doing it here would invent a value the applicant never gave."
+          "description": "How long the applicant has lived at this address, whole years. Meaningful only on the residential instance \u2014 it is the one block the wide table gives a duration. Kept separate from occupancyMonths rather than folded into a single figure because the form collects two inputs and form intake has no transform slot by design; combining them is a consumer's job, and doing it here would invent a value the applicant never gave."
         },
         {
           "name": "occupancyMonths",
@@ -1895,38 +1895,38 @@
       "id": "applicant-employment",
       "displayName": "Applicant-Provided Employment",
       "canonicalTable": "ihs_alt_data_applicant_employment",
-      "description": "One job the applicant described on a lending application form. MULTI-instance: a person can hold two jobs and the wide ihs table, which has exactly one unprefixed employment block, cannot say so. Today's form collects only the current one, so the sole adapter emits a single instance under the key \"current\" — an explicit key rather than the empty one, because \"\" reads as \"the single instance a single-cardinality category has\" and this category is not that. A second job becomes another row.",
+      "description": "One job the applicant described on a lending application form. MULTI-instance: a person can hold two jobs and the wide ihs table, which has exactly one unprefixed employment block, cannot say so. Today's form collects only the current one, so the sole adapter emits a single instance under the key \"current\" \u2014 an explicit key rather than the empty one, because \"\" reads as \"the single instance a single-cardinality category has\" and this category is not that. A second job becomes another row.",
       "fields": [
         {
           "name": "employerName",
           "type": "string",
           "fact": "employerName",
-          "description": "Employer name as the applicant entered it. Attestation of the shared employerName fact — the PAYSLIP attests the same fact from the document side (SYS-3333 de-prefixed it from payslipEmployerName). This is the pairing the disagreement surface exists for: a borrower naming an employer their payslip does not, or naming it differently, is worth seeing. Free text on both sides, so comparable after normalization."
+          "description": "Employer name as the applicant entered it. Attestation of the shared employerName fact \u2014 the PAYSLIP attests the same fact from the document side (SYS-3333 de-prefixed it from payslipEmployerName). This is the pairing the disagreement surface exists for: a borrower naming an employer their payslip does not, or naming it differently, is worth seeing. Free text on both sides, so comparable after normalization."
         },
         {
           "name": "employmentStatus",
           "type": "string",
-          "description": "Employment status as selected (permanent, contract, probation, …). NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+          "description": "Employment status as selected (permanent, contract, probation, \u2026). NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today \u2014 measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "employmentType",
           "type": "string",
-          "description": "Employment type as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+          "description": "Employment type as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today \u2014 measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "occupation",
           "type": "string",
-          "description": "Occupation as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+          "description": "Occupation as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today \u2014 measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "employmentSector",
           "type": "string",
-          "description": "Employment sector as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+          "description": "Employment sector as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today \u2014 measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "subEmploymentSector",
           "type": "string",
-          "description": "Sub-sector within employmentSector, as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+          "description": "Sub-sector within employmentSector, as selected. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today \u2014 measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "businessSector",
@@ -1942,7 +1942,7 @@
           "name": "lengthOfServiceYears",
           "type": "number",
           "unit": "years",
-          "description": "Length of service, whole years. Modeled because the wide table carries the column; no live form collects it. Kept separate from lengthOfServiceMonths for the same reason applicant-address keeps occupancy years and months apart — form intake has no transform slot, so folding two figures into one would invent a value nobody gave."
+          "description": "Length of service, whole years. Modeled because the wide table carries the column; no live form collects it. Kept separate from lengthOfServiceMonths for the same reason applicant-address keeps occupancy years and months apart \u2014 form intake has no transform slot, so folding two figures into one would invent a value nobody gave."
         },
         {
           "name": "lengthOfServiceMonths",
@@ -1956,7 +1956,7 @@
       "id": "applicant-income",
       "displayName": "Applicant-Provided Income",
       "canonicalTable": "ihs_alt_data_applicant_income",
-      "description": "The applicant's stated income position. SINGLE-instance: unlike employment, these describe the person overall rather than one job, and the wide table's single block is not a limitation being inherited here — it matches what is being said.",
+      "description": "The applicant's stated income position. SINGLE-instance: unlike employment, these describe the person overall rather than one job, and the wide table's single block is not a limitation being inherited here \u2014 it matches what is being said.",
       "fields": [
         {
           "name": "grossPay",
@@ -1964,7 +1964,7 @@
           "kind": "money",
           "fact": "grossPay",
           "legacyName": "monthlyGrossIncome",
-          "description": "Gross pay as the applicant stated it, monthly. Attestation of the shared grossPay fact, which the PAYSLIP attests from the document side. COMPARISON MUST CHECK THE PERIOD FIRST: a payslip's grossPay is the gross for ITS pay period, and the payslip category carries payPeriod for exactly that reason — a monthly statement compared against a fortnightly payslip disagrees by construction, not because anyone was wrong. The fact is shared because the two ARE the same quantity once the period is known, which is what distinguishes this from applicant-demographics' genderCode, where no resolution between the two sides exists at all."
+          "description": "Gross pay as the applicant stated it, monthly. Attestation of the shared grossPay fact, which the PAYSLIP attests from the document side. COMPARISON MUST CHECK THE PERIOD FIRST: a payslip's grossPay is the gross for ITS pay period, and the payslip category carries payPeriod for exactly that reason \u2014 a monthly statement compared against a fortnightly payslip disagrees by construction, not because anyone was wrong. The fact is shared because the two ARE the same quantity once the period is known, which is what distinguishes this from applicant-demographics' genderCode, where no resolution between the two sides exists at all."
         },
         {
           "name": "netPay",
@@ -1977,12 +1977,12 @@
         {
           "name": "sourceOfFund",
           "type": "string",
-          "description": "Stated source of funds. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+          "description": "Stated source of funds. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today \u2014 measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "sourceOfWealth",
           "type": "string",
-          "description": "Stated source of wealth. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today — measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
+          "description": "Stated source of wealth. NOT declared kind \"enum\". Collected by 6 of the 60 live form configs, and all 6 carry an identical choice set today \u2014 measured per field, not inferred from a sibling. The closure is still not the category's to promise: a form config carries its OWN choices, so one can add a value tomorrow without the manifest knowing, and kind \"enum\" obliges every producing adapter to enumerate the labels it emits. The declaration would go quietly false the first time someone edits a form."
         },
         {
           "name": "computationMode",
@@ -2000,12 +2000,12 @@
       "id": "subject-company",
       "displayName": "Applicant-Provided Company Profile",
       "canonicalTable": "ihs_alt_data_subject_company",
-      "description": "The company an application is about, as the applicant describes it. SINGLE-instance: one application has one subject company. THREE fields, not the six wide columns the transition plan grouped here — companyBackground, noOfEmployees and companyWebsite are collected by no live form in either population (0 of 4,622 ihs rows), and a field no form can feed is a promise this category cannot keep. They stay wide-table-only until something collects them. The three that ARE collected arrive from the lead-gen SPAs, not from FinHub's form_configs; a measurement over form_configs alone reports all six as uncollected, which is exactly how this category came to be dropped once already.",
+      "description": "The company an application is about, as the applicant describes it. SINGLE-instance: one application has one subject company. THREE fields, not the six wide columns the transition plan grouped here \u2014 companyBackground, noOfEmployees and companyWebsite are collected by no live form in either population (0 of 4,622 ihs rows), and a field no form can feed is a promise this category cannot keep. They stay wide-table-only until something collects them. The three that ARE collected arrive from the lead-gen SPAs, not from FinHub's form_configs; a measurement over form_configs alone reports all six as uncollected, which is exactly how this category came to be dropped once already.",
       "fields": [
         {
           "name": "entityTypeCode",
           "type": "string",
-          "description": "Legal entity type of the subject company as the applicant SELECTED IT FROM A DROPDOWN — a code, not a label. Named apart from company-profile's companyEntityType, and carrying no shared fact, on purpose: that one is OCR-read off the SSM document, this one is a code whose meaning is per-form. Exactly the genderCode / personGender split, for exactly the same reason — the registry enforces it, refusing one name across two categories unless both attest the same fact. NOT declared kind \"enum\": that promises a CLOSED label set, and the only form collecting this is a lead-gen SPA whose config is compiled into a bundle shipped from a separate repo, so the choice set can change without this registry or any manifest knowing."
+          "description": "Legal entity type of the subject company as the applicant SELECTED IT FROM A DROPDOWN \u2014 a code, not a label. Named apart from company-profile's companyEntityType, and carrying no shared fact, on purpose: that one is OCR-read off the SSM document, this one is a code whose meaning is per-form. Exactly the genderCode / personGender split, for exactly the same reason \u2014 the registry enforces it, refusing one name across two categories unless both attest the same fact. NOT declared kind \"enum\": that promises a CLOSED label set, and the only form collecting this is a lead-gen SPA whose config is compiled into a bundle shipped from a separate repo, so the choice set can change without this registry or any manifest knowing."
         },
         {
           "name": "companySizeCode",
@@ -2015,7 +2015,163 @@
         {
           "name": "businessNatureCode",
           "type": "string",
-          "description": "Stated nature of the subject company's business, as a per-form dropdown code. Named apart from company-profile's businessNature — which is OCR-read off the SSM document — for the same reason entityTypeCode is named apart, even though the two spellings do not collide and the registry would not have objected. Relying on a spelling difference nobody chose deliberately is how a shared fact gets asserted by accident."
+          "description": "Stated nature of the subject company's business, as a per-form dropdown code. Named apart from company-profile's businessNature \u2014 which is OCR-read off the SSM document \u2014 for the same reason entityTypeCode is named apart, even though the two spellings do not collide and the registry would not have objected. Relying on a spelling difference nobody chose deliberately is how a shared fact gets asserted by accident."
+        }
+      ]
+    },
+    {
+      "id": "applicant-collateral",
+      "displayName": "Applicant-Provided Collateral",
+      "canonicalTable": "ihs_alt_data_applicant_collateral",
+      "description": "The asset offered as security on a lending application, as the applicant (or the lender's own Open API caller) stated it. MULTI-instance, and not speculatively: finsys-api's lender Open API already models this block as `collateral[0]` \u2014 an ARRAY (see COLLATERAL_FIELDS in src/utils/ihsFieldDefs.ts) \u2014 so more than one collateral item is the EXISTING published contract, while the wide `ihs` table has exactly one column per attribute and can therefore hold exactly one item. The instance key is the array index the contract already uses, so a second collateral is one more row rather than eleven more columns. Every field describes a MOTOR VEHICLE, and is named for that rather than for the generic role, because the category's whole field set is vehicle-specific (a chassis number, an engine number and a laden-weight flag say nothing about a property or a machine). Naming them collateralIdentifier / collateralAttribute would buy a generality the data cannot honour; property or equipment collateral gets its own category with its own facts, and this one stays honest about what it can describe.",
+      "fields": [
+        {
+          "name": "vehicleMake",
+          "type": "string",
+          "description": "Manufacturer of the vehicle offered as collateral, as stated. No live form config collects it today \u2014 measured across BOTH form-spec populations on 2026-08-15 (0 of the 60 FinHub form_configs, 0 of the four lead-gen SPA bundles) and 0 of 4,624 rows in the sim's `ihs`. It is declared anyway, on the applicant-contact precedent (contactAreaCode / contactExtension), and on a stronger basis than that precedent had: the wide column exists AND `makeOfVehicle` is an authorable field in @finsys/core's own v2 form catalog (form-field-base-specs.json, category 12 'Vehicle Information'), so a lender can put it on a form today without any change here. A category describes the domain; a manifest describes what a form actually asks.",
+          "legacyName": "makeOfVehicle"
+        },
+        {
+          "name": "vehicleModel",
+          "type": "string",
+          "description": "Model of the vehicle offered as collateral. COLLECTED \u2014 by the finhero-auto lead-gen SPA, whose form spec is compiled into the SPA bundle and is therefore invisible to any query over FinHub's form_configs table. That second population is why this field is mapped and vehicleMake is not: measuring form_configs alone reports `modelOfVehicle` as collected by nobody, while the sim's `ihs` carries 8 rows of it. On the finhero-auto form the field is `visible: false` \u2014 a hidden input the page fills rather than a question the applicant answers. It is still an applicant-side statement submitted through the form save, so it is attested; the hidden-ness is a UX fact, not a provenance one.",
+          "legacyName": "modelOfVehicle"
+        },
+        {
+          "name": "vehicleYearMake",
+          "type": "number",
+          "unit": "count",
+          "range": [
+            1900,
+            2100
+          ],
+          "description": "Model year of the vehicle, as a four-digit year. Not collected by any live form (0/60 form_configs, 0/4 SPAs, 0/4,624 `ihs` rows) and declared for the same reason as vehicleMake \u2014 `yearMake` is authorable in the v2 catalog, which bounds it [2014, 2100] per-form. The range here is deliberately WIDER than any one form's: a category bound must hold for every lender, and a used-vehicle programme can legitimately accept a 1998 model. The unit is `count` rather than `years` because this is a calendar year \u2014 a position on a timeline \u2014 not a duration; `years` on this field would read as an age and be wrong by about two thousand.",
+          "legacyName": "yearMake"
+        },
+        {
+          "name": "vehicleConditionCode",
+          "type": "string",
+          "description": "Condition of the vehicle as the applicant SELECTED IT FROM A DROPDOWN \u2014 a code, not a label. COLLECTED: 6 of the 60 FinHub form_configs plus the finhero-auto SPA, all seven carrying the same choice set today ('N', 'U', 'UN', 'UR', 'PR'), measured 2026-08-15. Named `...Code` on the genderCode / raceCode precedent, and for the same reason: a future document attestor (a JPJ registration card, a valuation report) would attest the printed condition TEXT, and fusing a per-form code with OCR'd prose puts a permanent false positive into the disagreement surface. When the two need comparing, the comparison belongs in a per-form code-to-label resolution, not in a shared field name. NOT declared kind \"enum\": that promises a CLOSED label set and obliges every producing adapter to enumerate its labels in its manifest. A form-intake adapter cannot honour that \u2014 the choice set lives in a form config a lender can edit, so the promise goes quietly false the first time someone adds a sixth condition. That the seven live forms agree today is precisely the kind of measurement that expires.",
+          "legacyName": "vehicleCondition"
+        },
+        {
+          "name": "vehicleChassisNo",
+          "type": "string",
+          "description": "Chassis / VIN of the vehicle. Not collected by any live form today (0/60, 0/4, 0/4,624) and authorable in the v2 catalog. Declared rather than deferred because it is the vehicle's IDENTITY: it is the field a second attestor (a registration document extraction, a JPJ lookup) would key on, and reserving the canonical name now is what lets that attestor arrive as a manifest rather than as a registry change.",
+          "legacyName": "chassisNo"
+        },
+        {
+          "name": "vehicleEngineNo",
+          "type": "string",
+          "description": "Engine number of the vehicle. Same status and same reasoning as vehicleChassisNo: uncollected today, authorable in the v2 catalog, and an identity fact a document attestor would key on.",
+          "legacyName": "engineNo"
+        },
+        {
+          "name": "vehicleRegistrationNo",
+          "type": "string",
+          "description": "Registration (plate) number of the vehicle. Uncollected today, authorable in the v2 catalog. The third identity fact, and the one a human would actually use to tell two collateral instances apart \u2014 worth noting that it CANNOT serve as the instance key, because form intake has no transform slot and an instance key must be a literal in the manifest.",
+          "legacyName": "registrationNo"
+        },
+        {
+          "name": "vehicleRegistrationDate",
+          "type": "string",
+          "description": "Date the vehicle was first registered, as stated. Typed `string`, not a date primitive, and deliberately: the source column `ihs.registrationDate` is varchar(50), the v2 catalog authors it as a text input with inputType date, and neither constrains the format. Declaring it a narrower type here would assert a normalization that nothing performs \u2014 the value is whatever the form sent, and observedAt is what makes it interpretable.",
+          "legacyName": "registrationDate"
+        },
+        {
+          "name": "vehicleLadenWeightOver2500kg",
+          "type": "string",
+          "description": "Whether the vehicle's BDM (berat dengan muatan \u2014 laden weight) exceeds 2,500 kg, as stated. A commercial-vehicle discriminator that changes the applicable financing rules. Typed `string` and NOT `boolean`, which is the non-obvious call: the fact is boolean-shaped, but `ihs.bdmMoreThan2500kg` is varchar(10) and the v2 catalog authors it as a free TEXT input, so the values that actually arrive are whatever a form emits \u2014 'Y', 'N', 'Yes', ''. Declaring `boolean` would make the contract assert a coercion nobody performs, and the coercion's failure mode is silent: a truthiness test turns the string 'N' into true. Uncollected by any live form today.",
+          "legacyName": "bdmMoreThan2500kg"
+        },
+        {
+          "name": "collateralMarketValue",
+          "type": "number",
+          "kind": "money",
+          "description": "Assessed market value of the collateral. Prefixed `collateral` rather than named bare `marketValue` because a bare one would be a name a company valuation, a property appraisal or a share price could all claim later \u2014 and under this registry's rules a second category claiming the name would have to attest the SAME fact, which they do not. kind \"money\": the number is meaningless without a denomination, and the denomination belongs to the observation, not the field. Uncollected by any live form today; authorable in the v2 catalog.",
+          "legacyName": "marketValue"
+        },
+        {
+          "name": "collateralPurchasePriceOnTheRoad",
+          "type": "number",
+          "kind": "money",
+          "description": "On-the-road purchase price of the collateral \u2014 the price including registration, road tax and insurance, which is the figure Malaysian motor financing is actually written against. COLLECTED, and the most widely collected field in this category: 6 of the 60 FinHub form_configs plus the finhero-auto SPA (where it is the loan calculator's primary input), 8 of 4,624 `ihs` rows, measured 2026-08-15. Spelled out rather than left as the acronym OTR so the contract is readable by a consumer who has never seen a Malaysian motor quote; the legacy flat column keeps its `purchasePriceOTR` spelling. kind \"money\" \u2014 and note the v2 form catalog already declares this same field kind \"money\", so the two vocabularies agree on it.",
+          "legacyName": "purchasePriceOTR"
+        }
+      ]
+    },
+    {
+      "id": "applicant-obligations",
+      "displayName": "Applicant-Declared Monthly Obligations",
+      "canonicalTable": "ihs_alt_data_applicant_obligations",
+      "description": "One existing monthly debt commitment the applicant declared \u2014 the input to a debt-service ratio. MULTI-instance, keyed by the kind of obligation, and this is the textbook case for the whole transition: the wide `ihs` table spends five columns on five FIXED kinds (housing loan, hire purchase, personal loan, credit card, other financing), so an applicant with a SIXTH commitment has nowhere to put it and the DSR is computed from an amount that is knowably incomplete. Five columns collapse to two fields; the kind moves from the column NAME into a value, and a sixth obligation becomes one more row. NO adapter maps this category today and that is deliberate rather than unfinished \u2014 no live form collects any of the five columns (measured 2026-08-15 across both form-spec populations: 0 of 60 FinHub form_configs, 0 of the four lead-gen SPA bundles, and 0 of 4,624 rows in the sim's `ihs`), so a form-intake manifest over them would mint an APPLICANT attestation for a value no applicant ever gave. The declaration is the useful half: it reserves the vocabulary, states the shape, and lets the manifest arrive as a declaration when a lender authors the fields (all five are already authorable in @finsys/core's v2 form catalog, category 4 'Financial Information').",
+      "fields": [
+        {
+          "name": "obligationType",
+          "type": "string",
+          "description": "What kind of commitment this instance is \u2014 housing loan, hire purchase, personal loan, credit card, other financing, or something none of those five named. Carries no legacyName ON PURPOSE: there is no flat column it renames, because in the flat shape this value was not stored at all \u2014 it was encoded in WHICH of the five columns held a number. That is the specific thing this category changes. NOT declared kind \"enum\": the five wide columns look like a closed set and are exactly the set that proved too small, so promising closure here would re-create the defect in the contract that the schema change exists to remove."
+        },
+        {
+          "name": "obligationMonthlyInstallment",
+          "type": "number",
+          "kind": "money",
+          "description": "The monthly amount payable on this commitment. Carries no legacyName, and could not: FIVE flat columns (housingLoanMonthlyInstallment, hirePurchaseMonthlyInstallment, personalLoanMonthlyInstallment, creditCardMonthlyInstallment, otherFinancingMonthlyInstallment) all collapse into this one field, so any single legacy name would be correct for one of them and a lie about the other four. The mapping back to the flat vocabulary is (obligationType, obligationMonthlyInstallment) -> column, which is a per-instance function and not a field rename. kind \"money\"."
+        }
+      ]
+    },
+    {
+      "id": "related-person",
+      "displayName": "Related Person",
+      "canonicalTable": "ihs_alt_data_related_person",
+      "description": "A person other than the applicant who stands in a declared ROLE to the application \u2014 a company's named contact person, a director, a guarantor, a next of kin. MULTI-instance, keyed by role. Distinct from applicant-contact, which is the nearest neighbour and the one worth drawing the line against: applicant-contact models a CHANNEL (a phone line, an email address) and carries contactName / contactRelationship so an emergency contact's channel can say whose it is. It cannot carry an id number, an id type or a date of birth, and it should not \u2014 a contact POINT that carried identity facts would be two things at once. This category models the PERSON, with identity, and lets their contact details hang off them. NO adapter maps it today, and the reason is stronger here than for applicant-obligations: the eight wide `ihs` columns behind it (contactPersonName, contactPersonEmail, contactPersonPhoneNo, contactPersonPhoneNoAreaCode, contactPersonDateOfBirth, contactPersonPosition, contactPersonIdNo, contactPersonIdType) are ABSENT FROM @finsys/core's v2 form-authoring catalog entirely \u2014 verified 2026-08-15 against src/data/form-field-base-specs.json, where all 173 authorable fields were checked and none of the eight appears. So unlike applicant-collateral's unused fields, a lender CANNOT put these on a form today even if they wanted to: the columns are reachable only through the lender Open API's own payload, not through any form a borrower fills. 0 of 4,624 rows in the sim's `ihs` carry any of them. Declaring the category without a manifest states the shape and reserves the names; adding the fields to the authoring catalog is what would make a manifest meaningful, and that is a form-authoring change, not this one.",
+      "fields": [
+        {
+          "name": "relatedPersonName",
+          "type": "string",
+          "description": "The related person's name, as given. Deliberately does NOT share person-identity's personName fact \u2014 the same call applicant-contact made for contactName, and for the same reason: this is a THIRD PARTY's name, and attesting it as the subject's would be a genuine identity error rather than a formatting disagreement. A shared fact means 'two sources describing one real-world thing'; these are two different people.",
+          "legacyName": "contactPersonName"
+        },
+        {
+          "name": "relatedPersonIdNumber",
+          "type": "string",
+          "description": "The related person's identification number (NRIC, passport, or whatever relatedPersonIdType names). Same third-party reasoning as relatedPersonName: no shared fact with personIdNumber.",
+          "legacyName": "contactPersonIdNo"
+        },
+        {
+          "name": "relatedPersonIdType",
+          "type": "string",
+          "description": "Which kind of identification relatedPersonIdNumber is. NOT declared kind \"enum\": that promises a CLOSED label set and obliges every producing adapter to enumerate its labels, and there is no adapter to consult \u2014 the value arrives through the lender Open API from a caller whose vocabulary is its own.",
+          "legacyName": "contactPersonIdType"
+        },
+        {
+          "name": "relatedPersonDateOfBirth",
+          "type": "string",
+          "description": "The related person's date of birth, as given. Typed `string` because the source column is a DATE but the value arriving through the Open API is unnormalized text, and because no shared fact ties it to personDateOfBirth \u2014 a different person's birthday is not a competing attestation of the applicant's.",
+          "legacyName": "contactPersonDateOfBirth"
+        },
+        {
+          "name": "relatedPersonRole",
+          "type": "string",
+          "description": "How this person relates to the application \u2014 director, authorized contact, guarantor, next of kin. This is the instance key's meaning made explicit as a value, on the same reasoning as obligationType: a role encoded only in the key is invisible to a reader holding one row. NOT declared kind \"enum\". Renames the wide column contactPersonPosition, which named the person's job title within a company; `role` is the wider and more accurate word, since a guarantor holds no position.",
+          "legacyName": "contactPersonPosition"
+        },
+        {
+          "name": "relatedPersonEmail",
+          "type": "string",
+          "description": "Email address for the related person.",
+          "legacyName": "contactPersonEmail"
+        },
+        {
+          "name": "relatedPersonPhone",
+          "type": "string",
+          "description": "Phone number for the related person, as given.",
+          "legacyName": "contactPersonPhoneNo"
+        },
+        {
+          "name": "relatedPersonPhoneAreaCode",
+          "type": "string",
+          "description": "Area or country code, where it is captured separately from the number. Kept as its own field rather than folded into relatedPersonPhone because the wide table captures the two separately and there is no transform slot anywhere on the intake path that could join them \u2014 joining here would invent a value nobody gave.",
+          "legacyName": "contactPersonPhoneNoAreaCode"
         }
       ]
     }

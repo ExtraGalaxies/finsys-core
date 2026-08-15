@@ -1269,7 +1269,12 @@ describe("monetary fields and the closed unit set", () => {
     // 145 since SYS-3337: applicant-income declares grossPay and netPay,
     // co-attesting the payslip's. Raised deliberately, which is what this
     // pin asks for.
-    expect(money.length).toBe(145);
+    // 148 since SYS-3339: applicant-collateral declares collateralMarketValue
+    // and collateralPurchasePriceOnTheRoad; applicant-obligations declares
+    // obligationMonthlyInstallment. THREE here but only TWO in the
+    // legacyName pin below — the third has no flat column to rename, because
+    // five flat columns collapse into it. See that assertion.
+    expect(money.length).toBe(148);
     for (const { cat, f } of money) {
       expect(f.type, `${cat}.${f.name} type`).toBe("number");
       expect(f.unit, `${cat}.${f.name} unit`).toBeUndefined();
@@ -1416,8 +1421,19 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
     // stripping legacyName from any TEN money fields stayed green. A lower
     // bound is precisely what waves through the script that drops most of a
     // set and leaves a few.
+    //
+    // 28 since SYS-3339, while money.length went up by THREE. The gap is
+    // deliberate and is the interesting half: applicant-obligations'
+    // obligationMonthlyInstallment records NO legacyName because five flat
+    // columns (housingLoan…, hirePurchase…, personalLoan…, creditCard…,
+    // otherFinancing…MonthlyInstallment) all collapse into it. A legacyName
+    // is a one-to-one rename; naming any one of the five would resolve that
+    // spelling as money and leave the other four reading as bare numbers,
+    // which is worse than declaring nothing. The flat bridge for that field
+    // is (obligationType, amount) -> column, a per-instance function that
+    // does not belong in this map.
     const renamedMoney = legacyNames;
-    expect(renamedMoney.length, "renamed money fields must all record a legacyName").toBe(26);
+    expect(renamedMoney.length, "renamed money fields must all record a legacyName").toBe(28);
   });
 
   it("resolves a name from either vocabulary, and nothing else", () => {

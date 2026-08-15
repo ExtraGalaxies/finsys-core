@@ -6,7 +6,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [7.5.0] - 2026-08-15
+## [7.6.0] - 2026-08-15
 
 ### Added
 
@@ -49,6 +49,27 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   false on a release this registry never sees.
 
   `schemaVersion` 1.3.0 → 1.4.0 (additive).
+
+- **`applicant-collateral`, `applicant-obligations` and `related-person`
+  categories (SYS-3339).** Shipped in the same release as subject-company
+  because Phase 2.6 lands as one train.
+
+  `applicant-collateral` declares all 11 vehicle columns; only 3 are mapped by
+  a manifest (`modelOfVehicle`, `purchasePriceOTR`, `vehicleCondition` — the
+  ones a live form actually collects, and `modelOfVehicle` only on the lead-gen
+  side). Declaring a field nothing maps is the `applicant-contact` precedent:
+  the category models the shape, the manifest attests only what somebody gave.
+
+  `applicant-obligations` and `related-person` are declared with **no canonical
+  table and no manifest**, and recorded in an `UNBACKED_CATEGORIES` list beside
+  `geolocation` with the reason. Their columns are collected by nothing —
+  related-person's eight `contactPerson*` columns are not even present in
+  core's v2 authoring catalog, so no lender can put them on a form today. A
+  table with no writer is dead schema that reads as a shipped capability.
+
+  The modelling arguments never depended on the counts and still hold:
+  obligations is the DSR input, and five columns collapsing to
+  `{obligationType, monthlyInstallment}` is what makes a sixth debt capturable.
 
 ## [7.4.0] - 2026-08-14
 

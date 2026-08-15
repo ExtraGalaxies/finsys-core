@@ -6,7 +6,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [7.6.0] - 2026-08-15
+## [7.7.0] - 2026-08-15
+
+_7.5.0 and 7.6.0 were published to the local Verdaccio during the Phase 2.6
+parallel build and each carries only half of this release — 7.5.0 has
+subject-company, 7.6.0 has the other three. Neither reached public npm. 7.7.0
+is the integrated release and the only one that carries all four categories._
 
 ### Added
 

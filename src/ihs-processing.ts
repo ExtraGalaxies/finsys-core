@@ -746,7 +746,18 @@ function isProbablyId(str?: string | null): boolean {
   return false
 }
 
-interface ParsedDocFile {
+/**
+ * One entry inside a document-pointer field.
+ *
+ * EXPORTED as of SYS-3174, and that is the point of exporting it. The host is
+ * about to attest these entries as canonical `document-intake` rows, and the
+ * alternative to naming the shape here was for it to declare a private copy —
+ * which is precisely how this codebase ended up with seven hand-written,
+ * mutually-disagreeing lists of "the document fields". Every property is
+ * optional because every one of them is genuinely absent on some real row;
+ * this describes what is STORED, not what is required.
+ */
+export interface ParsedDocFile {
   path?: string
   fileName?: string
   documentId?: string
@@ -762,6 +773,21 @@ interface ParsedDocFile {
    * absent on every Malaysia upload.
    */
   documentLanguage?: string
+  /**
+   * SYS-3174: who uploaded this file — the acting principal, not the subject
+   * the document is about.
+   *
+   * The one genuine gap in this shape. It had no declaration anywhere in this
+   * package, while one upload route wrote it ad hoc into a single column's
+   * entries — so for every other document the answer was unrecoverable rather
+   * than merely missing. Declared here so the next writer finds the spelling
+   * instead of inventing a second one.
+   *
+   * Absent on every entry written before that route existed; a consumer must
+   * treat "no uploader recorded" as a real and common state, never as a
+   * defect.
+   */
+  uploadedBy?: string
 }
 
 /**

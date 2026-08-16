@@ -10,7 +10,7 @@
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * 23 categories · 283 canonical fields · 105 retired names
+ * 24 categories · 287 canonical fields · 105 retired names
  */
 
 /** Every category id the registry declares. */
@@ -26,6 +26,7 @@ export type AdapterCategoryId =
   | "bank-statement"
   | "company-profile"
   | "company-registration"
+  | "document-intake"
   | "epf-statement"
   | "financial-statement"
   | "finxtract-bank-statement"
@@ -159,6 +160,7 @@ export type CanonicalFieldNameLiteral =
   | "directors"
   | "disputeRate12m"
   | "distressTier"
+  | "documentType"
   | "ebitda"
   | "educationLevel"
   | "employeeEisContribution"
@@ -244,6 +246,7 @@ export type CanonicalFieldNameLiteral =
   | "otherDeduction"
   | "otherIncome"
   | "paidUpCapital"
+  | "pathInDms"
   | "payDate"
   | "payPeriod"
   | "paymentReliabilityTier"
@@ -308,6 +311,8 @@ export type CanonicalFieldNameLiteral =
   | "totalNonCurrentLiabilities"
   | "totalShareIssued"
   | "tradeReferenceDefaults12m"
+  | "uploadedAt"
+  | "uploadedBy"
   | "vacationDays90d"
   | "variableIncome"
   | "vehicleChassisNo"

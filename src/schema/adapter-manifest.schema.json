@@ -201,6 +201,19 @@
             }
           },
           "description": "SYS-3036 — declaration-only: the adapter is executed entirely OUTSIDE the host. An externally-orchestrated process completes its own ceremony/extraction and PUSHES the result to the host's assertion-ingest surface. No code is loaded and neither fetch() nor extract() ever runs — same declaration-only shape as form-intake/manual-override/extraction-pipeline, but data arrives via an external push rather than the host's own pipeline, form submission, or extract() call."
+        },
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "document-intake"
+            }
+          },
+          "description": "SYS-3174 — declaration-only: the host's own document UPLOAD path. The host receives a file, stores it, and records the pointer; the manifest is how that write becomes declared, provenance-carrying data rather than an untracked write to a wide column. No code is loaded and neither fetch() nor extract() ever runs. Deliberately NOT filed under extraction-pipeline: an upload happens BEFORE extraction and often without any extraction following, so sharing that discriminator would leave provenance unable to distinguish 'this file arrived' from 'this file was read' by type alone — which is the question the document-intake category exists to answer."
         }
       ]
     },

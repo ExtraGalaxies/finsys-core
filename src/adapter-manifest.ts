@@ -125,7 +125,8 @@ export interface AdapterManifest {
     | FormIntakeImplementation
     | ManualOverrideImplementation
     | ExtractionPipelineImplementation
-    | ExternalAssertionImplementation;
+    | ExternalAssertionImplementation
+    | DocumentIntakeImplementation;
 
   /**
    * SYS-2502: explicit instance cardinality.
@@ -486,6 +487,34 @@ export interface ExternalAssertionImplementation {
 }
 
 /**
+ * SYS-3174: declaration-only implementation for the host's own document
+ * UPLOAD path. The host receives a file, stores it, and records the pointer;
+ * this manifest is how that write becomes declared, provenance-carrying
+ * data instead of an untracked poke at a wide column. No code, no fetch(),
+ * no extract() — like the three above, the discriminator alone carries the
+ * meaning.
+ *
+ * WHY THIS IS NOT `extraction-pipeline`, which is the type it most resembles
+ * and the one it would have been easiest to reuse. Uploading a document is
+ * what happens BEFORE extraction, and frequently without any extraction
+ * following it at all — a supplementary document may never be parsed. Filing
+ * an upload under a discriminator that says "extraction" would leave
+ * provenance unable to distinguish "this file arrived" from "this file was
+ * read", by type alone, which is the exact question the `document-intake`
+ * category exists to answer. A type name asserting the wrong origin is not a
+ * cosmetic problem here: it is baked into every provenance row ever written
+ * under it, and unpicking it later means rewriting history rather than
+ * changing a constant.
+ *
+ * Nor `manual-override` (an operator-override SURFACE, and the type the
+ * correction model needs) nor `external-assertion` (the host never saw the
+ * process; here the host handles the upload itself).
+ */
+export interface DocumentIntakeImplementation {
+  readonly type: "document-intake";
+}
+
+/**
  * SYS-3036: how a registered adapter participates at execution time,
  * derived purely from `implementation.type`. Published here (rather than
  * re-derived per host) so every host classifies manifests identically:
@@ -534,6 +563,7 @@ export function executionModeOf(
     case "form-intake":
     case "manual-override":
     case "extraction-pipeline":
+    case "document-intake":
       return AdapterExecutionMode.DeclarationOnly;
     case "external-assertion":
       return AdapterExecutionMode.ExternallyAsserted;

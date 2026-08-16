@@ -42,6 +42,31 @@ consumer on 7.7.0 upgrades without touching anything.
   already reading it, so the protective direction is the only safe one to ship
   first.
 
+- **`document-intake` implementation type (SYS-3174).** A seventh
+  discriminator, declaration-only: no code is loaded and neither `fetch()` nor
+  `extract()` ever runs. The host's own upload path writes the canonical rows
+  and records the run; the manifest is how that write becomes declared,
+  provenance-carrying data rather than an untracked poke at a wide column.
+
+  **Deliberately not filed under `extraction-pipeline`,** which is the type it
+  most resembles and the one it would have been easiest to reuse. An upload
+  happens BEFORE extraction and frequently without any extraction following —
+  a supplementary document may never be parsed. Sharing that discriminator
+  would leave provenance unable to distinguish "this file arrived" from "this
+  file was read" by type alone, which is the question the `document-intake`
+  category exists to answer. A type name asserting the wrong origin is not
+  cosmetic here: it is baked into every provenance row written under it, and
+  unpicking it later means rewriting history rather than changing a constant.
+
+  Not `manual-override` either (an operator-override surface, and the type the
+  correction model needs) nor `external-assertion` (the host never saw the
+  process; here the host handles the upload itself).
+
+  `executionModeOf` classifies it as `DeclarationOnly` and remains exhaustive —
+  the `never` check makes an unhandled type a compile error, and the runtime
+  still throws rather than guessing when a host runs a newer schema than its
+  core.
+
 - **`ParsedDocFile` is now exported (SYS-3174),** from the package root as well
   as its module. The host is about to attest these entries as `document-intake`
   rows, and the alternative to naming the shape here was for it to declare a

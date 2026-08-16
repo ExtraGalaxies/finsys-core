@@ -6,6 +6,67 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.8.0] - 2026-08-16
+
+Additive. No field renamed, no category removed, no existing type changed — a
+consumer on 7.7.0 upgrades without touching anything.
+
+### Added
+
+- **`document-intake` category (SYS-3174).** One instance per uploaded
+  document file, with FOUR fields: `documentType`, `pathInDms`, `uploadedAt`,
+  `uploadedBy`.
+
+  **This is about the POINTER, not the document's contents.** The extracted
+  values already live in `bank-statement`, `payslip`, `financial-statement`
+  and the rest, each carrying full provenance. The pointer had none — a bare
+  string, or a JSON array of them, in a wide column with no record of who put
+  it there or when. The category gives a pointer the same standing as every
+  other fact on the canonical plane. It deliberately carries no value parsed
+  OUT of the document: a category mixing a file's identity with a file's
+  contents makes it impossible to say which run attested what.
+
+  **The field set was specified before it was built.** These four names were
+  written down in the harness as the named contract this release has to
+  satisfy, and the test asserts the set EXACTLY rather than as a superset — a
+  category that quietly grows a fifth field is a vocabulary change, and
+  vocabulary changes in this registry are what have repeatedly cost a major.
+
+  **`documentType` is deliberately not `kind: "enum"`.** The closed set of
+  document slots belongs to the host, varies by jurisdiction and form catalog,
+  and restating it here would create a second list to keep in step with the
+  first.
+
+  All four fields resolve to `sensitive`, none opting out. Loosening a field
+  later is additive; tightening one is a behavior change for every consumer
+  already reading it, so the protective direction is the only safe one to ship
+  first.
+
+- **`ParsedDocFile` is now exported (SYS-3174),** from the package root as well
+  as its module. The host is about to attest these entries as `document-intake`
+  rows, and the alternative to naming the shape here was for it to declare a
+  private copy — which is exactly how the consuming codebase ended up with
+  seven hand-written, mutually-disagreeing lists of "the document fields".
+
+- **`ParsedDocFile.uploadedBy` (SYS-3174).** The one genuine gap in the stored
+  file shape. Every other property the category names already travels with each
+  uploaded entry; this one had no declaration anywhere in the package while a
+  single upload route wrote it ad hoc into one column's entries — so for every
+  other document the answer was unrecoverable rather than merely missing.
+  Optional, and absent on every entry written before that route existed:
+  consumers must treat "no uploader recorded" as a real and common state, not a
+  defect.
+
+### Notes
+
+- Registry totals move from 23 categories / 283 canonical fields to **24 /
+  287**. The generated vocabulary union is regenerated accordingly, so
+  `document-intake` is a legal `AdapterCategoryId` at every consumer and an
+  unknown id remains a compile error rather than a runtime miss.
+- **No adapter, manifest or storage path ships here.** Those are the consuming
+  side and could not be written until this vocabulary existed, because the
+  category id is a closed generated union.
+
 ## [7.7.0] - 2026-08-15
 
 _7.5.0 and 7.6.0 were published to the local Verdaccio during the Phase 2.6

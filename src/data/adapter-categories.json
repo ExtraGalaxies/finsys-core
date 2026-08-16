@@ -2174,6 +2174,34 @@
           "legacyName": "contactPersonPhoneNoAreaCode"
         }
       ]
+    },
+    {
+      "id": "document-intake",
+      "displayName": "Document Intake",
+      "description": "One instance per uploaded document file. This category is about the POINTER, not the document's contents — the extracted values already live in bank-statement, payslip, financial-statement and the rest, each carrying full provenance. The pointer itself had none: it is a bare string, or a JSON array of them, sitting in a wide column with no record of who put it there or when. This gives a pointer the same standing as every other fact on the canonical plane. It carries no value parsed OUT of the document, deliberately — a category mixing a file's identity with a file's contents would make it impossible to say which adapter run attested what.",
+      "canonicalTable": "ihs_alt_data_document_intake",
+      "fields": [
+        {
+          "name": "documentType",
+          "type": "string",
+          "description": "Which document slot this file was uploaded into — the applicant-facing kind, e.g. a payslip, a bank statement, a company registration form. Deliberately NOT declared kind: \"enum\". The closed set of slots belongs to the host, it varies by jurisdiction and by form catalog, and restating it here would create a second list that has to be kept in step with the first. A registry naming a value it does not own is how two declarations of one fact begin to disagree."
+        },
+        {
+          "name": "pathInDms",
+          "type": "string",
+          "description": "Where the file lives in document storage. This is the value the legacy wide columns held directly, and the reason they could not be trusted: nothing recorded which write path set it, so a pointer overwritten by one caller was indistinguishable from a pointer set by another. As a canonical field it arrives attached to a run, which is the whole of the difference."
+        },
+        {
+          "name": "uploadedAt",
+          "type": "string",
+          "description": "When the file was uploaded, as an ISO 8601 timestamp. Distinct from the adapter run's own observedAt, which records when the pointer was ATTESTED — a backfill of existing pointers observes years-old uploads, and collapsing the two would date every historical document to the day the migration ran."
+        },
+        {
+          "name": "uploadedBy",
+          "type": "string",
+          "description": "Who uploaded the file — the acting principal, not the subject the document is about. The applicant, an agent acting for them, and a lender staging a document on their behalf are three different answers and only this field separates them. It is the one part of the stored file shape that had no home before: one upload route wrote it ad hoc into a single column's entries, so for every other document the answer was simply unrecoverable."
+        }
+      ]
     }
   ]
 }

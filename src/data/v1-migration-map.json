@@ -2332,9 +2332,121 @@
       "surface": "GET /lender/applications/:ihsId",
       "via": "column-audit"
     },
+    "epfAccountHolderAddressT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "personAddress"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfAccountHolderAddressT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "personAddress"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfAccountHolderNameT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfAccountHolderNameT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfDateOfStatementT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "dateOfStatement"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfDateOfStatementT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "dateOfStatement"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfEmployerNumberT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "employerNumber"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfEmployerNumberT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "employerNumber"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfIcNumberT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "personIdNumber"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfIcNumberT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "personIdNumber"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfKwspMemberNumberT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "kwspMemberNumber"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfKwspMemberNumberT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "kwspMemberNumber"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
     "epfStatementInstances": {
       "disposition": "structural",
       "note": "v2 exposes these as epf-statement instances"
+    },
+    "epfStatementYearT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "statementYear"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfStatementYearT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "statementYear"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
     },
     "epfStatements": {
       "address": {
@@ -2345,6 +2457,38 @@
       "disposition": "mapped",
       "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
       "via": "hand-authored"
+    },
+    "epfTotalContributionT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "totalContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfTotalContributionT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "totalContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfTotalCurrentContributionT1": {
+      "address": {
+        "category": "epf-statement",
+        "field": "totalCurrentContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "epfTotalCurrentContributionT2": {
+      "address": {
+        "category": "epf-statement",
+        "field": "totalCurrentContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
     },
     "eppNoOfPax": {
       "disposition": "relocated",
@@ -3979,9 +4123,729 @@
       "disposition": "mapped",
       "via": "name-equality"
     },
+    "payslipBasicPayT1": {
+      "address": {
+        "category": "payslip",
+        "field": "basicPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipBasicPayT2": {
+      "address": {
+        "category": "payslip",
+        "field": "basicPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipBasicPayT3": {
+      "address": {
+        "category": "payslip",
+        "field": "basicPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipBasicPayT4": {
+      "address": {
+        "category": "payslip",
+        "field": "basicPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipBasicPayT5": {
+      "address": {
+        "category": "payslip",
+        "field": "basicPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipBasicPayT6": {
+      "address": {
+        "category": "payslip",
+        "field": "basicPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipDeductionT1": {
+      "address": {
+        "category": "payslip",
+        "field": "deduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipDeductionT2": {
+      "address": {
+        "category": "payslip",
+        "field": "deduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipDeductionT3": {
+      "address": {
+        "category": "payslip",
+        "field": "deduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipDeductionT4": {
+      "address": {
+        "category": "payslip",
+        "field": "deduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipDeductionT5": {
+      "address": {
+        "category": "payslip",
+        "field": "deduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipDeductionT6": {
+      "address": {
+        "category": "payslip",
+        "field": "deduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEisContributionT1": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEisContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEisContributionT2": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEisContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEisContributionT3": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEisContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEisContributionT4": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEisContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEisContributionT5": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEisContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEisContributionT6": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEisContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEpfContributionT1": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEpfContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEpfContributionT2": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEpfContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEpfContributionT3": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEpfContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEpfContributionT4": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEpfContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEpfContributionT5": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEpfContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeEpfContributionT6": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeEpfContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeNameT1": {
+      "address": {
+        "category": "payslip",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeNameT2": {
+      "address": {
+        "category": "payslip",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeNameT3": {
+      "address": {
+        "category": "payslip",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeNameT4": {
+      "address": {
+        "category": "payslip",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeNameT5": {
+      "address": {
+        "category": "payslip",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeNameT6": {
+      "address": {
+        "category": "payslip",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeSocsoContributionT1": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeSocsoContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeSocsoContributionT2": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeSocsoContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeSocsoContributionT3": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeSocsoContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeSocsoContributionT4": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeSocsoContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeSocsoContributionT5": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeSocsoContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeSocsoContributionT6": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeSocsoContribution"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeTaxT1": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeTax"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeTaxT2": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeTax"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeTaxT3": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeTax"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeTaxT4": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeTax"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeTaxT5": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeTax"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployeeTaxT6": {
+      "address": {
+        "category": "payslip",
+        "field": "employeeTax"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployerNameT1": {
+      "address": {
+        "category": "payslip",
+        "field": "employerName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployerNameT2": {
+      "address": {
+        "category": "payslip",
+        "field": "employerName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployerNameT3": {
+      "address": {
+        "category": "payslip",
+        "field": "employerName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployerNameT4": {
+      "address": {
+        "category": "payslip",
+        "field": "employerName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployerNameT5": {
+      "address": {
+        "category": "payslip",
+        "field": "employerName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipEmployerNameT6": {
+      "address": {
+        "category": "payslip",
+        "field": "employerName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipFixedAllowancesT1": {
+      "address": {
+        "category": "payslip",
+        "field": "fixedAllowances"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipFixedAllowancesT2": {
+      "address": {
+        "category": "payslip",
+        "field": "fixedAllowances"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipFixedAllowancesT3": {
+      "address": {
+        "category": "payslip",
+        "field": "fixedAllowances"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipFixedAllowancesT4": {
+      "address": {
+        "category": "payslip",
+        "field": "fixedAllowances"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipFixedAllowancesT5": {
+      "address": {
+        "category": "payslip",
+        "field": "fixedAllowances"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipFixedAllowancesT6": {
+      "address": {
+        "category": "payslip",
+        "field": "fixedAllowances"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipGrossPayT1": {
+      "address": {
+        "category": "payslip",
+        "field": "grossPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipGrossPayT2": {
+      "address": {
+        "category": "payslip",
+        "field": "grossPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipGrossPayT3": {
+      "address": {
+        "category": "payslip",
+        "field": "grossPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipGrossPayT4": {
+      "address": {
+        "category": "payslip",
+        "field": "grossPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipGrossPayT5": {
+      "address": {
+        "category": "payslip",
+        "field": "grossPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipGrossPayT6": {
+      "address": {
+        "category": "payslip",
+        "field": "grossPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
     "payslipInstances": {
       "disposition": "structural",
       "note": "v2 exposes these as payslip instances"
+    },
+    "payslipNetPayT1": {
+      "address": {
+        "category": "payslip",
+        "field": "netPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipNetPayT2": {
+      "address": {
+        "category": "payslip",
+        "field": "netPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipNetPayT3": {
+      "address": {
+        "category": "payslip",
+        "field": "netPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipNetPayT4": {
+      "address": {
+        "category": "payslip",
+        "field": "netPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipNetPayT5": {
+      "address": {
+        "category": "payslip",
+        "field": "netPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipNetPayT6": {
+      "address": {
+        "category": "payslip",
+        "field": "netPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipOtherDeductionT1": {
+      "address": {
+        "category": "payslip",
+        "field": "otherDeduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipOtherDeductionT2": {
+      "address": {
+        "category": "payslip",
+        "field": "otherDeduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipOtherDeductionT3": {
+      "address": {
+        "category": "payslip",
+        "field": "otherDeduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipOtherDeductionT4": {
+      "address": {
+        "category": "payslip",
+        "field": "otherDeduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipOtherDeductionT5": {
+      "address": {
+        "category": "payslip",
+        "field": "otherDeduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipOtherDeductionT6": {
+      "address": {
+        "category": "payslip",
+        "field": "otherDeduction"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayDateT1": {
+      "address": {
+        "category": "payslip",
+        "field": "payDate"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayDateT2": {
+      "address": {
+        "category": "payslip",
+        "field": "payDate"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayDateT3": {
+      "address": {
+        "category": "payslip",
+        "field": "payDate"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayDateT4": {
+      "address": {
+        "category": "payslip",
+        "field": "payDate"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayDateT5": {
+      "address": {
+        "category": "payslip",
+        "field": "payDate"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayDateT6": {
+      "address": {
+        "category": "payslip",
+        "field": "payDate"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayPeriodT1": {
+      "address": {
+        "category": "payslip",
+        "field": "payPeriod"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayPeriodT2": {
+      "address": {
+        "category": "payslip",
+        "field": "payPeriod"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayPeriodT3": {
+      "address": {
+        "category": "payslip",
+        "field": "payPeriod"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayPeriodT4": {
+      "address": {
+        "category": "payslip",
+        "field": "payPeriod"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayPeriodT5": {
+      "address": {
+        "category": "payslip",
+        "field": "payPeriod"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipPayPeriodT6": {
+      "address": {
+        "category": "payslip",
+        "field": "payPeriod"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipVariableIncomeT1": {
+      "address": {
+        "category": "payslip",
+        "field": "variableIncome"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipVariableIncomeT2": {
+      "address": {
+        "category": "payslip",
+        "field": "variableIncome"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipVariableIncomeT3": {
+      "address": {
+        "category": "payslip",
+        "field": "variableIncome"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipVariableIncomeT4": {
+      "address": {
+        "category": "payslip",
+        "field": "variableIncome"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipVariableIncomeT5": {
+      "address": {
+        "category": "payslip",
+        "field": "variableIncome"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "payslipVariableIncomeT6": {
+      "address": {
+        "category": "payslip",
+        "field": "variableIncome"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
     },
     "payslips": {
       "address": {

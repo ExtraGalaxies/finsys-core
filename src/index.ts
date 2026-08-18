@@ -256,3 +256,21 @@ export type {
 // SYS-3036: execution-mode classification, published so every host
 // classifies manifests identically instead of re-deriving the switch.
 export { AdapterExecutionMode, executionModeOf } from './adapter-manifest.js'
+
+// SYS-3414: where every v1 flat-IHS key goes in v2 — including the ones with
+// no destination, which is the half a rename table omits and the half that
+// loses data. A migration instrument, not a runtime shim.
+export type {
+  V1Disposition,
+  V1ResolutionSource,
+  V1Address,
+  V1MigrationEntry,
+} from './v1-migration-map.js';
+
+export {
+  V1_MIGRATION_MAP_VERSION,
+  v1MigrationKeys,
+  v1MigrationEntry,
+  v1Addresses,
+  v1KeysByDisposition,
+} from './v1-migration-map.js';

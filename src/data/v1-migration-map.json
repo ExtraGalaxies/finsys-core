@@ -1,0 +1,5145 @@
+{
+  "entries": {
+    "accountFlags24m": {
+      "address": {
+        "category": "social-media",
+        "field": "accountFlags24m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "accountHolderNameT1": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountHolderNameT2": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountHolderNameT3": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountHolderNameT4": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountHolderNameT5": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountHolderNameT6": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountNumberT1": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "accountNumber"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountNumberT2": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "accountNumber"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountNumberT3": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "accountNumber"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountNumberT4": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "accountNumber"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountNumberT5": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "accountNumber"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountNumberT6": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "accountNumber"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "accountTenureMonths": {
+      "address": {
+        "category": "social-media",
+        "field": "accountTenureMonths"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "accountingRevenue12m": {
+      "address": {
+        "category": "trade-credit",
+        "field": "accountingRevenue12m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "activeTenureMonths": {
+      "address": {
+        "category": "payment-network",
+        "field": "activeTenureMonths"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "addressLine1": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine1"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "addressLine2": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine2"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "addressLine3": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine3"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "addressType": {
+      "disposition": "retired",
+      "note": "superseded BY THE INSTANCE KEY, not dropped \u2014 an applicant-address row is already keyed by which address it is. Collected by no live form; 0 of 8,475 rows populated.",
+      "via": "hand-authored"
+    },
+    "age": {
+      "address": {
+        "category": "applicant-demographics",
+        "field": "statedAge"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "apDaysPayableOutstanding": {
+      "address": {
+        "category": "trade-credit",
+        "field": "apDaysPayableOutstanding"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "arCurrentRatio": {
+      "address": {
+        "category": "trade-credit",
+        "field": "arCurrentRatio"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "arDaysSalesOutstanding": {
+      "address": {
+        "category": "trade-credit",
+        "field": "arDaysSalesOutstanding"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "arOverdue90PlusRatio": {
+      "address": {
+        "category": "trade-credit",
+        "field": "arOverdue90PlusRatio"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "arTotalOutstanding": {
+      "address": {
+        "category": "trade-credit",
+        "field": "arTotalOutstanding"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "arpu": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "arpu"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "arpuStability12m": {
+      "address": {
+        "category": "payment-network",
+        "field": "arpuStability12m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "assignedFromUserId": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "assignedToUserId": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "avgMaximumDemand": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "bankBalanceT1": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "closingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankBalanceT2": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "closingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankBalanceT3": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "closingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankBalanceT4": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "closingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankBalanceT5": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "closingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankBalanceT6": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "closingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankNameT1": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "issuingBankName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankNameT2": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "issuingBankName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankNameT3": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "issuingBankName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankNameT4": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "issuingBankName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankNameT5": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "issuingBankName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankNameT6": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "issuingBankName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "bankStatementInstances": {
+      "disposition": "structural",
+      "note": "v2 exposes these as finxtract-bank-statement instances"
+    },
+    "bankStatementOrSavingPassbook": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "bankStatementOrSavingPassbook"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "bankStatements": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "bankStatements"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "bankType": {
+      "disposition": "retired",
+      "note": "varchar(20), and 0 of 8,475 rows. Long mistaken for a document-pointer column (the SYS-2499 audit files it under \"document file path\"), but it cannot be one: the 16 real pointer columns hold [{\"month\":1,\"path\":\"https://...\"}] JSON and are text/varchar(1000+). appHelper.ts's bankTypeList is a lookup table, not a writer.",
+      "via": "hand-authored"
+    },
+    "bdmMoreThan2500kg": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleLadenWeightOver2500kg"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "buildingType": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "businessCommencementDate": {
+      "address": {
+        "category": "company-profile",
+        "field": "businessCommencementDate"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "businessNature": {
+      "address": {
+        "category": "company-profile",
+        "field": "businessNature"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "businessOrigin": {
+      "address": {
+        "category": "company-profile",
+        "field": "businessOrigin"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "businessSector": {
+      "address": {
+        "category": "applicant-employment",
+        "field": "businessSector"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "capitalReservesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "capitalReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "capitalReservesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "capitalReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "capitalReservesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "capitalReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "cashConversionCycleDays": {
+      "address": {
+        "category": "trade-credit",
+        "field": "cashConversionCycleDays"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "chassisNo": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleChassisNo"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "city": {
+      "disposition": "retired",
+      "reason": "the bare key is unused, but the DATA is live: WooCommerce collects it at checkout and submits it as permanentcity. Retired key is not retired data.",
+      "via": "consumer-sweep"
+    },
+    "clientUserId": {
+      "disposition": "relocated",
+      "reason": "SURFACE: GET /lender/applications/:ihsId, as customerUserId (PARTY_FIELDS). NOT retired: FinHub names it at Show.tsx:2039 as the rollout fallback (customerUserId ?? clientUserId) building the Customer Profile link. Dropping the finsys-api shim and leaving that fallback silently removes the button \u2014 the two changes are coupled.",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "consumer-sweep"
+    },
+    "companyBackground": {
+      "disposition": "vocabulary-gap",
+      "note": "subject-company-form-v1 names it as one of three columns \"collected by nothing at all\", and DELIBERATELY does not declare it \u2014 mapping it would mint an applicant attestation for a value no applicant gave. 0 of 8,475 rows; the only reference in six repos is a lead-gen test submit script. SITS EXACTLY WHERE noOfEmployees DID, which Kain kept as an SME signal, so this is a want-it-or-not call rather than an evidence question.",
+      "via": "hand-authored"
+    },
+    "companyEntityType": {
+      "address": {
+        "category": "subject-company",
+        "field": "entityTypeCode"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "companyLastOldName": {
+      "address": {
+        "category": "company-profile",
+        "field": "companyLastOldName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "companyName": {
+      "address": {
+        "category": "company-registration",
+        "field": "companyName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "companyNameDateOfChange": {
+      "address": {
+        "category": "company-profile",
+        "field": "companyNameDateOfChange"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "companyRegNo": {
+      "address": {
+        "category": "company-registration",
+        "field": "companyRegNo"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "companySize": {
+      "address": {
+        "category": "subject-company",
+        "field": "companySizeCode"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "companyStatus": {
+      "address": {
+        "category": "company-profile",
+        "field": "companyStatus"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "companyWebsite": {
+      "disposition": "retired",
+      "reason": "no consumer in six repos; absent from the core catalog entirely. The only hits are Mudah's DEALER account profile, a different context.",
+      "via": "consumer-sweep"
+    },
+    "computationMode": {
+      "address": {
+        "category": "applicant-income",
+        "field": "computationMode"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "consentCrossSelling": {
+      "disposition": "relocated",
+      "surface": "the consent engine",
+      "via": "column-audit"
+    },
+    "consentForm": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "consentForm"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "consentObtainInfoFromCtos": {
+      "disposition": "relocated",
+      "surface": "the consent engine",
+      "via": "column-audit"
+    },
+    "consents": {
+      "disposition": "relocated",
+      "note": "SURFACE: GET /lender/applications/:ihsId. NOT the flat booleans \u2014 v1 emits the raw consent EVENT ROWS (id, consentDefinitionId, consentDefinitionVersionId, ipAddress, method, bindingMessage, createdAt); the application record carries ConsentReference[] pointing into the consent engine instead, because copying versioned, snapshotted events into a second envelope creates a source of truth that drifts. A SHAPE CHANGE, not a move: a consumer reading consent state must follow the reference.",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "hand-authored"
+    },
+    "contactPersonDateOfBirth": {
+      "address": {
+        "category": "related-person",
+        "field": "relatedPersonDateOfBirth"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "contactPersonEmail": {
+      "address": {
+        "category": "related-person",
+        "field": "relatedPersonEmail"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "contactPersonIdNo": {
+      "address": {
+        "category": "related-person",
+        "field": "relatedPersonIdNumber"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "contactPersonIdType": {
+      "address": {
+        "category": "related-person",
+        "field": "relatedPersonIdType"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "contactPersonName": {
+      "address": {
+        "category": "related-person",
+        "field": "relatedPersonName"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "contactPersonPhoneNo": {
+      "address": {
+        "category": "related-person",
+        "field": "relatedPersonPhone"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "contactPersonPhoneNoAreaCode": {
+      "address": {
+        "category": "related-person",
+        "field": "relatedPersonPhoneAreaCode"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "contactPersonPosition": {
+      "address": {
+        "category": "related-person",
+        "field": "relatedPersonRole"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "coreIncomeDoc": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "coreIncomeDoc"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "costOfGoodsSoldT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "costOfGoodsSold"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "costOfGoodsSoldT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "costOfGoodsSold"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "costOfGoodsSoldT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "costOfGoodsSold"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "country": {
+      "disposition": "retired",
+      "note": "collected by no live form and 0 of 8,475 rows populated. applicant-address declares addressCountry for the day a form asks; the prefixed variants (permanentcity, permanentpostcode) are what real submissions carry.",
+      "via": "hand-authored"
+    },
+    "countryOfPermanentResident": {
+      "disposition": "retired",
+      "reason": "Mudah collects it and forwards it as nationality; the bare key is not what reaches finsys.",
+      "via": "consumer-sweep"
+    },
+    "createdAt": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "createdBy": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "createdByEmpCompanyID": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "creditCardMonthlyInstallment": {
+      "address": {
+        "category": "applicant-obligations",
+        "field": "obligationMonthlyInstallment",
+        "instanceKey": "creditCard"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "via": "hand-authored"
+    },
+    "ctRatio": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "currentAssetAmountDueFromAssociatedCompaniesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromAssociatedCompaniesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromAssociatedCompaniesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromCustomerT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromCustomer"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromCustomerT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromCustomer"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromCustomerT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromCustomer"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromDirectorT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromDirector"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromDirectorT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromDirector"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromDirectorT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromDirector"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromHoldingCompanyT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromHoldingCompany"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromHoldingCompanyT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromHoldingCompany"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromHoldingCompanyT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromHoldingCompany"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromSubsidiaryCompaniesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromSubsidiaryCompaniesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountDueFromSubsidiaryCompaniesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountDueFromSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountOwingByShareholdersT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountOwingByShareholders"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountOwingByShareholdersT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountOwingByShareholders"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetAmountOwingByShareholdersT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetAmountOwingByShareholders"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAndBankBalancesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAndBankBalances"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAndBankBalancesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAndBankBalances"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAndBankBalancesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAndBankBalances"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAndCashEquivalentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAndCashEquivalents"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAndCashEquivalentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAndCashEquivalents"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAndCashEquivalentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAndCashEquivalents"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAtBanksT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAtBanks"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAtBanksT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAtBanks"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashAtBanksT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashAtBanks"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashOnHandT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashOnHand"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashOnHandT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashOnHand"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashOnHandT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCashOnHand"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCashT1": {
+      "disposition": "needs-decision",
+      "reason": "eight plausible financial-statement targets (CashAndBankBalances, CashAtBanks, CashOnHand, CashAndCashEquivalents, ...) and no exact match. Which the extractor populates is a question for the financial-statement owner, not a name lookup.",
+      "via": "consumer-sweep"
+    },
+    "currentAssetCashT2": {
+      "disposition": "needs-decision",
+      "reason": "eight plausible financial-statement targets (CashAndBankBalances, CashAtBanks, CashOnHand, CashAndCashEquivalents, ...) and no exact match. Which the extractor populates is a question for the financial-statement owner, not a name lookup.",
+      "via": "consumer-sweep"
+    },
+    "currentAssetCashT3": {
+      "disposition": "needs-decision",
+      "reason": "eight plausible financial-statement targets (CashAndBankBalances, CashAtBanks, CashOnHand, CashAndCashEquivalents, ...) and no exact match. Which the extractor populates is a question for the financial-statement owner, not a name lookup.",
+      "via": "consumer-sweep"
+    },
+    "currentAssetContractAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetContractAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetContractAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetContractAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetContractAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetContractAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCurrentTaxAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCurrentTaxAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCurrentTaxAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCurrentTaxAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetCurrentTaxAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetCurrentTaxAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDepositsAndPrepaymentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDepositsAndPrepaymentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDepositsAndPrepaymentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDepositsCashAndBankBalancesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDepositsCashAndBankBalances"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDepositsCashAndBankBalancesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDepositsCashAndBankBalances"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDepositsCashAndBankBalancesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDepositsCashAndBankBalances"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDerivativeT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDerivative"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDerivativeT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDerivative"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDerivativeT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDerivative"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDevelopmentPropertiesOrExpenditureT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDevelopmentPropertiesOrExpenditure"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDevelopmentPropertiesOrExpenditureT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDevelopmentPropertiesOrExpenditure"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetDevelopmentPropertiesOrExpenditureT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetDevelopmentPropertiesOrExpenditure"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetFinancialAssetAtFairValueT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetFinancialAssetAtFairValue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetFinancialAssetAtFairValueT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetFinancialAssetAtFairValue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetFinancialAssetAtFairValueT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetFinancialAssetAtFairValue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetInventoriesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetInventories"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetInventoriesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetInventories"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetInventoriesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetInventories"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetLandUseRightT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetLandUseRight"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetLandUseRightT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetLandUseRight"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetLandUseRightT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetLandUseRight"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesAndDepositsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesAndDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesAndDepositsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesAndDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesAndDepositsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesAndDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesAndPrepaymentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesAndPrepaymentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesAndPrepaymentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesDepositsAndPrepaymentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesDepositsAndPrepaymentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesDepositsAndPrepaymentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivablesDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetOtherReceivablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetPrepaymentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetPrepaymentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetPrepaymentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetRestrictedCashT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetRestrictedCash"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetRestrictedCashT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetRestrictedCash"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetRestrictedCashT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetRestrictedCash"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetShortTermDepositsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetShortTermDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetShortTermDepositsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetShortTermDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetShortTermDepositsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetShortTermDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetShortTermInvestmentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetShortTermInvestments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetShortTermInvestmentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetShortTermInvestments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetShortTermInvestmentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetShortTermInvestments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTaxRecoverableT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTaxRecoverable"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTaxRecoverableT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTaxRecoverable"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTaxRecoverableT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTaxRecoverable"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTradeAndOtherReceivablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTradeAndOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTradeAndOtherReceivablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTradeAndOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTradeAndOtherReceivablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTradeAndOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTradeDebtorsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTradeDebtors"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTradeDebtorsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTradeDebtors"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentAssetTradeDebtorsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentAssetTradeDebtors"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountOwingToAssociatedCompaniesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountOwingToAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountOwingToAssociatedCompaniesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountOwingToAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountOwingToAssociatedCompaniesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountOwingToAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToDirectorT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToDirector"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToDirectorT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToDirector"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToDirectorT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToDirector"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToHoldingCompanyT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToHoldingCompany"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToHoldingCompanyT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToHoldingCompany"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToHoldingCompanyT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToHoldingCompany"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToSubsidiaryCompaniesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToSubsidiaryCompaniesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesAmountsOwingToSubsidiaryCompaniesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesAmountsOwingToSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankAcceptanceT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankAcceptance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankAcceptanceT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankAcceptance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankAcceptanceT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankAcceptance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankOverdraftT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankOverdraft"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankOverdraftT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankOverdraft"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankOverdraftT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankOverdraft"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankborrowingsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankborrowings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankborrowingsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankborrowings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBankborrowingsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBankborrowings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBorrowingsOrTermLoansT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBorrowingsOrTermLoans"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBorrowingsOrTermLoansT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBorrowingsOrTermLoans"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesBorrowingsOrTermLoansT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesBorrowingsOrTermLoans"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesContractLiabilitiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesContractLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesContractLiabilitiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesContractLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesContractLiabilitiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesContractLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDepositsFromCustomersT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDepositsFromCustomers"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDepositsFromCustomersT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDepositsFromCustomers"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDepositsFromCustomersT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDepositsFromCustomers"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDerivativeT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDerivative"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDerivativeT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDerivative"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDerivativeT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDerivative"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDividendPayablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDividendPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDividendPayablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDividendPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesDividendPayablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesDividendPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesFinanceLeasePayablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesFinanceLeasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesFinanceLeasePayablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesFinanceLeasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesFinanceLeasePayablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesFinanceLeasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesHirePurchasePayablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesHirePurchasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesHirePurchasePayablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesHirePurchasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesHirePurchasePayablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesHirePurchasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesLeasePayablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesLeasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesLeasePayablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesLeasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesLeasePayablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesLeasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesAccrualsAndDepositsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayablesAccrualsAndDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesAccrualsAndDepositsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayablesAccrualsAndDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesAccrualsAndDepositsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayablesAccrualsAndDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesAndAccrualsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayablesAndAccruals"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesAndAccrualsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayablesAndAccruals"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesAndAccrualsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayablesAndAccruals"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesOtherPayablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesOtherPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesProvisionForTaxationT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesProvisionForTaxation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesProvisionForTaxationT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesProvisionForTaxation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesProvisionForTaxationT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesProvisionForTaxation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesTradeAndOtherPayablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesTradeAndOtherPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesTradeAndOtherPayablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesTradeAndOtherPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesTradeAndOtherPayablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesTradeAndOtherPayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesTradeCreditorsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesTradeCreditors"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesTradeCreditorsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesTradeCreditors"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "currentLiabilitiesTradeCreditorsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "currentLiabilitiesTradeCreditors"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "customerConcentrationTop5Pct": {
+      "address": {
+        "category": "payment-network",
+        "field": "customerConcentrationTop5Pct"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "customerRatingAvg": {
+      "address": {
+        "category": "social-media",
+        "field": "customerRatingAvg"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "customerUserId": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "dateApplied": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "dateJoined": {
+      "address": {
+        "category": "applicant-employment",
+        "field": "dateJoined",
+        "instanceKey": "current"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "dateOfBirth": {
+      "address": {
+        "category": "applicant-identity",
+        "field": "personDateOfBirth"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "dealerName": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "debtorConcentrationTop5Ratio": {
+      "address": {
+        "category": "trade-credit",
+        "field": "debtorConcentrationTop5Ratio"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "depreciationOfInvestmentPropertiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfInvestmentProperties"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationOfInvestmentPropertiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfInvestmentProperties"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationOfInvestmentPropertiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfInvestmentProperties"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationOfInvestmentSecuritiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfInvestmentSecurities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationOfInvestmentSecuritiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfInvestmentSecurities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationOfInvestmentSecuritiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfInvestmentSecurities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationOfPropertyPlantEquipmentT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfPropertyPlantEquipment"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationOfPropertyPlantEquipmentT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfPropertyPlantEquipment"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationOfPropertyPlantEquipmentT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationOfPropertyPlantEquipment"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationRightOfUseAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationRightOfUseAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationRightOfUseAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationRightOfUseAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationRightOfUseAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciationRightOfUseAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "depreciationT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "depreciation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "directors": {
+      "address": {
+        "category": "company-profile",
+        "field": "directors"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "disclosureOfInformation": {
+      "disposition": "relocated",
+      "surface": "the consent engine",
+      "via": "column-audit"
+    },
+    "disputeRate12m": {
+      "address": {
+        "category": "payment-network",
+        "field": "disputeRate12m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "distressTier": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "distressTier"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "documentMetadata": {
+      "disposition": "structural",
+      "note": "document-intake carries pointer metadata as canonical fields"
+    },
+    "downpayment": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "durationInCurrentResidenceMth": {
+      "address": {
+        "category": "applicant-address",
+        "field": "occupancyMonths",
+        "instanceKey": "residential"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "durationInCurrentResidenceYr": {
+      "address": {
+        "category": "applicant-address",
+        "field": "occupancyYears",
+        "instanceKey": "residential"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "ebitda": {
+      "address": {
+        "category": "financial-statement",
+        "field": "ebitda"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "ebitdaT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "ebitda"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "ebitdaT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "ebitda"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "ebitdaT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "ebitda"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "educationLevel": {
+      "address": {
+        "category": "applicant-demographics",
+        "field": "educationLevel"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "email": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactValue",
+        "instanceKey": "email"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "emerContactTelNo1": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactValue",
+        "instanceKey": "emergency"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "emerContactTelNo1AreaCode": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactAreaCode",
+        "instanceKey": "emergency"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "as mobilePhoneNoAreaCode \u2014 the emergency instance exists and carries a name and relationship; the area code is uncollected.",
+      "via": "hand-authored"
+    },
+    "emergencyContactName": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactName",
+        "instanceKey": "emergency"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "employerName": {
+      "address": {
+        "category": "applicant-employment",
+        "field": "employerName",
+        "instanceKey": "current"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "employmentSector": {
+      "address": {
+        "category": "applicant-employment",
+        "field": "employmentSector",
+        "instanceKey": "current"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "employmentStatus": {
+      "address": {
+        "category": "applicant-employment",
+        "field": "employmentStatus",
+        "instanceKey": "current"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "employmentType": {
+      "address": {
+        "category": "applicant-employment",
+        "field": "employmentType",
+        "instanceKey": "current"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "endOfYearCash": {
+      "address": {
+        "category": "financial-statement",
+        "field": "endOfYearCash"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "endOfYearCashT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "endOfYearCash"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "endOfYearCashT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "endOfYearCash"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "endOfYearCashT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "endOfYearCash"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "engagementRate90d": {
+      "address": {
+        "category": "social-media",
+        "field": "engagementRate90d"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "engineNo": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleEngineNo"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "entity": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "epfStatementInstances": {
+      "disposition": "structural",
+      "note": "v2 exposes these as epf-statement instances"
+    },
+    "epfStatements": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "epfStatements"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "eppNoOfPax": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "eppPrice": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "eppProduct": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "exchangeEqualisationOrFluctuationReservesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "exchangeEqualisationOrFluctuationReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "exchangeEqualisationOrFluctuationReservesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "exchangeEqualisationOrFluctuationReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "exchangeEqualisationOrFluctuationReservesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "exchangeEqualisationOrFluctuationReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "facilityAddress": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "facilityInterestRate": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "facilityPackage": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "facilityPurpose": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "facilityTenureYears": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "facilityType": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "fieldProvenance": {
+      "disposition": "structural",
+      "note": "provenance is a per-value envelope in v2; the sidecar map is redundant"
+    },
+    "financeCostT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "financeCost"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "financeCostT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "financeCost"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "financeCostT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "financeCost"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "financialStatementInstances": {
+      "disposition": "structural",
+      "note": "v2 exposes these as financial-statement instances"
+    },
+    "financialStatements": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "financialStatements"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "financingSelection": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "financingTenure": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "finxtractConfigId": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "flexiRedrawOptIn": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "followerCount": {
+      "address": {
+        "category": "social-media",
+        "field": "followerCount"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "foreignPR": {
+      "disposition": "vocabulary-gap",
+      "note": "audit targets applicant-identity, which declares no permanent-residency field. Zero on every signal: no form, no consumer in six repos, 0 of 8,475 rows. Retire it only if nobody wants the FACT \u2014 the fact itself is real and a CRA subject model may want it.",
+      "via": "hand-authored"
+    },
+    "form9": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "form9"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "fullName": {
+      "address": {
+        "category": "applicant-identity",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "gender": {
+      "address": {
+        "category": "applicant-demographics",
+        "field": "genderCode"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "grossMarginPct": {
+      "address": {
+        "category": "trade-credit",
+        "field": "grossMarginPct"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "grossProfitT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "grossProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "grossProfitT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "grossProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "grossProfitT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "grossProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "handsetFinancingActive": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "handsetFinancingActive"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "handsetFinancingDelinquent": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "handsetFinancingDelinquent"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "handsetRiskTier": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "handsetRiskTier"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "hirePurchaseMonthlyInstallment": {
+      "address": {
+        "category": "applicant-obligations",
+        "field": "obligationMonthlyInstallment",
+        "instanceKey": "hirePurchase"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "via": "hand-authored"
+    },
+    "housingLoanMonthlyInstallment": {
+      "address": {
+        "category": "applicant-obligations",
+        "field": "obligationMonthlyInstallment",
+        "instanceKey": "housingLoan"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "via": "hand-authored"
+    },
+    "ic": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "ic"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "icAddress": {
+      "address": {
+        "category": "person-identity",
+        "field": "personAddress"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "icDateOfBirth": {
+      "address": {
+        "category": "person-identity",
+        "field": "personDateOfBirth"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "icGender": {
+      "address": {
+        "category": "person-identity",
+        "field": "personGender"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "icName": {
+      "address": {
+        "category": "person-identity",
+        "field": "personName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "icNationality": {
+      "address": {
+        "category": "person-identity",
+        "field": "personNationality"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "icNumber": {
+      "address": {
+        "category": "person-identity",
+        "field": "personIdNumber"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "icPlaceOfBirth": {
+      "address": {
+        "category": "person-identity",
+        "field": "personPlaceOfBirth"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "icRace": {
+      "address": {
+        "category": "person-identity",
+        "field": "personRace"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "icReligion": {
+      "address": {
+        "category": "person-identity",
+        "field": "personReligion"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "idNumber": {
+      "address": {
+        "category": "applicant-identity",
+        "field": "personIdNumber"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "idType": {
+      "disposition": "vocabulary-gap",
+      "reason": "FIVE consumers \u2014 Mudah and WooCommerce submit it, finhero-auto collects it as a typed dropdown driving idNumber consolidation, FinHub renders it, finsys-client renders it. Its only canonical match is related-person.relatedPersonIdType, which is the WRONG PERSON. No correct destination exists.",
+      "via": "consumer-sweep"
+    },
+    "ihsId": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "ihsType": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "incomeEPF_iakaun": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "incomeEPF_iakaun"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "incomeSupportingDoc": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "incomeSupportingDoc"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "incorporatedDate": {
+      "addresses": [
+        {
+          "category": "company-profile",
+          "field": "companyIncorporationDate"
+        },
+        {
+          "category": "company-registration",
+          "field": "companyIncorporationDate"
+        }
+      ],
+      "disposition": "mapped-fanout",
+      "note": "ONE v1 column, TWO attestors. The wide table could hold one value, so the second writer overwrote the first; v2 keeps both instances and the disagreement is the signal. A consumer reading one address gets one attestor's answer, not \"the\" answer.",
+      "via": "wide-column-feeder"
+    },
+    "internationalExtensionPhoneNo": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactExtension",
+        "instanceKey": "international"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "as internationalPhoneNo \u2014 instance not minted by any manifest.",
+      "via": "hand-authored"
+    },
+    "internationalPhoneNo": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactValue",
+        "instanceKey": "international"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "NO manifest mints an \"international\" instance \u2014 the four are email, mobile, office, emergency. The field resolves; the instance has to be created before anything can write it. 0 of 8,475 rows populated.",
+      "via": "hand-authored"
+    },
+    "internationalPhoneNoAreaCode": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactAreaCode",
+        "instanceKey": "international"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "as internationalPhoneNo \u2014 instance not minted by any manifest.",
+      "via": "hand-authored"
+    },
+    "invoiceInstances": {
+      "disposition": "structural",
+      "note": "no invoice category is declared \u2014 SYS-3376"
+    },
+    "invoices": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "invoices"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "isApplication": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "isReview": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "jurisdiction": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "lateDays24m": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "lateDays24m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "lenderId": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "lengthOfServiceMonth": {
+      "disposition": "retired",
+      "reason": "as lengthOfServiceYear \u2014 recomputed locally before display.",
+      "via": "consumer-sweep"
+    },
+    "lengthOfServiceYear": {
+      "disposition": "retired",
+      "reason": "already dead for display: finsys-client recomputes it from dateJoined (ihs_detail.ts:230-247) before rendering, so the API value is never shown.",
+      "via": "consumer-sweep"
+    },
+    "mailingBillingAddressInd": {
+      "disposition": "needs-decision",
+      "note": "NOT an address property. Its choices are Office / Residence, so it names WHICH address is preferred for mail \u2014 a statement about the application, and putting it on an address instance would make that row claim something about its siblings. applicant-address-form-v1 declined it for exactly that reason. It IS collected (personal_loan.json; 30 of 8,475 rows). Candidate home: the application record (GET /lender/applications/:ihsId), which already carries application-level facts \u2014 but nothing there owns applicant PREFERENCES yet.",
+      "via": "hand-authored"
+    },
+    "makeOfVehicle": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleMake"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "maritalStatus": {
+      "address": {
+        "category": "applicant-demographics",
+        "field": "maritalStatus"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "marketValue": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "collateralMarketValue"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "mobilePhoneNo": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactValue",
+        "instanceKey": "mobile"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "mobilePhoneNoAreaCode": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactAreaCode",
+        "instanceKey": "mobile"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "the instance exists (mobilePhoneNo mints it); no form collects the area code, so the field is addressable and permanently empty until one does.",
+      "via": "hand-authored"
+    },
+    "modelOfVehicle": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleModel",
+        "instanceKey": "0"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "monthlyGrossIncome": {
+      "address": {
+        "category": "applicant-income",
+        "field": "grossPay"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "monthlyNetIncome": {
+      "address": {
+        "category": "applicant-income",
+        "field": "netPay"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "monthlyRepayment": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "monthlyVolume12m": {
+      "address": {
+        "category": "payment-network",
+        "field": "monthlyVolume12m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "monthlyVolume3m": {
+      "address": {
+        "category": "payment-network",
+        "field": "monthlyVolume3m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "myKadOrPassport": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "myKadOrPassport"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "nationality": {
+      "address": {
+        "category": "applicant-identity",
+        "field": "personNationality"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "natureOfBusiness": {
+      "address": {
+        "category": "subject-company",
+        "field": "businessNatureCode"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "negativeSentimentRatio90d": {
+      "address": {
+        "category": "social-media",
+        "field": "negativeSentimentRatio90d"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "netOperatingCashFlow": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netOperatingCashFlow"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netOperatingCashFlowT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netOperatingCashFlow"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netOperatingCashFlowT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netOperatingCashFlow"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netOperatingCashFlowT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netOperatingCashFlow"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netProfitPriorYearT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netProfitPriorYearT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netProfitPriorYearT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netProfitT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netProfitT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "netProfitT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "netProfit"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "noOfDependants": {
+      "address": {
+        "category": "applicant-demographics",
+        "field": "dependantsCount"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "noOfEmployees": {
+      "disposition": "vocabulary-gap",
+      "reason": "wanted as an SME signal (Kain) but 0 of 8,474 rows populated and no canonical field of the right kind \u2014 subject-company.companySizeCode is a coded BAND, this is a raw COUNT. Needs a new employeeCount:number on subject-company.",
+      "via": "consumer-sweep"
+    },
+    "nonCurrentAssetDeferredAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetDeferredAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetDeferredAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetDeferredAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetDeferredAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetDeferredAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetDepositsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetDepositsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetDepositsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetDeposits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetFinancialAssetAtFairValueT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetFinancialAssetAtFairValue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetFinancialAssetAtFairValueT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetFinancialAssetAtFairValue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetFinancialAssetAtFairValueT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetFinancialAssetAtFairValue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetGoodwillOnConsolidationT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetGoodwillOnConsolidation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetGoodwillOnConsolidationT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetGoodwillOnConsolidation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetGoodwillOnConsolidationT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetGoodwillOnConsolidation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetIntangibleAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetIntangibleAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetIntangibleAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetIntangibleAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetIntangibleAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetIntangibleAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInventoriesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInventories"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInventoriesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInventories"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInventoriesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInventories"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInvestmentPropertiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInvestmentProperties"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInvestmentPropertiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInvestmentProperties"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInvestmentPropertiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInvestmentProperties"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInvestmentSecuritiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInvestmentSecurities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInvestmentSecuritiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInvestmentSecurities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetInvestmentSecuritiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetInvestmentSecurities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetLandUseRightT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetLandUseRight"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetLandUseRightT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetLandUseRight"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetLandUseRightT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetLandUseRight"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOtherReceivablesDepositsAndPrepaymentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOtherReceivablesDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOtherReceivablesDepositsAndPrepaymentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOtherReceivablesDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOtherReceivablesDepositsAndPrepaymentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOtherReceivablesDepositsAndPrepayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOtherReceivablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOtherReceivablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOtherReceivablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOwnGoodwillT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOwnGoodwill"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOwnGoodwillT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOwnGoodwill"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetOwnGoodwillT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetOwnGoodwill"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetPrepaidLeasePaymentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetPrepaidLeasePayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetPrepaidLeasePaymentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetPrepaidLeasePayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetPrepaidLeasePaymentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetPrepaidLeasePayments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetPropertyPlantEquipmentT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetPropertyPlantEquipment"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetPropertyPlantEquipmentT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetPropertyPlantEquipment"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetPropertyPlantEquipmentT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetPropertyPlantEquipment"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetRightOfUseAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetRightOfUseAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetRightOfUseAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetRightOfUseAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetRightOfUseAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetRightOfUseAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetSinkingFundT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetSinkingFund"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetSinkingFundT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetSinkingFund"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetSinkingFundT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetSinkingFund"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetTradeAndOtherReceivablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetTradeAndOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetTradeAndOtherReceivablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetTradeAndOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetTradeAndOtherReceivablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetTradeAndOtherReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetTradeReceivablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetTradeReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetTradeReceivablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetTradeReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetTradeReceivablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetTradeReceivables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsAssociatedCompaniesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsAssociatedCompaniesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsAssociatedCompaniesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsAssociatedCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsDevelopmentPropertiesOrExpenditureT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsDevelopmentPropertiesOrExpenditure"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsDevelopmentPropertiesOrExpenditureT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsDevelopmentPropertiesOrExpenditure"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsDevelopmentPropertiesOrExpenditureT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsDevelopmentPropertiesOrExpenditure"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsInvestmentsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsInvestments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsInvestmentsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsInvestments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsInvestmentsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsInvestments"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsSubsidiaryCompaniesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsSubsidiaryCompaniesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentAssetsSubsidiaryCompaniesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentAssetsSubsidiaryCompanies"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesBankBorrowingsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesBankBorrowings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesBankBorrowingsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesBankBorrowings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesBankBorrowingsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesBankBorrowings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesBorrowingsOrTermLoansT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesBorrowingsOrTermLoans"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesBorrowingsOrTermLoansT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesBorrowingsOrTermLoans"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesBorrowingsOrTermLoansT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesBorrowingsOrTermLoans"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesContractLiabilitiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesContractLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesContractLiabilitiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesContractLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesContractLiabilitiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesContractLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesDeferredTaxationT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesDeferredTaxation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesDeferredTaxationT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesDeferredTaxation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesDeferredTaxationT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesDeferredTaxation"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesDepositsFromCustomersT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesDepositsFromCustomers"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesDepositsFromCustomersT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesDepositsFromCustomers"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesDepositsFromCustomersT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesDepositsFromCustomers"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesFinanceLeaseObligationsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesFinanceLeaseObligations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesFinanceLeaseObligationsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesFinanceLeaseObligations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesFinanceLeaseObligationsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesFinanceLeaseObligations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesHirePurchasePayablesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesHirePurchasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesHirePurchasePayablesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesHirePurchasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesHirePurchasePayablesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesHirePurchasePayables"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesLeaseObligationsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesLeaseObligations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesLeaseObligationsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesLeaseObligations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesLeaseObligationsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesLeaseObligations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesRetirementBenefitsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesRetirementBenefits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesRetirementBenefitsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesRetirementBenefits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "nonCurrentLiabilitiesRetirementBenefitsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "nonCurrentLiabilitiesRetirementBenefits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "occupation": {
+      "address": {
+        "category": "applicant-employment",
+        "field": "occupation",
+        "instanceKey": "current"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "officeFacilityType": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "officePhoneNo": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactValue",
+        "instanceKey": "office"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "officePhoneNoAreaCode": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactAreaCode",
+        "instanceKey": "office"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "as mobilePhoneNoAreaCode \u2014 the office instance exists, the area code is uncollected.",
+      "via": "hand-authored"
+    },
+    "officeaddressLine1": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine1",
+        "instanceKey": "office"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "officeaddressLine2": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine2",
+        "instanceKey": "office"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "officeaddressLine3": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine3",
+        "instanceKey": "office"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "officeaddressType": {
+      "disposition": "retired",
+      "note": "as addressType \u2014 the instance key carries the discriminator.",
+      "via": "hand-authored"
+    },
+    "officecity": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressCity",
+        "instanceKey": "office"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "officepostcode": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressPostcode",
+        "instanceKey": "office"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "officestate": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressStateCode",
+        "instanceKey": "office"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "onTimePaymentRatio24m": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "onTimePaymentRatio24m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "openingBalanceT1": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "openingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "openingBalanceT2": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "openingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "openingBalanceT3": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "openingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "openingBalanceT4": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "openingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "openingBalanceT5": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "openingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "openingBalanceT6": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "openingBalance"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "originatorCode": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "otherFinancingMonthlyInstallment": {
+      "address": {
+        "category": "applicant-obligations",
+        "field": "obligationMonthlyInstallment",
+        "instanceKey": "otherFinancing"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "via": "hand-authored"
+    },
+    "otherIncomeT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "otherIncome"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "otherIncomeT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "otherIncome"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "otherIncomeT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "otherIncome"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "pRIDNo": {
+      "disposition": "vocabulary-gap",
+      "note": "as foreignPR \u2014 the PR identity number. applicant-identity.personIdNumber attests the primary ID; a second, differently-issued number needs its own field or an idType-qualified instance, which is the same gap idType has.",
+      "via": "hand-authored"
+    },
+    "paymentReliabilityTier": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "paymentReliabilityTier"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "payslipInstances": {
+      "disposition": "structural",
+      "note": "v2 exposes these as payslip instances"
+    },
+    "payslips": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "payslips"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "permanentaddressLine1": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine1",
+        "instanceKey": "permanent"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "permanentaddressLine2": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine2",
+        "instanceKey": "permanent"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "permanentaddressLine3": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine3",
+        "instanceKey": "permanent"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "permanentaddressType": {
+      "disposition": "retired",
+      "note": "as addressType \u2014 the instance key carries the discriminator.",
+      "via": "hand-authored"
+    },
+    "permanentcity": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressCity",
+        "instanceKey": "permanent"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "permanentpostcode": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressPostcode",
+        "instanceKey": "permanent"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "personalLoanMonthlyInstallment": {
+      "address": {
+        "category": "applicant-obligations",
+        "field": "obligationMonthlyInstallment",
+        "instanceKey": "personalLoan"
+      },
+      "disposition": "mapped-pending-build",
+      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "via": "hand-authored"
+    },
+    "phoneNumber": {
+      "disposition": "needs-decision",
+      "note": "THE FIELD IS KNOWN AND THE INSTANCE IS NOT. applicant-contact.contactValue is the home, but this column is unqualified: it is one of the founding columns (InitialMigration, alongside fullName/email/idNumber), predating the mobile/office/emergency split, so nothing in the schema says which kind of contact point it holds. Assigning an instance key guesses, and a wrong guess attests a mobile number as an office one. No live form collects it; finsys-client renders it through the GENERIC catalog path (ui.ts:33), which degrades silently rather than breaking. Needs a data-shape read against production before an instance key is chosen.",
+      "via": "hand-authored"
+    },
+    "photocopyRegistrationCard": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "photocopyRegistrationCard"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "postcode": {
+      "disposition": "retired",
+      "reason": "as city \u2014 collected and submitted as permanentpostcode.",
+      "via": "consumer-sweep"
+    },
+    "postingConsistency12m": {
+      "address": {
+        "category": "social-media",
+        "field": "postingConsistency12m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "preferenceShareCapitalT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "preferenceShareCapital"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "preferenceShareCapitalT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "preferenceShareCapital"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "preferenceShareCapitalT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "preferenceShareCapital"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "preferredBranch": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "preferredLanguage": {
+      "address": {
+        "category": "applicant-demographics",
+        "field": "preferredLanguage"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "previousDirectors": {
+      "address": {
+        "category": "company-profile",
+        "field": "previousDirectors"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "product": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "profitAfterTaxT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "profitAfterTax"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "profitAfterTaxT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "profitAfterTax"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "profitAfterTaxT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "profitAfterTax"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "profitFromOperationsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "profitFromOperations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "profitFromOperationsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "profitFromOperations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "profitFromOperationsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "profitFromOperations"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "programId": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "purchasePriceOTR": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "collateralPurchasePriceOnTheRoad",
+        "instanceKey": "0"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "purposeOfAcctOpen": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "purposeOfAcquisition": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "race": {
+      "address": {
+        "category": "applicant-demographics",
+        "field": "raceCode"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "registeredAddress": {
+      "address": {
+        "category": "company-profile",
+        "field": "registeredAddress"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "registrationDate": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleRegistrationDate"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "registrationNo": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleRegistrationNo"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "relationshiptoContactName": {
+      "address": {
+        "category": "applicant-contact",
+        "field": "contactRelationship",
+        "instanceKey": "emergency"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "reservesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "reserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "reservesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "reserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "reservesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "reserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "residenceType": {
+      "address": {
+        "category": "applicant-demographics",
+        "field": "residenceType"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "residentialaddressLine1": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine1",
+        "instanceKey": "residential"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "residentialaddressLine2": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine2",
+        "instanceKey": "residential"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "residentialaddressLine3": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressLine3",
+        "instanceKey": "residential"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "residentialaddressType": {
+      "disposition": "retired",
+      "note": "as addressType \u2014 the instance key carries the discriminator.",
+      "via": "hand-authored"
+    },
+    "residentialcity": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressCity",
+        "instanceKey": "residential"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "residentialpostcode": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressPostcode",
+        "instanceKey": "residential"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "residentialstate": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressStateCode",
+        "instanceKey": "residential"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "retainedEarningsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "retainedEarnings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "retainedEarningsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "retainedEarnings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "retainedEarningsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "retainedEarnings"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "revaluationReservesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "revaluationReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "revaluationReservesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "revaluationReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "revaluationReservesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "revaluationReserves"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "revenueT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "revenue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "revenueT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "revenue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "revenueT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "revenue"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "salutation": {
+      "disposition": "vocabulary-gap",
+      "note": "the SYS-2499 audit targets applicant-identity, which declares no salutation field \u2014 and a title is not an identity ATTESTATION, it is a form of address. Collected ONLY by personal_loan.json (retired product, which Kain has said could be resurrected) and one lead-gen submit script; 0 of 8,475 rows. Needs a declared field before it has an address.",
+      "via": "hand-authored"
+    },
+    "shareCapital": {
+      "address": {
+        "category": "financial-statement",
+        "field": "shareCapital"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "shareCapitalT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "shareCapital"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "shareCapitalT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "shareCapital"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "shareCapitalT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "shareCapital"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "sharePremiumT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "sharePremium"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "sharePremiumT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "sharePremium"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "sharePremiumT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "sharePremium"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "shareholders": {
+      "address": {
+        "category": "company-profile",
+        "field": "shareholders"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "shortTermLiabilities": {
+      "address": {
+        "category": "financial-statement",
+        "field": "shortTermLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "shortTermLiabilitiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "shortTermLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "shortTermLiabilitiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "shortTermLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "shortTermLiabilitiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "shortTermLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "sourceOfFund": {
+      "address": {
+        "category": "applicant-income",
+        "field": "sourceOfFund"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "sourceOfWealth": {
+      "address": {
+        "category": "applicant-income",
+        "field": "sourceOfWealth"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "ssm": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "ssm"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "ssmCompanyEntityType": {
+      "address": {
+        "category": "company-profile",
+        "field": "companyEntityType"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "ssmCompanyName": {
+      "address": {
+        "category": "company-profile",
+        "field": "companyName"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "ssmCompanyRegNo": {
+      "address": {
+        "category": "company-profile",
+        "field": "companyRegNo"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "ssmIncorporatedDate": {
+      "disposition": "retired",
+      "note": "SUPERSEDED BY THE SHARED COLUMN and already dead. SYS-2722 (finsys-api 884b9078, 2026-07-09) consolidated company incorporation date onto the canonical incorporatedDate for BOTH extractors and backfilled history; processSSM has not written this column since. SYS-3163 (2026-08-04) later formalised the binding (WIDE_COLUMN_BINDINGS.companyIncorporationDate, owners [form9, ssm], no columnBySource override) but changed no behavior here. MEASURED on finsim: 839 of 8,475 rows carry ssmCompanyName (the same extractor's sibling, and the positive control that makes this zero meaningful) and 839 carry incorporatedDate, while ZERO carry ssmIncorporatedDate. The backfill COPIED rather than cleared, so rows predating 2026-07-09 still hold both \u2014 the symptom is a field correct on older records and blank on newer ones, not a uniformly broken one. SEE SYS-3419: SYS-2722 scoped the reader half too and it never shipped.",
+      "via": "hand-authored"
+    },
+    "ssmPaidUpCapital": {
+      "address": {
+        "category": "company-profile",
+        "field": "paidUpCapital"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "state": {
+      "address": {
+        "category": "applicant-address",
+        "field": "addressStateCode",
+        "instanceKey": "permanent"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "statementDateT1": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "statementDate"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "statementDateT2": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "statementDate"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "statementDateT3": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "statementDate"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "statementDateT4": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "statementDate"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "statementDateT5": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "statementDate"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "statementDateT6": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "statementDate"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "statementType": {
+      "address": {
+        "category": "applicant-income",
+        "field": "statementType"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "status": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "statusDescription": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "subEmploymentSector": {
+      "address": {
+        "category": "applicant-employment",
+        "field": "subEmploymentSector",
+        "instanceKey": "current"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "supplementaryDoc": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "supplementaryDoc"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "suspensionsCount24m": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "suspensionsCount24m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "tangibleAssets": {
+      "disposition": "vocabulary-gap",
+      "reason": "the OWNING category is known \u2014 financial-statement feeds this column through financialStatementSpec.wideTableMirror \u2014 but it declares no field for it. An earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not a lookup.",
+      "via": "consumer-sweep"
+    },
+    "tangibleAssetsT1": {
+      "disposition": "vocabulary-gap",
+      "reason": "the OWNING category is known \u2014 financial-statement feeds this column through financialStatementSpec.wideTableMirror \u2014 but it declares no field for it. An earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not a lookup.",
+      "via": "consumer-sweep"
+    },
+    "tangibleAssetsT2": {
+      "disposition": "vocabulary-gap",
+      "reason": "the OWNING category is known \u2014 financial-statement feeds this column through financialStatementSpec.wideTableMirror \u2014 but it declares no field for it. An earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not a lookup.",
+      "via": "consumer-sweep"
+    },
+    "tangibleAssetsT3": {
+      "disposition": "vocabulary-gap",
+      "reason": "the OWNING category is known \u2014 financial-statement feeds this column through financialStatementSpec.wideTableMirror \u2014 but it declares no field for it. An earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not a lookup.",
+      "via": "consumer-sweep"
+    },
+    "taxesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "taxes"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "taxesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "taxes"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "taxesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "taxes"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "tenureMonths": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "tenureMonths"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "tenureTier": {
+      "address": {
+        "category": "telco-carrier",
+        "field": "tenureTier"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "tnbBills": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "tnbBills"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
+    "tnbTariff": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "totalAssets": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCreditsT1": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalCredits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCreditsT2": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalCredits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCreditsT3": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalCredits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCreditsT4": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalCredits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCreditsT5": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalCredits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCreditsT6": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalCredits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCurrentAssets": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalCurrentAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCurrentAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalCurrentAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCurrentAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalCurrentAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCurrentAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalCurrentAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCurrentLiabilities": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalCurrentLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCurrentLiabilitiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalCurrentLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCurrentLiabilitiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalCurrentLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalCurrentLiabilitiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalCurrentLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalDebitsT1": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalDebits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalDebitsT2": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalDebits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalDebitsT3": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalDebits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalDebitsT4": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalDebits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalDebitsT5": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalDebits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalDebitsT6": {
+      "address": {
+        "category": "finxtract-bank-statement",
+        "field": "totalDebits"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalEquityPriorYearT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalEquity"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalEquityPriorYearT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalEquity"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalEquityPriorYearT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalEquity"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalEquityT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalEquity"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalEquityT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalEquity"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalEquityT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalEquity"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalFinancing": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "totalLiabilitiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalLiabilitiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalLiabilitiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalNonCurrentAssetsT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalNonCurrentAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalNonCurrentAssetsT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalNonCurrentAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalNonCurrentAssetsT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalNonCurrentAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalNonCurrentLiabilitiesT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalNonCurrentLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalNonCurrentLiabilitiesT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalNonCurrentLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalNonCurrentLiabilitiesT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "totalNonCurrentLiabilities"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "totalShareIssued": {
+      "address": {
+        "category": "company-profile",
+        "field": "totalShareIssued"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "tradeReferenceDefaults12m": {
+      "address": {
+        "category": "trade-credit",
+        "field": "tradeReferenceDefaults12m"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "updatedAt": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "updatedBy": {
+      "disposition": "relocated",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "column-audit"
+    },
+    "vehicleCondition": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleConditionCode",
+        "instanceKey": "0"
+      },
+      "disposition": "mapped",
+      "via": "form-intake-fieldmap"
+    },
+    "verifiedBusinessAccount": {
+      "address": {
+        "category": "social-media",
+        "field": "verifiedBusinessAccount"
+      },
+      "disposition": "mapped",
+      "via": "name-equality"
+    },
+    "yearMake": {
+      "address": {
+        "category": "applicant-collateral",
+        "field": "vehicleYearMake"
+      },
+      "disposition": "mapped",
+      "via": "legacy-name"
+    },
+    "zakatT1": {
+      "address": {
+        "category": "financial-statement",
+        "field": "zakat"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "zakatT2": {
+      "address": {
+        "category": "financial-statement",
+        "field": "zakat"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    },
+    "zakatT3": {
+      "address": {
+        "category": "financial-statement",
+        "field": "zakat"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
+    }
+  },
+  "schemaVersion": "0.3.0-draft"
+}

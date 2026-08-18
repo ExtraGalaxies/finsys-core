@@ -57,9 +57,6 @@ export type { SurveyElementJSON, SurveyPageJSON, SurveyJSON } from "./survey-gen
 // RHF Generator types
 export type { RHFStep, RHFSchemaOutput } from "./rhf-generator.js";
 
-// Re-export survey-core types for convenience
-export type { IQuestion, IPage, ISurvey, IPanel, IElement } from "./survey-generator.js";
-
 // Form domain classes
 export { FormSpec } from "./form-spec.js";
 

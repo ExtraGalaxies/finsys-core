@@ -6,6 +6,69 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [8.0.0] - 2026-08-18
+
+**Breaking, in exactly one way, and it is a fix.** Everything else in this
+release is unchanged from 7.10.0 — the category registry, the field catalogue,
+the v1 migration map, the v2 envelope types, every function.
+
+### Removed
+
+- **The `survey-core` type re-exports from the root entry (SYS-3420):**
+  `IQuestion`, `IPage`, `ISurvey`, `IPanel`, `IElement`. Import them from
+  `survey-core` directly — a one-line change:
+
+  ```ts
+  // before
+  import type { IQuestion } from '@finsys/core'
+  // after
+  import type { IQuestion } from 'survey-core'
+  ```
+
+  **Why this is a fix and not housekeeping.** `survey-core` was an *optional*
+  peer, which npm does not install. The root declaration file re-exported from
+  it unconditionally, so for any consumer with `skipLibCheck: false` — tsc's
+  default — loading `@finsys/core` at all was
+  `dist/index.d.ts(3,61): error TS2307: Cannot find module 'survey-core'`.
+  This repo's own tsconfig sets `skipLibCheck: true`, so nothing here ever
+  saw it; the frontier review of `@finsys/lender-client` 2.6.0 — the first
+  package to put this root `.d.ts` in front of external lenders — did.
+  Reproduced under node16, nodenext, bundler and node10; 7.x is broken for
+  such a consumer whether or not this line is removed. Measured before
+  removing: zero consumers in the estate import these five names from this
+  package, and this package uses none of them itself.
+
+- **The `survey-core` peer dependency.** It was vestigial: `generateSurveyJson`
+  emits plain JSON and never imported SurveyJS. Rendering that JSON is your
+  app's concern and your app's dependency. Removing the peer also removes the
+  peer-range-rot hazard that broke 7.0.0 for survey-core 3 users.
+
+### Added
+
+- **`npm run test:consumer`** (`scripts/check-consumer-typecheck.sh`), run in
+  CI: packs the tarball, installs *only* it into a fresh fixture — no optional
+  peers, no repo `.npmrc` — and typechecks an import of the root entry with
+  `skipLibCheck: false` under `nodenext` and `bundler`. Observed red on the
+  7.10.0 tree before the fix (the exact TS2307 above), green after. Also runs
+  for any package using the shared `npm-package-ci.yml` that defines the
+  script.
+
+- **A stated semver contract for the five `Canonical*` envelope types**
+  (`src/canonical-view.ts`): adding a required member, removing or renaming
+  *any* member — optional included, since `confidence?`/`origin?`/`runId?`
+  are what a consumer uses to judge a value — or narrowing a type is a major
+  of this package; adding an optional member is a minor. They are re-exported
+  by the lender SDK, so a change reaches external consumers on their next
+  install.
+
+### Dependents
+
+`@finsys/adapter-toolkit`'s peer range was `>=6.0.1 <8`; it is widened to
+`<9` and released **before** this version so there is no window in which the
+two cannot co-install. `@finsys/lender-client` 2.6.0 depends on `^8.0.0`.
+finsys-api, finhub-adonisjs and finsys-client stay on `^7.8.0` until their
+next core-touching change; none imports the removed names.
+
 ## [7.10.0] - 2026-08-18
 
 Additive. Nothing renamed, nothing removed — a consumer on 7.9.0 upgrades

@@ -33,11 +33,12 @@ This project targets Node 24.16.0 (see [`.nvmrc`](./.nvmrc)) and npm ≥ 12.0.1.
 npm install @finsys/core
 ```
 
-If you use the SurveyJS generator, install the peer dependency:
-
-```bash
-npm install survey-core
-```
+`generateSurveyJson` emits plain JSON and does not import SurveyJS; if you
+render that JSON with SurveyJS, `survey-core` is your app's dependency, not
+this package's. (Before 8.0.0 this package declared it as an optional peer and
+re-exported five of its types from the root entry — which made the root
+declaration file fail to typecheck for any consumer without it. See the
+CHANGELOG.)
 
 ## Quick Start
 
@@ -175,7 +176,7 @@ Extracts default values for a specific form step.
 
 ### `generateSurveyJson(config: UnifiedFormConfig): SurveyJSON`
 
-Converts a form config into SurveyJS-compatible JSON. Requires `survey-core` peer dependency.
+Converts a form config into SurveyJS-compatible JSON. Plain data — no SurveyJS import; render it with `survey-core` in your own app.
 
 ### `validateFormConfig(data: unknown): ValidationResult`
 
@@ -212,10 +213,10 @@ UnifiedFormConfig, FieldData, FieldReference, PageConfig, Category, Choice, Vali
 // Output types
 ResolvedField, FieldGroup, RHFStep, RHFSchemaOutput
 SurveyElementJSON, SurveyPageJSON, SurveyJSON
-
-// Re-exported from survey-core
-IQuestion, IPage, ISurvey, IPanel, IElement
 ```
+
+SurveyJS's own types (`IQuestion`, `IPage`, `ISurvey`, `IPanel`, `IElement`)
+were re-exported from here up to 7.x; import them from `survey-core` directly.
 
 ## Development
 

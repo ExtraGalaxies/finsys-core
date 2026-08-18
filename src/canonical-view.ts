@@ -28,8 +28,11 @@
  * them, is this estate's signature defect. So the shape lives once, in the
  * package that already owns published vocabulary — the category registry, the
  * field catalogue, the v1 migration map — and `@finsys/lender-client`
- * re-exports it. That re-export is deliberately a no-op for anyone already on
- * 2.5.0: same names, same members, same meaning.
+ * re-exports it. Member-for-member identical to what the SDK's 2.5.0
+ * declared — but 2.5.0 never exported these names from its index (TS2305 on
+ * `import type { CanonicalView } from '@finsys/lender-client'`), so the SDK's
+ * re-export is the first release in which a consumer can name them. Additive
+ * either way; the members and their meaning are unchanged.
  *
  * WHAT THIS FILE IS NOT. It is a description of a payload, not a client. There
  * is no fetching here and no instance-selection rule — selection is one

@@ -27,9 +27,17 @@ without touching anything.
   **Two declarations of one wire shape, drifting apart with nothing comparing
   them, is this estate's signature defect.** So the shape lives once, in the
   package that already owns published vocabulary — the category registry, the
-  field catalogue, the v1 migration map — and the SDK re-exports it. That
-  re-export is deliberately a **no-op** for anyone already on
-  `@finsys/lender-client` 2.5.0: same names, same members, same meaning.
+  field catalogue, the v1 migration map — and the SDK re-exports it.
+
+  Member-for-member identical to what `@finsys/lender-client` 2.5.0 declares
+  (proved by parsing both `.d.ts` files, not by reading them). But note what
+  2.5.0 actually shipped: it *declared* these five interfaces and never
+  exported them from its index — `import type { CanonicalView } from
+  '@finsys/lender-client'` is `TS2305` on 2.5.0, proved with `tsc`. A 2.5.0
+  consumer holds a `CanonicalView` only as the unnamed return type of
+  `getCanonicalView()`. So the SDK's re-export is not a no-op for that
+  consumer: it is the first release in which the names are importable. Still
+  additive — nothing a 2.5.0 consumer could write stops compiling.
 
   `canonical-view.test.ts` pins every member, in both directions — a literal
   carrying all optional members catches a dropped one, and a minimal literal

@@ -1370,8 +1370,17 @@ export function documentsOfType(
   const category = extractionCategoryOf(docType)
   const extracted = category !== null ? (view.categories[category]?.instances ?? []) : []
   const byHash = new Map<string, CanonicalInstance[]>()
+  const legacyByOrdinal = new Map<number, CanonicalInstance[]>()
   for (const inst of extracted) {
     const h = documentHashOfKey(inst.instanceKey)
+    if (h === null) {
+      const n = legacyOrdinalOfKey(inst.instanceKey)
+      if (n === null) continue // no identity and no slot: nothing to attribute it to
+      const list = legacyByOrdinal.get(n)
+      if (list) list.push(inst)
+      else legacyByOrdinal.set(n, [inst])
+      continue
+    }
     const list = byHash.get(h)
     if (list) list.push(inst)
     else byHash.set(h, [inst])
@@ -1393,23 +1402,53 @@ export function documentsOfType(
       origin: 'intake',
     })
   }
+  const intakeCount = out.length
   for (const [hash, group] of byHash) {
     if (!claimed.has(hash)) out.push({ hash, path: null, uploadedAt: null, uploadedBy: null, extraction: group, origin: 'extraction-only' })
+  }
+  // Legacy slot rows: positional, as v1 was — `legacy:T{n}` is the n-th
+  // INTAKE document's extraction, but only when that document has no hashed
+  // extraction (a hashed run for the same document supersedes its legacy
+  // duplicate). A slot beyond the intake documents is an extraction-only
+  // document with no identity: a pre-writer subject whose uploads left no
+  // intake row, still rendered, still counted, marked as such.
+  for (const n of [...legacyByOrdinal.keys()].sort((a, b) => a - b)) {
+    const group = legacyByOrdinal.get(n)!
+    const target = n >= 1 && n <= intakeCount ? out[n - 1]! : undefined
+    if (target && target.extraction.length === 0) out[n - 1] = { ...target, extraction: group }
+    else if (!target) out.push({ hash: null, path: null, uploadedAt: null, uploadedBy: null, extraction: group, origin: 'extraction-only' })
+    // else: the target already has hashed extraction — the legacy rows are its superseded duplicate.
   }
   return out
 }
 
 /**
- * The document hash inside an extraction instance key:
+ * The document identity inside an extraction instance key:
  * `bankStatement:<hash>` → `<hash>`, `financialStatement:<hash>#T2` → `<hash>`.
- * A key with no colon is its own hash. The `#…` tail is the per-document
- * period discriminator and is not part of the document's identity.
+ * A key with no colon is its own identity. The `#…` tail is the per-document
+ * period discriminator and is not part of the identity.
+ *
+ * NULL for a `legacy:T{n}` key. Those rows were written by the pre-hash path
+ * — one per T-slot of the wide table, no document behind them — and on the sim
+ * they are the ONLY extraction rows for 143 financial-statement subjects and
+ * 33 bank-statement subjects. They carry no identity; `legacyOrdinalOfKey`
+ * carries the one thing they do know, their slot.
  */
-export function documentHashOfKey(instanceKey: string): string {
+export function documentHashOfKey(instanceKey: string): string | null {
+  if (LEGACY_KEY.test(instanceKey)) return null
   const colon = instanceKey.indexOf(':')
   const afterColon = colon === -1 ? instanceKey : instanceKey.slice(colon + 1)
   const hashAt = afterColon.indexOf('#')
-  return hashAt === -1 ? afterColon : afterColon.slice(0, hashAt)
+  const id = hashAt === -1 ? afterColon : afterColon.slice(0, hashAt)
+  return id === '' ? null : id
+}
+
+const LEGACY_KEY = /^legacy:T(\d+)$/
+
+/** `legacy:T3` → 3; null for any other key. The slot ordinal is 1-based, as the wide table's was. */
+export function legacyOrdinalOfKey(instanceKey: string): number | null {
+  const m = LEGACY_KEY.exec(instanceKey)
+  return m ? Number(m[1]) : null
 }
 
 /** The DMS path's last segment, query stripped — the document's content hash. */

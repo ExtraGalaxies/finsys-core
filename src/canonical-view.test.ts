@@ -55,6 +55,8 @@ describe('the v2 canonical envelope', () => {
       confidence: 0.97,
       origin: 'extraction',
       confidentiality: 'sensitive',
+      // SYS-3415: present only under a lender-overlay projection.
+      originalValue: 'SG',
     };
     const instance: CanonicalInstance = {
       instanceKey: 'mobile',
@@ -65,7 +67,12 @@ describe('the v2 canonical envelope', () => {
       fields: { contactValue: envelope },
     };
     const category: CanonicalCategory = { cardinality: 'multi', instances: [instance] };
-    const view: CanonicalView = { ihsId: 9154, categories: { 'applicant-contact': category } };
+    const view: CanonicalView = {
+      ihsId: 9154,
+      categories: { 'applicant-contact': category },
+      // SYS-3415: present iff read under `?overlay=mine`.
+      overlay: { lenderId: 7, applied: 1, updatedAt: '2026-08-18T00:00:00.000Z', unprojected: [] },
+    };
     const address: CanonicalAddress = {
       category: 'applicant-contact',
       field: 'contactValue',

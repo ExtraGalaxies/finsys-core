@@ -71,6 +71,17 @@ record.
   document type added after the map would resolve to null; the test that
   pins the seven types by name is what catches that.
 
+### Added — two optional members on the envelope, for the lender overlay (SYS-3415)
+
+- `CanonicalFieldEnvelope.originalValue?` and `CanonicalView.overlay?`. Both
+  present ONLY when a view is read under the lender-overlay projection
+  (`?overlay=mine` on the v2 read routes): an overlaid envelope carries the
+  calling lender's staged value as `value`, `origin: 'manual'`, and the
+  attested value it stands in for as `originalValue`; the view carries
+  `overlay: {lenderId, applied, updatedAt, unprojected[]}` — the signal that
+  the SDK's 2.5.0 notes said neither payload had. Absent on the facts-only
+  view. Additive; the compat pins in both packages cover them.
+
 ### Added — the documents table from the view (SYS-3378)
 
 - **`buildDocumentRowsFromView(view, metadata?)`** → `DocumentRow[]` — the

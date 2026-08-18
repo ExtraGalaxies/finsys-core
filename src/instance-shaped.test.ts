@@ -8,6 +8,7 @@ import {
   buildDocumentRowsFromView,
   documentHashOfKey,
   documentHashOfPath,
+  legacyOrdinalOfKey,
   APPLICATION_RECORD_CURRENCY_FIELDS,
   registryMoneyLegacyNames,
 } from './ihs-processing.js'
@@ -409,14 +410,65 @@ describe('buildDocumentRowsFromView — the documents table, from intake instanc
   })
 })
 
-describe('documentHashOfKey / documentHashOfPath', () => {
-  it('strips the prefix and the period suffix; treats a bare key as its own hash', () => {
+describe('documentHashOfKey / documentHashOfPath / legacyOrdinalOfKey', () => {
+  it('strips the prefix and the period suffix; treats a bare key as its own identity; a legacy slot key has none', () => {
     expect(documentHashOfKey('bankStatement:abc')).toBe('abc')
     expect(documentHashOfKey('financialStatement:abc#T2')).toBe('abc')
     expect(documentHashOfKey('abc')).toBe('abc')
     expect(documentHashOfKey('a:b:c#T1')).toBe('b:c')
+    expect(documentHashOfKey('legacy:T1')).toBeNull()
+    expect(documentHashOfKey('bankStatement:')).toBeNull()
+    expect(legacyOrdinalOfKey('legacy:T3')).toBe(3)
+    expect(legacyOrdinalOfKey('bankStatement:abc')).toBeNull()
     expect(documentHashOfPath('https://x/y/HASH?sig=1')).toBe('HASH')
     expect(documentHashOfPath('https://x/y/')).toBeNull()
+  })
+})
+
+describe('legacy slot rows — positional, as v1 was, and only where identity is absent', () => {
+  // The sim carries 143 financial-statement and 33 bank-statement subjects
+  // whose ONLY extraction rows are `legacy:T{n}` — no document behind them.
+  const hashA = 'a'.repeat(64)
+  const hashB = 'b'.repeat(64)
+  it('legacy:T{n} attaches to the n-th intake document when it has no hashed extraction; a hashed run supersedes it; overflow is an observable extraction-only document', () => {
+    const v = view({
+      'document-intake': {
+        cardinality: 'multi',
+        instances: [
+          inst('financialStatements#1', { documentType: 'financialStatements', pathInDms: `${DMS}${hashA}` }),
+          inst('financialStatements#2', { documentType: 'financialStatements', pathInDms: `${DMS}${hashB}` }),
+        ],
+      },
+      'financial-statement': {
+        cardinality: 'multi',
+        instances: [
+          inst(`financialStatement:${hashB}#T1`, { revenue: 9 }), // doc 2, by identity
+          inst('legacy:T1', { revenue: 1 }), // doc 1 has no hashed rows → attaches
+          inst('legacy:T2', { revenue: 2 }), // doc 2 has hashed rows → superseded duplicate, ignored
+          inst('legacy:T3', { revenue: 3 }), // no third intake document → extraction-only, no identity
+        ],
+      },
+    })
+    const st = resolveExtractionStatusFromView(v).documents.filter((d) => d.fileType === 'financialStatements')
+    expect(st.map((d) => [d.documentId ?? null, d.status, d.populatedColumns, d.unlinked ?? false])).toEqual([
+      [hashA, DocExtractionStatus.Extracted, ['revenue'], false],
+      [hashB, DocExtractionStatus.Extracted, ['revenue'], false],
+      [null, DocExtractionStatus.Extracted, ['revenue'], true],
+    ])
+    const rows = buildDocumentRowsFromView(v).filter((r) => r.docType === 'financialStatements')
+    expect(rows.map((r) => [r.index, r.documentId, r.displayName])).toEqual([
+      [0, hashA, 'Financial Statements 1'],
+      [1, hashB, 'Financial Statements 2'],
+      [2, null, 'Financial Statements 3'],
+    ])
+    expect(rows[2]!.capabilities.download).toBe(false)
+  })
+
+  it('a legacy-only subject with no intake rows at all still renders and counts its slots', () => {
+    const v = view({ 'finxtract-bank-statement': { cardinality: 'multi', instances: [inst('legacy:T1', { closingBalance: 5 })] } })
+    const bank = resolveExtractionStatusFromView(v).documents.filter((d) => d.fileType === 'bankStatements')
+    expect(bank.map((d) => [d.status, d.unlinked ?? false])).toEqual([[DocExtractionStatus.Extracted, true]])
+    expect(buildDocumentRowsFromView(v).filter((r) => r.docType === 'bankStatements')).toHaveLength(1)
   })
 })
 

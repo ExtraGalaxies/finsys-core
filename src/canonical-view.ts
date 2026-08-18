@@ -56,6 +56,15 @@ export interface CanonicalFieldEnvelope {
   confidence?: number
   origin?: string
   confidentiality: string
+  /**
+   * SYS-3415: present ONLY under a lender-overlay projection (`?overlay=mine`)
+   * on a field the calling lender has a staged, uncommitted edit for — the
+   * attested value this envelope's `value` is standing in for. `origin` is
+   * 'manual' on such an envelope and `confidence` is absent. Never present on
+   * the facts-only view; a committed correction is a fact (a manual-override
+   * run) and carries no originalValue.
+   */
+  originalValue?: number | boolean | string
 }
 
 export interface CanonicalInstance {
@@ -91,6 +100,23 @@ export interface CanonicalCategory {
 export interface CanonicalView {
   ihsId: number
   categories: Record<string, CanonicalCategory>
+  /**
+   * SYS-3415: present iff the view was read under a lender-overlay projection
+   * (`?overlay=mine`). Its presence is the signal that `value`s in this view
+   * may be the calling lender's staged edits rather than attested facts — the
+   * signal the SDK's 2.5.0 notes said neither payload carried. `applied` counts
+   * fields overlaid; `unprojected` names any staged column that could not be
+   * placed on the canonical plane (a legacy column with no address, or a
+   * T-slot the sibling storage cannot resolve) — surfaced, never dropped.
+   * ABSENT on the facts-only view, and absent for a caller with no active
+   * overlay only if the projection was not requested at all.
+   */
+  overlay?: {
+    lenderId: number
+    applied: number
+    updatedAt: string | null
+    unprojected: string[]
+  }
 }
 
 /**

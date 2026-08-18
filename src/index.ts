@@ -113,6 +113,7 @@ export {
   documentsOfType,
   documentHashOfKey,
   documentHashOfPath,
+  legacyOrdinalOfKey,
   APPLICATION_RECORD_CURRENCY_FIELDS,
   registryMoneyLegacyNames,
   buildDocumentRows,

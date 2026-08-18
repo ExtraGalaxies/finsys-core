@@ -6,6 +6,57 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [8.1.0] - 2026-08-18
+
+Additive. Nothing renamed, nothing removed — a consumer on 8.0.0 upgrades
+without touching anything.
+
+### Added
+
+- **The instance-shaped detail path (SYS-3334)** — the three functions a
+  consumer needs to render an IHS from a v2 `CanonicalView` instead of the
+  flat v1 record, with the SAME output types, so the flag flip on the consumer
+  is a migration and can be checked against a before-picture:
+
+  - `processIhsDetailsFromView(view)` — `IhsFieldDetail[]`, feeding the
+    unchanged `groupDetailsByCategory`. Labels and groupings come from the
+    LEGACY column name, recovered per field through the v1 migration map in
+    reverse, so the panel a v1 consumer had is the panel it gets. Measured on
+    157 sim subjects, both paths on the same record: identical, except for
+    (a) keys the map marks `relocated` (Loan/Account Information — the
+    application record, which v2 deliberately does not carry) or
+    `needs-decision` (`phoneNumber`), (b) v1's DECIMAL-as-string vs v2's typed
+    number, and (c) per-subject dual-write divergences in the data plane. A
+    canonical-only field with no legacy key gets a collision-proof name and
+    lands in `General`, which the grouping drops — as v1 did with alt-data
+    keys. Two instances resolving to one legacy name is a thrown error, not an
+    overwrite.
+  - `resolveExtractionStatusFromView(view, jobRecords?)` — a RE-DERIVATION,
+    not a port; three decisions, each pinned by a test that names the numbers:
+    (1) uploaded = `document-intake` instances of the type ∪ the extraction
+    category's documents (an extracted document was uploaded; covers uploads
+    that predate the intake writer); (2) per-document status joined by the
+    document's DMS hash — intake's `pathInDms` tail is the extraction key's
+    hash, with `#T1`/`#T2` period suffixes grouped as one document — not by
+    array position; (3) `totalColumns` is the registry's field set for the
+    extraction category, not the wide table's slot width (bank 8, payslip 15,
+    EPF 9, IC 9 unchanged; financial-statement 122 vs v1's 116, company-profile
+    16 vs 15, company-registration 3 vs 2). `populatedColumns` are canonical
+    names. Where this differs from v1 on live data it corrects v1: v1's
+    financial slots were misaligned (`13/13` then `0/0`), and v1 counted a
+    wide column as populated by Form 9 when SSM or the applicant form had
+    filled it.
+  - `v1KeyForAddress(category, field, instanceKey?)` — the reverse lookup;
+    null for a canonical-only address and, deliberately, for a T-slot family.
+  - `extractionCategoryOf(documentType)` and `documentCategoryIds()` — derived
+    from the document-type groups through the map (intersection across a
+    type's columns, so the fan-out key `incorporatedDate` resolves Form 9 →
+    company-registration and SSM → company-profile), not hand-listed.
+
+  `groupDetailsByCategory` needs no instance variant: the detail type is
+  preserved. `buildFileFieldTablesFromInstances` was already instance-shaped
+  and is unchanged.
+
 ## [8.0.0] - 2026-08-18
 
 **Breaking, in exactly one way, and it is a fix.** Everything else in this

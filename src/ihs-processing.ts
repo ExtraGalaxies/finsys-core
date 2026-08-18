@@ -24,6 +24,8 @@ import type {
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
 import { allCategories } from './adapter-categories.js'
+import { v1Addresses, v1KeyForAddress } from './v1-migration-map.js'
+import type { CanonicalView } from './canonical-view.js'
 import type { TaggedFieldData } from './document-types.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
 import { resolveDisplayCurrency } from './jurisdiction.js'
@@ -1047,4 +1049,162 @@ export function groupDetailsByCategory(details: IhsFieldDetail[]): IhsDetailCate
         valueFormat: d.valueFormat,
       })),
     }))
+}
+
+// ── Instance-shaped detail processing (SYS-3334) ────────────────────
+
+/**
+ * `processIhsDetails` for a v2 `CanonicalView` — the same output type, the
+ * same labels, the same groupings, so a consumer flipping from v1 to v2 sees
+ * the panel it had. That parity is the point of an instance-shaped PATH rather
+ * than a new panel: the flag flip on finhub is a migration, not a redesign,
+ * and it can be checked against a before-picture (`groupDetailsByCategory` of
+ * both, on the same subject).
+ *
+ * HOW PARITY IS ACHIEVED. v1 keyed everything — display name, form-spec
+ * category, value format — by the LEGACY column name. This function walks the
+ * view (category → instance → field) and asks the v1 migration map, in
+ * reverse, which legacy key held each address. Where the map answers, the
+ * detail is emitted exactly as v1 would have emitted it. Where it does not —
+ * a canonical-only field the wide table never had — the detail is emitted
+ * under the canonical name and, having no form spec, lands in `General`,
+ * which `groupDetailsByCategory` drops. THAT TOO IS PARITY: v1's flat record
+ * carried alt-data keys with no form spec (`arpu`, …), they landed in
+ * `General`, and the panel never showed them. A consumer that wants those
+ * reads the view directly; this function is the detail panel, not the view.
+ *
+ * WHAT IS EXCLUDED, AND WHY IT IS DERIVED RATHER THAN LISTED. v1 skipped the
+ * file/financial columns because `buildFileFieldTables` renders them. The v2
+ * equivalents are the extraction categories of every document type plus
+ * `document-intake` — derived from the document-type groups through the map,
+ * so a new document type excludes itself. A hand-written list here would be
+ * the seventh copy of "which fields are document fields" in this estate.
+ *
+ * VALUE FILTER is v1's exactly (null / '' / 'Not Specified' / false skipped),
+ * applied to the envelope's `value`. Provenance on the envelope is not
+ * surfaced here — `IhsFieldDetail` has no slot for it, and adding one is a
+ * type change every consumer would inherit; that is its own decision.
+ */
+export function processIhsDetailsFromView(view: CanonicalView): IhsFieldDetail[] {
+  const excluded = documentCategoryIds()
+  const specMap = getBaseFieldSpecMap()
+  const categoryNameMap: Record<string, string> = {}
+  for (const cat of getBaseCategories()) categoryNameMap[String(cat.id)] = cat.name
+
+  const details: IhsFieldDetail[] = []
+  const seen = new Set<string>()
+
+  for (const [categoryId, category] of Object.entries(view.categories)) {
+    if (excluded.has(categoryId)) continue
+    for (const instance of category.instances) {
+      for (const [field, envelope] of Object.entries(instance.fields)) {
+        const value = envelope.value
+        if (value === null || value === undefined || value === '' || value === 'Not Specified') continue
+        if (value === false) continue
+
+        // For a SINGLE-cardinality category the instance key carries no
+        // information (some adapters write '', some 'default'), and the map's
+        // entries for such categories are keyless — so fall back to the
+        // keyless lookup. For a multi category the key IS the discriminator
+        // (email vs mobile) and no fallback is offered.
+        const legacy =
+          v1KeyForAddress(categoryId, field, instance.instanceKey || undefined) ??
+          (category.cardinality === 'single' ? v1KeyForAddress(categoryId, field) : null)
+        if (legacy !== null && EXCLUDED_FIELDS.has(legacy)) continue
+
+        // The name a v1 consumer keyed on, when there was one. Otherwise a name
+        // that cannot collide with a legacy key or with another instance's.
+        const name = legacy ?? canonicalDetailName(categoryId, field, instance.instanceKey)
+        if (seen.has(name)) {
+          // Two instances resolving to one legacy key means the map is wrong
+          // for this category, and silently overwriting would hide it.
+          throw new Error(
+            `processIhsDetailsFromView: two instances of ${categoryId} both resolve to detail "${name}" ` +
+              `(second at instanceKey "${instance.instanceKey}"). The v1 migration map cannot tell them apart.`,
+          )
+        }
+        seen.add(name)
+
+        const spec = legacy !== null ? specMap.get(legacy) : undefined
+        const categoryKey = spec?.category ? String(spec.category) : '0'
+
+        details.push({
+          name,
+          displayName: getDisplayName(legacy ?? field),
+          category: categoryNameMap[categoryKey] || 'General',
+          value,
+          valueFormat: inferValueFormat(legacy ?? field, value),
+        })
+      }
+    }
+  }
+  return details
+}
+
+function canonicalDetailName(categoryId: string, field: string, instanceKey: string): string {
+  return instanceKey ? `${categoryId}/${instanceKey}/${field}` : `${categoryId}/${field}`
+}
+
+let documentCategoryIdsCache: Set<string> | null = null
+
+/**
+ * The adapter categories that hold DOCUMENT data — every document type's
+ * extraction category (via the migration map: the type's legacy T-slot columns
+ * → the category they map into) plus `document-intake` (the pointers). Derived,
+ * not listed, and asserted to be one category per document type: a type whose
+ * columns map into two categories would be a registry defect, and a type whose
+ * columns map nowhere would silently leak into the detail panel.
+ */
+export function documentCategoryIds(): ReadonlySet<string> {
+  if (documentCategoryIdsCache) return documentCategoryIdsCache
+  const ids = new Set<string>(['document-intake'])
+  for (const group of getDocumentTypeGroups()) {
+    const target = extractionCategoryOf(group.documentType)
+    if (target) ids.add(target)
+  }
+  documentCategoryIdsCache = ids
+  return ids
+}
+
+const extractionCategoryCache = new Map<string, string | null>()
+
+/**
+ * Which adapter category carries the EXTRACTED values for a document type —
+ * `bankStatements` → `finxtract-bank-statement`, `ssm` → `company-profile`.
+ * Read off the migration map: the type's legacy extraction columns (the form
+ * spec's `ihs_column_names`) and where they went.
+ *
+ * INTERSECTION, NOT UNION, across the columns. A fan-out key is attested by
+ * more than one category — `incorporatedDate` (SYS-2722) by company-profile
+ * from the SSM document AND by company-registration from Form 9 — so a single
+ * column can name two categories and still be right. The category a document
+ * type EXTRACTS INTO is the one every one of its mapped columns names: for
+ * Form 9 that is company-registration ({cp,cr} ∩ {cr} ∩ {cr}); for SSM it is
+ * company-profile. Unmapped columns do not vote. Null when nothing is mapped.
+ * Throws when the intersection is empty or has two members, because then
+ * "the" extraction category does not exist and every caller would pick one
+ * silently.
+ */
+export function extractionCategoryOf(documentType: string): string | null {
+  if (extractionCategoryCache.has(documentType)) return extractionCategoryCache.get(documentType)!
+  const group = getDocumentTypeGroups().find((g) => g.documentType === documentType)
+  const votes: Array<Set<string>> = []
+  for (const field of group?.fields ?? []) {
+    for (const col of field.ihs_column_names ?? []) {
+      const cats = new Set<string>(v1Addresses(col).map((a) => a.category))
+      if (cats.size > 0) votes.push(cats)
+    }
+  }
+  const common = votes.length === 0
+    ? null
+    : votes.reduce((acc, cats) => new Set<string>([...acc].filter((c) => cats.has(c))))
+  if (common !== null && common.size !== 1) {
+    throw new Error(
+      `extractionCategoryOf(${documentType}): its mapped columns agree on ${common.size} categories ` +
+        `(${[...common].join(', ') || 'none'}); the migration map or the registry is inconsistent.`,
+    )
+  }
+  const result = common === null ? null : [...common][0]!
+  extractionCategoryCache.set(documentType, result)
+  return result
 }

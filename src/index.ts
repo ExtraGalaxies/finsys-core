@@ -105,6 +105,10 @@ export {
   buildFileFieldTablesFromInstances,
   processIhsDetails,
   groupDetailsByCategory,
+  // SYS-3334: the instance-shaped path — same output types, fed by a CanonicalView
+  processIhsDetailsFromView,
+  documentCategoryIds,
+  extractionCategoryOf,
   buildDocumentRows,
   parseFileField,
   getDocDisplayNames,
@@ -153,6 +157,7 @@ export {
 // Extraction status
 export {
   resolveExtractionStatus,
+  resolveExtractionStatusFromView,
   DocExtractionStatus,
 } from './extraction-status.js'
 
@@ -270,6 +275,7 @@ export {
   v1MigrationEntry,
   v1Addresses,
   v1KeysByDisposition,
+  v1KeyForAddress,
 } from './v1-migration-map.js';
 
 // SYS-3334: the v2 canonical envelope. Owned here rather than in the lender

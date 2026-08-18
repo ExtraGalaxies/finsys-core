@@ -212,3 +212,69 @@ export function v1KeysByDisposition(d: V1Disposition): ReadonlyArray<string> {
   assertValidated();
   return Object.keys(map.entries).filter((k) => map.entries[k]!.disposition === d);
 }
+
+// ── Reverse lookup (SYS-3334) ────────────────────────────────────────
+
+/**
+ * The reverse of `v1Addresses`: given a place on the canonical plane, the v1
+ * key that used to hold it — or null.
+ *
+ * WHY IT EXISTS. The instance-shaped detail processor has to render a v2 view
+ * with the labels and groupings the v1 panel had, or the flag flip on the
+ * consumer is a redesign rather than a migration. Both label and grouping are
+ * keyed by the LEGACY column name (the display-name catalogue and the form
+ * spec), so the processor needs canonical → legacy. This map is the only
+ * complete statement of that relationship: 771 keys, generated and proven.
+ *
+ * WHEN IT ANSWERS NULL, AND WHY THAT IS THE RIGHT ANSWER.
+ *   - No v1 key ever held this address: a canonical-only field (the alt-data
+ *     categories, or a registry field newer than the wide table). The caller
+ *     falls back to the registry's own names.
+ *   - More than one v1 key maps here with no instanceKey to tell them apart:
+ *     the T-slot families (bankBalanceT1..T6 → closingBalance). Those are
+ *     document-extraction fields, rendered by the file-field tables and never
+ *     by the detail panel, so the ambiguity never reaches a caller that needs
+ *     it resolved. Returning null rather than a guess is deliberate: a guess
+ *     would label six documents' balances "T1".
+ *
+ * `instanceKey` matters: `contactValue` at `email` was `email`, at `mobile` was
+ * `mobilePhoneNo`. An address without one matches only entries without one.
+ */
+export function v1KeyForAddress(
+  category: string,
+  field: string,
+  instanceKey?: string,
+): string | null {
+  const idx = reverseIndex();
+  const hits = idx.get(reverseKey(category, field, instanceKey));
+  return hits && hits.length === 1 ? hits[0]! : null;
+}
+
+function reverseKey(category: string, field: string, instanceKey?: string): string {
+  return `${category} ${field} ${instanceKey ?? ''}`;
+}
+
+let reverse: Map<string, string[]> | null = null;
+
+function reverseIndex(): Map<string, string[]> {
+  if (reverse) return reverse;
+  assertValidated();
+  const idx = new Map<string, string[]>();
+  for (const [key, entry] of Object.entries(map.entries)) {
+    // Only addresses a consumer can read TODAY. `mapped-pending-build` names a
+    // destination that does not exist yet; sending a reader there is a wrong
+    // answer with every success signal true.
+    if (entry.disposition !== 'mapped' && entry.disposition !== 'mapped-fanout') continue;
+    for (const a of entry.addresses ?? (entry.address ? [entry.address] : [])) {
+      // A prefix address is a fan-out over N instances (document pointers);
+      // no single instance corresponds to the v1 key, so it is not reversible.
+      if (a.instanceKeyPrefix) continue;
+      const k = reverseKey(a.category, a.field, a.instanceKey);
+      const list = idx.get(k);
+      if (list) list.push(key);
+      else idx.set(k, [key]);
+    }
+  }
+  reverse = idx;
+  return idx;
+}

@@ -6,6 +6,63 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.9.0] - 2026-08-18
+
+Additive. Nothing renamed, nothing removed, no existing type changed — a
+consumer on 7.8.0 upgrades without touching anything.
+
+### Added
+
+- **The v1 → canonical migration map (SYS-3414).** Where every one of the 662
+  keys in the v1 flat IHS response goes in v2 — `v1MigrationEntry(key)`,
+  `v1Addresses(key)`, `v1KeysByDisposition(d)`.
+
+  **It answers "nothing, and here is why" as carefully as it answers "read it
+  here".** 565 keys have an address. The other 97 do not, and those are the
+  ones a rename table would omit — which is also where data gets lost. Every
+  key without a destination carries a reason: `retired` (13), `relocated` to
+  another surface (50), `structural` (7), `vocabulary-gap` where a destination
+  is wanted and no canonical field exists to be one (10), and `needs-decision`
+  where more than one destination is defensible and the choice needs an owner
+  rather than a lookup (5).
+
+  **Read `retired` as "this key has no v2 destination", never as "this data is
+  gone."** Several retired keys are live data arriving under a different name:
+  `city` and `postcode` are submitted as `permanentcity` / `permanentpostcode`,
+  and `countryOfPermanentResident` arrives as `nationality`. One,
+  `ssmIncorporatedDate`, is a dead column with live readers — finding that is
+  what produced SYS-3419.
+
+  **`mapped-fanout` is its own disposition because a fanout key cannot be
+  read like the others.** One legacy column, two attestors: the wide table
+  could hold one value so the second writer overwrote the first, and v2 keeps
+  both instances because the disagreement is the signal. `v1Addresses()`
+  therefore returns an ARRAY for every key, including single ones — an API
+  returning an optional single address invites a caller to handle only that
+  case and silently report one attestor's answer as "the" answer.
+
+  **The addresses are derived from authored bridges, and the map records
+  which.** `via` distinguishes `wide-column-feeder` and `form-intake-fieldmap`
+  (somebody wrote the bridge down) from `name-equality` (the names simply
+  matched). That distinction is not documentation. Matching on name alone put
+  `companyName` on `financial-statement` and split one bank statement's fields
+  across two categories while its own siblings went to a third — all
+  well-formed, all wrong, because 14 canonical names are declared by more than
+  one category and the first one in the file wins a match nobody checked. An
+  ambiguous name is now refused rather than resolved.
+
+  **Closure is proven on every run, not asserted once.** The generator's gate
+  runs once, on a laptop; `v1-migration-map.test.ts` re-checks every address
+  against the registry as it is TODAY, so renaming a canonical field turns the
+  map red instead of leaving a dangling address behind. What it deliberately
+  does NOT prove: that these 662 keys ARE the v1 response — this package has
+  never seen that response, and set-equality against a live one belongs in
+  finsim, where a real stack can be asked.
+
+  The map is `0.3.0-draft` and versioned separately from the package: it is a
+  migration instrument, read once while porting, and it retires with the v1
+  surface. Nothing reads it at request time.
+
 ## [7.8.0] - 2026-08-16
 
 Additive. No field renamed, no category removed, no existing type changed — a

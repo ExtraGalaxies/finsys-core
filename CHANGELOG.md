@@ -6,6 +6,52 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [7.10.0] - 2026-08-18
+
+Additive. Nothing renamed, nothing removed — a consumer on 7.9.0 upgrades
+without touching anything.
+
+### Added
+
+- **The v2 canonical envelope types (SYS-3334).** `CanonicalView`,
+  `CanonicalCategory`, `CanonicalInstance`, `CanonicalFieldEnvelope` and
+  `CanonicalAddress`.
+
+  **These describe the wire shape of a published API, and they lived only in
+  `@finsys/lender-client` — the SDK built for external lenders.** Every other
+  consumer therefore had two bad options: depend on an SDK meant for somebody
+  else, or re-declare the shape. finhub reads finsys-api through its own
+  gateway and would have re-declared it; FHD's portal would have been the third
+  declaration.
+
+  **Two declarations of one wire shape, drifting apart with nothing comparing
+  them, is this estate's signature defect.** So the shape lives once, in the
+  package that already owns published vocabulary — the category registry, the
+  field catalogue, the v1 migration map — and the SDK re-exports it.
+
+  Member-for-member identical to what `@finsys/lender-client` 2.5.0 declares
+  (proved by parsing both `.d.ts` files, not by reading them). But note what
+  2.5.0 actually shipped: it *declared* these five interfaces and never
+  exported them from its index — `import type { CanonicalView } from
+  '@finsys/lender-client'` is `TS2305` on 2.5.0, proved with `tsc`. A 2.5.0
+  consumer holds a `CanonicalView` only as the unnamed return type of
+  `getCanonicalView()`. So the SDK's re-export is not a no-op for that
+  consumer: it is the first release in which the names are importable. Still
+  additive — nothing a 2.5.0 consumer could write stops compiling.
+
+  `canonical-view.test.ts` pins every member, in both directions — a literal
+  carrying all optional members catches a dropped one, and a minimal literal
+  catches an optional member being made required. Both pins are compile-time
+  (`tsc --noEmit`) and both were mutation-proven. The two-way assignability
+  check against the SDK's declaration lives in the SDK's own suite, which is
+  the only place both declarations exist at once; core must not depend on a
+  package that depends on core.
+
+  **This file describes a payload, not a client.** There is no fetching here
+  and no instance-selection rule: selection is the one decision every consumer
+  must make identically, so it belongs with the code that reads the envelope,
+  not with the types that describe it.
+
 ## [7.9.0] - 2026-08-18
 
 Additive. Nothing renamed, nothing removed, no existing type changed — a

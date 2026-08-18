@@ -23,9 +23,9 @@ import type {
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
-import { allCategories } from './adapter-categories.js'
-import { v1Addresses, v1KeyForAddress } from './v1-migration-map.js'
-import type { CanonicalView } from './canonical-view.js'
+import { allCategories, assertAdapterCategory, type AdapterCategory } from './adapter-categories.js'
+import { v1Addresses, v1KeyForAddress, v1AddressHasKeyedEntries, v1MigrationKeys } from './v1-migration-map.js'
+import type { CanonicalView, CanonicalInstance } from './canonical-view.js'
 import type { TaggedFieldData } from './document-types.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
 import { resolveDisplayCurrency } from './jurisdiction.js'
@@ -949,14 +949,48 @@ function isFileOrFinancialColumn(fieldName: string, fileColumnSet: Set<string>):
 }
 
 
+/**
+ * SYS-3259: money-ness is DERIVED from the registry, not listed here. A legacy
+ * name resolves through the migration map to a canonical field, and the
+ * registry says whether that field's `kind` is `money`. That is 471 v1 keys;
+ * the hand-written set this replaces named four, so `monthlyNetIncome`,
+ * `purchasePriceOTR` and every other money field rendered as a plain string.
+ *
+ * THE RESIDUAL, named for what it is. The ticket's premise — "Phase 2.6 makes
+ * this a deletion" — held for ONE of the four names. `totalFinancing` is
+ * `relocated` (the application record) and `approvedAmount` /
+ * `monthlyInstallment` are not adapter fields at all; none has a registry
+ * entry to derive from. They stay, as the application record's currency
+ * fields, until that record carries its own field spec (SYS-3379 / SYS-3412).
+ * A test pins that this set contains ONLY names the registry cannot answer.
+ */
+export const APPLICATION_RECORD_CURRENCY_FIELDS: ReadonlySet<string> = new Set([
+  'totalFinancing',
+  'approvedAmount',
+  'monthlyInstallment',
+])
+
+let moneyLegacyNames: Set<string> | null = null
+
+/** Every v1 key whose canonical destination the registry declares as money. */
+export function registryMoneyLegacyNames(): ReadonlySet<string> {
+  if (moneyLegacyNames) return moneyLegacyNames
+  const money = new Set<string>()
+  for (const cat of allCategories()) {
+    for (const f of cat.fields) if (f.kind === 'money') money.add(`${cat.id}|${f.name}`)
+  }
+  const names = new Set<string>()
+  for (const key of v1MigrationKeys()) {
+    if (v1Addresses(key).some((a) => money.has(`${a.category}|${a.field}`))) names.add(key)
+  }
+  moneyLegacyNames = names
+  return names
+}
+
 function inferValueFormat(fieldName: string, value: unknown): IhsValueFormat {
-  const currencyFields = new Set([
-    'totalFinancing',
-    'monthlyGrossIncome',
-    'approvedAmount',
-    'monthlyInstallment',
-  ])
-  if (currencyFields.has(fieldName)) return IhsValueFormat.CURRENCY
+  if (APPLICATION_RECORD_CURRENCY_FIELDS.has(fieldName) || registryMoneyLegacyNames().has(fieldName)) {
+    return IhsValueFormat.CURRENCY
+  }
 
   const numberFields = new Set([
     'age',
@@ -1092,36 +1126,42 @@ export function processIhsDetailsFromView(view: CanonicalView): IhsFieldDetail[]
   for (const cat of getBaseCategories()) categoryNameMap[String(cat.id)] = cat.name
 
   const details: IhsFieldDetail[] = []
-  const seen = new Set<string>()
 
   for (const [categoryId, category] of Object.entries(view.categories)) {
-    if (excluded.has(categoryId)) continue
+    if (excluded.has(categoryId as AdapterCategory)) continue
+    // Scoped per category: a name can only collide with another of the same
+    // category (the reverse map is injective across categories except for a
+    // fan-out key, and both fan-out categories are documents).
+    const seen = new Set<string>()
     for (const instance of category.instances) {
       for (const [field, envelope] of Object.entries(instance.fields)) {
         const value = envelope.value
         if (value === null || value === undefined || value === '' || value === 'Not Specified') continue
         if (value === false) continue
 
-        // For a SINGLE-cardinality category the instance key carries no
-        // information (some adapters write '', some 'default'), and the map's
-        // entries for such categories are keyless — so fall back to the
-        // keyless lookup. For a multi category the key IS the discriminator
-        // (email vs mobile) and no fallback is offered.
+        // The keyed lookup first. If it misses AND the map holds no keyed
+        // entry for this (category, field) at all, the key carries no
+        // discriminating power — a single-cardinality category whose adapter
+        // wrote 'default' or '' — so the keyless entry is the answer. This
+        // rule does not depend on `cardinality`, which the API omits when no
+        // manifest is reachable for the producing adapter.
         const legacy =
           v1KeyForAddress(categoryId, field, instance.instanceKey || undefined) ??
-          (category.cardinality === 'single' ? v1KeyForAddress(categoryId, field) : null)
-        if (legacy !== null && EXCLUDED_FIELDS.has(legacy)) continue
+          (v1AddressHasKeyedEntries(categoryId, field) ? null : v1KeyForAddress(categoryId, field))
 
         // The name a v1 consumer keyed on, when there was one. Otherwise a name
         // that cannot collide with a legacy key or with another instance's.
-        const name = legacy ?? canonicalDetailName(categoryId, field, instance.instanceKey)
+        let name = legacy ?? canonicalDetailName(categoryId, field, instance.instanceKey)
+        let displayName = getDisplayName(legacy ?? field)
         if (seen.has(name)) {
-          // Two instances resolving to one legacy key means the map is wrong
-          // for this category, and silently overwriting would hide it.
-          throw new Error(
-            `processIhsDetailsFromView: two instances of ${categoryId} both resolve to detail "${name}" ` +
-              `(second at instanceKey "${instance.instanceKey}"). The v1 migration map cannot tell them apart.`,
-          )
+          // Two instances of one category resolving to one name: two producers
+          // writing the same key (the registry allows several vendors per
+          // alt-data category). Not a reason to fail a page render, and not a
+          // reason to hide one — a disagreement between producers is exactly
+          // what a reviewer should see. The second keeps the same group, under
+          // a name that cannot collide and a label that says whose value it is.
+          name = `${canonicalDetailName(categoryId, field, instance.instanceKey)}@${instance.adapterId}`
+          displayName = `${displayName} (${instance.adapterId})`
         }
         seen.add(name)
 
@@ -1130,7 +1170,7 @@ export function processIhsDetailsFromView(view: CanonicalView): IhsFieldDetail[]
 
         details.push({
           name,
-          displayName: getDisplayName(legacy ?? field),
+          displayName,
           category: categoryNameMap[categoryKey] || 'General',
           value,
           valueFormat: inferValueFormat(legacy ?? field, value),
@@ -1145,19 +1185,22 @@ function canonicalDetailName(categoryId: string, field: string, instanceKey: str
   return instanceKey ? `${categoryId}/${instanceKey}/${field}` : `${categoryId}/${field}`
 }
 
-let documentCategoryIdsCache: Set<string> | null = null
+let documentCategoryIdsCache: Set<AdapterCategory> | null = null
 
 /**
  * The adapter categories that hold DOCUMENT data — every document type's
  * extraction category (via the migration map: the type's legacy T-slot columns
  * → the category they map into) plus `document-intake` (the pointers). Derived,
- * not listed, and asserted to be one category per document type: a type whose
- * columns map into two categories would be a registry defect, and a type whose
- * columns map nowhere would silently leak into the detail panel.
+ * not listed. A type whose columns map into two categories throws. A type whose
+ * columns map NOWHERE (the map is frozen at the v1 surface, so any document
+ * type added after it) resolves to null and would NOT be excluded here — that
+ * case is caught by the test that pins the seven types by name, not by this
+ * function; adding a document type means deciding its extraction category
+ * there.
  */
-export function documentCategoryIds(): ReadonlySet<string> {
+export function documentCategoryIds(): ReadonlySet<AdapterCategory> {
   if (documentCategoryIdsCache) return documentCategoryIdsCache
-  const ids = new Set<string>(['document-intake'])
+  const ids = new Set<AdapterCategory>([assertAdapterCategory('document-intake')])
   for (const group of getDocumentTypeGroups()) {
     const target = extractionCategoryOf(group.documentType)
     if (target) ids.add(target)
@@ -1166,7 +1209,7 @@ export function documentCategoryIds(): ReadonlySet<string> {
   return ids
 }
 
-const extractionCategoryCache = new Map<string, string | null>()
+const extractionCategoryCache = new Map<string, AdapterCategory | null>()
 
 /**
  * Which adapter category carries the EXTRACTED values for a document type —
@@ -1185,7 +1228,7 @@ const extractionCategoryCache = new Map<string, string | null>()
  * "the" extraction category does not exist and every caller would pick one
  * silently.
  */
-export function extractionCategoryOf(documentType: string): string | null {
+export function extractionCategoryOf(documentType: string): AdapterCategory | null {
   if (extractionCategoryCache.has(documentType)) return extractionCategoryCache.get(documentType)!
   const group = getDocumentTypeGroups().find((g) => g.documentType === documentType)
   const votes: Array<Set<string>> = []
@@ -1204,7 +1247,177 @@ export function extractionCategoryOf(documentType: string): string | null {
         `(${[...common].join(', ') || 'none'}); the migration map or the registry is inconsistent.`,
     )
   }
-  const result = common === null ? null : [...common][0]!
+  const result = common === null ? null : assertAdapterCategory([...common][0]!)
   extractionCategoryCache.set(documentType, result)
   return result
+}
+
+// ── Instance-shaped document rows (SYS-3378) ─────────────────────────
+
+/**
+ * `buildDocumentRows` for a v2 `CanonicalView`. Same `DocumentRow[]`, same
+ * grouping and order (DOC_DISPLAY_NAMES), same capabilities — read from the
+ * `document-intake` instances instead of the wide pointer columns. This is
+ * the Phase 6 blocker SYS-3378 names: until this exists, dropping a pointer
+ * column blanks the documents table in both products.
+ *
+ * WHICH DOCUMENTS. Every `document-intake` instance whose `documentType` is a
+ * type the table shows, in intake order — UNIONED with any document the
+ * extraction categories know that intake does not (an upload predating the
+ * intake writer; measured 1 of 1323 on the sim). The same union, in the same
+ * order, that `resolveExtractionStatusFromView` walks, so a consumer aligning
+ * status to rows by (docType, index) still can; and both now carry the
+ * document hash as `documentId`, so it can join by identity instead.
+ *
+ * WHAT MOVED. `uploadedAt` comes from the intake instance's own `uploadedAt`
+ * field, else its `observedAt` — the attestation IS the upload — with the
+ * consumer-supplied `metadata` map (the `documentMetadata` sibling, keyed by
+ * path) consulted first, exactly as v1 did, for fileName / fileType /
+ * fileSize when the consumer has it. `uploadedBy` is read off the instance.
+ *
+ * WHAT DID NOT SURVIVE, said plainly. v1's `periodLabel` came from `month` /
+ * `year` on the pointer entry, and in practice was the slot ordinal
+ * ("Year 1", "Year 2") for financial statements and null elsewhere. Intake
+ * instances carry no period, so `timePeriod` is 'ALL' and `periodLabel` is
+ * null; the display name falls back to "<label> <n>" as v1's did for every
+ * other type. The period a statement covers is a FACT about its content and
+ * belongs on the extraction instance (`financialYearEnd`), not on the upload.
+ */
+export function buildDocumentRowsFromView(
+  view: CanonicalView,
+  metadata?: Record<string, DocumentFileMetadata>,
+): DocumentRow[] {
+  const metaMap = metadata ?? {}
+  const rows: DocumentRow[] = []
+  const intake = view.categories['document-intake']?.instances ?? []
+
+  for (const docType of Object.keys(DOC_DISPLAY_NAMES)) {
+    const label = DOC_DISPLAY_NAMES[docType]!
+    const extractable = EXTRACTABLE_DOC_TYPES.has(docType)
+    const reUploadable = extractable && REUPLOADABLE_DOC_TYPES.has(docType)
+
+    const documents = documentsOfType(view, intake, docType)
+    documents.forEach((doc, index) => {
+      const path = doc.path
+      const meta = path ? metaMap[path] : undefined
+      const documentId = doc.hash ?? (path ? path.split('/').pop() || null : null)
+
+      const rawName = meta?.fileName ?? undefined
+      const fileName = rawName && !isProbablyId(rawName) ? rawName : null
+      const rawExt = (rawName ?? '').split('.').pop()
+      const ext = rawExt && rawExt.length <= 5 && !isProbablyId(rawExt) ? rawExt.toUpperCase() : null
+      const mime = meta?.fileType
+      const fileType = ext || (mime?.split('/').pop()?.toUpperCase() ?? null)
+      const fileSize = meta?.fileSize ?? null
+      const uploadedAt = meta?.createdAt ?? doc.uploadedAt ?? null
+
+      rows.push({
+        docType,
+        label,
+        index,
+        displayName: fileName || (documents.length > 1 ? `${label} ${index + 1}` : label),
+        documentId,
+        path,
+        timePeriod: 'ALL',
+        periodLabel: null,
+        fileName,
+        fileType,
+        fileSize,
+        uploadedAt,
+        ...(doc.uploadedBy ? { uploadedBy: doc.uploadedBy } : {}),
+        capabilities: {
+          download: !!documentId,
+          viewJson: extractable,
+          reExtract: extractable,
+          reUpload: reUploadable,
+        },
+      })
+    })
+  }
+  return rows
+}
+
+/** One document the view knows about, from intake, from extraction, or both. */
+export interface ViewDocument {
+  /** The DMS content hash — the join key across intake, extraction and status. Null when neither side carries one. */
+  hash: string | null
+  path: string | null
+  uploadedAt: string | null
+  uploadedBy: string | null
+  /** The extraction instances for this document (period rows grouped), possibly none. */
+  extraction: ReadonlyArray<CanonicalInstance>
+  /**
+   * 'intake' — an intake instance names this document (upload order, and the
+   * only rows a positional job record may be aligned to). 'extraction-only' —
+   * no intake row: a pre-writer upload, or a join miss between an intake path
+   * and an extraction key. Both are real; the second must stay observable.
+   */
+  origin: 'intake' | 'extraction-only'
+}
+
+/**
+ * The documents of one type, in the order both instance-shaped functions use:
+ * intake instances first (upload order), then any extracted document no
+ * intake instance accounts for. Shared by `buildDocumentRowsFromView` and
+ * `resolveExtractionStatusFromView` so their (docType, index) alignment is a
+ * property of one function, not a coincidence of two.
+ */
+export function documentsOfType(
+  view: CanonicalView,
+  intake: ReadonlyArray<CanonicalInstance>,
+  docType: string,
+): ViewDocument[] {
+  const category = extractionCategoryOf(docType)
+  const extracted = category !== null ? (view.categories[category]?.instances ?? []) : []
+  const byHash = new Map<string, CanonicalInstance[]>()
+  for (const inst of extracted) {
+    const h = documentHashOfKey(inst.instanceKey)
+    const list = byHash.get(h)
+    if (list) list.push(inst)
+    else byHash.set(h, [inst])
+  }
+  const out: ViewDocument[] = []
+  const claimed = new Set<string>()
+  for (const inst of intake) {
+    if (inst.fields.documentType?.value !== docType) continue
+    const path = stringOrNull(inst.fields.pathInDms?.value)
+    const hash = path ? documentHashOfPath(path) : null
+    const extraction = hash !== null ? (byHash.get(hash) ?? []) : []
+    if (hash !== null && extraction.length > 0) claimed.add(hash)
+    out.push({
+      hash,
+      path,
+      uploadedAt: stringOrNull(inst.fields.uploadedAt?.value) ?? inst.observedAt ?? null,
+      uploadedBy: stringOrNull(inst.fields.uploadedBy?.value),
+      extraction,
+      origin: 'intake',
+    })
+  }
+  for (const [hash, group] of byHash) {
+    if (!claimed.has(hash)) out.push({ hash, path: null, uploadedAt: null, uploadedBy: null, extraction: group, origin: 'extraction-only' })
+  }
+  return out
+}
+
+/**
+ * The document hash inside an extraction instance key:
+ * `bankStatement:<hash>` → `<hash>`, `financialStatement:<hash>#T2` → `<hash>`.
+ * A key with no colon is its own hash. The `#…` tail is the per-document
+ * period discriminator and is not part of the document's identity.
+ */
+export function documentHashOfKey(instanceKey: string): string {
+  const colon = instanceKey.indexOf(':')
+  const afterColon = colon === -1 ? instanceKey : instanceKey.slice(colon + 1)
+  const hashAt = afterColon.indexOf('#')
+  return hashAt === -1 ? afterColon : afterColon.slice(0, hashAt)
+}
+
+/** The DMS path's last segment, query stripped — the document's content hash. */
+export function documentHashOfPath(path: string): string | null {
+  const tail = path.split('?')[0]!.split('/').pop()
+  return tail || null
+}
+
+function stringOrNull(v: unknown): string | null {
+  return typeof v === 'string' && v !== '' ? v : null
 }

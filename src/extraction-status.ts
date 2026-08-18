@@ -14,7 +14,7 @@ import { ExtractionFileType, ExtractionJobStatus } from './extraction.js'
 import { getDocumentTypeGroups } from './document-types.js'
 import type { FieldData } from './survey-generator.js'
 import { categoryFieldsOf, type AdapterCategory } from './adapter-categories.js'
-import { extractionCategoryOf } from './ihs-processing.js'
+import { extractionCategoryOf, documentsOfType } from './ihs-processing.js'
 import type { CanonicalView, CanonicalInstance } from './canonical-view.js'
 
 // ── Types ──────────────────────────────────────────────────
@@ -42,6 +42,20 @@ export interface DocExtractionResult {
   populatedColumns: string[]
   totalColumns: number
   errorMessage?: string | null
+  /**
+   * SYS-3378: the document's DMS content hash — present on the instance-shaped
+   * path, absent on the flat one. The join key to `DocumentRow.documentId`, so
+   * a consumer can overlay status by identity rather than by (fileType, index).
+   */
+  documentId?: string
+  /**
+   * SYS-3334: set only on the instance-shaped path, for a document known from
+   * its extraction instances alone — no intake row names it. Either an upload
+   * that predates the intake writer, or a join miss between an intake path and
+   * an extraction key. Kept observable so a join regression cannot masquerade
+   * as a pre-writer upload.
+   */
+  unlinked?: true
 }
 
 export interface ExtractionStatusResult {
@@ -268,23 +282,29 @@ export function resolveExtractionStatus(
  *
  * 2. PER-DOCUMENT STATUS is joined by identity, not by position. v1 aligned
  *    upload index i with T-slot column family i and job record i. v2 joins an
- *    intake instance to its extraction instance by the document's DMS hash —
- *    intake's `pathInDms` tail IS the extraction instance's key suffix
- *    (`bankStatement:<hash>`). Job records still match by fileType and order,
- *    as before, because they carry nothing better. A document with no
- *    extraction instance is uploaded-but-not-extracted — exactly the case the
- *    panel exists to show. Measured: 520 of 670 intake instances join; the
- *    150 that do not are that case.
+ *    intake instance to its extraction instances by the document's DMS hash —
+ *    intake's `pathInDms` tail IS the extraction key's hash
+ *    (`bankStatement:<hash>`, `financialStatement:<hash>#T2` — period rows of
+ *    one document are grouped). A document with no extraction instance is
+ *    uploaded-but-not-extracted — exactly the case the panel exists to show.
+ *    Measured: 520 of 670 intake instances join; the 150 that do not are that
+ *    case. Job records still carry only fileType and order, so they are
+ *    aligned positionally — but ONLY to the intake-ordered prefix, never to an
+ *    extraction-only document that was never in the pointer array. One shift
+ *    remains and is stated: intake is append-only, so a REPLACED file keeps
+ *    its superseded row, and a positional job after that point lands one
+ *    document later than v1 would have put it. Measured 1 of 1323 documents.
  *
  * 3. THE DENOMINATOR is the registry's field set for the extraction category
  *    — what the adapter DECLARES it produces — not the form spec's column
- *    list for a T-slot. v1's `totalColumns` was the wide table's slot width,
- *    which happened to equal the registry for four types and is narrower for
- *    three (financial-statement 116 vs 122, company-profile 15 vs 16,
- *    company-registration 2 vs 3): registry fields the wide table never had a
- *    column for. Using the registry means the ratio measures the contract,
- *    not the legacy schema; the three ratios shift by a few points, once,
- *    and the test names the numbers so a fourth shift is a decision.
+ *    list for a T-slot. v1's `totalColumns` was that slot's width: equal to
+ *    the registry for bank (8), payslip (15), EPF (9), IC (9), SSM (16) and
+ *    Form 9 (3) — and, for financial statements, 13 on the first slot then 0
+ *    on the second, because v1's financial slots were misaligned with its
+ *    documents. So the ONLY user-visible denominator change is financial
+ *    statements: 13 → 122 on the first document and 0 → 122 on the rest, and
+ *    that is a correction. The test pins BOTH sides — the flat path's numbers
+ *    next to the registry's — so a drift on either is a decision.
  *
  * `populatedColumns` are CANONICAL field names now (`closingBalance`, not
  * `bankBalanceT1`). Same information, right vocabulary; consumers rendering
@@ -306,31 +326,12 @@ export function resolveExtractionStatusFromView(
     const extracted = category ? (view.categories[category]?.instances ?? []) : []
     const matchingJobs = jobRecords?.filter((j) => j.fileType === fileType) ?? []
 
-    // Every document of this type the view knows about, in intake order, then
-    // any extracted document no intake instance accounts for. A DOCUMENT may
-    // carry several extraction instances — a financial statement yields one
-    // per period (`financialStatement:<hash>#T1`, `#T2`) — so instances are
-    // grouped by document hash first, and a document is extracted if any of
-    // its instances carries data.
-    const byHash = new Map<string, CanonicalInstance[]>()
-    for (const inst of extracted) {
-      const h = instanceHash(inst.instanceKey)
-      const list = byHash.get(h)
-      if (list) list.push(inst)
-      else byHash.set(h, [inst])
-    }
-    const uploads: Array<{ extraction: ReadonlyArray<CanonicalInstance> }> = []
-    const claimed = new Set<string>()
-    for (const inst of intake) {
-      if (inst.fields.documentType?.value !== fileType) continue
-      const hash = pathHash(inst.fields.pathInDms?.value)
-      const hit = hash !== null ? byHash.get(hash) : undefined
-      if (hit && hash !== null) claimed.add(hash)
-      uploads.push({ extraction: hit ?? [] })
-    }
-    for (const [hash, group] of byHash) {
-      if (!claimed.has(hash)) uploads.push({ extraction: group })
-    }
+    // The documents of this type, in the ONE order both instance-shaped
+    // functions use (see documentsOfType): intake first, then extracted
+    // documents intake does not know. A document is the group of its
+    // extraction instances (`#T1`, `#T2` period rows), extracted if any of
+    // them carries data.
+    const uploads = documentsOfType(view, intake, fileType)
 
     if (uploads.length === 0) {
       // Not uploaded: v1 emitted one NotUploaded row per type (single-file
@@ -342,8 +343,17 @@ export function resolveExtractionStatusFromView(
 
     uploads.forEach((u, idx) => {
       const populated = populatedFields(u.extraction, declared)
-      const { status, errorMessage } = classify(true, populated.length > 0, matchingJobs[idx], hasJobRecords)
-      documents.push({ fileType, status, displayName, populatedColumns: populated, totalColumns: declared.length, errorMessage })
+      // A positional job record is only meaningful against the intake-ordered
+      // prefix — the same order the pointer array had. An extraction-only
+      // document was never in that array, so no job may be aligned to it;
+      // `classify` without a job degrades to Uploaded/Extracted correctly.
+      const job = u.origin === 'intake' ? matchingJobs[idx] : undefined
+      const { status, errorMessage } = classify(true, populated.length > 0, job, hasJobRecords)
+      documents.push({
+        fileType, status, displayName, populatedColumns: populated, totalColumns: declared.length, errorMessage,
+        ...(u.hash !== null ? { documentId: u.hash } : {}),
+        ...(u.origin === 'extraction-only' ? { unlinked: true } : {}),
+      })
     })
   }
 
@@ -400,22 +410,4 @@ function populatedFields(instances: ReadonlyArray<CanonicalInstance>, declared: 
   }))
 }
 
-/**
- * The document hash inside an extraction instance key:
- * `bankStatement:<hash>` → `<hash>`, `financialStatement:<hash>#T2` → `<hash>`.
- * A key with no colon is its own hash. The `#…` tail is the per-document
- * period discriminator and is not part of the document's identity.
- */
-function instanceHash(instanceKey: string): string {
-  const colon = instanceKey.indexOf(':')
-  const afterColon = colon === -1 ? instanceKey : instanceKey.slice(colon + 1)
-  const hashAt = afterColon.indexOf('#')
-  return hashAt === -1 ? afterColon : afterColon.slice(0, hashAt)
-}
 
-/** The DMS path's last segment, query stripped — the document's content hash. */
-function pathHash(value: unknown): string | null {
-  if (typeof value !== 'string' || value === '') return null
-  const tail = value.split('?')[0]!.split('/').pop()
-  return tail || null
-}

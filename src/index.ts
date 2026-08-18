@@ -109,6 +109,12 @@ export {
   processIhsDetailsFromView,
   documentCategoryIds,
   extractionCategoryOf,
+  buildDocumentRowsFromView,
+  documentsOfType,
+  documentHashOfKey,
+  documentHashOfPath,
+  APPLICATION_RECORD_CURRENCY_FIELDS,
+  registryMoneyLegacyNames,
   buildDocumentRows,
   parseFileField,
   getDocDisplayNames,
@@ -276,6 +282,7 @@ export {
   v1Addresses,
   v1KeysByDisposition,
   v1KeyForAddress,
+  v1AddressHasKeyedEntries,
 } from './v1-migration-map.js';
 
 // SYS-3334: the v2 canonical envelope. Owned here rather than in the lender

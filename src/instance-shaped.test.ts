@@ -5,6 +5,11 @@ import {
   processIhsDetailsFromView,
   documentCategoryIds,
   extractionCategoryOf,
+  buildDocumentRowsFromView,
+  documentHashOfKey,
+  documentHashOfPath,
+  APPLICATION_RECORD_CURRENCY_FIELDS,
+  registryMoneyLegacyNames,
 } from './ihs-processing.js'
 import { IhsValueFormat } from './ihs-types.js'
 import {
@@ -86,7 +91,7 @@ describe('v1KeyForAddress — the reverse of the migration map', () => {
         seen.set(k, [...(seen.get(k) ?? []), key])
       }
     }
-    const ambiguousOutsideDocs = [...seen].filter(([k, keys]) => keys.length > 1 && !docs.has(k.split('|')[0]!))
+    const ambiguousOutsideDocs = [...seen].filter(([k, keys]) => keys.length > 1 && !(docs as ReadonlySet<string>).has(k.split('|')[0]!))
     expect(ambiguousOutsideDocs).toEqual([])
   })
 })
@@ -134,12 +139,19 @@ describe('processIhsDetailsFromView — the panel v1 rendered, from a v2 view', 
     updatedAt: '2026-08-18T00:00:00.000Z',
   }
   const v2 = view({
-    'applicant-identity': { cardinality: 'single', instances: [inst('', { personName: 'Gita Ismail', personIdNumber: '831218975125' })] },
+    // 'default' rather than '': a vendor adapter's key on a single-cardinality
+    // category. Cardinality deliberately OMITTED — the API omits it when no
+    // manifest is reachable — so the fallback rule cannot lean on it.
+    'applicant-identity': { instances: [inst('default', { personName: 'Gita Ismail', personIdNumber: '831218975125' })] },
     'applicant-contact': {
       cardinality: 'multi',
       instances: [inst('email', { contactValue: 'gita@example.test' }), inst('mobile', { contactValue: '+60175715073' })],
     },
     'company-profile': { cardinality: 'multi', instances: [inst('ssm:abc', { companyName: 'Granite Holdings' })] },
+    // companyRegNo reverse-maps to a form-spec-VISIBLE category ("Company
+    // Information"), so a broken exclusion set would inject it into the
+    // compared output rather than hide in General.
+    'company-registration': { cardinality: 'multi', instances: [inst('form9:def', { companyRegNo: '123456-X' })] },
     'telco-carrier': { cardinality: 'single', instances: [inst('default', { arpu: 93.46 })] },
   })
 
@@ -176,29 +188,57 @@ describe('processIhsDetailsFromView — the panel v1 rendered, from a v2 view', 
     expect(processIhsDetailsFromView(v)).toEqual([])
   })
 
-  it('refuses two instances that resolve to one legacy name rather than overwriting', () => {
+  it('two producers on one key: emits both, the second under a name that says what it is — never throws, never overwrites', () => {
     const v = view({
-      'applicant-identity': { cardinality: 'single', instances: [inst('', { personName: 'A' }), inst('', { personName: 'B' })] },
+      'applicant-identity': {
+        cardinality: 'single',
+        instances: [inst('', { personName: 'A' }, { adapterId: 'vendor-a' }), inst('', { personName: 'B' }, { adapterId: 'vendor-b' })],
+      },
     })
-    expect(() => processIhsDetailsFromView(v)).toThrow(/two instances of applicant-identity both resolve to detail "fullName"/)
+    const details = processIhsDetailsFromView(v)
+    // Both VISIBLE, same group, the second labeled by its producer — a
+    // disagreement between producers is what a reviewer should see, not
+    // something a render helper hides or dies on.
+    expect(details.map((d) => [d.name, d.displayName, d.value, d.category])).toEqual([
+      ['fullName', 'Full Name', 'A', 'Basic Information'],
+      ['applicant-identity/personName@vendor-b', 'Full Name (vendor-b)', 'B', 'Basic Information'],
+    ])
+  })
+
+  it('the fallback to a keyless entry is offered only where the map holds no keyed entry for the field', () => {
+    // contactValue HAS keyed entries (email, mobile): an unknown key must NOT fall back to either.
+    const v = view({ 'applicant-contact': { instances: [inst('fax', { contactValue: '+6031234' })] } })
+    expect(processIhsDetailsFromView(v)[0]).toMatchObject({ name: 'applicant-contact/fax/contactValue', category: 'General' })
   })
 })
 
 // ── Extraction status: the three decisions ─────────────────────────
 
 describe('resolveExtractionStatusFromView — a re-derivation, with its decisions pinned', () => {
-  it('DECISION 3: the denominator is the registry field set, and these are the numbers', () => {
-    // v1's totalColumns was the wide table's slot width — equal to the
-    // registry for four types, narrower for three. Change a number here only
-    // on purpose.
-    expect(Object.fromEntries(getDocumentTypeGroups().map((g) => [g.documentType, categoryFieldsOf(extractionCategoryOf(g.documentType)! as never).length]))).toEqual({
+  it('DECISION 3: the denominator is the registry field set — pinned NEXT TO the flat path\'s, so neither drifts unseen', () => {
+    // The registry side.
+    expect(Object.fromEntries(getDocumentTypeGroups().map((g) => [g.documentType, categoryFieldsOf(extractionCategoryOf(g.documentType)!).length]))).toEqual({
       bankStatements: 8,
-      financialStatements: 122, // v1 slot: 116 mapped (and, per slot, 13 — v1's financial slots were misaligned)
-      form9: 3, // v1: 2
-      ssm: 16, // v1: 15
+      financialStatements: 122,
+      form9: 3,
+      ssm: 16,
       ic: 9,
       epfStatements: 9,
       payslips: 15,
+    })
+    // The flat path's side, measured on a record with ONE file per type: the
+    // wide table's slot width. Equal for six types. Financial statements: 13
+    // on the first slot (and 0 on the second — v1's financial slots were
+    // misaligned with its documents), so the only visible denominator change
+    // on the flip is 13 → 122 there, and it is a correction.
+    const oneOfEach = {
+      bankStatements: '[{"path":"https://x/a"}]', financialStatements: '[{"path":"https://x/b"}]',
+      form9: 'https://x/c', ssm: 'https://x/d', ic: 'https://x/e',
+      epfStatements: '[{"path":"https://x/f"}]', payslips: '[{"path":"https://x/g"}]',
+    }
+    const flat = resolveExtractionStatus(oneOfEach)
+    expect(Object.fromEntries(flat.documents.map((d) => [d.fileType, d.totalColumns]))).toEqual({
+      bankStatements: 8, financialStatements: 13, form9: 3, ssm: 16, ic: 9, epfStatements: 9, payslips: 15,
     })
     const v = view({ 'document-intake': { cardinality: 'multi', instances: [] } })
     const r = resolveExtractionStatusFromView(v)
@@ -277,6 +317,28 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
     expect(none.every((d) => d.status === DocExtractionStatus.Uploaded)).toBe(true)
   })
 
+  it('a positional job never lands on an extraction-only document — it was never in the pointer array', () => {
+    const v = view({
+      'document-intake': {
+        cardinality: 'multi',
+        instances: [inst('bankStatements#1', { documentType: 'bankStatements', pathInDms: `${DMS}${hashA}` })],
+      },
+      'finxtract-bank-statement': {
+        cardinality: 'multi',
+        instances: [inst(`bankStatement:${hashA}`, { closingBalance: 1 }), inst(`bankStatement:${hashB}`, { closingBalance: 2 })],
+      },
+    })
+    const jobs = [
+      { fileType: 'bankStatements', status: ExtractionJobStatus.Failed, errorMessage: 'for the intake doc' },
+      { fileType: 'bankStatements', status: ExtractionJobStatus.Processing },
+    ]
+    const bank = resolveExtractionStatusFromView(v, jobs).documents.filter((d) => d.fileType === 'bankStatements')
+    expect(bank.map((d) => [d.documentId, d.status, d.errorMessage ?? null, d.unlinked ?? false])).toEqual([
+      [hashA, DocExtractionStatus.Extracted, 'for the intake doc', false], // failed job + data → Extracted with the message, as v1
+      [hashB, DocExtractionStatus.Extracted, null, true], // job[1] NOT applied; extraction-only is observable
+    ])
+  })
+
   it('a document not-uploaded reports 0 populated — the flat path could count another source\'s columns', () => {
     // v1 said form9 "NotUploaded 3/3" when SSM or the applicant form had
     // filled companyName/companyRegNo/incorporatedDate; the wide column does
@@ -289,5 +351,94 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
     // and the flat path's behavior, for the record — the same wide columns read as populated:
     const flat = resolveExtractionStatus({ ssm: 'x.pdf', companyName: 'Acme', companyRegNo: '1' })
     expect(flat.documents.find((d) => d.fileType === 'form9')!.status).toBe(DocExtractionStatus.NotUploaded)
+  })
+})
+
+// ── SYS-3378: document rows from the view ──────────────────────────
+
+describe('buildDocumentRowsFromView — the documents table, from intake instances', () => {
+  const hashA = 'a'.repeat(64)
+  const hashB = 'b'.repeat(64)
+  const hashD = 'd'.repeat(64)
+  const v = view({
+    'document-intake': {
+      cardinality: 'multi',
+      instances: [
+        inst('bankStatements#1', { documentType: 'bankStatements', pathInDms: `${DMS}${hashA}`, uploadedAt: '2026-08-01T00:00:00.000Z', uploadedBy: 'agent:7' }),
+        inst('bankStatements#2', { documentType: 'bankStatements', pathInDms: `${DMS}${hashB}?sig=x` }, { observedAt: '2026-08-02T00:00:00.000Z' }),
+        inst('ssm#3', { documentType: 'ssm', pathInDms: `${DMS}${'e'.repeat(64)}` }),
+        // A type the table does not show: dropped, as v1 dropped pointer columns outside DOC_DISPLAY_NAMES.
+        inst('invoices#4', { documentType: 'invoices', pathInDms: `${DMS}${'f'.repeat(64)}` }),
+      ],
+    },
+    'finxtract-bank-statement': {
+      cardinality: 'multi',
+      // hashD: extracted, no intake row — a pre-writer upload. Still a document, still a row.
+      instances: [inst(`bankStatement:${hashA}`, { closingBalance: 1 }), inst(`bankStatement:${hashD}`, { closingBalance: 2 })],
+    },
+  })
+
+  it('emits rows in DOC_DISPLAY_NAMES order, intake first then extracted-only, with the hash as documentId', () => {
+    const rows = buildDocumentRowsFromView(v)
+    expect(rows.map((r) => [r.docType, r.index, r.documentId])).toEqual([
+      ['bankStatements', 0, hashA],
+      ['bankStatements', 1, hashB],
+      ['bankStatements', 2, hashD],
+      ['ssm', 0, 'e'.repeat(64)],
+    ])
+    expect(rows.some((r) => r.docType === 'invoices')).toBe(false)
+  })
+
+  it('takes uploadedAt from the instance (field, else observedAt), uploadedBy from the field, and metadata from the sibling map first', () => {
+    const rows = buildDocumentRowsFromView(v, { [`${DMS}${hashA}`]: { fileName: 'jan.pdf', fileType: 'application/pdf', fileSize: 1234, createdAt: null } })
+    expect(rows[0]).toMatchObject({ fileName: 'jan.pdf', fileType: 'PDF', fileSize: 1234, uploadedAt: '2026-08-01T00:00:00.000Z', uploadedBy: 'agent:7', displayName: 'jan.pdf' })
+    expect(rows[1]).toMatchObject({ fileName: null, uploadedAt: '2026-08-02T00:00:00.000Z', displayName: 'Bank Statements 2', path: `${DMS}${hashB}?sig=x` })
+    expect(rows[2]).toMatchObject({ path: null, uploadedAt: null, displayName: 'Bank Statements 3', capabilities: { download: true, viewJson: true, reExtract: true, reUpload: true } })
+    expect(rows[3]).toMatchObject({ displayName: 'SSM Company Profile', capabilities: { viewJson: true } })
+  })
+
+  it('aligns with resolveExtractionStatusFromView by (docType, index) AND by documentId — one order, one function', () => {
+    const rows = buildDocumentRowsFromView(v)
+    const status = resolveExtractionStatusFromView(v).documents.filter((d) => d.fileType === 'bankStatements')
+    expect(status.map((d) => d.documentId)).toEqual(rows.filter((r) => r.docType === 'bankStatements').map((r) => r.documentId))
+    expect(status.map((d) => d.status)).toEqual([DocExtractionStatus.Extracted, DocExtractionStatus.Unknown, DocExtractionStatus.Extracted])
+  })
+
+  it('period is not carried by an upload: timePeriod ALL, periodLabel null — stated, not accidental', () => {
+    for (const r of buildDocumentRowsFromView(v)) expect([r.timePeriod, r.periodLabel]).toEqual(['ALL', null])
+  })
+})
+
+describe('documentHashOfKey / documentHashOfPath', () => {
+  it('strips the prefix and the period suffix; treats a bare key as its own hash', () => {
+    expect(documentHashOfKey('bankStatement:abc')).toBe('abc')
+    expect(documentHashOfKey('financialStatement:abc#T2')).toBe('abc')
+    expect(documentHashOfKey('abc')).toBe('abc')
+    expect(documentHashOfKey('a:b:c#T1')).toBe('b:c')
+    expect(documentHashOfPath('https://x/y/HASH?sig=1')).toBe('HASH')
+    expect(documentHashOfPath('https://x/y/')).toBeNull()
+  })
+})
+
+// ── SYS-3259: currency is derived, and the residual is named ───────
+
+describe('inferValueFormat currency — derived from the registry (SYS-3259)', () => {
+  it('a registry money field renders as CURRENCY through its legacy name — the four-name set could not', () => {
+    // monthlyNetIncome was never in the hand-written set and rendered as a string.
+    const details = processIhsDetails({ monthlyNetIncome: '4200.00', monthlyGrossIncome: '6100.00' })
+    expect(details.map((d) => [d.name, d.valueFormat])).toEqual([
+      ['monthlyNetIncome', IhsValueFormat.CURRENCY],
+      ['monthlyGrossIncome', IhsValueFormat.CURRENCY],
+    ])
+    expect(registryMoneyLegacyNames().size).toBeGreaterThan(400)
+  })
+
+  it('the residual set contains ONLY names the registry cannot answer', () => {
+    // If a name here ever gains a registry entry, it must leave this set.
+    for (const name of APPLICATION_RECORD_CURRENCY_FIELDS) {
+      expect(registryMoneyLegacyNames().has(name), `${name} is now derivable — remove it from the residual`).toBe(false)
+    }
+    expect([...APPLICATION_RECORD_CURRENCY_FIELDS].sort()).toEqual(['approvedAmount', 'monthlyInstallment', 'totalFinancing'])
+    expect(processIhsDetails({ totalFinancing: 50000 })[0]!.valueFormat).toBe(IhsValueFormat.CURRENCY)
   })
 })

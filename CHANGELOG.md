@@ -9,53 +9,104 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [8.1.0] - 2026-08-18
 
 Additive. Nothing renamed, nothing removed — a consumer on 8.0.0 upgrades
-without touching anything.
+without touching anything. **This is Phase 5's last core release**: it carries
+everything a consumer needs to render an IHS from a v2 `CanonicalView` instead
+of the flat v1 record, with the SAME output types, so the flag flip on the
+consumer is a migration and can be checked against a before-picture. Every
+claim below was measured on 157 sim subjects with both paths run on the same
+record.
 
-### Added
+### Added — the instance-shaped path (SYS-3334)
 
-- **The instance-shaped detail path (SYS-3334)** — the three functions a
-  consumer needs to render an IHS from a v2 `CanonicalView` instead of the
-  flat v1 record, with the SAME output types, so the flag flip on the consumer
-  is a migration and can be checked against a before-picture:
+- **`processIhsDetailsFromView(view)`** → `IhsFieldDetail[]`, feeding the
+  unchanged `groupDetailsByCategory`. Labels and groupings come from the LEGACY
+  column name, recovered per field through the v1 migration map in reverse, so
+  the panel a v1 consumer had is the panel it gets. Identical on the sim
+  except for four classes, none of them the processor's: (a) keys the map
+  marks `relocated` (Loan/Account Information — the application record, which
+  v2 deliberately does not carry) or `needs-decision` (`phoneNumber`);
+  (b) v1's DECIMAL-as-string vs v2's typed number; (c) three `text`-typed
+  document pointers v1 rendered as raw DMS paths in the panel
+  (`myKadOrPassport`, `tnbBills`, `incomeEPF_iakaun`) — their v2 home is
+  `document-intake`, which the panel excludes; (d) per-subject dual-write
+  divergences in the data plane. A canonical-only field with no legacy key
+  gets a collision-proof name and lands in `General`, which the grouping
+  drops — as v1 did with alt-data keys. Two producers on one key are BOTH
+  emitted, in the same group, the second labeled by its producer: a
+  disagreement between producers is what a reviewer should see, not something
+  a render helper hides or dies on.
+- **`resolveExtractionStatusFromView(view, jobRecords?)`** — a RE-DERIVATION,
+  not a port; three decisions, each pinned by a test that names the numbers:
+  (1) uploaded = the type's `document-intake` instances ∪ the extraction
+  category's documents (an extracted document was uploaded; covers uploads
+  that predate the intake writer); (2) per-document status joined by the
+  document's DMS hash — intake's `pathInDms` tail is the extraction key's
+  hash, `#T1`/`#T2` period rows grouped as one document — not by array
+  position; positional job records apply ONLY to the intake-ordered prefix,
+  never to an extraction-only document; (3) `totalColumns` is the registry's
+  field set for the extraction category. On that last one, stated exactly:
+  v1's slot widths equal the registry for bank (8), payslip (15), EPF (9),
+  IC (9), SSM (16) and Form 9 (3); financial statements were 13 on the first
+  slot and 0 on the second (v1's slots were misaligned with its documents),
+  so the only visible denominator change is 13 → 122 there, and it is a
+  correction. Also corrected: v1 counted a wide column as populated by Form 9
+  when SSM or the applicant form had filled it. `populatedColumns` are
+  canonical names. New optional members on `DocExtractionResult`:
+  `documentId` (the hash — the join key to `DocumentRow.documentId`) and
+  `unlinked` (an extraction-only document, kept observable so a join
+  regression cannot masquerade as a pre-writer upload).
+- **`v1KeyForAddress(category, field, instanceKey?)`** — the reverse lookup;
+  null for a canonical-only address and, deliberately, for a T-slot family.
+  Admits `mapped-pending-build` (a label is right whether or not the address
+  is written yet). **`v1AddressHasKeyedEntries(category, field)`** — whether
+  an instance key carries discriminating power for that field; the detail
+  processor falls back to the keyless entry only when it does not, a rule
+  that does not depend on `cardinality`, which the API omits when no manifest
+  is reachable.
+- **`extractionCategoryOf(documentType): AdapterCategory | null`** and
+  **`documentCategoryIds(): ReadonlySet<AdapterCategory>`** — derived from
+  the document-type groups through the map (intersection across a type's
+  columns, so the fan-out key `incorporatedDate` resolves Form 9 →
+  company-registration and SSM → company-profile), not hand-listed. A
+  document type added after the map would resolve to null; the test that
+  pins the seven types by name is what catches that.
 
-  - `processIhsDetailsFromView(view)` — `IhsFieldDetail[]`, feeding the
-    unchanged `groupDetailsByCategory`. Labels and groupings come from the
-    LEGACY column name, recovered per field through the v1 migration map in
-    reverse, so the panel a v1 consumer had is the panel it gets. Measured on
-    157 sim subjects, both paths on the same record: identical, except for
-    (a) keys the map marks `relocated` (Loan/Account Information — the
-    application record, which v2 deliberately does not carry) or
-    `needs-decision` (`phoneNumber`), (b) v1's DECIMAL-as-string vs v2's typed
-    number, and (c) per-subject dual-write divergences in the data plane. A
-    canonical-only field with no legacy key gets a collision-proof name and
-    lands in `General`, which the grouping drops — as v1 did with alt-data
-    keys. Two instances resolving to one legacy name is a thrown error, not an
-    overwrite.
-  - `resolveExtractionStatusFromView(view, jobRecords?)` — a RE-DERIVATION,
-    not a port; three decisions, each pinned by a test that names the numbers:
-    (1) uploaded = `document-intake` instances of the type ∪ the extraction
-    category's documents (an extracted document was uploaded; covers uploads
-    that predate the intake writer); (2) per-document status joined by the
-    document's DMS hash — intake's `pathInDms` tail is the extraction key's
-    hash, with `#T1`/`#T2` period suffixes grouped as one document — not by
-    array position; (3) `totalColumns` is the registry's field set for the
-    extraction category, not the wide table's slot width (bank 8, payslip 15,
-    EPF 9, IC 9 unchanged; financial-statement 122 vs v1's 116, company-profile
-    16 vs 15, company-registration 3 vs 2). `populatedColumns` are canonical
-    names. Where this differs from v1 on live data it corrects v1: v1's
-    financial slots were misaligned (`13/13` then `0/0`), and v1 counted a
-    wide column as populated by Form 9 when SSM or the applicant form had
-    filled it.
-  - `v1KeyForAddress(category, field, instanceKey?)` — the reverse lookup;
-    null for a canonical-only address and, deliberately, for a T-slot family.
-  - `extractionCategoryOf(documentType)` and `documentCategoryIds()` — derived
-    from the document-type groups through the map (intersection across a
-    type's columns, so the fan-out key `incorporatedDate` resolves Form 9 →
-    company-registration and SSM → company-profile), not hand-listed.
+### Added — the documents table from the view (SYS-3378)
 
-  `groupDetailsByCategory` needs no instance variant: the detail type is
-  preserved. `buildFileFieldTablesFromInstances` was already instance-shaped
-  and is unchanged.
+- **`buildDocumentRowsFromView(view, metadata?)`** → `DocumentRow[]` — the
+  Phase 6 blocker: until this existed, dropping a pointer column blanked the
+  documents table in both products. Reads `document-intake` instances (same
+  DOC_DISPLAY_NAMES grouping and order; a type outside it is dropped, as v1
+  dropped its pointer column) unioned with extracted-only documents, in the
+  ONE order `resolveExtractionStatusFromView` uses — shared
+  **`documentsOfType()`** — so a consumer aligning status to rows by
+  (docType, index) still can, and both carry the hash as `documentId` so it
+  can join by identity instead. `uploadedAt` from the instance (`uploadedAt`
+  field, else `observedAt`), `uploadedBy` from the instance, the consumer's
+  `documentMetadata` map consulted first for name/type/size as before.
+  Stated plainly: uploads carry no period, so `timePeriod` is `'ALL'` and
+  `periodLabel` null (v1's was the slot ordinal, "Year 1"). On the sim: same
+  row count and same (docType, documentId) set as the flat path on 156 of
+  157 subjects; the one is the replaced-file case the intake log remembers.
+  Also exported: `documentHashOfKey`, `documentHashOfPath`, `ViewDocument`.
+
+### Changed — currency is derived, not listed (SYS-3259)
+
+- `inferValueFormat` now asks the registry: a legacy name resolves through
+  the map to a canonical field, and `kind: money` makes it CURRENCY — 471 v1
+  keys, where the hand-written set named four. So `monthlyNetIncome`,
+  `purchasePriceOTR` and every other money field stop rendering as a plain
+  string, on BOTH paths. **This is a visible change on the flat path too**, on
+  the consumer's next core bump. The ticket's premise ("Phase 2.6 makes this
+  a deletion") held for one of the four names: `totalFinancing` is
+  `relocated` and `approvedAmount` / `monthlyInstallment` are not adapter
+  fields, so they stay as **`APPLICATION_RECORD_CURRENCY_FIELDS`** — named
+  for what they are, with a test that fails if any of them ever becomes
+  derivable. `registryMoneyLegacyNames()` is exported.
+
+`groupDetailsByCategory` needs no instance variant: the detail type is
+preserved. `buildFileFieldTablesFromInstances` was already instance-shaped
+and is unchanged.
 
 ## [8.0.0] - 2026-08-18
 

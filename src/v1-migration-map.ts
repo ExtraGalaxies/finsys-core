@@ -251,20 +251,37 @@ export function v1KeyForAddress(
 }
 
 function reverseKey(category: string, field: string, instanceKey?: string): string {
-  return `${category} ${field} ${instanceKey ?? ''}`;
+  // NUL cannot appear in a category id, field name or instance key.
+  return `${category}\u0000${field}\u0000${instanceKey ?? ''}`;
 }
 
 let reverse: Map<string, string[]> | null = null;
+let keyedAddresses: Set<string> | null = null;
+
+/**
+ * Whether the map holds ANY instance-keyed entry for (category, field). When it
+ * does not, an instance key carries no discriminating power for that field and
+ * a keyed lookup that misses may fall back to the keyless entry. When it does
+ * (`contactValue`: email vs mobile), no such fallback is offered.
+ */
+export function v1AddressHasKeyedEntries(category: string, field: string): boolean {
+  reverseIndex();
+  return keyedAddresses!.has(`${category}\u0000${field}`);
+}
 
 function reverseIndex(): Map<string, string[]> {
   if (reverse) return reverse;
   assertValidated();
   const idx = new Map<string, string[]>();
+  const keyed = new Set<string>();
   for (const [key, entry] of Object.entries(map.entries)) {
-    // Only addresses a consumer can read TODAY. `mapped-pending-build` names a
-    // destination that does not exist yet; sending a reader there is a wrong
-    // answer with every success signal true.
-    if (entry.disposition !== 'mapped' && entry.disposition !== 'mapped-fanout') continue;
+    // The reverse question is "what LABEL did this address carry", and the
+    // label is right whether or not anything writes the address yet — so
+    // `mapped-pending-build` is admitted here (the forward lookup is where a
+    // not-yet-written destination is a wrong answer). Eleven addresses; the
+    // day they are written, they keep their v1 names instead of falling into
+    // General.
+    if (entry.disposition !== 'mapped' && entry.disposition !== 'mapped-fanout' && entry.disposition !== 'mapped-pending-build') continue;
     for (const a of entry.addresses ?? (entry.address ? [entry.address] : [])) {
       // A prefix address is a fan-out over N instances (document pointers);
       // no single instance corresponds to the v1 key, so it is not reversible.
@@ -273,8 +290,10 @@ function reverseIndex(): Map<string, string[]> {
       const list = idx.get(k);
       if (list) list.push(key);
       else idx.set(k, [key]);
+      if (a.instanceKey !== undefined) keyed.add(`${a.category}\u0000${a.field}`);
     }
   }
   reverse = idx;
+  keyedAddresses = keyed;
   return idx;
 }

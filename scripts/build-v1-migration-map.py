@@ -15,6 +15,15 @@ Two gates, learned in that order:
    wrong. So bare name-equality now REFUSES an ambiguous name, and two authored
    bridges are consulted first.
 
+THE KEY LIST IS A UNION, NOT A CAPTURE. `scripts/v1-response-keys.json` is the
+union of the response keys over 150 live records, because the v1 serializer
+emits a key only where the record HAS the data -- measured 2026-08-18, the
+per-record key set ranges 346..662 across 4 distinct shapes. The first version
+of this map was generated from ONE captured record, and that is precisely how
+it shipped without `consents`: the record used had no consent events, so the
+key was never in the input and nothing could report it missing. A single
+capture describes a record; only the union describes the surface.
+
 The authored bridges are READ FROM origin/main, never transcribed.
 wideColumnFeeders.ts says explicitly: "do not copy them anywhere the tests do
 not reach." Deriving on every run means this map inherits those tests instead
@@ -290,6 +299,13 @@ HAND = {
                 'are what real submissions carry.'),
 
     # --- singles
+    'consents': ('relocated', None,
+                 'SURFACE: GET /lender/applications/:ihsId. NOT the flat booleans — v1 emits the raw '
+                 'consent EVENT ROWS (id, consentDefinitionId, consentDefinitionVersionId, ipAddress, '
+                 'method, bindingMessage, createdAt); the application record carries ConsentReference[] '
+                 'pointing into the consent engine instead, because copying versioned, snapshotted '
+                 'events into a second envelope creates a source of truth that drifts. A SHAPE CHANGE, '
+                 'not a move: a consumer reading consent state must follow the reference.'),
     'ssmIncorporatedDate': ('retired', None,
                             'SUPERSEDED BY THE SHARED COLUMN and already dead: SYS-3163 moved the SSM processor '
                             'onto WIDE_COLUMN_BINDINGS.companyIncorporationDate, whose column is incorporatedDate '
@@ -359,6 +375,8 @@ for key in sorted(v1.keys()):
         elif base in HAND:
             disp, addr, note = HAND[base]
             e = {'disposition': disp, 'via': 'hand-authored', 'note': note}
+            if disp == 'relocated' and note.startswith('SURFACE: '):
+                e['surface'] = note.split('SURFACE: ', 1)[1].split('.')[0]
             if addr:
                 e['address'] = address(addr[0], addr[1], instance_key=addr[2])
             entries[key] = e

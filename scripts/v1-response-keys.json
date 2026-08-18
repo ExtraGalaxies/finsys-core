@@ -73,6 +73,7 @@
     "consentCrossSelling": null,
     "consentForm": null,
     "consentObtainInfoFromCtos": null,
+    "consents": null,
     "contactPersonDateOfBirth": null,
     "contactPersonEmail": null,
     "contactPersonIdNo": null,

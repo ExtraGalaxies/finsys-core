@@ -551,6 +551,12 @@
       "surface": "the consent engine",
       "via": "column-audit"
     },
+    "consents": {
+      "disposition": "relocated",
+      "note": "SURFACE: GET /lender/applications/:ihsId. NOT the flat booleans \u2014 v1 emits the raw consent EVENT ROWS (id, consentDefinitionId, consentDefinitionVersionId, ipAddress, method, bindingMessage, createdAt); the application record carries ConsentReference[] pointing into the consent engine instead, because copying versioned, snapshotted events into a second envelope creates a source of truth that drifts. A SHAPE CHANGE, not a move: a consumer reading consent state must follow the reference.",
+      "surface": "GET /lender/applications/:ihsId",
+      "via": "hand-authored"
+    },
     "contactPersonDateOfBirth": {
       "address": {
         "category": "related-person",

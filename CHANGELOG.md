@@ -13,18 +13,26 @@ consumer on 7.8.0 upgrades without touching anything.
 
 ### Added
 
-- **The v1 → canonical migration map (SYS-3414).** Where every one of the 662
-  keys in the v1 flat IHS response goes in v2 — `v1MigrationEntry(key)`,
+- **The v1 → canonical migration map (SYS-3414).** Where every one of the 663
+  keys the v1 flat IHS response can emit goes in v2 — `v1MigrationEntry(key)`,
   `v1Addresses(key)`, `v1KeysByDisposition(d)`.
 
   **It answers "nothing, and here is why" as carefully as it answers "read it
-  here".** 565 keys have an address. The other 97 do not, and those are the
-  ones a rename table would omit — which is also where data gets lost. Every
-  key without a destination carries a reason: `retired` (13), `relocated` to
-  another surface (50), `structural` (7), `vocabulary-gap` where a destination
-  is wanted and no canonical field exists to be one (10), and `needs-decision`
-  where more than one destination is defensible and the choice needs an owner
-  rather than a lookup (5).
+  here".** 565 of 663 keys have an address. The other 98 do not, and those are
+  the ones a rename table would omit — which is also where data gets lost.
+  Every key without a destination carries a reason: `retired` (13),
+  `relocated` to another surface (51), `structural` (7), `vocabulary-gap`
+  where a destination is wanted and no canonical field exists to be one (10),
+  and `needs-decision` where more than one destination is defensible and the
+  choice needs an owner rather than a lookup (5).
+
+  **The key list is a UNION over 150 live records, not a capture of one.** The
+  v1 serializer emits a key only where the record has the data, so the
+  per-record key set ranges 346–662 across four distinct shapes. Generating
+  from a single rich record is exactly how the first draft of this map shipped
+  without `consents` — the record used had no consent events, the key was never
+  in the input, and nothing could report it missing. A capture describes a
+  record; only a union describes the surface.
 
   **Read `retired` as "this key has no v2 destination", never as "this data is
   gone."** Several retired keys are live data arriving under a different name:
@@ -55,9 +63,11 @@ consumer on 7.8.0 upgrades without touching anything.
   runs once, on a laptop; `v1-migration-map.test.ts` re-checks every address
   against the registry as it is TODAY, so renaming a canonical field turns the
   map red instead of leaving a dangling address behind. What it deliberately
-  does NOT prove: that these 662 keys ARE the v1 response — this package has
-  never seen that response, and set-equality against a live one belongs in
-  finsim, where a real stack can be asked.
+  does NOT prove: that these 663 keys ARE the v1 response — this package has
+  never seen that response. That check was run against a live finsim stack
+  while this was built (150 records; union 663; zero map entries never
+  emitted), and it is what found `consents`. It belongs in finsim as a
+  standing spec, and is still owed there.
 
   The map is `0.3.0-draft` and versioned separately from the package: it is a
   migration instrument, read once while porting, and it retires with the v1

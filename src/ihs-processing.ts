@@ -1118,6 +1118,15 @@ export function groupDetailsByCategory(details: IhsFieldDetail[]): IhsDetailCate
  * applied to the envelope's `value`. Provenance on the envelope is not
  * surfaced here — `IhsFieldDetail` has no slot for it, and adding one is a
  * type change every consumer would inherit; that is its own decision.
+ *
+ * Dropping `false` is INHERITED v1 behavior, not a rule this function
+ * chose — and it is no longer hypothetical now that boolean-typed registry
+ * fields exist (`telco-carrier.handsetFinancingActive`,
+ * `social-media.verifiedBusinessAccount`, `financial-statement.consolidated`):
+ * a lender cannot tell "false" from "never asked" in either panel. Left
+ * unchanged here because parity with the flat path IS the contract and the
+ * flat path drops it too; whether `false` should render is a product
+ * decision, not a bug in this processor.
  */
 export function processIhsDetailsFromView(view: CanonicalView): IhsFieldDetail[] {
   const excluded = documentCategoryIds()
@@ -1133,7 +1142,7 @@ export function processIhsDetailsFromView(view: CanonicalView): IhsFieldDetail[]
     // category (the reverse map is injective across categories except for a
     // fan-out key, and both fan-out categories are documents).
     const seen = new Set<string>()
-    for (const instance of category.instances) {
+    for (const instance of category.instances ?? []) {
       for (const [field, envelope] of Object.entries(instance.fields)) {
         const value = envelope.value
         if (value === null || value === undefined || value === '' || value === 'Not Specified') continue
@@ -1160,8 +1169,21 @@ export function processIhsDetailsFromView(view: CanonicalView): IhsFieldDetail[]
           // reason to hide one — a disagreement between producers is exactly
           // what a reviewer should see. The second keeps the same group, under
           // a name that cannot collide and a label that says whose value it is.
-          name = `${canonicalDetailName(categoryId, field, instance.instanceKey)}@${instance.adapterId}`
-          displayName = `${displayName} (${instance.adapterId})`
+          const base = `${canonicalDetailName(categoryId, field, instance.instanceKey)}@${instance.adapterId}`
+          const baseDisplay = `${displayName} (${instance.adapterId})`
+          name = base
+          displayName = baseDisplay
+          // A third (or further) producer sharing the SAME (instanceKey,
+          // adapterId, field) collides on the disambiguated name too — it is
+          // never itself checked against `seen`. Number it until unique; this
+          // loop, not the disambiguation above, is what makes uniqueness hold
+          // for N > 2 producers.
+          let n = 2
+          while (seen.has(name)) {
+            name = `${base}#${n}`
+            displayName = `${baseDisplay} #${n}`
+            n++
+          }
         }
         seen.add(name)
 
@@ -1451,9 +1473,9 @@ export function legacyOrdinalOfKey(instanceKey: string): number | null {
   return m ? Number(m[1]) : null
 }
 
-/** The DMS path's last segment, query stripped — the document's content hash. */
+/** The DMS path's last segment, query and fragment stripped — the document's content hash. */
 export function documentHashOfPath(path: string): string | null {
-  const tail = path.split('?')[0]!.split('/').pop()
+  const tail = path.split(/[?#]/)[0]!.split('/').pop()
   return tail || null
 }
 

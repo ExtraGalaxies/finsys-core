@@ -206,10 +206,76 @@ describe('processIhsDetailsFromView — the panel v1 rendered, from a v2 view', 
     ])
   })
 
+  it('three producers sharing one (instanceKey, adapterId, field) each get a unique name — the disambiguated name is itself collision-checked', () => {
+    // All three share instanceKey '' and adapterId 'vendor-a': the second
+    // producer's disambiguated name (`…@vendor-a`) is never itself checked
+    // against `seen`, so a naive fix (disambiguate once, don't loop) still
+    // collides the second and third producers on the identical string.
+    const v = view({
+      'applicant-identity': {
+        cardinality: 'single',
+        instances: [
+          inst('', { personName: 'A' }, { adapterId: 'vendor-a' }),
+          inst('', { personName: 'B' }, { adapterId: 'vendor-a' }),
+          inst('', { personName: 'C' }, { adapterId: 'vendor-a' }),
+        ],
+      },
+    })
+    const details = processIhsDetailsFromView(v)
+    const names = details.map((d) => d.name)
+    expect(new Set(names).size).toBe(details.length)
+    expect(details.map((d) => d.value)).toEqual(['A', 'B', 'C'])
+  })
+
   it('the fallback to a keyless entry is offered only where the map holds no keyed entry for the field', () => {
     // contactValue HAS keyed entries (email, mobile): an unknown key must NOT fall back to either.
     const v = view({ 'applicant-contact': { instances: [inst('fax', { contactValue: '+6031234' })] } })
     expect(processIhsDetailsFromView(v)[0]).toMatchObject({ name: 'applicant-contact/fax/contactValue', category: 'General' })
+  })
+
+  it('an instanceKey outside the keyed set, on a field that HAS keyed entries elsewhere, lands in General rather than falling back to the keyless entry', () => {
+    // addressLine1/2/3 are the only (category, field) pairs the map holds
+    // BOTH a keyless v1 key (`addressLine1`) and keyed ones (office /
+    // permanent / residential) for. 'business' is none of those three, so
+    // the keyed lookup misses — and because v1AddressHasKeyedEntries is true
+    // for this field, the gate must NOT fall back to the keyless entry.
+    const v = view({ 'applicant-address': { cardinality: 'multi', instances: [inst('business', { addressLine1: '123 Jalan Test' })] } })
+    const [d] = processIhsDetailsFromView(v)
+    expect(d).toMatchObject({ name: 'applicant-address/business/addressLine1', category: 'General' })
+  })
+
+  it('a category present with no `instances` does not throw — the API can serve that shape', () => {
+    // Sibling functions (documentsOfType et al.) already guard `?.instances
+    // ?? []`; the API can omit `instances` on a category the same way it
+    // omits `cardinality`. Cast past the type (which declares it required)
+    // to model the real, untyped payload.
+    const v = {
+      ihsId: 1,
+      categories: {
+        'applicant-identity': { instances: [inst('default', { personName: 'Gita Ismail' })] },
+        'telco-carrier': { cardinality: 'multi' },
+      },
+    } as unknown as CanonicalView
+    expect(() => processIhsDetailsFromView(v)).not.toThrow()
+    const details = processIhsDetailsFromView(v)
+    expect(details.some((d) => d.name === 'fullName')).toBe(true)
+  })
+
+  it('DECISION (SYS-3334 sweep): value === false is dropped on BOTH paths — inherited v1 behavior, not re-derived, awaiting a product call', () => {
+    // v1's filter has the identical line (processIhsDetails, above). Now
+    // that boolean-typed registry fields exist (telco-carrier.
+    // handsetFinancingActive, social-media.verifiedBusinessAccount,
+    // financial-statement.consolidated), this is no longer hypothetical: a
+    // lender cannot distinguish "false" from "never asked" in either panel.
+    // NOT fixed here — parity with the flat path is the contract, and the
+    // flat path drops it too, so changing one side breaks the side-by-side
+    // comparison the whole SYS-3334 release measures against. Whether
+    // `false` should render is Kain's call, not this processor's.
+    const flat = processIhsDetails({ handsetFinancingActive: false })
+    expect(flat.some((d) => d.name === 'handsetFinancingActive')).toBe(false)
+
+    const v = view({ 'telco-carrier': { cardinality: 'single', instances: [inst('default', { handsetFinancingActive: false })] } })
+    expect(processIhsDetailsFromView(v).some((d) => d.name === 'handsetFinancingActive')).toBe(false)
   })
 })
 
@@ -421,6 +487,7 @@ describe('documentHashOfKey / documentHashOfPath / legacyOrdinalOfKey', () => {
     expect(legacyOrdinalOfKey('legacy:T3')).toBe(3)
     expect(legacyOrdinalOfKey('bankStatement:abc')).toBeNull()
     expect(documentHashOfPath('https://x/y/HASH?sig=1')).toBe('HASH')
+    expect(documentHashOfPath('https://x/y/HASH#frag')).toBe('HASH')
     expect(documentHashOfPath('https://x/y/')).toBeNull()
   })
 })

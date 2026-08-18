@@ -119,6 +119,20 @@ record.
 preserved. `buildFileFieldTablesFromInstances` was already instance-shaped
 and is unchanged.
 
+### Fixed
+
+- **`processIhsDetailsFromView` threw on a category with no `instances`** —
+  the sibling instance-shaped functions already guarded `?.instances ?? []`;
+  this one didn't, and the API can serve that shape. Guarded the same way.
+- **`processIhsDetailsFromView` could emit two identical disambiguated
+  names** when three or more instances shared one (instanceKey, adapterId,
+  field): the collision-disambiguated name (`…@vendor-a`) was never itself
+  checked against `seen`, so a third producer collided with the second.
+  Numbered past the first collision until unique.
+- **`documentHashOfPath` stripped `?` but not `#`** — a DMS URL fragment
+  (`…/HASH#frag`) leaked into the returned hash, breaking the join to the
+  extraction key. Strips both now.
+
 ## [8.0.0] - 2026-08-18
 
 **Breaking, in exactly one way, and it is a fix.** Everything else in this

@@ -307,13 +307,18 @@ HAND = {
                  'events into a second envelope creates a source of truth that drifts. A SHAPE CHANGE, '
                  'not a move: a consumer reading consent state must follow the reference.'),
     'ssmIncorporatedDate': ('retired', None,
-                            'SUPERSEDED BY THE SHARED COLUMN and already dead: SYS-3163 moved the SSM processor '
-                            'onto WIDE_COLUMN_BINDINGS.companyIncorporationDate, whose column is incorporatedDate '
-                            'with no per-source override, so projectSsmCanonical has not written this column '
-                            'since. MEASURED: 839 of 8,475 rows carry ssmCompanyName (the same extractor\'s '
-                            'sibling, and the positive control that makes this zero meaningful) and 839 carry '
-                            'incorporatedDate, while ZERO carry ssmIncorporatedDate. SEE SYS-3419 FOR THE LIVE DEFECT THIS '
-                            'EXPOSES — both UIs still read the dead column.'),
+                            'SUPERSEDED BY THE SHARED COLUMN and already dead. SYS-2722 (finsys-api 884b9078, '
+                            '2026-07-09) consolidated company incorporation date onto the canonical '
+                            'incorporatedDate for BOTH extractors and backfilled history; processSSM has not '
+                            'written this column since. SYS-3163 (2026-08-04) later formalised the binding '
+                            '(WIDE_COLUMN_BINDINGS.companyIncorporationDate, owners [form9, ssm], no '
+                            'columnBySource override) but changed no behavior here. MEASURED on finsim: 839 of '
+                            '8,475 rows carry ssmCompanyName (the same extractor\'s sibling, and the positive '
+                            'control that makes this zero meaningful) and 839 carry incorporatedDate, while ZERO '
+                            'carry ssmIncorporatedDate. The backfill COPIED rather than cleared, so rows '
+                            'predating 2026-07-09 still hold both — the symptom is a field correct on older '
+                            'records and blank on newer ones, not a uniformly broken one. SEE SYS-3419: SYS-2722 '
+                            'scoped the reader half too and it never shipped.'),
     'bankType': ('retired', None,
                  'varchar(20), and 0 of 8,475 rows. Long mistaken for a document-pointer column (the SYS-2499 '
                  'audit files it under "document file path"), but it cannot be one: the 16 real pointer columns '

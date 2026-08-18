@@ -38,8 +38,9 @@ consumer on 7.8.0 upgrades without touching anything.
   gone."** Several retired keys are live data arriving under a different name:
   `city` and `postcode` are submitted as `permanentcity` / `permanentpostcode`,
   and `countryOfPermanentResident` arrives as `nationality`. One,
-  `ssmIncorporatedDate`, is a dead column with live readers — finding that is
-  what produced SYS-3419.
+  `ssmIncorporatedDate`, is a dead column with live readers — SYS-2722
+  consolidated the fact onto `incorporatedDate` in July and the two UIs that
+  render it were never repointed. Finding that produced SYS-3419.
 
   **`mapped-fanout` is its own disposition because a fanout key cannot be
   read like the others.** One legacy column, two attestors: the wide table

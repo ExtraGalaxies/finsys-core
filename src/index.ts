@@ -274,3 +274,15 @@ export {
   v1Addresses,
   v1KeysByDisposition,
 } from './v1-migration-map.js';
+
+// SYS-3334: the v2 canonical envelope. Owned here rather than in the lender
+// SDK, because it is the wire shape of a published API and every consumer
+// needs it — finhub through its own gateway, FHD's portal later, not only
+// external lenders holding @finsys/lender-client (which re-exports these).
+export type {
+  CanonicalFieldEnvelope,
+  CanonicalInstance,
+  CanonicalCategory,
+  CanonicalView,
+  CanonicalAddress,
+} from './canonical-view.js';

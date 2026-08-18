@@ -38,3 +38,10 @@ jobs:
         run: npm test --if-present
       - name: Lint
         run: npm run lint --if-present
+      # Typecheck a CONSUMER of the built tarball with skipLibCheck: false —
+      # tsc's default, and the one setting our own tsconfig disables. Optional
+      # peers are not installed into the fixture, on purpose: a .d.ts that
+      # references one is the consumer's TS2307, and this repo's suite is
+      # blind to it (SYS-3420). Packages without a test:consumer script skip.
+      - name: Consumer typecheck (skipLibCheck=false, no optional peers)
+        run: npm run test:consumer --if-present

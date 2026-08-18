@@ -34,6 +34,15 @@
  * re-export is the first release in which a consumer can name them. Additive
  * either way; the members and their meaning are unchanged.
  *
+ * SEMVER CONTRACT (SYS-3420, from the review of @finsys/lender-client 2.6.0).
+ * These five interfaces are re-exported by the lender SDK, so a change here
+ * reaches external consumers on THEIR next install, not on an SDK release.
+ * Therefore: adding a REQUIRED member, removing or renaming ANY member
+ * (optional included — `confidence?`, `origin?`, `runId?` are what a consumer
+ * uses to judge a value), or narrowing a member's type is a MAJOR of this
+ * package. Adding an OPTIONAL member is a minor. The SDK's own compat suite
+ * pins both directions, `keyof` included, against its previous release.
+ *
  * WHAT THIS FILE IS NOT. It is a description of a payload, not a client. There
  * is no fetching here and no instance-selection rule — selection is one
  * decision that every consumer must make identically, so it belongs with the

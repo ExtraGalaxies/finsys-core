@@ -21,8 +21,6 @@
  * resolving field references, applying dynamic titles, and grouping by category.
  */
 
-// Re-export survey-core types for consumers
-export type { IQuestion, IPage, ISurvey, IPanel, IElement } from "survey-core";
 import type { Jurisdiction } from "./jurisdiction.js";
 import { getPastMonthLabel, getPastYearLabel } from "./utils.js";
 

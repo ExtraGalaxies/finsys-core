@@ -513,7 +513,10 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         `adapter category data: ${where} canonicalTable must be an "ihs"-prefixed table identifier (got "${cat.canonicalTable}")`,
       );
     }
-    if (tables.has(cat.canonicalTable)) {
+    // Case-insensitive on purpose: on a lower_case_table_names=1 host two
+    // names differing only by case ARE one table, and on =0 a registry
+    // declaring both would be declaring a trap. Refuse either way.
+    if (tables.has(cat.canonicalTable.toLowerCase())) {
       throw new Error(
         `adapter category data: duplicate canonicalTable "${cat.canonicalTable}" (${where})`,
       );
@@ -834,7 +837,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       fields: Object.freeze(fields) as ReadonlyArray<CanonicalFieldSpec>,
     });
     byId.set(cat.id, schema);
-    tables.add(cat.canonicalTable);
+    tables.add(cat.canonicalTable.toLowerCase());
     all.push(schema);
   }
 

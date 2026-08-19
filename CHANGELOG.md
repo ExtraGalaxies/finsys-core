@@ -8,10 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [8.1.1] - 2026-08-19
 
-Patch. Three declared-vs-actual defects, each found after 8.1.0 froze; no
-API change, no consumer change — every consumer on `^8.1.0` picks this up on
-its next install and nothing needs a PR. This is intended to be the last core
-release until Phase 6 (9.0.0), barring a prioritized feature.
+Patch. Three declared-vs-actual defects, each found after 8.1.0 froze. No
+breaking change; two of the fixes are consumer-visible — a new root type
+export, and one extra documents-table row where invoices exist — and every
+consumer on `^8.1.0` picks them up on its next install; nothing needs a PR.
+This is intended to be the last core release until Phase 6 (9.0.0), barring
+a prioritized feature. Also: `package-lock.json` declared 8.0.0 through the
+8.1.0 release; it now carries the package's own version.
 
 ### Fixed — `ViewDocument` is exported from the root (SYS-3438)
 
@@ -35,7 +38,9 @@ release until Phase 6 (9.0.0), barring a prioritized feature.
   `canonicalTable` yet (finsys-api reaches every table through its entities),
   so this changes no read; it stops the first consumer that does from
   reading a table that is not there. The drift guard against the physical
-  schema belongs in the host, which has both. SYS-3341 (derive the table from
+  schema belongs in the host, which has both. The duplicate-table guard now
+  compares case-insensitively, so two declarations differing only by case are
+  refused rather than admitted as two tables. SYS-3341 (derive the table from
   the category id) retires the question.
 
 ### Fixed — invoices render in the documents table (SYS-3376)

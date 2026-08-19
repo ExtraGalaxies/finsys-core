@@ -345,6 +345,14 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
     raw.categories[0].canonicalTable = "some_other_table";
     expect(() => buildCategoryRegistry(raw)).toThrow(/"ihs"-prefixed/);
   });
+  it("refuses two canonicalTables that differ only by case (SYS-3327)", () => {
+    const raw = validRaw();
+    // Same table, different case past the (lowercase) namespace prefix.
+    const twin = raw.categories[0].canonicalTable.replace(/[a-z]$/, (c) => c.toUpperCase());
+    expect(twin).not.toBe(raw.categories[0].canonicalTable);
+    raw.categories.push({ ...raw.categories[0], id: "fixture-twin", canonicalTable: twin });
+    expect(() => buildCategoryRegistry(raw)).toThrow(/duplicate canonicalTable/);
+  });
   it("admits a camel-cased table inside the ihs namespace (SYS-3327: ihsPayslip is the physical name)", () => {
     // The lowercase-only rule this replaces is WHY the payslip declaration
     // was wrong: it could not be written correctly. Case-sensitive schema,

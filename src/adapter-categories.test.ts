@@ -93,7 +93,8 @@ describe("Adapter category catalogue", () => {
       // SYS-2998: the invariant is the IHS namespace prefix — alt-data
       // tables (ihs_alt_data_*) AND promoted legacy sibling tables
       // (ihsbankstatement, ...) are both canonical now.
-      expect(cat.canonicalTable).toMatch(/^ihs[a-z0-9_]*$/);
+      // SYS-3327: case-preserving — `ihsPayslip` is the physical name.
+      expect(cat.canonicalTable).toMatch(/^ihs[A-Za-z0-9_]*$/);
       expect(tables.has(cat.canonicalTable)).toBe(false);
       tables.add(cat.canonicalTable);
     }
@@ -344,6 +345,22 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
     raw.categories[0].canonicalTable = "some_other_table";
     expect(() => buildCategoryRegistry(raw)).toThrow(/"ihs"-prefixed/);
   });
+  it("refuses two canonicalTables that differ only by case (SYS-3327)", () => {
+    const raw = validRaw();
+    // Same table, different case past the (lowercase) namespace prefix.
+    const twin = raw.categories[0].canonicalTable.replace(/[a-z]$/, (c) => c.toUpperCase());
+    expect(twin).not.toBe(raw.categories[0].canonicalTable);
+    raw.categories.push({ ...raw.categories[0], id: "fixture-twin", canonicalTable: twin });
+    expect(() => buildCategoryRegistry(raw)).toThrow(/duplicate canonicalTable/);
+  });
+  it("admits a camel-cased table inside the ihs namespace (SYS-3327: ihsPayslip is the physical name)", () => {
+    // The lowercase-only rule this replaces is WHY the payslip declaration
+    // was wrong: it could not be written correctly. Case-sensitive schema,
+    // case-preserving declaration.
+    const raw = validRaw();
+    raw.categories[0].canonicalTable = "ihsPayslip";
+    expect(buildCategoryRegistry(raw).byId.get(raw.categories[0].id)?.canonicalTable).toBe("ihsPayslip");
+  });
 
   it("rejects a category with no fields", () => {
     const raw = validRaw();
@@ -589,7 +606,12 @@ describe("FinXtract document-extraction categories", () => {
     // window to close. Their FIELDS are swept regardless, which is where the
     // shared facts come from.
     expect(categorySchemaOf("epf-statement").canonicalTable).toBe("ihsepfstatement");
-    expect(categorySchemaOf("payslip").canonicalTable).toBe("ihspayslip");
+    // SYS-3327: the physical table is `ihsPayslip` — the ONE camel-cased
+    // sibling (bank/epf/financial are all-lowercase) — and the database runs
+    // lower_case_table_names=0, so "ihspayslip" resolved to no table at all.
+    // Measured on the finsim MySQL 2026-08-19. This line used to restate the
+    // wrong literal, which is how a declared/actual drift passes its own test.
+    expect(categorySchemaOf("payslip").canonicalTable).toBe("ihsPayslip");
     // The fourth keeps its id, and the reason is worth stating: de-prefixing
     // it lands on `bank-statement`, which the partner-feed category already
     // holds. Resolving that means renaming the PARTNER category (its fields

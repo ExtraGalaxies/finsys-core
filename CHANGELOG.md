@@ -6,6 +6,59 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [8.1.1] - 2026-08-19
+
+Patch. Three declared-vs-actual defects, each found after 8.1.0 froze. No
+breaking change; two of the fixes are consumer-visible — a new root type
+export, and one extra documents-table row where invoices exist — and every
+consumer on `^8.1.0` picks them up on its next install; nothing needs a PR.
+This is intended to be the last core release until Phase 6 (9.0.0), barring
+a prioritized feature. Also: `package-lock.json` declared 8.0.0 through the
+8.1.0 release; it now carries the package's own version.
+
+### Fixed — `ViewDocument` is exported from the root (SYS-3438)
+
+- `documentsOfType()` returns `ViewDocument[]`, and the 8.1.0 notes said the
+  type was exported. It was declared `export interface` in `ihs-processing`
+  and never added to `index.ts` — the published d.ts had it outside the
+  `export {}` block, and `import type { ViewDocument } from '@finsys/core'`
+  was TS2459. Exported now, with a ROOT-entry pin (same shape as
+  `CanonicalAttestation`'s) so `tsc` fails if it is ever dropped again.
+
+### Fixed — the payslip category declares the table that exists (SYS-3327)
+
+- `finxtract-payslip.canonicalTable` read `ihspayslip`; the physical table is
+  `ihsPayslip` — the ONE camel-cased sibling (bank/epf/financial are
+  lowercase) — on a database with `lower_case_table_names=0`, so the declared
+  name resolved to no table at all. Measured on the finsim MySQL 2026-08-19.
+- The registry validator was lowercase-only (`/^ihs[a-z0-9_]*$/`), which is
+  WHY the declaration was wrong: it could not be written correctly, and its
+  test restated the wrong literal. The validator is case-preserving now; the
+  namespace prefix stays the invariant. One consumer already resolves
+  storage from `canonicalTable`: finsys-api's v2 read (`ihsCanonicalRead-
+  Service.resolveCategoryTable`) matches it against TypeORM entity metadata
+  CASE-INSENSITIVELY, precisely because of this mismatch, and its drift test
+  pinned `payslip` as the one known exception "until the two declarations
+  converge — the resolver may then be tightened". They have; it can. No
+  other consumer reads the field. The drift guard against the physical
+  schema belongs in the host, which has both. The duplicate-table guard now
+  compares case-insensitively, so two declarations differing only by case are
+  refused rather than admitted as two tables. SYS-3341 (derive the table from
+  the category id) retires the question.
+
+### Fixed — invoices render in the documents table (SYS-3376)
+
+- `invoices` is a host pointer slot (finsys-api `IHS_DOCUMENT_POINTER_FIELDS`,
+  array storage, extraction: true) that the doc catalog never named, so
+  `buildDocumentRows` and `buildDocumentRowsFromView` both dropped it — an
+  uploaded invoice was stored, billed for on extraction, and rendered in
+  NEITHER product. It is a row now (label `Invoices`, extractable, not
+  re-uploadable), in catalog order: after payslips, before SSM. Consumers
+  that index rows positionally will see one more row where invoices exist;
+  the (docType, index) alignment with `resolveExtractionStatusFromView` is
+  unchanged. The slot list is host-owned; the comparator that every host
+  slot is in `getDocDisplayNames()` belongs beside the list, in finsys-api.
+
 ## [8.1.0] - 2026-08-18
 
 Additive. Nothing renamed, nothing removed — a consumer on 8.0.0 upgrades

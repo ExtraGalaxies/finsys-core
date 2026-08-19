@@ -512,6 +512,53 @@ describe('buildDocumentRows (SYS-2766)', () => {
   it('returns [] when the IHS has no document fields', () => {
     expect(buildDocumentRows({ ihsId: 1, monthlyGrossIncome: 5000 })).toEqual([])
   })
+
+  // SYS-3376: `invoices` is a real ihs pointer column (finsys-api
+  // IHS_DOCUMENT_POINTER_FIELDS, array storage, extraction: true) that the
+  // catalog never named, so an uploaded invoice was stored, billed for on
+  // extraction, and rendered in NEITHER product's documents table. The slot
+  // list is host-owned; the host carries the comparator (every pointer slot
+  // must be in getDocDisplayNames()). This pins the core half.
+  it('renders invoices — an extractable host slot the catalog used to drop silently (SYS-3376)', () => {
+    const rows = buildDocumentRows({
+      invoices: [
+        { path: 'https://dms/inv1', fileName: 'inv-jan.pdf', fileSize: 100 },
+        { path: 'https://dms/inv2', fileName: 'inv-feb.pdf', fileSize: 200 },
+      ],
+    })
+    expect(rows.map((r) => [r.docType, r.index, r.documentId])).toEqual([
+      ['invoices', 0, 'inv1'],
+      ['invoices', 1, 'inv2'],
+    ])
+    expect(rows[0].label).toBe('Invoices')
+    expect(rows[0].capabilities.reExtract).toBe(true)
+    expect(rows[0].capabilities.viewJson).toBe(true)
+    expect(rows[0].capabilities.reUpload).toBe(false)
+    expect(getDocDisplayNames().invoices).toBe('Invoices')
+  })
+})
+
+// SYS-3438: `ViewDocument` was declared `export interface` in ihs-processing
+// and documented in the 8.1.0 CHANGELOG as exported, but never added to
+// index.ts — the published 8.1.0 d.ts has it outside the `export {}` block
+// and `import type { ViewDocument } from '@finsys/core'` is TS2459. Same pin
+// shape as canonical-view.test's CanonicalAttestation: the ROOT entry, so
+// `npm run lint` (tsc) fails if index.ts drops the name; vitest strips the
+// type import, so the runtime assertion is trivially true.
+import type * as Root from './index.js'
+describe('the documents-table types are exported from the ROOT entry (SYS-3438)', () => {
+  it('ViewDocument is importable from @finsys/core, as documentsOfType() return type requires', () => {
+    const doc: Root.ViewDocument = {
+      hash: null,
+      path: null,
+      uploadedAt: null,
+      uploadedBy: null,
+      extraction: [],
+      origin: 'intake',
+    }
+    const docs: ReturnType<typeof Root.documentsOfType> = [doc]
+    expect(docs).toHaveLength(1)
+  })
 })
 
 describe('document-table maps + formatters (SYS-2766)', () => {

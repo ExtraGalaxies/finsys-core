@@ -34,10 +34,13 @@ a prioritized feature. Also: `package-lock.json` declared 8.0.0 through the
 - The registry validator was lowercase-only (`/^ihs[a-z0-9_]*$/`), which is
   WHY the declaration was wrong: it could not be written correctly, and its
   test restated the wrong literal. The validator is case-preserving now; the
-  namespace prefix stays the invariant. Nothing resolves storage from
-  `canonicalTable` yet (finsys-api reaches every table through its entities),
-  so this changes no read; it stops the first consumer that does from
-  reading a table that is not there. The drift guard against the physical
+  namespace prefix stays the invariant. One consumer already resolves
+  storage from `canonicalTable`: finsys-api's v2 read (`ihsCanonicalRead-
+  Service.resolveCategoryTable`) matches it against TypeORM entity metadata
+  CASE-INSENSITIVELY, precisely because of this mismatch, and its drift test
+  pinned `payslip` as the one known exception "until the two declarations
+  converge — the resolver may then be tightened". They have; it can. No
+  other consumer reads the field. The drift guard against the physical
   schema belongs in the host, which has both. The duplicate-table guard now
   compares case-insensitively, so two declarations differing only by case are
   refused rather than admitted as two tables. SYS-3341 (derive the table from

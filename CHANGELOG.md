@@ -82,6 +82,18 @@ record.
   the SDK's 2.5.0 notes said neither payload had. Absent on the facts-only
   view. Additive; the compat pins in both packages cover them.
 
+### Added — two optional members for resolved corrections (SYS-3421)
+
+- `CanonicalFieldEnvelope.attestations?: CanonicalAttestation[]` and
+  `resolvedBy?: string`, and the `CanonicalAttestation` type. Present only when
+  more than one attestation exists for a field (an extraction and a committed
+  manual correction): `value` is the RESOLVED one under the named policy
+  (`class-precedence@1` — a manual correction outranks a later extraction by
+  what it is, not when it arrived: SYS-3392, CONFLICT SURFACES), and the list
+  carries every attestation including the loser, so the disagreement is
+  visible. Scoring consumes `value`, never the list. Absent when nothing
+  needed resolving. Additive.
+
 ### Added — the documents table from the view (SYS-3378)
 
 - **`buildDocumentRowsFromView(view, metadata?)`** → `DocumentRow[]` — the

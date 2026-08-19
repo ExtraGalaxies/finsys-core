@@ -57,6 +57,12 @@ describe('the v2 canonical envelope', () => {
       confidentiality: 'sensitive',
       // SYS-3415: present only under a lender-overlay projection.
       originalValue: 'SG',
+      // SYS-3421: present only when more than one attestation exists.
+      attestations: [
+        { value: 'MY', origin: 'manual', adapterId: 'manual-override-v1', adapterVersion: 1, runId: 99, observedAt: '2026-08-19T00:00:00.000Z', lenderId: 7 },
+        { value: 'SG', origin: 'extraction', adapterId: 'finxtract-ic-v1', adapterVersion: 1, runId: 42 },
+      ],
+      resolvedBy: 'class-precedence@1',
     };
     const instance: CanonicalInstance = {
       instanceKey: 'mobile',

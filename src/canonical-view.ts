@@ -65,6 +65,39 @@ export interface CanonicalFieldEnvelope {
    * run) and carries no originalValue.
    */
   originalValue?: number | boolean | string
+  /**
+   * SYS-3421 (the SYS-3392 decision, CONFLICT SURFACES): when more than one
+   * attestation exists for this field — an extraction and a committed manual
+   * correction — `value` is the RESOLVED one and this lists every attestation
+   * behind it, the winner included, so the disagreement is visible rather
+   * than the loser silently discarded. Absent when there is exactly one.
+   * Scoring consumes `value`, never this list.
+   */
+  attestations?: CanonicalAttestation[]
+  /**
+   * SYS-3421: the policy that chose `value` when `attestations` is present —
+   * `'<policy-id>@<version>'`, e.g. `class-precedence@1`. A policy VERSION
+   * bump changes this visibly rather than changing values silently. Absent
+   * when nothing needed resolving.
+   */
+  resolvedBy?: string
+}
+
+/**
+ * One attestation of a field's value — who said it, when, from which run.
+ * The same information an instance carries, at field grain, so a manual
+ * correction can stand beside the extraction it corrects.
+ */
+export interface CanonicalAttestation {
+  value: number | boolean | string
+  /** 'extraction' | 'form-intake' | 'manual' | … — the assertion class the resolver ranks. */
+  origin: string
+  adapterId: string
+  adapterVersion: number
+  runId?: number
+  observedAt?: string
+  /** Present on a manual attestation: the lender that committed it. */
+  lenderId?: number
 }
 
 export interface CanonicalInstance {

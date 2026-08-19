@@ -60,6 +60,22 @@ export type IhsFieldOrigin = (typeof IHS_FIELD_ORIGINS)[number]
 export interface IhsFieldProvenance {
   source: string
   confidence: number | null
+  /**
+   * ISO wall-clock of the extraction run.
+   *
+   * SYS-3334 F7/F10 (round 2): `fieldProvenanceFromView` (ihs-processing.ts)
+   * writes `''` here when the source instance carries no `observedAt` at
+   * all — kept a required `string` rather than made optional, because
+   * loosening this type ripples into every consumer that already
+   * destructures it as one (a required→optional change is exactly the kind
+   * of narrowing-at-the-read-site this package's semver discipline tries to
+   * avoid inflicting on downstream `tsc` builds). A reader that formats this
+   * value must treat `''` the same as "unknown", exactly as it must already
+   * treat a value that never arrived: `new Date('')` is `Invalid Date`, not
+   * a thrown error, so a caller that skips the guard fails quietly rather
+   * than loudly. Documented here rather than fixed silently, so the sentinel
+   * is a decision on record instead of a bug waiting to be rediscovered.
+   */
   observedAt: string
   sourceRunId: string | null
   origin: IhsFieldOrigin
@@ -100,6 +116,23 @@ export interface IhsFieldProvenance {
    */
   currency?: string
 }
+
+/**
+ * `IhsFieldProvenance` plus the value an overlay projection REPLACED.
+ *
+ * SYS-3334 F3 (round 2): `fieldProvenanceFromView` synthesizes provenance
+ * from `CanonicalView` envelopes, which — under a lender-overlay projection
+ * (`?overlay=mine`) — can carry `originalValue` (`CanonicalFieldEnvelope`'s
+ * own member: the attested value a staged edit is standing in for). Plain
+ * `IhsFieldProvenance` has nowhere to put that; widening it for every
+ * consumer to carry an almost-always-absent member is the wrong trade for
+ * what only this one path needs, so it is a separate, ADDITIVE type instead.
+ * `originalValue` is `unknown` rather than the envelope's own
+ * `number | boolean | string`, because a table cell already renders `unknown`
+ * data (`FileFieldTableItem.data`) and narrowing it here would just move the
+ * cast to every caller.
+ */
+export type IhsFieldProvenanceWithOriginal = IhsFieldProvenance & { originalValue?: unknown }
 
 /**
  * Type guard: narrows an unknown value to `IhsFieldOrigin` iff it is one of

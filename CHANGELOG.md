@@ -6,6 +6,841 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [8.1.0] - 2026-08-18
+
+Additive. Nothing renamed, nothing removed — a consumer on 8.0.0 upgrades
+without touching anything. **This is Phase 5's last core release**: it carries
+everything a consumer needs to render an IHS from a v2 `CanonicalView` instead
+of the flat v1 record, with the SAME output types, so the flag flip on the
+consumer is a migration and can be checked against a before-picture. Every
+claim below was measured on 157 sim subjects with both paths run on the same
+record.
+
+### Added — the instance-shaped path (SYS-3334)
+
+- **`processIhsDetailsFromView(view)`** → `IhsFieldDetail[]`, feeding the
+  unchanged `groupDetailsByCategory`. Labels and groupings come from the LEGACY
+  column name, recovered per field through the v1 migration map in reverse, so
+  the panel a v1 consumer had is the panel it gets. Identical on the sim
+  except for four classes, none of them the processor's: (a) keys the map
+  marks `relocated` (Loan/Account Information — the application record, which
+  v2 deliberately does not carry) or `needs-decision` (`phoneNumber`);
+  (b) v1's DECIMAL-as-string vs v2's typed number; (c) three `text`-typed
+  document pointers v1 rendered as raw DMS paths in the panel
+  (`myKadOrPassport`, `tnbBills`, `incomeEPF_iakaun`) — their v2 home is
+  `document-intake`, which the panel excludes; (d) per-subject dual-write
+  divergences in the data plane. A canonical-only field with no legacy key
+  gets a collision-proof name and lands in `General`, which the grouping
+  drops — as v1 did with alt-data keys. Two producers on one key are BOTH
+  emitted, in the same group, the second labeled by its producer: a
+  disagreement between producers is what a reviewer should see, not something
+  a render helper hides or dies on.
+- **`resolveExtractionStatusFromView(view, jobRecords?)`** — a RE-DERIVATION,
+  not a port; three decisions, each pinned by a test that names the numbers:
+  (1) uploaded = the type's `document-intake` instances ∪ the extraction
+  category's documents (an extracted document was uploaded; covers uploads
+  that predate the intake writer); (2) per-document status joined by the
+  document's DMS hash — intake's `pathInDms` tail is the extraction key's
+  hash, `#T1`/`#T2` period rows grouped as one document — not by array
+  position; positional job records apply ONLY to the intake-ordered prefix,
+  never to an extraction-only document; (3) `totalColumns` is the registry's
+  field set for the extraction category. On that last one, stated exactly:
+  v1's slot widths equal the registry for bank (8), payslip (15), EPF (9),
+  IC (9), SSM (16) and Form 9 (3); financial statements were 13 on the first
+  slot and 0 on the second (v1's slots were misaligned with its documents),
+  so the only visible denominator change is 13 → 122 there, and it is a
+  correction. Also corrected: v1 counted a wide column as populated by Form 9
+  when SSM or the applicant form had filled it. `populatedColumns` are
+  canonical names. New optional members on `DocExtractionResult`:
+  `documentId` (the hash — the join key to `DocumentRow.documentId`) and
+  `unlinked` (an extraction-only document, kept observable so a join
+  regression cannot masquerade as a pre-writer upload).
+- **`v1KeyForAddress(category, field, instanceKey?)`** — the reverse lookup;
+  null for a canonical-only address and, deliberately, for a T-slot family.
+  Admits `mapped-pending-build` (a label is right whether or not the address
+  is written yet). **`v1AddressHasKeyedEntries(category, field)`** — whether
+  an instance key carries discriminating power for that field; the detail
+  processor falls back to the keyless entry only when it does not, a rule
+  that does not depend on `cardinality`, which the API omits when no manifest
+  is reachable.
+- **`extractionCategoryOf(documentType): AdapterCategory | null`** and
+  **`documentCategoryIds(): ReadonlySet<AdapterCategory>`** — derived from
+  the document-type groups through the map (intersection across a type's
+  columns, so the fan-out key `incorporatedDate` resolves Form 9 →
+  company-registration and SSM → company-profile), not hand-listed. A
+  document type added after the map would resolve to null; the test that
+  pins the seven types by name is what catches that.
+
+### Added — two optional members on the envelope, for the lender overlay (SYS-3415)
+
+- `CanonicalFieldEnvelope.originalValue?` and `CanonicalView.overlay?`. Both
+  present ONLY when a view is read under the lender-overlay projection
+  (`?overlay=mine` on the v2 read routes): an overlaid envelope carries the
+  calling lender's staged value as `value`, `origin: 'manual'`, and the
+  attested value it stands in for as `originalValue`; the view carries
+  `overlay: {lenderId, applied, updatedAt, unprojected[]}` — the signal that
+  the SDK's 2.5.0 notes said neither payload had. Absent on the facts-only
+  view. Additive; the compat pins in both packages cover them.
+
+### Added — two optional members for resolved corrections (SYS-3421)
+
+- `CanonicalFieldEnvelope.attestations?: CanonicalAttestation[]` and
+  `resolvedBy?: string`, and the `CanonicalAttestation` type. Present only when
+  more than one attestation exists for a field (an extraction and a committed
+  manual correction): `value` is the RESOLVED one under the named policy
+  (`class-precedence@1` — a manual correction outranks a later extraction by
+  what it is, not when it arrived: SYS-3392, CONFLICT SURFACES), and the list
+  carries every attestation including the loser, so the disagreement is
+  visible. Scoring consumes `value`, never the list. Absent when nothing
+  needed resolving. Additive. `CanonicalAttestation.value` admits `null` — a
+  lender clearing a field is an attestation too, and the ledger must show it
+  even though the envelope's own `value` never carries null (a resolved
+  clear makes the field absent). `CanonicalAttestation` is exported from the
+  root entry, and a lint-time pin now holds every envelope member there — the
+  first 8.1.0 candidate declared it and forgot the export (finsys-api found
+  it, TS2305).
+
+### Added — the documents table from the view (SYS-3378)
+
+- **`buildDocumentRowsFromView(view, metadata?)`** → `DocumentRow[]` — the
+  Phase 6 blocker: until this existed, dropping a pointer column blanked the
+  documents table in both products. Reads `document-intake` instances (same
+  DOC_DISPLAY_NAMES grouping and order; a type outside it is dropped, as v1
+  dropped its pointer column) unioned with extracted-only documents, in the
+  ONE order `resolveExtractionStatusFromView` uses — shared
+  **`documentsOfType()`** — so a consumer aligning status to rows by
+  (docType, index) still can, and both carry the hash as `documentId` so it
+  can join by identity instead. `uploadedAt` from the instance (`uploadedAt`
+  field, else `observedAt`), `uploadedBy` from the instance, the consumer's
+  `documentMetadata` map consulted first for name/type/size as before.
+  Stated plainly: uploads carry no period, so `timePeriod` is `'ALL'` and
+  `periodLabel` null (v1's was the slot ordinal, "Year 1"). On the sim: same
+  row count and same (docType, documentId) set as the flat path on 156 of
+  157 subjects; the one is the replaced-file case the intake log remembers.
+  Also exported: `documentHashOfKey`, `documentHashOfPath`, `ViewDocument`.
+
+### Added — the last flat function's instance-shaped sibling (SYS-3334)
+
+- **`buildFileFieldTablesFromView(view, fieldProvenance?)`** →
+  `Record<string, FileFieldTableData>` — the fourth and final flat file-field
+  function to get a `CanonicalView` counterpart, closing out the instance-shaped
+  path this release carries. For every document-type group, resolves its
+  extraction category and its `InstanceRow[]` (see `instanceRowsFromView`
+  below), keyed by `documentGroup` — the same key
+  `buildFileFieldTablesFromInstances` already groups its own catalog output
+  by — and hands the map to that unchanged function. **v2 envelopes carry
+  `confidence`/`origin` per field with no v1 sidecar behind them**, so this
+  function SYNTHESIZES one via `fieldProvenanceFromView` (below): `{ source:
+  adapterId, confidence, observedAt, sourceRunId, origin }` per field, keyed
+  BY EVERY NAME `buildInstanceTable` OR a v1 sidecar might read for that cell
+  — corrected, H1, round 4: this bullet used to say "keyed the way
+  `buildInstanceTable` already expects (`${legacyBaseName}${timePeriod}`)",
+  as if that were the only name a cell needed. `buildInstanceTable` reads
+  ONLY that period-suffixed form, unconditionally — never the exact v1 key,
+  even when the field has one and even when that exact key IS its legacy
+  base (true of `ssm`/`form9`/`ic`, whose single-instance columns carry no
+  T-suffix at all). Emitting only the exact key, as this path did before
+  H1, therefore lost 100% of those three document types' provenance. Both
+  names are emitted when both resolve now — see `fieldProvenanceFromView`'s
+  own doc for the mechanism and the gate that keeps a scalar field's F6
+  position-rescue from minting a meaningless `<base><period>` twin. A
+  caller-supplied `fieldProvenance` entry still overrides the synthesized
+  one, per key it names. An envelope asserting neither `confidence` nor
+  `origin` synthesizes nothing for that cell (L1, round 4: `originalValue`
+  alone does not count either — see `fieldProvenanceFromView`'s doc), rather
+  than fabricating a `{ confidence: null, origin: 'derived' }` record the
+  source never sent. NOT carried through: per-observation currency — the
+  denomination `IhsFieldProvenance.currency` records on the flat sidecar.
+  `CanonicalFieldEnvelope` has no such member yet, so money values through
+  this path format without a denomination, same honest "unknown" behavior
+  `formatValue` already had.
+
+  **On the "confidence dots keep working with zero caller-supplied
+  provenance" claim this bullet used to make outright — corrected twice
+  now.** First (F11, round 2 review): on the wire as of 2026-08-19 they do
+  not, for any document category — finsys-api's read attaches provenance to
+  0 of 68k extraction fields (probed live), and this function has nothing to
+  synthesize FROM until finsys-api's own provenance-on-the-wire fix ships.
+  Second (H1, round 4): even once it does, `ssm`/`form9`/`ic` specifically
+  ALSO needed the fix above — their exact key winning outright, with no
+  period-suffixed twin, meant they would still have rendered zero dots
+  regardless of what finsys-api ships. Once both are true — the wire fix AND
+  H1 — confidence dots work from the envelopes with zero caller-supplied
+  provenance, exactly as designed, for every document category alike. Until
+  then this path renders no dots, and — H2, round 4 (see the
+  `fieldProvenanceFromView` bullet below) — where two instances land on one
+  slot it renders NEITHER instance's dot rather than one instance's real
+  number on the other's column: absent, never fabricated.
+- **`instanceRowsFromView(view, category)`** → `InstanceRow[]` — one row per
+  v2 instance of a category, ORDERED BY NUMERIC PERIOD (F5, round 2 — see
+  below), values keyed by their legacy BASE column name (via
+  `v1LegacyBaseNameOf`, below) so the rows are consumable by
+  `buildFileFieldTablesFromInstances` without it knowing what a
+  `CanonicalView` is. `timePeriod` resolves in priority order (F4, round 2
+  widened this from three rules to four): (1) `instance.legacySlot`,
+  VERBATIM, when the source row carried one (see `legacySlot` below); (2) a
+  `#T{n}` suffix on the instance key (financial statements' two-period
+  documents); (3) a `legacy:T{n}` key's own ordinal; else (4) — for every
+  category whose instances carry no period on the wire at all (bank /
+  payslip / EPF / SSM / Form 9 / IC) — the instance's 0-based position in
+  `documentsOfType`'s ordering of that category's documents, as
+  `T{position + 1}`. **Corrected (F4/F11, round 2): rule 4 is NOT "the exact
+  numbering v1's own T1..T6 wide-table slots used", as this bullet
+  previously claimed.** v1's T-number was the UPLOADER-DECLARED slot (bank
+  `month`, EPF `year`, payslip `period`), stored on the sibling row as
+  `timePeriod`; upload-order position is a different fact that equals it
+  only when uploads are ordered, complete, and unique per slot. Rule 1
+  (`legacySlot`) is the honest fix — it carries the ACTUAL v1 slot once
+  finsys-api's provenance-on-the-wire fix exposes it — and rule 4 is now
+  documented as the approximation it always was. `sourceLabel` prefers the
+  wire's own per-instance label (`instance.sourceLabel`) when present, else
+  falls back to the registry-derived one for `finxtract-bank-statement`, the
+  one category the registry gives an obvious per-instance label field
+  (`issuingBankName` — different statements can be different banks), else
+  null; F6 (round 2) additionally guards a no-period, `instanceKey: ''` row
+  against rendering a BLANK column header — `'T1'` when it is the only
+  instance of its category, else labeled by array position (`#1`, `#2`).
+- **`legacySlot?: string` and `sourceLabel?: string` on `CanonicalInstance`**
+  (F4, round 2 — `canonical-view.ts`) — the honest fix for a review finding
+  that `T{position+1}` is not v1's own numbering: v1's T-number is the
+  uploader-declared slot on the file entry, stored on the sibling row as
+  `timePeriod` with `sourceLabel` beside it. finsys-api exposes both on the
+  wire under the provenance-on-the-wire fix (the same fix F11's confidence-
+  dots correction above depends on). Present through the migration window
+  only, retiring with the wide table; optional, additive to the envelope's
+  semver contract.
+- **`fieldProvenanceFromView(view)`** →
+  `{ provenance: Record<string, IhsFieldProvenanceWithOriginal>; collided:
+  string[] }` (F3, HIGH, round 2 — hoisted out of
+  `buildFileFieldTablesFromView` and fixed at the same time). The provenance
+  map used to be built inline, keyed per (base, period) with a bare
+  `synthesized[key] = entry` — so two instances landing on the same key (a
+  re-extraction of the SAME document, or two filings both `#T1`) collided
+  SILENTLY, last-write-wins, with no signal a collision even happened. Fixed
+  to keep the entry with the newer `observedAt` (falling back to the larger
+  `runId`, then last-in-order) and to COUNT collisions in the returned
+  `collided` array. Now covers EVERY category, not only document-extraction
+  ones. Keyed by the v1 column name — the exact address via
+  `v1KeyForAddress` (with the same keyless fallback
+  `processIhsDetailsFromView` uses) AND (H1, HIGH, round 4 — see below)
+  `${legacyBase}${timePeriod}` when a document-extraction category resolves
+  one, `timePeriod` being `row.timePeriod` from the SAME resolved rows
+  `instanceRowsFromView` renders (M1, round 4 — corrected below; was a
+  second `timePeriodOf` call that could silently disagree with what the row
+  shows). No entry when the envelope asserts neither `confidence` nor
+  `origin` (L1, round 4 — corrected from "none of `confidence`, `origin`, or
+  `originalValue`": `originalValue` alone used to admit an envelope here
+  too, then fabricate `origin: 'derived'` for a field that asserted nothing
+  beyond the value an overlay replaced); `originalValue` (SYS-3415's overlay
+  projection) is still carried onto an entry one of the other two
+  justified, via `IhsFieldProvenanceWithOriginal = IhsFieldProvenance &
+  { originalValue?: unknown }` (`ihs-types.ts`).
+
+  **H1 (HIGH, round 4): the exact key and the period-suffixed key are BOTH
+  emitted when both resolve, not the exact key only.** `buildInstanceTable`
+  reads ONLY `${legacyBaseName}${timePeriod}`, unconditionally, never the
+  exact key — a fact this map did not act on before H1: whenever the exact
+  key existed it won outright, and for `ssm`/`form9`/`ic` (single-instance
+  columns with no T-suffix, so their exact key IS their legacy base) that
+  meant the period-suffixed key `buildInstanceTable` actually reads was
+  NEVER written. Measured: `ssm_documents` 16/16, `ic_documents` 9/9,
+  `form9` 3/3 base columns lost 100% of their provenance through the view
+  path. Fixed by emitting both names for the same cell whenever both
+  resolve, gated to the categories `buildInstanceTable` is ever fed
+  (`documentTypeOfCategory(category) !== null`) — ungated, a scalar
+  category's own position-rescued period (F6) would mint a
+  `<legacyBase><period>` twin nothing reads (an `applicant-identity`
+  `fullName` gaining a spurious `fullNameT1`, say).
+
+  **Corrected (C-2, round 5): the "16/16 … 3/3" recovery claim above is only
+  true when `incorporatedDate`'s SIBLING document is absent.** `incorporatedDate`
+  is the one base name inside those 28 columns that is ALSO the map's only
+  `mapped-fanout` key — SSM's `company-profile`/`companyIncorporationDate`
+  and Form 9's `company-registration`/`companyIncorporationDate` are two
+  DIFFERENT (category, field) addresses that both resolve to the SAME
+  period-suffixed key (`incorporatedDateT1`). Before H-1 (round 5, below),
+  this map's own collision logic could not tell that apart from two
+  instances of ONE category landing on one slot, so whenever BOTH SSM and
+  Form 9 were present, the two attestors collided with each other and H2
+  (below) dropped BOTH — SSM alone rendered a confidence dot; SSM + Form 9
+  rendered NEITHER, on identical values. H1's fix restored the OTHER 27
+  columns unconditionally; `incorporatedDate` needed H-1 as well.
+
+  **H2 (HIGH, round 4): a collided key is DROPPED from `provenance`, not
+  resolved to the winner.** NAMED, NOT HIDDEN (unchanged): the map stays per
+  (base, slot) — `buildInstanceTable`'s own key contract — so two DIFFERENT
+  instances sharing a slot necessarily share ONE provenance entry; that
+  remains a limitation of `buildInstanceTable`'s key format, not of this
+  function. But rendering the WINNER's confidence on that shared slot — the
+  behavior before H2 — put a wrong-but-plausible number on the LOSING
+  instance's column, whose real confidence was never that: a real shape
+  during the `legacySlot` migration window (one instance carrying it
+  verbatim, its sibling falling through to the SAME position-fallback slot).
+  **This contradicted the "it never fabricates one" guarantee stated
+  elsewhere in this file** (a rendered confidence the source instance never
+  asserted is exactly what that guarantee means to rule out) — fixed to
+  match it: a collided key is now removed from `provenance` entirely (absent
+  is honest), `collided` still names it for a caller that wants to log or
+  investigate.
+
+  **H-1 (HIGH, round 5): a `mapped-fanout` key's two DIFFERENT attestors are
+  NOT a collision.** `incorporatedDate` is attested by TWO categories
+  (`company-profile` from SSM, `company-registration` from Form 9), and
+  SYS-2722 designed the fanout precisely so BOTH survive — that is what a
+  two-address entry means. H2's collision logic (above) did not know the
+  difference between "two attestors of one fanout key" and "two instances of
+  one category on one slot", so it treated the former as a collision too:
+  SSM alone rendered `incorporatedDateT1` with a confidence dot; SSM + Form 9
+  present together rendered NEITHER table's dot, on the SAME agreeing value.
+  Fixed by `v1FanoutAddressOf` (`v1-migration-map.ts`) and `sharedFanoutOf`
+  (`ihs-processing.ts`): when two writers to one key are DIFFERENT addresses
+  that are both attestors of the SAME fanout entry, the write is kept —
+  whichever address is FIRST in the map's own `addresses` order, the same
+  rule `flatRecordFromView`'s `mapped-fanout` branch already used to place a
+  value — and the key is never added to `collided`. Two instances of the
+  SAME attestor category (e.g. two SSM uploads) still collide exactly as
+  before; the exception is per ADDRESS, not per key.
+
+  **M-5 (round 5): the F3-era temporal tie-break (`challengerWins`,
+  `winnerMeta`) is DELETED — SHIPPED BEHAVIOR restated plainly.** H2 (above)
+  unconditionally deletes a collided key's `provenance` entry regardless of
+  which write "won" a temporal comparison, so every key that ever reached
+  `challengerWins` had its result thrown away at the end — the comparison
+  was computing an answer nobody could ever read. A collided key is now
+  simply recorded (`collided.add(key)`) and left alone: **a collided key is
+  reported in `collided` and absent from `provenance`; no winner is chosen,
+  because a winner would be a guess.** Behavior is unchanged for every case
+  this suite already covered — the deletion removes dead code, it does not
+  change an output.
+
+  `buildFileFieldTablesFromView` now calls this and uses its `.provenance`;
+  a caller-supplied `fieldProvenance` still overrides per key — **except
+  (M-4, round 4, doc corrected round 5) for the SAME 28 base columns (ssm 16,
+  ic 9, form9 3): a caller sidecar keyed by the bare v1 name never reaches
+  `buildInstanceTable`'s `${base}${period}` lookup, so an override (and any
+  `currency` on it) on those 28 must be keyed the SAME way the synthesized
+  twin is (`<base>T1`, not the bare v1 name) or it silently does nothing.**
+- **`v1LegacyBaseNameOf(category, field)`** → `string | null`, in
+  `v1-migration-map.ts` — the T-suffix-stripped legacy name every REVERSIBLE
+  v1 key (`mapped`, `mapped-fanout`, or `mapped-pending-build` — corrected,
+  F1, round 2; see the Fixed section below) at a (category, field) address
+  shares (`bankBalanceT1..T6` → `bankBalance`), the bridge the two functions
+  above are built on. Distinct from `v1KeyForAddress`, which refuses this
+  exact case (there is no SINGLE v1 key once a field has six T-slot
+  siblings) — this only needs the shared BASE, which the family agrees on
+  by construction. Excludes any address discriminated by an instance key or
+  key prefix (contact type, address type, a document-intake fan-out) rather
+  than colliding unrelated legacy names into one slot; throws if two
+  DIFFERENT base names ever map to one instance-less address, which would
+  mean the map disagrees with its own T-slot convention. Null for a
+  canonical-only field the wide table genuinely never had — not, as F1
+  found, for a `mapped-fanout` field that DID have one.
+
+### Changed — currency is derived, not listed (SYS-3259)
+
+- `inferValueFormat` now asks the registry: a legacy name resolves through
+  the map to a canonical field, and `kind: money` makes it CURRENCY — 471 v1
+  keys, where the hand-written set named four. So `monthlyNetIncome`,
+  `purchasePriceOTR` and every other money field stop rendering as a plain
+  string, on BOTH paths. **This is a visible change on the flat path too**, on
+  the consumer's next core bump. The ticket's premise ("Phase 2.6 makes this
+  a deletion") held for one of the four names: `totalFinancing` is
+  `relocated` and `approvedAmount` / `monthlyInstallment` are not adapter
+  fields, so they stay as **`APPLICATION_RECORD_CURRENCY_FIELDS`** — named
+  for what they are, with a test that fails if any of them ever becomes
+  derivable. `registryMoneyLegacyNames()` is exported.
+
+`groupDetailsByCategory` needs no instance variant: the detail type is
+preserved. `buildFileFieldTablesFromInstances` itself is UNCHANGED —
+`buildFileFieldTablesFromView` (above) is the new bridge that feeds it from a
+`CanonicalView`, not a rewrite of it.
+
+### Fixed
+
+- **`processIhsDetailsFromView` threw on a category with no `instances`** —
+  the sibling instance-shaped functions already guarded `?.instances ?? []`;
+  this one didn't, and the API can serve that shape. Guarded the same way.
+- **`processIhsDetailsFromView` could emit two identical disambiguated
+  names** when three or more instances shared one (instanceKey, adapterId,
+  field): the collision-disambiguated name (`…@vendor-a`) was never itself
+  checked against `seen`, so a third producer collided with the second.
+  Numbered past the first collision until unique.
+- **`documentHashOfPath` stripped `?` but not `#`** — a DMS URL fragment
+  (`…/HASH#frag`) leaked into the returned hash, breaking the join to the
+  extraction key. Strips both now.
+
+### Fixed — an opus review of the built `dist/`, round 2 (SYS-3334)
+
+A second review — executed against the built `dist/`, not just read — found
+seven more issues on the instance-shaped path above. Fixed here, before this
+candidate ships; the finding numbers are the review's own.
+
+- **F1, CRITICAL: `mapped-fanout` was excluded from `legacyBaseNameIndex`,
+  so `incorporatedDate` silently vanished from the SSM and Form 9 tables
+  while the value sat right there in the view.** `legacyBaseNameIndex`
+  admitted only `disposition === 'mapped'`; `reverseIndex` (backing
+  `v1KeyForAddress`) already admitted `mapped` + `mapped-fanout` +
+  `mapped-pending-build`. `incorporatedDate` is `mapped-fanout` (two
+  addresses: `company-profile`/`companyIncorporationDate`,
+  `company-registration`/`companyIncorporationDate`); `instanceRowsFromView`
+  `continue`d at the null and the row lost the column. Fixed by admitting
+  the SAME disposition set `reverseIndex` uses — one shared constant,
+  `REVERSIBLE_DISPOSITIONS`, backs both bridges now, so they cannot disagree
+  again. The existing conflict guard (two different base names at one
+  address) is unchanged and still catches a fanout whose siblings disagree.
+  Corrected the three doc sites that claimed a field with no legacy base
+  name "never had a wide column" (`v1-migration-map.ts`,
+  `ihs-processing.ts`'s `instanceRowsFromView`, and this file — see above).
+
+  **The parity delta this fix measures, named rather than left implicit:**
+  with F1 fixed, exactly two catalog base columns still cannot render
+  through the view path — `financials`/`tangibleAssets` (`vocabulary-gap`,
+  no canonical field declared for it yet) and `financials`/`currentAssetCash`
+  (`needs-decision`, eight plausible financial-statement targets and no
+  exact match). A runtime test DERIVES this set from the live catalog + map
+  rather than asserting a hand-written list, so a third column losing its
+  address — or one of these two gaining one — fails the test immediately.
+
+- **The honest fix for F4: `legacySlot` and `sourceLabel` on
+  `CanonicalInstance`.** The review is right that `T{position+1}` is NOT
+  v1's numbering — see the corrected `instanceRowsFromView` bullet above and
+  the two new optional members documented there. `timePeriodOf`'s cascade
+  widened from three rules to four, with `instance.legacySlot` outranking
+  every derived rule; its own doc comment states plainly that the old
+  rule-4 fallback is an APPROXIMATION, exact only when uploads are ordered,
+  complete, and unique per slot — not "the exact numbering v1 used", which
+  is what it said before this fix.
+
+- **F3, HIGH: the provenance map's collision was silent — a re-extraction
+  could stamp the OLDER value with the NEWER run's confidence.**
+  `synthesized[\`${legacyBase}${row.timePeriod}\`]` was keyed per (base,
+  period), not per instance, so two instances of the same document (a
+  re-extraction) or two filings both `#T1` collided with a bare
+  `synthesized[key] = entry` — last write wins, no signal. Fixed by hoisting
+  the synthesis into the new, exported `fieldProvenanceFromView` (documented
+  above), which keeps the entry with the newer `observedAt` (falling back to
+  the larger `runId`, then last-in-order) and returns which keys collided.
+  `buildFileFieldTablesFromView` now calls it internally; its own tests (the
+  existing describe's test (f) included) now exercise this function rather
+  than inline logic that could drift from it.
+
+- **F5, MEDIUM: column order followed the extraction array, not the
+  period.** `instanceRowsFromView` returned rows in view order; when intake
+  order and extraction order disagreed, the table rendered descending. v1's
+  `extractTimePeriods` sorted its T-slots ascending before rendering, and
+  this path did not. Fixed: rows now sort by numeric period (`T1 < T2 <
+  …`), rows without one trailing in original order. The `rows[i] ↔
+  instances[i]` positional coupling `buildFileFieldTablesFromView` used to
+  rely on to recover a row's source instance does not survive a sort, so
+  that coupling was removed rather than preserved: the internal
+  `instanceRowPairsFromView` now carries `{ row, instance }` PAIRS instead
+  of two arrays a caller indexes in lockstep.
+
+- **F6, MEDIUM: `instanceKey: ''` (a single-cardinality instance) rendered
+  a BLANK column header.** `timePeriodOf` answered null for a row with no
+  period and an empty `instanceKey`, and `instanceColumnLabel` fell back to
+  `row.instanceKey` itself — `''`. Fixed: such a row now gets `timePeriod:
+  'T1'` when it is the ONLY instance of its category (a single-cardinality
+  category's one instance IS slot 1), else is labeled by its array position
+  (`#1`, `#2`) — never `''`.
+
+- **F7/F10: two doc-honesty fixes, named so a future reader does not have
+  to rediscover either.** `legacyOriginOf`'s comment claimed a value
+  degrading to `'derived'` used "the type's own documented meaning" —
+  true for most cases, but not for `'form-intake'`: `IhsFieldOrigin`'s own
+  doc says `derived` means "computed / no-confidence path", and a
+  form-intake value is an APPLICANT's real assertion, not a computed one.
+  `'derived'` is now documented as the least-wrong CLOSED-vocabulary answer,
+  not a correct one. Separately, `observedAt: instance.observedAt ?? ''`
+  writes a sentinel a naive date formatter chokes on
+  (`new Date('')` → `Invalid Date`, not a thrown error); rather than
+  loosening `IhsFieldProvenance.observedAt` to optional — which would ripple
+  into every consumer that already destructures it as a plain `string` —
+  the sentinel is documented at its declaration site instead, so a future
+  reader finds a decision on record rather than rediscovering a bug.
+
+- **F11: CHANGELOG claims that exceeded the code, corrected in place
+  above** — the confidence-dots claim (now conditioned on finsys-api's own
+  provenance-on-the-wire fix, which has not shipped as of 2026-08-19), the
+  "exact numbering v1 used" claim (see F4/`legacySlot`), and the "wide table
+  never had" claim (see F1). Two claims this candidate never made, ADDED
+  now because a consumer needs them:
+
+  - **`ssm_documents` / `ic_documents` / `form9` change TABLE TYPE AND CELL
+    KEY between the two paths.** v1's `buildFileFieldTables` gives these
+    groups `FileFieldTableType.KEY_VALUE` (their catalog columns carry no
+    T-suffix, so `extractTimePeriods` finds none), each item's one cell
+    keyed `'value'`. The view path's `buildInstanceTable` ALWAYS produces
+    `TIME_SERIES` — unconditionally, by its own doc comment — so these
+    render as a ONE-COLUMN `TIME_SERIES` table (`'T1'`) instead: the same
+    "one value per field" information, under a different type enum and a
+    different cell key. Inherited from `buildFileFieldTablesFromInstances`,
+    unchanged by this candidate — but a consumer swapping one call for the
+    other must know (finsys-client already special-cases `ssm_documents`
+    for exactly this reason).
+  - **Two filings both landing on `#T1`/`#T2` render FOUR columns** (`T1`,
+    `T2`, `T1 (2)`, `T2 (2)`), values intact — v1's fixed three slots held
+    one filing at a time. Nothing yet names WHICH filing a `(2)` column
+    belongs to; that is unbuilt, not broken.
+
+### Map correction — six PriorYear keys pointed at the CURRENT-year address
+
+`netProfitPriorYearT1..T3` and `totalEquityPriorYearT1..T3` were `mapped`
+(`via: wide-column-feeder`) onto `financial-statement`/`netProfit` and
+`/totalEquity` — the SAME address as `netProfitT{n}` / `totalEquityT{n}`.
+They are the Vietnam financial-statement spec's prior-year COMPARATIVE
+columns, written on the SAME row as the current-year value
+(`financialStatementSpecVN.ts` — the "total-comprehensive-income-…-(t-2)"
+column); the registry declares no prior-year field, and the VN spec is not
+period-aware. Any forward walk resolving `netProfitPriorYearT1` through the
+map — a v1-shape bridge, a provenance lookup — returned the CURRENT-year net
+profit under the PRIOR-year name, silently wrong.
+
+Fixed in the generator's hand-authored overrides
+(`scripts/build-v1-migration-map.py`'s new `PRIOR_YEAR_COMPARATIVE`, checked
+by the RAW v1 key rather than by `base`, because these six strip to the
+SAME base as their current-year siblings under the generator's own PERIOD
+regex — a base-keyed override could not single them out without also
+catching the six correctly-mapped current-year columns). Disposition
+`needs-decision`; the note on each key names the two candidate resolutions —
+(1) make the VN spec period-aware, so the comparative becomes period 2 of
+the same document; (2) declare `netProfitPriorYear`/`totalEquityPriorYear`
+as their own registry fields — an owner decides which. Map regenerated;
+`v1-migration-map.test.ts` re-passes against the new file, plus a new pinned
+assertion for these six.
+
+**Counts moved:** `mapped` 673 → 667 (the six PriorYear keys left it);
+`needs-decision` 5 → 11 (they landed there). No other disposition changed —
+diffed the regenerated map against its prior committed version to confirm.
+
+`v1LegacyBaseNameOf`'s conflict guard remains correct: `needs-decision`
+entries carry no address, so they never reach `legacyBaseNameIndex`'s loop
+at all. The `(PriorYear)?` branch of `v1-migration-map.ts`'s
+`TIME_PERIOD_SUFFIX` regex is now UNREACHABLE there — no `mapped` /
+`mapped-fanout` / `mapped-pending-build` key contains "PriorYear" anymore —
+and stays in place, documented as such: it regains a live match the moment
+either candidate resolution ships a PriorYear key back into `mapped`, and it
+stays literal-identical to the Python generator's own PERIOD constant rather
+than forking the two.
+
+### Added — the v1-shape bridge (SYS-3334)
+
+Both Phase 5 consumers read the v1 flat record in many places besides the
+four functions above: an evaluation-data factory that walks EVERY flat key
+into scoring, an SSM panel reading a dozen-plus flat keys, `jurisdictionOf`,
+`MatchingUtil.isSatisfied`, header reads (`fullName`, `status`), and several
+places reading the v1 `fieldProvenance` sidecar (keyed by v1 column name).
+If each consumer re-derives those reads from a `CanonicalView` on its own,
+the walks diverge. So core owns the bridge too.
+
+- **`flatRecordFromView(view, record?): FlatRecordFromView`** — a v1 SHAPE
+  from v2 bytes, for the migration window ONLY (C-1, round 5, stated
+  plainly): new code reads the view directly; this bridge retires with the
+  wide table. re-derived from a `CanonicalView` (+ an optional
+  `ApplicationRecordLike` for the `relocated` keys), plus the four
+  `<category>Instances` sidecars — the migration map run FORWARD (v1 key →
+  address → value), so `EvaluationDataFactory`, `MatchingUtil`,
+  `jurisdictionOf` and the SSM panel can read a view through one map instead
+  of each growing its own reverse walk. **Iterates `v1MigrationKeys()`, not
+  the view: a v1 key with no v2 value is reported, never dropped.** THE
+  CEILING (C-1): 52 of the map's 771 keys (13 `retired` + 10
+  `vocabulary-gap` + 11 `needs-decision` + 11 `mapped-pending-build` + 7
+  `structural`) can NEVER be placed, regardless of what the view or record
+  hold — so `record` holds at most 719 of 771 keys (`mapped` 667 +
+  `mapped-fanout` 1 + `relocated` 51), and only that many when every one of
+  them actually resolves. Every key the map holds ends up in exactly one
+  place:
+  - `mapped` (a plain address): the first instance carrying the field, in
+    the SAME period-sorted order the rendered file-field tables use (M-1,
+    round 5 — corrected from "view order"; see C-5 below), preferring the
+    first NON-SENTINEL value (L-2, round 5: `null`/`''`/`'Not Specified'`/
+    `false` — the same sentinels `processIhsDetailsFromView` skips before a
+    reviewer ever sees them; if every instance carries only a sentinel, the
+    first is placed anyway). Flags the key in `ambiguous: string[]` ONLY
+    when a candidate value genuinely DIFFERS (L-1, round 5 — corrected from
+    "more than one instance carries the field": two attestors reporting the
+    identical fact, one as a v1 decimal string and one as a v2 typed number,
+    are not a disagreement, and comparing them with a strict `!==` buried
+    the keys that really do disagree in noise).
+  - `mapped` with `instanceKey`: the one instance naming it.
+  - `mapped` with `instanceKeyPrefix` (the document-intake pointer columns):
+    the first instance whose key EQUALS the prefix or continues it at a `#`
+    boundary (L-3, round 5 — corrected from a bare `startsWith`, which let a
+    LONGER sibling prefix steal the match, e.g. `bankStatements` matching
+    `bankStatementsExtraordinary#1`) — v1 held one path per pointer column,
+    so first-in-order is the parity choice, and (unlike the plain-address
+    collision above) never flagged, because it is the STATED contract rather
+    than an accident.
+  - A T-slot family key (`bankBalanceT1`, …): the base name every sibling
+    shares (`v1LegacyBaseNameOf`, not a second regex-strip) at the row whose
+    `timePeriod` equals the key's own slot (`instanceRowsFromView` — the SAME
+    rows and the same `timePeriodOf` cascade the rendered file-field tables
+    use, so this can't silently disagree with what a reader sees there) —
+    **and now (C-5, round 5) the SAME claim holds for the WHOLE function,
+    not only this branch: M-1 (above) fixed the plain-address branch to read
+    this identical resolved order too, so "one derivation, read by every
+    caller" is accurate for `flatRecordFromView` as a whole, not merely
+    aspirational for the T-slot path alone.** More than one row sharing the
+    slot places the first (the rule is unchanged) AND flags `ambiguous`
+    (M-2, round 5 — a T-slot key names a SLOT, not an INSTANCE, so
+    `buildInstanceTable` can render two columns under one period header
+    while this can only ever place one value; before this fix the second row
+    was silently dropped with no signal). Absent → `unplaced`, reason ONE OF
+    THREE DISTINCT causes (L-5, round 5 — corrected from one fixed
+    `'no T{n} instance'` string for all three): `'no legacy base name'`
+    (defensive; unreachable via `v1MigrationKeys()` today — every T-slot
+    `mapped` key's own address always contributes its base), `'no T{n} row'`,
+    or `'T{n} row lacks <base>'`.
+  - `mapped-fanout` (`incorporatedDate`, the map's only member today): the
+    first address (the map's own address order) that has a value; a second
+    address with a DIFFERENT value also flags `ambiguous`.
+  - `relocated`: the three top-level specials (`ihsId` <- `applicationId`,
+    `status` <- `status`, `statusDescription` <- `statusDescription`) read
+    straight off `record`; every other relocated key walks `record.parties`
+    -> `record.facility` -> `record.system` BY PRESENCE, not nullishness
+    (H-2, round 5, HIGH — corrected from a `??` chain: `parties.jurisdiction:
+    null` beside `facility.jurisdiction: 'X'` used to silently return `'X'`
+    — the WRONG bucket — because `??` treats an explicit `null` as "try the
+    next bucket", and it did so inconsistently: a `null` in the LAST bucket
+    still got placed, because nothing was left to fall through to). **A
+    bucket's explicit `null` is placed as `null` (C-6, round 5, stated
+    plainly) — v1 served null for an empty relocated column, and that is a
+    real assertion, never "try the next bucket".** `record` undefined, or
+    the key present in NONE of the buckets, → `unplaced`, reason now NAMES
+    THE SURFACE (M-3, round 5 — corrected from a bare `'relocated: not on
+    the application record'` string that read identically whether the
+    record genuinely lacked the key or a caller simply forgot a bucket):
+    `` `relocated (surface: ${entry.surface}): not on the application
+    record` `` — 48 of the 51 relocated keys carry
+    `GET /lender/applications/:ihsId`, 3 (`consentCrossSelling`,
+    `consentObtainInfoFromCtos`, `disclosureOfInformation`) carry the
+    consent engine. A `Date` instance in ANY relocated bucket normalizes to
+    its ISO string (L-6, round 5) — the ONE normalization this function
+    performs on a relocated value, shape not value coercion: v1 served every
+    relocated timestamp (`createdAt`, `updatedAt`, …) as an ISO string, and a
+    caller assembling `ApplicationRecordLike` from an ORM row hands back
+    `Date` objects instead.
+  - `retired`, `vocabulary-gap`, `needs-decision`, `mapped-pending-build`,
+    `structural`: NEVER placed, regardless of what the view holds —
+    `unplaced` with the map entry's own `note`/`reason`. `structural` covers
+    seven entries: the four instance sidecars (below) plus `documentMetadata`
+    (v2 carries that as canonical `document-intake` fields), `fieldProvenance`
+    (superseded by the per-value envelope — see `fieldProvenanceFromView`),
+    and `invoiceInstances` (no invoice category exists in the registry yet).
+  - Value coercion: NONE. Whatever the envelope (or `InstanceRow`) holds is
+    placed verbatim; the consumer's own `coerceFieldValue` already handles a
+    v1 decimal-as-string next to a v2 typed number.
+  - The overlay projection: nothing to do — an overlaid envelope's `value`
+    already IS the overlaid one, exactly as v1's own details-merge behaved.
+
+  `unplaced: { key, disposition, reason }[]` names every v1 key this call
+  could NOT place, one entry per key, never silent — a completeness pin
+  (`unplaced.length + Object.keys(record).length === v1MigrationKeys().length`)
+  holds for any view/record pair, so a new disposition added to the map
+  cannot fall through unreported. `instances` carries the four `structural`
+  sidecars (`financialStatementInstances`, `bankStatementInstances`,
+  `epfStatementInstances`, `payslipInstances`) as `instanceRowsFromView`
+  output — v1 shipped these as sibling arrays beside the flat record, never
+  as flat keys, and this function keeps that shape rather than flattening
+  them into `record`. `ApplicationRecordLike`'s own doc (round 5, L-6) now
+  states the record contract plainly: WHICH key lives in WHICH bucket is the
+  caller's decision, not this package's — `system` in practice carries the
+  administrative/timestamp keys, `facility` the financing terms, `parties`
+  borrower/lender identity.
+
+  **L-4 (round 5): a call-local cache removes a rebuild `flatRecordFromView`
+  used to pay 504 times per call.** M-1 (above) made the plain-address
+  branch call `instanceRowPairsFromView` per key, same as the T-slot branch
+  already did — and most keys share a category with many siblings
+  (`finxtract-bank-statement` alone backs 8 T-slot base columns × up to 6
+  periods). A `Map<AdapterCategory, InstanceRowPair[]>`, built once per
+  `flatRecordFromView` call and shared by both lookups, turns that into one
+  rebuild per category actually visited. Measured on a representative
+  fixture (6 document categories, 500 calls): ~1.04ms/call uncached, ~0.19ms/call
+  cached — roughly 5.6x.
+
+### Fixed — an opus review of the built `dist/`, round 4 (SYS-3334)
+
+A third review, over the round-2-fixed `fieldProvenanceFromView` /
+`instanceRowsFromView` / `buildFileFieldTablesFromView` — nine more findings.
+H1 and H2 are documented in place above (the `buildFileFieldTablesFromView`
+and `fieldProvenanceFromView` bullets); the rest are here. Finding numbers
+are the review's own.
+
+- **M1: `fieldProvenanceFromView` recomputed a row's period with a second
+  `timePeriodOf` call, independent of the resolved row — so F6's rescue (a
+  sole `instanceKey: ''` instance position-falling-back to `'T1'`) never
+  reached it.** `instanceRowsFromView` (via `instanceRowPairsFromView`)
+  already resolves the FULL four-rule cascade including F6's rescue onto
+  `row.timePeriod`; `fieldProvenanceFromView` threw that answer away and
+  asked `timePeriodOf` again with the RAW instance, which does not know
+  about F6 and answered `null` for exactly the row F6 exists to save — so a
+  sole rescued instance's column could render with a `'T1'` header and never
+  a confidence dot. Fixed by consuming `instanceRowPairsFromView`'s pairs
+  directly, making the `.instance` member load-bearing for the first time
+  (it was dead before this fix — see L2 next). One derivation of a row's
+  period, read by both the rendered row and its provenance.
+
+- **L2: the `InstanceRowPair` doc block described a coupling that no longer
+  existed.** It said `buildFileFieldTablesFromView` was the reason pairs
+  (not two arrays) exist — that function only ever calls `instanceRowsFromView`,
+  which keeps `.row` and discards `.instance`; `fieldProvenanceFromView`
+  didn't consume pairs at all yet. Corrected to name the ACTUAL reason (F5's
+  sort breaking a `rows[i] ↔ instances[i]` positional coupling) and the
+  actual consumer M1 makes of `.instance`.
+
+- **M4: `instance.legacySlot` was consumed verbatim, with no shape check.**
+  A producer emitting `'1'`, `'2026-06'`, or `'T1 '` (a stray trailing
+  character) would put that string directly into a rendered column header
+  and into a provenance key (`bankBalance2026-06`, say). finsys-api has not
+  shipped this member on any real instance as of 2026-08-19 (see
+  `CanonicalInstance.legacySlot`'s doc), which is what makes this the
+  cheapest moment to pin the contract, before a real producer has a chance
+  to violate it. Fixed: `timePeriodOf` now accepts only `/^T[1-9]\d*$/` —
+  REJECTED outright when it does not match, never trimmed, so a producer bug
+  is visible as a DIFFERENT (derived) period rather than accepted verbatim.
+  The rule is stated on `CanonicalInstance.legacySlot`'s own doc
+  (`canonical-view.ts`), not only in `ihs-processing.ts`.
+
+- **L1: an envelope carrying ONLY `originalValue` fabricated `origin:
+  'derived'`.** The no-entry guard admitted an envelope asserting none of
+  `confidence`/`origin`/`originalValue`, but let `originalValue` alone
+  through the gate — then stamped it `origin: legacyOriginOf(undefined)` =
+  `'derived'`, the exact synthesized-from-nothing shape this function's own
+  doc says it never emits. Fixed: an entry is now synthesized only when
+  `confidence` or `origin` is present; `originalValue` is still carried onto
+  such an entry, never a reason to create one by itself.
+
+- **L3: `CanonicalInstance.observedAt` had no stated format**, despite
+  `fieldProvenanceFromView`'s collision resolution (`challengerWins`)
+  comparing it as a plain string. Documented on the member itself
+  (`canonical-view.ts`): ISO-8601, UTC `Z` offset — the format that makes
+  string comparison equal chronological comparison. No code change; the
+  behavior was already correct, only unstated.
+
+- **M2: the flat-vs-view parity test's item-list equality was a fixture
+  artifact, and its own comment gave the wrong reason.** The fixture
+  populated all 8 bank-statement base columns on both instances, which is
+  the ONLY reason `viewTable.items` and `flatTable.items` could be asserted
+  equal — `buildInstanceTable` DROPS a base column with no value in ANY
+  instance (`if (!hasAny) continue`), while v1's `buildTableForGroup`
+  (`TIME_SERIES` branch) has no such guard and renders one item per catalog
+  base column regardless of data. Sparsened to 3 of 8 columns; the test now
+  asserts what is actually true — view items are a SUBSET of flat items (by
+  displayName), values equal by position on the ones both sides have — and
+  states the real difference: **a partial extraction renders only the
+  fields that came back — v1 rendered every catalog column with blank
+  cells; consumers must not read a shorter view table as missing data**
+  (inherited from `buildFileFieldTablesFromInstances`, unchanged by this
+  candidate — named here because the old fixture's full population hid it).
+
+- **M3: the derived-unreachable-set test covered one hand-picked document
+  group (`financialStatements`) rather than all seven.** A base column
+  losing its address in any OTHER group was invisible to the suite. Widened
+  to loop `getDocumentTypeGroups()` and assert the whole map — six empty
+  sets plus `financials`'s known two (`currentAssetCash`, `tangibleAssets`)
+  — so a regression in any group goes red, not only in the one this test
+  happened to check.
+
+- **L5: four historical Jira IDs (`SYS-3249`, `SYS-3191`, `SYS-2842`,
+  `SYS-2827`) had crept into NEW comment lines** across this candidate's
+  three prior rounds — reworded to prose; only `SYS-3334` (this ticket) and
+  `SYS-3421` (active on this same train — see the envelope's `attestations`/
+  `resolvedBy` section above) remain in code comments.
+
+### Added — `CanonicalInstance.periodPosition?` (SYS-3334)
+
+- The 1-based period COORDINATE of a period-aware document instance (financial
+  statements: 1 = the document's own current fiscal year, 2 = its prior
+  comparative), when the source row stores one — distinct from `legacySlot`:
+  a year-2 document's own current-year column has position 1 and NO slot (v1
+  discarded it). `instanceRowsFromView` copies it onto `InstanceRow.periodPosition`
+  verbatim, because v1's sidecar rows carried it and the finsys-client resolver
+  selects "the true current-year row" by it — without this the view path
+  silently reverted a fixed scoring bug (the T2-overlap projection standing in
+  for the current year). Absent when the wire has none. Additive.
+
+### Fixed — an executed check of the frozen candidate, round 5 addendum (SYS-3334)
+
+- `fieldProvenanceFromView`: the mapped-fanout carve-out (two attestors of one v1
+  key are not a collision) now applies ONLY when the two attestors AGREE on the
+  value. When SSM and Form 9 disagree on `incorporatedDate`, each table keeps its
+  own value and NEITHER carries a confidence — the key is reported in `collided`.
+  Without this, the surviving entry paired one table's value with the OTHER
+  attestor's confidence, source and run: a wrong-but-plausible dot. Pinned.
+
+### Fixed — an opus review of the built `dist/`, round 5 (SYS-3334)
+
+A fourth review, executing the tree rather than only reading it — ten more
+findings on `fieldProvenanceFromView` / `flatRecordFromView` /
+`valueAtTSlot` / `valueAtPlainAddress` / `valueAtInstanceKeyPrefix`. H-1,
+H-2, M-1 through M-5, and the caller-override correction (M-4) are
+documented in place above, next to the functions and claims they correct
+(search this file for "round 5"); this section is the index. Finding
+numbers are the review's own.
+
+- **H-2 (HIGH): the `relocated` bucket walk used `??`, so an explicit `null`
+  in one bucket fell through to a LATER bucket that also carried the key —
+  the WRONG bucket's value.** Fixed to walk by presence
+  (`Object.prototype.hasOwnProperty`), documented above next to the
+  `relocated` bullet.
+- **M-1: `valueAtPlainAddress` read the view's raw extraction-array order,
+  not F5's period-sorted order** — a category whose upload order disagreed
+  with its period order could place the flat scalar from a DIFFERENT
+  document than the one the rendered table's own T1 column shows for the
+  same field. Paired with **L-4**: a call-local cache of
+  `instanceRowPairsFromView` (~5.6x on a representative fixture — see
+  above), since the fix makes the plain-address branch call it per key too.
+- **H-1 (HIGH): a `mapped-fanout` key's two attestors read as a collision.**
+  `incorporatedDate`'s two addresses (SSM, Form 9) landed on the SAME
+  provenance key; the collision logic could not tell that apart from two
+  instances of ONE category on one slot, so SSM+Form9 present together
+  dropped BOTH tables' confidence dot that SSM alone rendered fine. Fixed —
+  documented above next to `fieldProvenanceFromView`'s H1/H2 bullets.
+- **M-2: two rows sharing a T-slot silently picked the first with no
+  signal.** A T-slot key names a SLOT, not an INSTANCE — `buildInstanceTable`
+  can render two columns under one period header while the flat scalar can
+  only ever hold one. Now flags `ambiguous`, same rule unchanged (place the
+  first).
+- **L-1: `ambiguous` fired on mere instance count, not on actual
+  disagreement** — two SSM uploads reporting the identical `companyName`
+  flagged as ambiguous. Fixed with a shared `candidateValuesAgree` numish/
+  String compare, used identically by the plain-address pick and the
+  `mapped-fanout` disagreement check.
+- **L-2: the plain-address pick could place a sentinel (`''`,
+  `'Not Specified'`, `null`, `false`) while a LATER instance held the real
+  value** — the detail panel (reading the same view) would show the real
+  name while a scoring consumer of `record` read the sentinel. Fixed to
+  prefer the first NON-sentinel instance (`isSentinelValue`, shared with
+  `processIhsDetailsFromView`'s own rule).
+- **L-3: `valueAtInstanceKeyPrefix` used a bare `startsWith`**, so a longer
+  sibling doc type's prefix (`bankStatementsExtraordinary`) could steal the
+  match from a shorter one (`bankStatements`) whenever it sorted first.
+  Fixed to require an exact match or a `#`-delimited continuation.
+- **L-5: the T-slot `unplaced` reason was one fixed string
+  (`'no T{n} instance'`) for three distinct causes.** Now distinguishes
+  `'no legacy base name'` (defensive, unreachable via `v1MigrationKeys()`
+  today), `'no T{n} row'`, and `'T{n} row lacks <base>'`.
+- **L-6: a relocated `Date` value (an ORM row's `createdAt`/`updatedAt`)
+  had no normalization** — v1 served every relocated timestamp as an ISO
+  string. `ApplicationRecordLike`'s own doc now states the record contract
+  (which bucket carries which keys) and the one normalization this function
+  performs (`normalizeRelocatedValue`: shape, not value coercion).
+- **M-5: the F3-era temporal tie-break (`challengerWins`, `winnerMeta`) was
+  dead code.** H2 (round 4) unconditionally deletes a collided key's
+  `provenance` entry regardless of which write "won", so the comparison's
+  result was never observable. Deleted; a collision is now just recorded and
+  left alone. No behavior change — every case the suite already covered
+  still passes identically.
+- **M-3: the relocated `unplaced` reason conflated "the record genuinely
+  does not carry this" with "the caller forgot a bucket".** Now names the
+  entry's `surface` (48 of 51 relocated keys are the application record's
+  own `GET` route; 3 are the consent engine).
+
+At the end of this round: `git diff -U0 -- . ':(exclude)CHANGELOG.md' | grep
+'^+' | grep -oE 'SYS-[0-9]+' | sort | uniq -c` shows only `SYS-3334` and
+`SYS-3421` in new code comments, same discipline L5 (round 4) established.
+
 ## [8.0.0] - 2026-08-18
 
 **Breaking, in exactly one way, and it is a fix.** Everything else in this

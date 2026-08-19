@@ -353,12 +353,73 @@ OBLIGATIONS = {
     'otherFinancingMonthlyInstallment': 'otherFinancing',
 }
 
+# SYS-3334 (round 2, the map correction). These six strip, under PERIOD, to
+# the SAME base as their current-year sibling ("netProfitPriorYearT1" ->
+# "netProfit", identical to what "netProfitT1" strips to) -- so a base-keyed
+# override (SWEEP or HAND, both looked up by `base` below) cannot single
+# them out without ALSO catching the six correctly-mapped current-year
+# columns that share that base. Keyed by the RAW key instead, and checked
+# before any base-keyed dict, for exactly that reason.
+#
+# THE FINDING. financialStatementSpecVN.ts writes the prior-year comparative
+# on the SAME row as the current-year value (the "-(t-2)" column) — a
+# Vietnam-spec artifact, not a second document — and the registry declares
+# no PriorYear field for either metric: the VN spec is not period-aware. So
+# the feeder-branch resolution these six used to fall through to (same as
+# their current-year siblings, because `base` cannot tell them apart) named
+# the CURRENT-year address for a PRIOR-year key. Any forward walk through the
+# map — a v1-shape bridge, a provenance lookup — that resolved
+# netProfitPriorYearT1 was reading netProfitT1's value under the wrong name,
+# silently. `needs-decision` carries no address at all: a wrong answer is
+# worse than an absent one, and this map exists to prevent exactly that.
+PRIOR_YEAR_COMPARATIVE = {
+    'netProfitPriorYearT1': ('needs-decision',
+        'the Vietnam financial-statement spec writes this PRIOR-YEAR comparative on the SAME row as '
+        'netProfitT1 (financialStatementSpecVN.ts, the total-comprehensive-income "-(t-2)" column) -- not '
+        'a second document, a second column on the first one. The registry declares no PriorYear field '
+        'for netProfit and the VN spec is not period-aware, so there is no address to resolve to yet. TWO '
+        'candidate resolutions, an owner decides: (1) make the VN spec period-aware, so the comparative '
+        'becomes period 2 of the SAME document and resolves like any other T-slot; or (2) declare a '
+        'netProfitPriorYear registry field. Until one ships, do not resolve this through the feeder '
+        'branch that netProfitT1 uses -- that silently returns the CURRENT-year value under this '
+        'PRIOR-year name, which is what this override exists to stop.'),
+    'netProfitPriorYearT2': ('needs-decision',
+        'as netProfitPriorYearT1 -- the same SAME-row VN comparative, one T-slot over. See that entry for '
+        'the full finding; the two candidate resolutions are identical: make the VN spec period-aware, or '
+        'declare netProfitPriorYear as its own registry field.'),
+    'netProfitPriorYearT3': ('needs-decision',
+        'as netProfitPriorYearT1 -- the same SAME-row VN comparative, one T-slot over. See that entry for '
+        'the full finding; the two candidate resolutions are identical: make the VN spec period-aware, or '
+        'declare netProfitPriorYear as its own registry field.'),
+    'totalEquityPriorYearT1': ('needs-decision',
+        'the Vietnam financial-statement spec writes this PRIOR-YEAR comparative on the SAME row as '
+        'totalEquityT1 (financialStatementSpecVN.ts, the same "-(t-2)" comparative-column pattern as '
+        'netProfitPriorYear) -- not a second document, a second column on the first one. The registry '
+        'declares no PriorYear field for totalEquity and the VN spec is not period-aware, so there is no '
+        'address to resolve to yet. TWO candidate resolutions, an owner decides: (1) make the VN spec '
+        'period-aware, so the comparative becomes period 2 of the SAME document and resolves like any '
+        'other T-slot; or (2) declare a totalEquityPriorYear registry field. Until one ships, do not '
+        'resolve this through the feeder branch that totalEquityT1 uses -- that silently returns the '
+        'CURRENT-year value under this PRIOR-year name, which is what this override exists to stop.'),
+    'totalEquityPriorYearT2': ('needs-decision',
+        'as totalEquityPriorYearT1 -- the same SAME-row VN comparative, one T-slot over. See that entry '
+        'for the full finding; the two candidate resolutions are identical: make the VN spec '
+        'period-aware, or declare totalEquityPriorYear as its own registry field.'),
+    'totalEquityPriorYearT3': ('needs-decision',
+        'as totalEquityPriorYearT1 -- the same SAME-row VN comparative, one T-slot over. See that entry '
+        'for the full finding; the two candidate resolutions are identical: make the VN spec '
+        'period-aware, or declare totalEquityPriorYear as its own registry field.'),
+}
+
 entries, unresolved, rejected, ambiguous = {}, [], [], []
 for key in sorted(v1.keys()):
     base = PERIOD.sub('', key)
     try:
         if key in STRUCTURAL:
             entries[key] = {'disposition': 'structural', 'note': STRUCTURAL[key]}
+        elif key in PRIOR_YEAR_COMPARATIVE:
+            disp, note = PRIOR_YEAR_COMPARATIVE[key]
+            entries[key] = {'disposition': disp, 'via': 'hand-authored', 'note': note}
         elif base in SWEEP:
             disp, reason = SWEEP[base]
             e = {'disposition': disp, 'reason': reason, 'via': 'consumer-sweep'}

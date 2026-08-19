@@ -3119,28 +3119,19 @@
       "via": "wide-column-feeder"
     },
     "netProfitPriorYearT1": {
-      "address": {
-        "category": "financial-statement",
-        "field": "netProfit"
-      },
-      "disposition": "mapped",
-      "via": "wide-column-feeder"
+      "disposition": "needs-decision",
+      "note": "the Vietnam financial-statement spec writes this PRIOR-YEAR comparative on the SAME row as netProfitT1 (financialStatementSpecVN.ts, the total-comprehensive-income \"-(t-2)\" column) -- not a second document, a second column on the first one. The registry declares no PriorYear field for netProfit and the VN spec is not period-aware, so there is no address to resolve to yet. TWO candidate resolutions, an owner decides: (1) make the VN spec period-aware, so the comparative becomes period 2 of the SAME document and resolves like any other T-slot; or (2) declare a netProfitPriorYear registry field. Until one ships, do not resolve this through the feeder branch that netProfitT1 uses -- that silently returns the CURRENT-year value under this PRIOR-year name, which is what this override exists to stop.",
+      "via": "hand-authored"
     },
     "netProfitPriorYearT2": {
-      "address": {
-        "category": "financial-statement",
-        "field": "netProfit"
-      },
-      "disposition": "mapped",
-      "via": "wide-column-feeder"
+      "disposition": "needs-decision",
+      "note": "as netProfitPriorYearT1 -- the same SAME-row VN comparative, one T-slot over. See that entry for the full finding; the two candidate resolutions are identical: make the VN spec period-aware, or declare netProfitPriorYear as its own registry field.",
+      "via": "hand-authored"
     },
     "netProfitPriorYearT3": {
-      "address": {
-        "category": "financial-statement",
-        "field": "netProfit"
-      },
-      "disposition": "mapped",
-      "via": "wide-column-feeder"
+      "disposition": "needs-decision",
+      "note": "as netProfitPriorYearT1 -- the same SAME-row VN comparative, one T-slot over. See that entry for the full finding; the two candidate resolutions are identical: make the VN spec period-aware, or declare netProfitPriorYear as its own registry field.",
+      "via": "hand-authored"
     },
     "netProfitT1": {
       "address": {
@@ -5805,28 +5796,19 @@
       "via": "wide-column-feeder"
     },
     "totalEquityPriorYearT1": {
-      "address": {
-        "category": "financial-statement",
-        "field": "totalEquity"
-      },
-      "disposition": "mapped",
-      "via": "wide-column-feeder"
+      "disposition": "needs-decision",
+      "note": "the Vietnam financial-statement spec writes this PRIOR-YEAR comparative on the SAME row as totalEquityT1 (financialStatementSpecVN.ts, the same \"-(t-2)\" comparative-column pattern as netProfitPriorYear) -- not a second document, a second column on the first one. The registry declares no PriorYear field for totalEquity and the VN spec is not period-aware, so there is no address to resolve to yet. TWO candidate resolutions, an owner decides: (1) make the VN spec period-aware, so the comparative becomes period 2 of the SAME document and resolves like any other T-slot; or (2) declare a totalEquityPriorYear registry field. Until one ships, do not resolve this through the feeder branch that totalEquityT1 uses -- that silently returns the CURRENT-year value under this PRIOR-year name, which is what this override exists to stop.",
+      "via": "hand-authored"
     },
     "totalEquityPriorYearT2": {
-      "address": {
-        "category": "financial-statement",
-        "field": "totalEquity"
-      },
-      "disposition": "mapped",
-      "via": "wide-column-feeder"
+      "disposition": "needs-decision",
+      "note": "as totalEquityPriorYearT1 -- the same SAME-row VN comparative, one T-slot over. See that entry for the full finding; the two candidate resolutions are identical: make the VN spec period-aware, or declare totalEquityPriorYear as its own registry field.",
+      "via": "hand-authored"
     },
     "totalEquityPriorYearT3": {
-      "address": {
-        "category": "financial-statement",
-        "field": "totalEquity"
-      },
-      "disposition": "mapped",
-      "via": "wide-column-feeder"
+      "disposition": "needs-decision",
+      "note": "as totalEquityPriorYearT1 -- the same SAME-row VN comparative, one T-slot over. See that entry for the full finding; the two candidate resolutions are identical: make the VN spec period-aware, or declare totalEquityPriorYear as its own registry field.",
+      "via": "hand-authored"
     },
     "totalEquityT1": {
       "address": {

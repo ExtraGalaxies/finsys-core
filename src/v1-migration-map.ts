@@ -212,3 +212,288 @@ export function v1KeysByDisposition(d: V1Disposition): ReadonlyArray<string> {
   assertValidated();
   return Object.keys(map.entries).filter((k) => map.entries[k]!.disposition === d);
 }
+
+// ── Reverse lookup (SYS-3334) ────────────────────────────────────────
+
+/**
+ * SYS-3334 F1 (round 2). The dispositions BOTH reverse bridges — `reverseIndex`
+ * (backing `v1KeyForAddress`) and `legacyBaseNameIndex` (backing
+ * `v1LegacyBaseNameOf`) — admit as carrying a real destination. Before this
+ * constant existed the two were two independently-typed disposition checks
+ * that happened to agree; they silently stopped agreeing the moment
+ * `legacyBaseNameIndex` was written admitting only `'mapped'` while
+ * `reverseIndex` already admitted `mapped-fanout` and `mapped-pending-build`
+ * too. The gap was `incorporatedDate` (`mapped-fanout`, SYS-2722's two
+ * attestors, `company-profile`/`company-registration`): `reverseIndex`
+ * answered it, `legacyBaseNameIndex` answered null, and every SSM / Form 9
+ * view-path row silently lost the "Incorporated Date" column despite the
+ * value being right there in the view. One constant now backs both bridges
+ * so they cannot disagree again — see `legacyBaseNameIndex`'s own comment
+ * for why `mapped-pending-build` belongs here too (a label is right whether
+ * or not the address is written yet).
+ */
+const REVERSIBLE_DISPOSITIONS: ReadonlySet<V1Disposition> = new Set<V1Disposition>([
+  'mapped',
+  'mapped-fanout',
+  'mapped-pending-build',
+]);
+
+/**
+ * The reverse of `v1Addresses`: given a place on the canonical plane, the v1
+ * key that used to hold it — or null.
+ *
+ * WHY IT EXISTS. The instance-shaped detail processor has to render a v2 view
+ * with the labels and groupings the v1 panel had, or the flag flip on the
+ * consumer is a redesign rather than a migration. Both label and grouping are
+ * keyed by the LEGACY column name (the display-name catalogue and the form
+ * spec), so the processor needs canonical → legacy. This map is the only
+ * complete statement of that relationship: 771 keys, generated and proven.
+ *
+ * WHEN IT ANSWERS NULL, AND WHY THAT IS THE RIGHT ANSWER.
+ *   - No v1 key ever held this address: a canonical-only field (the alt-data
+ *     categories, or a registry field newer than the wide table). The caller
+ *     falls back to the registry's own names.
+ *   - More than one v1 key maps here with no instanceKey to tell them apart:
+ *     the T-slot families (bankBalanceT1..T6 → closingBalance). Those are
+ *     document-extraction fields, rendered by the file-field tables and never
+ *     by the detail panel, so the ambiguity never reaches a caller that needs
+ *     it resolved. Returning null rather than a guess is deliberate: a guess
+ *     would label six documents' balances "T1".
+ *
+ * `instanceKey` matters: `contactValue` at `email` was `email`, at `mobile` was
+ * `mobilePhoneNo`. An address without one matches only entries without one.
+ */
+export function v1KeyForAddress(
+  category: string,
+  field: string,
+  instanceKey?: string,
+): string | null {
+  const idx = reverseIndex();
+  const hits = idx.get(reverseKey(category, field, instanceKey));
+  return hits && hits.length === 1 ? hits[0]! : null;
+}
+
+function reverseKey(category: string, field: string, instanceKey?: string): string {
+  // NUL cannot appear in a category id, field name or instance key.
+  return `${category}\u0000${field}\u0000${instanceKey ?? ''}`;
+}
+
+let reverse: Map<string, string[]> | null = null;
+let keyedAddresses: Set<string> | null = null;
+
+/**
+ * Whether the map holds ANY instance-keyed entry for (category, field). When it
+ * does not, an instance key carries no discriminating power for that field and
+ * a keyed lookup that misses may fall back to the keyless entry. When it does
+ * (`contactValue`: email vs mobile), no such fallback is offered.
+ */
+export function v1AddressHasKeyedEntries(category: string, field: string): boolean {
+  reverseIndex();
+  return keyedAddresses!.has(`${category}\u0000${field}`);
+}
+
+function reverseIndex(): Map<string, string[]> {
+  if (reverse) return reverse;
+  assertValidated();
+  const idx = new Map<string, string[]>();
+  const keyed = new Set<string>();
+  for (const [key, entry] of Object.entries(map.entries)) {
+    // The reverse question is "what LABEL did this address carry", and the
+    // label is right whether or not anything writes the address yet — so
+    // `mapped-pending-build` is admitted here (the forward lookup is where a
+    // not-yet-written destination is a wrong answer). Eleven addresses; the
+    // day they are written, they keep their v1 names instead of falling into
+    // General. `REVERSIBLE_DISPOSITIONS` — this bridge's disposition set and
+    // `legacyBaseNameIndex`'s must never diverge again; see that constant's doc.
+    if (!REVERSIBLE_DISPOSITIONS.has(entry.disposition)) continue;
+    for (const a of entry.addresses ?? (entry.address ? [entry.address] : [])) {
+      // A prefix address is a fan-out over N instances (document pointers);
+      // no single instance corresponds to the v1 key, so it is not reversible.
+      if (a.instanceKeyPrefix) continue;
+      const k = reverseKey(a.category, a.field, a.instanceKey);
+      const list = idx.get(k);
+      if (list) list.push(key);
+      else idx.set(k, [key]);
+      if (a.instanceKey !== undefined) keyed.add(`${a.category}\u0000${a.field}`);
+    }
+  }
+  reverse = idx;
+  keyedAddresses = keyed;
+  return idx;
+}
+
+// ── Legacy base-name bridge (SYS-3334) ──────────────────────────────
+
+/**
+ * The same T-slot suffix regex `scripts/build-v1-migration-map.py`'s own
+ * PERIOD constant uses.
+ *
+ * The `(PriorYear)?` branch is UNREACHABLE here as of the map correction
+ * (SYS-3334 round 2): the six `…PriorYearT{n}` keys (`netProfitPriorYearT1`,
+ * …, `totalEquityPriorYearT3`) are now `needs-decision` — see
+ * `scripts/build-v1-migration-map.py`'s `PRIOR_YEAR_COMPARATIVE` override and
+ * this package's CHANGELOG — so no `mapped` / `mapped-fanout` /
+ * `mapped-pending-build` key contains "PriorYear" for this regex to match
+ * against. It stays literal-identical to the Python generator's PERIOD
+ * constant rather than forking the two (the doc line above is the whole
+ * point: one regex, read the same way in both places), and it regains a live
+ * match the moment either candidate resolution ships a PriorYear key back
+ * into `mapped`.
+ */
+const TIME_PERIOD_SUFFIX = /(PriorYear)?T[1-9]$/;
+
+function legacyBaseNameKey(category: string, field: string): string {
+  return category + ' ' + field;
+}
+
+let legacyBaseNames: Map<string, string> | null = null;
+
+/**
+ * Builds the (category, field) -> legacy BASE name index, lazily and once
+ * (see `assertValidated`'s reasoning for why lazy: importing this module must
+ * not throw for a consumer that never reads the map).
+ *
+ * SYS-3334 F1 (round 2 — CRITICAL, fixed here). This used to admit ONLY
+ * `mapped` entries — a narrower set than `reverseIndex`'s (which already
+ * admitted `mapped-fanout` and `mapped-pending-build`), and the two bridges
+ * silently disagreeing is exactly the failure `REVERSIBLE_DISPOSITIONS`
+ * exists to prevent (see its doc). The concrete casualty: `incorporatedDate`
+ * is `mapped-fanout` (`company-profile`/`companyIncorporationDate` AND
+ * `company-registration`/`companyIncorporationDate` — SYS-2722's two
+ * attestors), so this index returned null for both addresses,
+ * `instanceRowsFromView` `continue`d at the null, and the SSM / Form 9
+ * instance rows silently lost the "Incorporated Date" column while the value
+ * sat right there in the view. Now uses the SAME disposition set
+ * `reverseIndex` does, so the two bridges cannot diverge again.
+ *
+ * A `mapped-fanout` entry contributes EVERY one of its `addresses`, not just
+ * one — a fanout is two attestors of the SAME v1 key, and both attestors'
+ * (category, field) pairs shared that key's base name in v1 (the wide column
+ * held one value; either extractor could have written it).
+ *
+ * Restricted to addresses that carry neither `instanceKey` nor
+ * `instanceKeyPrefix`. That is a DIFFERENT multiplicity from the one this
+ * function bridges: several DISTINCT v1 keys landing on one (category, field)
+ * because an INSTANCE tells them apart — `bankStatements`/`consentForm`/…
+ * all onto `document-intake`/`pathInDms` (an instanceKeyPrefix each), or
+ * `email`/`mobile`/`office`/`emergency` onto `applicant-contact`/
+ * `contactValue` (an instanceKey each). Stripping a T-suffix from THOSE keys
+ * would collide unrelated legacy names into one slot — `bankStatements` and
+ * `consentForm` share no T-suffix to strip, so the naive index would record
+ * two different "base names" for one address and throw on a case that is not
+ * a defect at all. Excluding any address with an instance discriminator
+ * leaves exactly the T-slot families (`bankBalanceT1..T6`, `revenueT1..T3`,
+ * `incorporatedDate`'s two-attestor fanout, …) — verified empirically against
+ * the live (post-F1, post-map-correction) map: 616 instance-less addresses
+ * across `mapped` / `mapped-fanout` / `mapped-pending-build`, converging to
+ * 252 distinct (category, field) bases, 0 conflicts — the property this
+ * function relies on, and the conflict guard below is what would catch a
+ * regression of it.
+ */
+function legacyBaseNameIndex(): Map<string, string> {
+  if (legacyBaseNames) return legacyBaseNames;
+  assertValidated();
+  const idx = new Map<string, string>();
+  for (const [key, entry] of Object.entries(map.entries)) {
+    if (!REVERSIBLE_DISPOSITIONS.has(entry.disposition)) continue;
+    const addrs = entry.addresses ?? (entry.address ? [entry.address] : []);
+    const baseName = key.replace(TIME_PERIOD_SUFFIX, '');
+    for (const addr of addrs) {
+      if (addr.instanceKey !== undefined || addr.instanceKeyPrefix !== undefined) continue;
+      const k = legacyBaseNameKey(addr.category, addr.field);
+      const existing = idx.get(k);
+      if (existing !== undefined && existing !== baseName) {
+        // A registry defect, not a data shape this function is meant to
+        // tolerate: two T-slot families at the SAME instance-less address
+        // disagreeing on their shared base name means the map (or the T-slot
+        // catalog entries it was built from) no longer agrees with itself.
+        // This is also the guard the brief calls out for a fanout whose TWO
+        // addresses disagree with each other — `addrs` is walked in the same
+        // loop, so a fanout entry hits this exact check across its own pair.
+        throw new Error(
+          `v1LegacyBaseNameOf(${addr.category}, ${addr.field}): two different legacy base names map here — ` +
+            `"${existing}" and "${baseName}" (from v1 key "${key}"). Regenerate the map with ` +
+            `scripts/build-v1-migration-map.py and check the T-slot catalog entries at this address.`,
+        );
+      }
+      idx.set(k, baseName);
+    }
+  }
+  legacyBaseNames = idx;
+  return idx;
+}
+
+/**
+ * The T-suffix-stripped legacy name every `mapped` v1 key at this (category,
+ * field) address shares — e.g. `finxtract-bank-statement`/`closingBalance` →
+ * `bankBalance` (from `bankBalanceT1`..`bankBalanceT6`, all stripping to the
+ * same base). This is the bridge `buildFileFieldTablesFromView` needs: it
+ * feeds a `CanonicalView`'s values into `buildFileFieldTablesFromInstances`,
+ * which is keyed by the legacy BASE column name, not the canonical one.
+ *
+ * Deliberately NOT `v1KeyForAddress`, which answers null on exactly this
+ * T-slot case — it is answering a different question ("which ONE v1 key was
+ * this"), and there is no single answer once a field has six T-slot
+ * siblings. This function only needs the shared BASE, which (by construction
+ * — see `legacyBaseNameIndex`'s comment) every slot in the family agrees on.
+ *
+ * Null when no instance-less REVERSIBLE v1 key (`mapped`, `mapped-fanout`, or
+ * `mapped-pending-build` — the same set `legacyBaseNameIndex` admits, so this
+ * function and `v1KeyForAddress` cannot disagree about which addresses have a
+ * legacy name at all) ever held this (category, field) — a canonical-only
+ * field: an alt-data category the wide table never had, or a registry field
+ * newer than it (e.g. `financial-statement`/`consolidated`,
+ * `financial-statement`/`localNo`). SYS-3334 F1 (round 2): this used to say
+ * `mapped` only, which was wrong for exactly one case — `mapped-fanout` — and
+ * that case was `incorporatedDate`, so this function answered null for a
+ * field that very much had a wide column.
+ */
+export function v1LegacyBaseNameOf(category: string, field: string): string | null {
+  return legacyBaseNameIndex().get(legacyBaseNameKey(category, field)) ?? null;
+}
+
+// ── Fanout attestor index (SYS-3334 H-1, round 5) ────────────────────
+
+let fanoutAddressCache: Map<string, { key: string; index: number }> | null = null;
+
+/**
+ * Builds the (category, field) -> { fanout's own v1 key, address INDEX }
+ * index, lazily and once — one entry per address of every `mapped-fanout`
+ * entry (today: `incorporatedDate`'s two). `index` is the 0-based position
+ * in the entry's OWN `addresses` array, the same order
+ * `flatRecordFromView`'s `mapped-fanout` branch already treats as
+ * authoritative ("place the FIRST address, in map order, that has a value").
+ */
+function fanoutAddressIndex(): Map<string, { key: string; index: number }> {
+  if (fanoutAddressCache) return fanoutAddressCache;
+  assertValidated();
+  const idx = new Map<string, { key: string; index: number }>();
+  for (const [key, entry] of Object.entries(map.entries)) {
+    if (entry.disposition !== 'mapped-fanout') continue;
+    (entry.addresses ?? []).forEach((addr, index) => {
+      idx.set(legacyBaseNameKey(addr.category, addr.field), { key, index });
+    });
+  }
+  fanoutAddressCache = idx;
+  return idx;
+}
+
+/**
+ * Whether (category, field) is one attestor of a `mapped-fanout` entry, and
+ * if so its 0-based position in the map's own `addresses` order — null for
+ * anything else (a plain `mapped` address, or no address at all).
+ *
+ * WHY IT EXISTS. `fieldProvenanceFromView` (`ihs-processing.ts`) has to tell
+ * "two DIFFERENT attestors of ONE fanout key disagreeing" apart from "two
+ * instances of the SAME category colliding on one slot" — SYS-2722 designed
+ * the fanout so BOTH attestors survive (that is the whole point of a
+ * two-address entry), so the first is not a collision at all; the second
+ * is. This is the one piece of information that distinction needs, and it
+ * did not exist anywhere in this module before H-1 — `v1LegacyBaseNameOf`
+ * answers the shared BASE NAME both addresses resolve to, which is exactly
+ * what makes the two writes LOOK like a collision (same key) without saying
+ * whether they are one.
+ */
+export function v1FanoutAddressOf(category: string, field: string): { key: string; index: number } | null {
+  return fanoutAddressIndex().get(legacyBaseNameKey(category, field)) ?? null;
+}

@@ -10,6 +10,7 @@ import type { FieldData } from './survey-generator.js'
 import {
   IhsValueFormat,
   FileFieldTableType,
+  isValidIhsFieldOrigin,
 } from './ihs-types.js'
 import type {
   IhsFieldDetail,
@@ -17,6 +18,8 @@ import type {
   FileFieldTableData,
   FileFieldTableItem,
   IhsFieldProvenance,
+  IhsFieldProvenanceWithOriginal,
+  IhsFieldOrigin,
   DocumentRow,
   DocumentFileMetadata,
   InstanceRow,
@@ -24,7 +27,16 @@ import type {
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
 import { allCategories, assertAdapterCategory, type AdapterCategory } from './adapter-categories.js'
-import { v1Addresses, v1KeyForAddress, v1AddressHasKeyedEntries, v1MigrationKeys } from './v1-migration-map.js'
+import {
+  v1Addresses,
+  v1KeyForAddress,
+  v1AddressHasKeyedEntries,
+  v1MigrationKeys,
+  v1MigrationEntry,
+  v1LegacyBaseNameOf,
+  v1FanoutAddressOf,
+} from './v1-migration-map.js'
+import type { V1Address } from './v1-migration-map.js'
 import type { CanonicalView, CanonicalInstance } from './canonical-view.js'
 import type { TaggedFieldData } from './document-types.js'
 import displayNamesData from './data/form-field-display-names.json' with { type: 'json' }
@@ -1128,6 +1140,17 @@ export function groupDetailsByCategory(details: IhsFieldDetail[]): IhsDetailCate
  * flat path drops it too; whether `false` should render is a product
  * decision, not a bug in this processor.
  */
+/**
+ * L-2 (round 5): the v1 sentinel values this detail panel skips — `null`,
+ * `undefined`, `''`, `'Not Specified'`, `false`. Named as its own function so
+ * `valueAtPlainAddress`'s multi-instance pick (below) can share the EXACT
+ * rule rather than growing its own copy that could silently drift from what
+ * a reviewer actually sees rendered here.
+ */
+function isSentinelValue(value: unknown): boolean {
+  return value === null || value === undefined || value === '' || value === 'Not Specified' || value === false
+}
+
 export function processIhsDetailsFromView(view: CanonicalView): IhsFieldDetail[] {
   const excluded = documentCategoryIds()
   const specMap = getBaseFieldSpecMap()
@@ -1145,8 +1168,7 @@ export function processIhsDetailsFromView(view: CanonicalView): IhsFieldDetail[]
     for (const instance of category.instances ?? []) {
       for (const [field, envelope] of Object.entries(instance.fields)) {
         const value = envelope.value
-        if (value === null || value === undefined || value === '' || value === 'Not Specified') continue
-        if (value === false) continue
+        if (isSentinelValue(value)) continue
 
         // The keyed lookup first. If it misses AND the map holds no keyed
         // entry for this (category, field) at all, the key carries no
@@ -1481,4 +1503,1185 @@ export function documentHashOfPath(path: string): string | null {
 
 function stringOrNull(v: unknown): string | null {
   return typeof v === 'string' && v !== '' ? v : null
+}
+
+// ── SYS-3334: buildFileFieldTables — the last flat function's instance-shaped sibling ──
+
+const HASH_PERIOD_SUFFIX = /#T(\d+)$/
+
+/**
+ * v2's `documentType -> extraction category` map (`extractionCategoryOf`),
+ * inverted: which document type OWNS this extraction category's instances.
+ * A linear scan over ~7 document types, not worth a cache of its own on top
+ * of `extractionCategoryOf`'s.
+ */
+function documentTypeOfCategory(category: AdapterCategory): string | null {
+  for (const group of getDocumentTypeGroups()) {
+    if (extractionCategoryOf(group.documentType) === category) return group.documentType
+  }
+  return null
+}
+
+/**
+ * A category's instances, positioned as `documentsOfType` orders that
+ * category's documents — the 0-based index `instanceRowsFromView` falls
+ * back to when an instance carries no period of its own (see `timePeriodOf`).
+ */
+function instancePositions(view: CanonicalView, category: AdapterCategory): Map<string, number> {
+  const docType = documentTypeOfCategory(category)
+  if (docType === null) return new Map()
+  const intake = view.categories['document-intake']?.instances ?? []
+  const documents = documentsOfType(view, intake, docType)
+  const positions = new Map<string, number>()
+  documents.forEach((doc, i) => {
+    for (const inst of doc.extraction) {
+      if (!positions.has(inst.instanceKey)) positions.set(inst.instanceKey, i)
+    }
+  })
+  return positions
+}
+
+/**
+ * `InstanceRow.timePeriod` for one instance, FOUR rules in priority order —
+ * widened from three by SYS-3334 F4 (round 2 review):
+ *
+ * 1. `instance.legacySlot`, VERBATIM, when present AND it matches
+ *    `LEGACY_SLOT_SHAPE` (M4, round 4 — see that constant's doc: rejected
+ *    outright when it does not, never trimmed or coerced, and rules 2-4
+ *    below are consulted exactly as if the member were absent). This is the
+ *    actual v1 slot the source row stored (finsys-api's provenance-on-the-wire
+ *    fix puts it on the instance) — the uploader-declared slot on the file
+ *    entry (bank `month`, EPF `year`, payslip `period`), not a re-derivation
+ *    of it. When it is present AND well-shaped, rules 2-4 below are not even
+ *    consulted: the wire already answered the question they exist to
+ *    approximate.
+ * 2. A `#T{n}` suffix on the key IS the period (financial statements:
+ *    `financialStatement:<hash>#T2` -> 'T2' — two periods, one document).
+ * 3. A `legacy:T{n}` key names its slot directly (`legacyOrdinalOfKey`).
+ * 4. Otherwise the instance carries NO period on the wire and no
+ *    `legacySlot` either — true of every bank / payslip / EPF instance
+ *    (and, in practice, SSM / Form 9 / IC: one document, one
+ *    single-cardinality instance, no period at all). RULE: label it by the
+ *    instance's 0-based position in `documentsOfType`'s ordering of that
+ *    category's documents, as `T{position + 1}`.
+ *
+ *    THIS IS AN APPROXIMATION, not v1's own numbering — F4's finding, and
+ *    the reason rule 1 exists and outranks it. v1's T-number was the
+ *    UPLOADER-DECLARED slot (bank `month`, EPF `year`, payslip `period`),
+ *    stored on the sibling row as `timePeriod`; upload-order position is a
+ *    DIFFERENT fact that happens to equal it only when uploads are ordered,
+ *    complete, and unique per slot — an applicant who uploads statements out
+ *    of order, skips a month, or replaces one gets a position-derived label
+ *    that disagrees with what v1 would have shown. Rule 1 is what removes
+ *    the approximation once finsys-api's provenance-on-the-wire fix ships;
+ *    until then, this rule is what this function has.
+ *
+ *    Null only when the instance is absent from that ordering too — no
+ *    document type maps to this category (`documentTypeOfCategory` found
+ *    none), or the instance has neither a hash nor a legacy ordinal AND
+ *    `documentsOfType` could not place it either (its own doc comment: "no
+ *    identity and no slot: nothing to attribute it to").
+ */
+/**
+ * M4 (round 4): the ONLY shape `legacySlot` is trusted in — bare `T`
+ * followed by a positive integer with no leading zero, no whitespace, no
+ * suffix (`'T1'`, `'T23'`; never `'T1 '`, `'1'`, `'2026-06'`, `'T01'`).
+ * finsys-api has not shipped this member on any real instance as of
+ * 2026-08-19 (see `CanonicalInstance.legacySlot`'s own doc), which makes
+ * THIS the cheapest moment to pin the contract — before a real producer
+ * exists to violate it. A value that fails this check is REJECTED, not
+ * trimmed: trimming `'T1 '` to `'T1'` would silently accept a producer bug
+ * that put a stray character on the wire, and this member's whole job is to
+ * carry the wire's own claim verbatim. A rejected value is treated as
+ * ABSENT — `timePeriodOf` falls through to rule 2, exactly as if
+ * `legacySlot` had never been set — so a producer bug renders as a
+ * DIFFERENT (derived) period rather than as one that looks legitimate in a
+ * column header or a provenance key.
+ */
+const LEGACY_SLOT_SHAPE = /^T[1-9]\d*$/
+
+function timePeriodOf(instance: CanonicalInstance, positions: Map<string, number>): string | null {
+  if (instance.legacySlot && LEGACY_SLOT_SHAPE.test(instance.legacySlot)) return instance.legacySlot
+  const hashSuffix = HASH_PERIOD_SUFFIX.exec(instance.instanceKey)
+  if (hashSuffix) return `T${hashSuffix[1]}`
+  const legacyOrdinal = legacyOrdinalOfKey(instance.instanceKey)
+  if (legacyOrdinal !== null) return `T${legacyOrdinal}`
+  const position = positions.get(instance.instanceKey)
+  return position !== undefined ? `T${position + 1}` : null
+}
+
+/**
+ * The one category with an obvious per-instance label field, per the
+ * registry: `finxtract-bank-statement.issuingBankName` (legacy base name
+ * `bankName`) — different statements can be different banks. No other
+ * document-extraction category has an analogous field: payslip's
+ * `employerName` and financial-statement's `companyName` are constant
+ * across one applicant's own documents, so they would not discriminate one
+ * instance from another the way a bank name does. Checked against the
+ * registry directly (`src/data/adapter-categories.json`), not assumed.
+ */
+const SOURCE_LABEL_LEGACY_NAME: Partial<Record<AdapterCategory, string>> = {
+  'finxtract-bank-statement': 'bankName',
+}
+
+/** Numeric ordering for `InstanceRow.timePeriod` (SYS-3334 F5, round 2): `'T1'
+ * < 'T2' < … < 'T10'`. Anything that is not a bare `T{n}` — null, or F6's
+ * `'#1'`/`'#2'` index fallback — sorts LAST, stable in original order; it
+ * carries no period to order BY, so v1's "declared slot" ordering has
+ * nothing to say about it either. */
+function periodSortValue(period: string | null | undefined): number {
+  if (!period) return Number.POSITIVE_INFINITY
+  const m = /^T(\d+)$/.exec(period)
+  return m ? Number(m[1]) : Number.POSITIVE_INFINITY
+}
+
+interface InstanceRowPair {
+  row: InstanceRow
+  instance: CanonicalInstance
+}
+
+/**
+ * `instanceRowsFromView`'s row-building step, paired with the SOURCE
+ * instance and sorted by numeric period (SYS-3334 F5, round 2).
+ *
+ * WHY PAIRS, NOT TWO ARRAYS. `fieldProvenanceFromView` needs both a row's
+ * RESOLVED period (`row.timePeriod` — the full four-rule cascade, F6's
+ * `instanceKey: ''` rescue included) and the SAME instance's envelopes,
+ * `adapterId`, `observedAt` and `runId` (what a provenance entry is built
+ * from) — one pass, one resolved fact, rather than two.
+ *
+ * CORRECTED (M1, round 4): this comment used to name
+ * `buildFileFieldTablesFromView` as the consumer that needed the pairing —
+ * it does not; that function only ever calls `instanceRowsFromView`, which
+ * keeps `.row` and discards `.instance`. `.instance` was, in fact, dead on
+ * every path until M1's fix (below): `fieldProvenanceFromView` used to walk
+ * `category.instances` directly and call `timePeriodOf` a SECOND time,
+ * which — for a row F6 had rescued from a blank header — recomputed null
+ * instead of reusing the rescued period, so the rescued column could never
+ * carry a confidence dot. `fieldProvenanceFromView` now consumes THESE
+ * pairs instead, making `.instance` load-bearing: one derivation of a row's
+ * period, read by every caller that needs it.
+ *
+ * WHY SORT AT ALL (F5). `instanceRowsFromView` used to return rows in view
+ * (extraction-array) order. v1's `extractTimePeriods` sorted its T-slots
+ * ASCENDING before rendering, so whenever intake order (which
+ * `instancePositions` derives period from) disagreed with the extraction
+ * array's own order, the resulting table rendered out of sequence — a
+ * later-uploaded, earlier-period document could render AFTER an
+ * earlier-uploaded, later-period one. Sorted here, once, so every caller
+ * (this function, `buildFileFieldTablesFromView`) sees ascending period
+ * order without re-deriving it. Rows without a parseable period (null, or
+ * F6's `#n` fallback) sort LAST, stable in their original order — nothing
+ * ranks them against a real period, so they should not silently jump ahead
+ * of one.
+ */
+function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory): InstanceRowPair[] {
+  const instances = view.categories[category]?.instances ?? []
+  if (instances.length === 0) return []
+
+  const positions = instancePositions(view, category)
+  const sourceLabelField = SOURCE_LABEL_LEGACY_NAME[category]
+
+  const pairs: InstanceRowPair[] = instances.map((instance, i) => {
+    const row: InstanceRow = {
+      instanceKey: instance.instanceKey,
+      timePeriod: timePeriodOf(instance, positions),
+      sourceLabel: null,
+      // The period COORDINATE, when the wire carries one — v1's sidecar rows
+      // carried `periodPosition` too (finsys-api's toInstanceRow includes it
+      // deliberately), and the finsys-client resolver selects the true
+      // current-year row by it. Without this the flat-vs-view rows differ on
+      // exactly the column that decides which number a lender scores on.
+      ...(instance.periodPosition !== undefined ? { periodPosition: instance.periodPosition } : {}),
+    }
+    if (row.timePeriod === null && instance.instanceKey === '') {
+      // SYS-3334 F6 (round 2): a single-cardinality category's ONE instance
+      // carries instanceKey '' by convention (canonical-view.ts's own
+      // contract) — and IS slot 1, the same way any other lone document
+      // would position-fallback to T1. Without this, `timePeriodOf` answers
+      // null, `instanceColumnLabel` falls back to `row.instanceKey` (''),
+      // and the table renders a BLANK column header. More than one instance
+      // sharing '' is a data anomaly (the contract says '' means "the ONE
+      // instance"), so '' cannot mean slot 1 for either of them here —
+      // fall back to array position, never to a shared, ambiguous label.
+      row.timePeriod = instances.length === 1 ? 'T1' : `#${i + 1}`
+    }
+    for (const [field, envelope] of Object.entries(instance.fields)) {
+      const legacyBase = v1LegacyBaseNameOf(category, field)
+      if (legacyBase === null) continue
+      row[legacyBase] = envelope.value
+    }
+    // SYS-3334 F4 (round 2): the wire's OWN per-instance label (finsys-api's
+    // provenance-on-the-wire fix) wins over the registry-derived one — it is
+    // the actual value the source row carried, not a guess from a field this
+    // function happens to recognize. The registry fallback stays for every
+    // instance that predates the fix.
+    if (instance.sourceLabel) {
+      row.sourceLabel = instance.sourceLabel
+    } else if (sourceLabelField) {
+      const label = row[sourceLabelField]
+      if (typeof label === 'string' && label !== '') row.sourceLabel = label
+    }
+    return { row, instance }
+  })
+
+  // Stable sort (guaranteed since ES2019, which every runtime this package
+  // targets satisfies) — ties (including every no-period row, all sorting to
+  // +Infinity) keep their original relative order.
+  pairs.sort((a, b) => periodSortValue(a.row.timePeriod) - periodSortValue(b.row.timePeriod))
+  return pairs
+}
+
+/**
+ * `InstanceRow[]` for one category of a `CanonicalView` — one row per v2
+ * instance of that category, ORDERED BY NUMERIC PERIOD (SYS-3334 F5, round
+ * 2 — see `instanceRowPairsFromView`'s doc for why; rows without one trail,
+ * stable in view order). The bridge `buildFileFieldTablesFromView` needs: it
+ * feeds a view into `buildFileFieldTablesFromInstances`, which was built for
+ * finsys-api's sibling-table instance rows (one row per uploaded document,
+ * keyed by a real instanceKey rather than a pre-declared T{n} slot) and
+ * knows nothing about canonical envelopes.
+ *
+ * `instanceKey` is carried verbatim. `timePeriod` follows the four-rule
+ * cascade in `timePeriodOf` (its own doc comment states the position-based
+ * fallback rule, and F6's `instanceKey: ''` guard below it, in full — read
+ * both before assuming a null or a `#n` here is a bug). `sourceLabel` is the
+ * wire's own per-instance label (`instance.sourceLabel`) when present, else
+ * the registry-derived one for the one category with an obvious label field
+ * (`SOURCE_LABEL_LEGACY_NAME`), else null.
+ *
+ * Every field envelope becomes `row[legacyBaseName] = value`, via
+ * `v1LegacyBaseNameOf`. A field with no legacy base name never had a wide
+ * column — SKIPPED, not thrown: `buildFileFieldTablesFromInstances` only
+ * ever reads the base names the catalog declares for this category, so an
+ * unmapped field would never be looked up even if it were written into the
+ * row. (A category with no v1 lineage at all has every field skipped this
+ * way and produces rows with no metric keys — `groupColumnsByInstance`
+ * treats that as "no data" for every base column, and
+ * `buildFileFieldTablesFromInstances` omits the table, same as an empty
+ * `instanceRows` array would.) SYS-3334 F1 (round 2): this claim used to be
+ * false for exactly one shape — a `mapped-fanout` field (`incorporatedDate`)
+ * — because `v1LegacyBaseNameOf` answered null for it despite it having a
+ * wide column; fixed at the source in `v1-migration-map.ts`, so the claim
+ * above is accurate again rather than merely aspirational.
+ */
+export function instanceRowsFromView(view: CanonicalView, category: AdapterCategory): InstanceRow[] {
+  return instanceRowPairsFromView(view, category).map((p) => p.row)
+}
+
+/**
+ * v1's assertion-class vocabulary (`IhsFieldOrigin`: 'extracted' | 'derived'
+ * | 'manual') is CLOSED; v2's `CanonicalFieldEnvelope.origin` is an open
+ * string naming the assertion class the finsys-api resolver ranks
+ * ('extraction' | 'form-intake' | 'manual' | …, per `CanonicalAttestation`'s
+ * doc comment in canonical-view.ts). The one rename known today is
+ * 'extraction' -> 'extracted'. Anything else — absent, or a class this
+ * bridge does not recognize — degrades to 'derived'.
+ *
+ * SYS-3334 F7 (round 2 review): that fallback is NOT "the type's documented
+ * meaning" for one real case, 'form-intake', and the earlier wording of this
+ * comment overclaimed it. `IhsFieldOrigin`'s own doc (ihs-types.ts) says
+ * `derived` means "computed / no-confidence path" — a value nobody attested,
+ * produced by a formula. A form-intake value is neither: an APPLICANT typed
+ * it, which is a real assertion, just not one the closed v1 vocabulary has a
+ * slot for ('manual' means a LENDER correction, not an applicant's own
+ * answer — see `CanonicalAttestation`'s doc). 'derived' is the
+ * LEAST-WRONG of the three available answers, not a correct one: it is
+ * right that a form-intake value carries no extraction confidence, and wrong
+ * to imply the value was computed rather than asserted. Widening
+ * `IhsFieldOrigin` to a fourth value is the real fix and is not this
+ * function's call to make — every consumer of the closed enum would need
+ * updating for one bridge function's honesty. Never claim 'extracted' for a
+ * string this function does not understand — that would fabricate a
+ * confidence-worthy classification, exactly the failure `confidence` exists
+ * to prevent.
+ */
+function legacyOriginOf(origin: string | undefined): IhsFieldOrigin {
+  if (origin === 'extraction') return 'extracted'
+  if (isValidIhsFieldOrigin(origin)) return origin
+  return 'derived'
+}
+
+/**
+ * The per-(legacy-key) provenance map every instance-shaped file-field
+ * function synthesizes from `CanonicalView` envelopes — HOISTED out of
+ * `buildFileFieldTablesFromView` (SYS-3334 F3, round 2 review) so it can be
+ * called on its own, and FIXED at the same time: the inline version this
+ * replaces built its map with a bare `synthesized[key] = entry` inside a
+ * loop, so two envelopes landing on the same key SILENTLY collided —
+ * whichever was written last won, with no signal that a collision had even
+ * happened. Two real shapes produce that collision: a re-extraction (two
+ * runs of the SAME document, same key, same period) and two filings that
+ * both land on `#T1` (see F5's own doc for why two filings can share a
+ * slot).
+ *
+ * COVERS EVERY CATEGORY, not only document-extraction ones (unlike
+ * `buildFileFieldTablesFromView`'s own loop, which only ever walked
+ * `getDocumentTypeGroups()`). A scalar field's provenance — an applicant's
+ * own `fullName` confidence, say — is exactly as real as a bank statement
+ * cell's, and the caller-override contract (`fieldProvenance` beating the
+ * synthesized map) should hold for it too.
+ *
+ * KEYING, two paths — BOTH emitted when both answer (H1, round 4;
+ * corrected from "only when (1) has no answer" below):
+ *   1. THE EXACT v1 KEY, via `v1KeyForAddress(category, field, instanceKey)`,
+ *      with the SAME keyless fallback `processIhsDetailsFromView` uses when
+ *      the instance key carries no discriminating power for this field
+ *      (`v1AddressHasKeyedEntries`) — copied here rather than imported,
+ *      because `processIhsDetailsFromView` is out of scope for this change
+ *      (see the brief this function was built against) and duplicating four
+ *      lines is safer than reaching into a function nobody may touch. What
+ *      the detail panel and a v1 sidecar key on.
+ *   2. THE T-SLOT FAMILY'S SHARED BASE + this instance's period, via
+ *      `v1LegacyBaseNameOf(category, field)` and `${legacyBase}${period}`.
+ *      What `buildInstanceTable` ALWAYS reads (unconditionally, never the
+ *      exact key — see its own doc). `period` is `row.timePeriod`, from the
+ *      SAME resolved rows `instanceRowsFromView` renders
+ *      (`instanceRowPairsFromView` — M1, round 4, corrected below), not a
+ *      second derivation that could silently disagree with what the row
+ *      shows.
+ *
+ * H1 (HIGH, round 4): path 2 used to run ONLY when path 1 had no answer —
+ * correct for a genuine T-slot family (`bankBalanceT1..T6`, no single v1 key
+ * to name), wrong for `ssm`/`form9`/`ic`: their single-instance columns
+ * carry NO T-suffix at all, so their exact key (`ssmCompanyName`,
+ * `icName`, …) IS already their legacy base, and it beat path 2 to `key`
+ * every time. `buildInstanceTable` never looks up the bare base — it always
+ * appends the period — so these three document types lost 100% of their
+ * provenance through this path (measured: `ssm_documents` 16/16,
+ * `ic_documents` 9/9, `form9` 3/3 base columns). Both names point at the
+ * SAME cell, so both are now emitted whenever both resolve — gated to
+ * document-extraction categories (`documentTypeOfCategory(category) !==
+ * null`, the same set `buildInstanceTable` is ever fed): a scalar category's
+ * F6-rescued period (an `applicant-identity` sole `''` instance renders
+ * `'T1'` too, for `instanceRowsFromView`'s OWN reason — see F6's doc) would
+ * otherwise mint a `<base><period>` twin — e.g. `fullNameT1` — that nothing
+ * ever reads, purely because path 2's two ingredients both happened to
+ * resolve for a field `buildInstanceTable` will never render.
+ *
+ * NAMED, NOT HIDDEN: the period-suffixed key is per (base, slot), not per
+ * instance — `buildInstanceTable`'s own contract (it looks provenance up by
+ * `${baseName}${row.timePeriod}`, which does not include `instanceKey`). So
+ * two DIFFERENT instances that land on the same slot (the re-extraction and
+ * two-filings cases above) necessarily share ONE provenance entry; this is a
+ * limitation of `buildInstanceTable`'s key format, not of this function.
+ *
+ * H2 (HIGH, round 4): a collided key is DROPPED from the returned
+ * `provenance`, not resolved to the winner. `collided` still names it, so a
+ * caller can log or investigate — but the entry itself is removed: with two
+ * instances landing on one slot (a real shape during the `legacySlot`
+ * migration window — one instance carrying it, its sibling falling through
+ * to the SAME position-fallback slot), rendering the winner's confidence on
+ * BOTH columns put a wrong-but-plausible number on the loser's column, which
+ * never had that confidence. Absent is honest; wrong-and-confident is not —
+ * exactly the property F3 (above) exists to protect, and rendering a
+ * winner's number on a loser's column violated it as surely as the silent
+ * last-write-wins F3 fixed did.
+ *
+ * M-5 (round 5): H2 above is why this function no longer picks a temporal
+ * winner for a genuine collision at all. Round 2-4 kept a `challengerWins`
+ * tie-break (newer `observedAt`, then larger `runId`, then last-in-order) so
+ * `provenance[key]` briefly held "the winner" before H2's unconditional
+ * delete removed it — but every key that ever REACHES a collision comparison
+ * is, by definition, a key H2 deletes at the end, so that comparison's
+ * result was never observable in the returned `provenance`: `challengerWins`
+ * and the `winnerMeta` map that fed it were computing an answer nobody could
+ * ever read. Deleted. A collision is now just recorded (`collidedSet.add`)
+ * and left alone — SHIPPED BEHAVIOR, stated plainly: a collided key is
+ * reported in `collided` and absent from `provenance`; no winner is chosen,
+ * because a winner would be a guess with nowhere left to render it.
+ *
+ * H-1 (HIGH, round 5): a `mapped-fanout` key's two DIFFERENT attestors
+ * (`sharedFanoutOf`, below) are NOT this kind of collision — the fanout's
+ * whole design is that BOTH survive. See that function's own doc and the
+ * loop below for the address-order tie-break that replaces
+ * `challengerWins` for exactly this one case.
+ *
+ * NO ENTRY when the envelope asserts NEITHER `confidence` NOR `origin` (L1,
+ * round 4 — corrected from "none of `confidence`, `origin`, or
+ * `originalValue`"): `originalValue` alone used to admit an envelope here
+ * too, then stamp it `origin: legacyOriginOf(undefined)` = `'derived'` — the
+ * exact fabricated shape this paragraph says never happens, for a field
+ * that asserted NOTHING beyond the value an overlay replaced. `confidence`
+ * or `origin` is a real assertion; `originalValue` is carried ONTO an entry
+ * one of those two justified, never a reason to create one by itself.
+ */
+/**
+ * H-1 (round 5): whether two DIFFERENT (category, field) addresses that just
+ * wrote the SAME provenance key are the two attestors of one
+ * `mapped-fanout` entry (`incorporatedDate` today) rather than a genuine
+ * collision. Returns their positions in the fanout's own `addresses` order
+ * when they are; null when they are not (including when either address is
+ * not a fanout attestor at all, or the two belong to DIFFERENT fanouts).
+ */
+function sharedFanoutOf(
+  a: { category: string; field: string },
+  b: { category: string; field: string },
+): { incumbentIndex: number; challengerIndex: number } | null {
+  const fa = v1FanoutAddressOf(a.category, a.field)
+  const fb = v1FanoutAddressOf(b.category, b.field)
+  if (fa === null || fb === null || fa.key !== fb.key) return null
+  return { incumbentIndex: fa.index, challengerIndex: fb.index }
+}
+
+export function fieldProvenanceFromView(
+  view: CanonicalView,
+): { provenance: Record<string, IhsFieldProvenanceWithOriginal>; collided: string[] } {
+  const provenance: Record<string, IhsFieldProvenanceWithOriginal> = {}
+  // H-1: the (category, field) address that WROTE the current entry under
+  // each key, so a second write from a DIFFERENT address can be told apart
+  // from a second write from the SAME one — see the loop below. (M-5, round
+  // 5: this replaces the round 2-4 `winnerMeta` map, which tracked
+  // observedAt/runId for a temporal tie-break that H2's unconditional
+  // delete made unobservable for every key it was ever consulted on — see
+  // this function's own doc.)
+  // The VALUE rides along so a fanout co-attestation can be told from a
+  // fanout DISAGREEMENT (H-1r5, below): the carve-out is only honest when
+  // both attestors say the same thing.
+  const originAddress = new Map<string, { category: string; field: string; value: unknown }>()
+  const collidedSet = new Set<string>()
+
+  for (const categoryId of Object.keys(view.categories)) {
+    const category = categoryId as AdapterCategory
+    // H1: gates path 2 (below) to the categories buildInstanceTable ever
+    // renders — see the function doc for why a scalar category's rescued
+    // period must NOT feed a legacy-base+period key.
+    const isDocCategory = documentTypeOfCategory(category) !== null
+
+    for (const { row, instance } of instanceRowPairsFromView(view, category)) {
+      // M1: the SAME resolved period the row carries — including F6's
+      // rescue — never a second `timePeriodOf` call (see the function doc
+      // and `InstanceRowPair`'s own doc for the bug this replaces).
+      const period = row.timePeriod
+
+      for (const [field, envelope] of Object.entries(instance.fields)) {
+        // L1: `originalValue` alone does not justify synthesizing an entry.
+        if (envelope.confidence === undefined && envelope.origin === undefined) {
+          continue
+        }
+
+        // The keyed lookup first — same keyless fallback rule
+        // `processIhsDetailsFromView` uses (see that function's own comment
+        // for the reasoning): a miss only falls back to the keyless entry
+        // when the map holds no keyed entry for this address AT ALL.
+        const exact =
+          v1KeyForAddress(categoryId, field, instance.instanceKey || undefined) ??
+          (v1AddressHasKeyedEntries(categoryId, field) ? null : v1KeyForAddress(categoryId, field))
+
+        // H1: path 2, computed independently of path 1 and emitted
+        // ALONGSIDE it (not only as a fallback) — see the function doc.
+        let periodKey: string | null = null
+        if (isDocCategory && period !== null) {
+          const legacyBase = v1LegacyBaseNameOf(categoryId, field)
+          if (legacyBase !== null) periodKey = `${legacyBase}${period}`
+        }
+
+        const keys = new Set<string>()
+        if (exact !== null) keys.add(exact)
+        if (periodKey !== null) keys.add(periodKey)
+        if (keys.size === 0) continue
+
+        const entry: IhsFieldProvenanceWithOriginal = {
+          source: instance.adapterId,
+          confidence: envelope.confidence ?? null,
+          // F7/F10: '' is a documented sentinel — see IhsFieldProvenance.observedAt.
+          observedAt: instance.observedAt ?? '',
+          sourceRunId: instance.runId !== undefined ? String(instance.runId) : null,
+          origin: legacyOriginOf(envelope.origin),
+          ...(envelope.originalValue !== undefined ? { originalValue: envelope.originalValue } : {}),
+        }
+
+        for (const key of keys) {
+          const incumbentAddress = originAddress.get(key)
+          if (incumbentAddress === undefined) {
+            provenance[key] = entry
+            originAddress.set(key, { category: categoryId, field, value: envelope.value })
+            continue
+          }
+
+          // H-1: is this a SECOND write from the address that already holds
+          // the key, or from a DIFFERENT address? Only the latter can
+          // possibly be a fanout co-attestation rather than a collision.
+          const sameAddress = incumbentAddress.category === categoryId && incumbentAddress.field === field
+          const fanout = sameAddress ? null : sharedFanoutOf(incumbentAddress, { category: categoryId, field })
+
+          if (fanout) {
+            // Two DIFFERENT attestors of the SAME mapped-fanout v1 key —
+            // the fanout's whole design is that both survive, so this is
+            // NOT a collision WHEN THEY AGREE. Keep whichever address is
+            // FIRST in the map's own `addresses` order — the same rule
+            // `flatRecordFromView`'s `mapped-fanout` branch uses to pick
+            // "the" value. Never a temporal/run-based tie-break: that
+            // answers a different question ("which INSTANCE of the SAME
+            // address is newest"), and M-5 removed it as dead weight for
+            // the genuine-collision case below.
+            //
+            // H-1r5: when the two attestors DISAGREE on the value, this is
+            // a collision after all. Both tables render their OWN value,
+            // but the provenance map is keyed by the v1 column, so a single
+            // surviving entry would pair one table's value with the OTHER
+            // attestor's confidence, source and run — a wrong-but-plausible
+            // dot, the exact shape H2 exists to prevent. Absent is honest.
+            if (!candidateValuesAgree(incumbentAddress.value, envelope.value)) {
+              collidedSet.add(key)
+              continue
+            }
+            if (fanout.challengerIndex < fanout.incumbentIndex) {
+              provenance[key] = entry
+              originAddress.set(key, { category: categoryId, field, value: envelope.value })
+            }
+            continue
+          }
+
+          // M-5 (round 5): a real collision — the SAME address wrote this
+          // key twice, or two DIFFERENT addresses that are not both
+          // attestors of one fanout. Recorded and left alone: H2 (round 4,
+          // below) unconditionally deletes this key's `provenance` entry
+          // regardless of which write it is, so nothing here needs to pick
+          // a winner.
+          collidedSet.add(key)
+        }
+      }
+    }
+  }
+
+  // H2: a collided key is dropped from `provenance` — see the function doc.
+  // `collided` (returned below) still names every one of them.
+  for (const key of collidedSet) {
+    delete provenance[key]
+  }
+
+  return { provenance, collided: [...collidedSet] }
+}
+
+/**
+ * `buildFileFieldTables` for a v2 `CanonicalView` — the fourth and last flat
+ * file-field function to get an instance-shaped sibling (the finsys-client
+ * migration's last flat surface to gain one; see this module's other
+ * SYS-3334 doc comments on
+ * `processIhsDetailsFromView` / `resolveExtractionStatusFromView` /
+ * `buildDocumentRowsFromView` for the same discipline applied here).
+ *
+ * MECHANISM. For every document-type group (`getDocumentTypeGroups()`),
+ * resolve its extraction category (`extractionCategoryOf`), turn that
+ * category's instances into `InstanceRow[]` (`instanceRowsFromView`), and
+ * hand the whole map to `buildFileFieldTablesFromInstances` keyed by
+ * `documentGroup` — the exact key that function already groups its own
+ * catalog output by (`groupFieldsByPattern` groups `type: 'file'` specs by
+ * `document_group`, e.g. `bank_statements`, NOT `document_type`, e.g.
+ * `bankStatements` — confirmed against the catalog data, not assumed). A
+ * document type whose columns map to no extraction category
+ * (`extractionCategoryOf` returns null) contributes no table, same as an
+ * absent category does today for `buildFileFieldTablesFromInstances`.
+ *
+ * PROVENANCE, WITHOUT A V1 SIDECAR — now `fieldProvenanceFromView` (SYS-3334
+ * F3, round 2). `buildInstanceTable` (inside `buildFileFieldTablesFromInstances`)
+ * looks up per-cell provenance in a `fieldProvenance` map keyed by
+ * `${legacyBaseName}${timePeriod}` — the exact wide-table column name
+ * (`bankBalanceT1`). v1 fed that map from a sidecar finsys-api built
+ * alongside the flat record; a `CanonicalView` has no such sidecar, but its
+ * own envelopes already carry `confidence` / `origin` per field, plus
+ * `adapterId` / `observedAt` / `runId` per instance —
+ * `fieldProvenanceFromView` synthesizes the sidecar's shape from those, so
+ * confidence dots keep working with NO caller-supplied provenance at all —
+ * QUALIFIED (H1/F11, round 4): true once BOTH (a) finsys-api's own
+ * provenance-on-the-wire fix ships (as of 2026-08-19 it has not — the wire
+ * attaches provenance to 0 of 68k extraction fields) AND (b)
+ * `fieldProvenanceFromView` emits both the exact v1 key and the
+ * period-suffixed key this lookup actually reads (H1's fix — before it,
+ * `ssm`/`form9`/`ic` rendered zero dots regardless of what finsys-api
+ * ships, because their exact key won outright and this lookup never sees
+ * it). See `fieldProvenanceFromView`'s own doc for the mechanism.
+ * The optional `fieldProvenance` parameter still exists (same signature as
+ * `buildFileFieldTables`) for a caller that has one anyway; where it and the
+ * synthesized map name the same key, the CALLER'S entry wins — an explicit
+ * override should beat a derived guess. `fieldProvenanceFromView`'s own
+ * `collided` return is dropped here: this function's signature predates F3
+ * and changing its return shape is out of scope for a review fix — a caller
+ * that needs the collision signal calls `fieldProvenanceFromView` directly.
+ *
+ * M-4 (round 4, doc corrected round 5): THE OVERRIDE IS VACUOUS ON 28 BASE
+ * COLUMNS — stated plainly, because "the caller's entry wins" reads as a
+ * universal contract and is not one. `buildInstanceTable` reads ONLY
+ * `${legacyBaseName}${timePeriod}` (H1, round 4's own finding), never the
+ * bare v1 key — but for ssm (16 columns), ic (9), and form9 (3), the exact
+ * v1 key IS the legacy base (their single-instance fields carry no
+ * T-suffix at all), so a caller-supplied sidecar keyed by that bare v1 name
+ * (`ssmCompanyName`, not `ssmCompanyNameT1`) never reaches the lookup this
+ * function actually performs — it silently does nothing, and a `currency`
+ * on that same caller entry is lost the identical way (never read, because
+ * the entry itself is never read). The synthesized period-suffixed twin
+ * (H1) is what actually reaches the cell; a caller wanting to override one
+ * of these 28 must key its override the SAME way — `<base>T1`, not the
+ * bare v1 name — behavior UNCHANGED by this correction; only the doc was
+ * wrong.
+ *
+ * NOT CARRIED THROUGH: `currency` — the per-observation denomination
+ * `IhsFieldProvenance.currency` records on the flat sidecar.
+ * `CanonicalFieldEnvelope` has no currency member — v2 does not yet attach
+ * one the way the v1 sidecar could — so money values through this path format
+ * WITHOUT a currency code (a plain grouped number: `formatValue`'s existing,
+ * honest "no denomination known" behavior; it does not invent one). This is
+ * a real capability gap, not a bug introduced here, and it already applied
+ * to `buildFileFieldTablesFromInstances` before this function existed.
+ */
+export function buildFileFieldTablesFromView(
+  view: CanonicalView,
+  fieldProvenance?: Record<string, IhsFieldProvenance>,
+): Record<string, FileFieldTableData> {
+  const instancesByCategory: Record<string, InstanceRow[]> = {}
+
+  for (const group of getDocumentTypeGroups()) {
+    const category = extractionCategoryOf(group.documentType)
+    if (category === null) continue
+
+    instancesByCategory[group.documentGroup] = instanceRowsFromView(view, category)
+  }
+
+  const { provenance: synthesized } = fieldProvenanceFromView(view)
+  const provenance = { ...synthesized, ...(fieldProvenance ?? {}) }
+  return buildFileFieldTablesFromInstances(
+    instancesByCategory,
+    Object.keys(provenance).length > 0 ? provenance : undefined,
+  )
+}
+
+// ── The v1-shape bridge (SYS-3334) ────────────────────────────────────
+
+/**
+ * The record half of the v2 read pair, structurally — core does not import
+ * the SDK or any host-side application-record type. `parties` / `facility` /
+ * `system` are the three groupings finhub-adonisjs and finsys-client already
+ * use for the non-adapter fields the `relocated` keys moved to (the
+ * migration map's own NOT-ADAPTER column-audit classes); a caller with a
+ * differently-shaped record adapts it to this shape at the call site rather
+ * than this package widening to match one host's naming.
+ *
+ * L-6 (round 5): WHICH KEY LIVES IN WHICH BUCKET IS THE RECORD CONTRACT —
+ * this package does not police it, `flatRecordFromView` just walks whichever
+ * bucket the map's `relocated` entries and the caller agree on (H-2, round
+ * 5: by PRESENCE, `parties` -> `facility` -> `system`, stopping at the first
+ * bucket that carries the key at all). In practice: `system` carries the
+ * administrative/timestamp keys (`createdAt`, `updatedAt`, `jurisdiction`,
+ * `programId`, …), `facility` carries financing terms (`totalFinancing`, …),
+ * `parties` carries borrower/lender identity. The ONE normalization
+ * `flatRecordFromView` performs on ANY relocated value, regardless of which
+ * bucket it came from: a `Date` instance becomes its ISO string — v1 served
+ * every relocated timestamp as an ISO string, and a caller assembling this
+ * record from an ORM row hands back `Date` objects instead. This is SHAPE,
+ * not the value coercion `flatRecordFromView`'s own doc disclaims elsewhere
+ * (a `Date` and its ISO string name the same instant; there is no second
+ * opinion about what the value IS, only about which JS type carries it). See
+ * `normalizeRelocatedValue`.
+ */
+export interface ApplicationRecordLike {
+  applicationId?: number
+  status?: string | null
+  statusDescription?: string | null
+  parties?: Record<string, unknown>
+  facility?: Record<string, unknown>
+  system?: Record<string, unknown>
+}
+
+/**
+ * The v1 flat IHS record's SHAPE, re-derived from a `CanonicalView` (+ an
+ * optional `ApplicationRecordLike` for the keys the migration map calls
+ * `relocated`) — the migration map run FORWARD (v1 key → address → value),
+ * so `EvaluationDataFactory`, the SSM panel, `MatchingUtil.isSatisfied`,
+ * `jurisdictionOf` and every other v1-flat-shaped reader can consume a v2
+ * view through one map instead of each growing its own reverse walk.
+ */
+export interface FlatRecordFromView {
+  /** v1 column name -> value, for every key the map could place from this view/record. */
+  record: Record<string, unknown>
+  /**
+   * v1 keys the map holds but this function could NOT place, one entry per
+   * key, NEVER silent — `flatRecordFromView` iterates `v1MigrationKeys()`,
+   * not the view, so a key with no v2 value is reported, not dropped. Every
+   * non-placed key ends up here exactly once, `disposition` is the map's own
+   * `V1Disposition` string (so a caller can filter — "show me only the
+   * `needs-decision` residuals"), and `reason` is either the map entry's own
+   * `note`/`reason` (retired / vocabulary-gap / needs-decision /
+   * mapped-pending-build / structural) or a fact this function discovered
+   * about the SUPPLIED view/record for a `mapped` / `mapped-fanout` /
+   * `relocated` key that had an address but no value at it today.
+   */
+  unplaced: { key: string; disposition: string; reason: string }[]
+  /**
+   * v1 keys that WERE placed, but the placement made a choice a reader
+   * should be able to see rather than trust silently: (a) a plain-address
+   * `mapped` key where more than one instance of the category carried that
+   * field (the first, in the SAME period-sorted order the rendered tables
+   * use — M-1, round 5 — was placed; v1's own wide column could hold only
+   * one value too, so this is not a new ambiguity, only a newly VISIBLE
+   * one); (b) a `mapped-fanout` key (`incorporatedDate`) where more than one
+   * attestor address had a value and they DISAGREED (the first address's
+   * value, in the map's own address order, was placed); (c) a T-slot family
+   * key (M-2, round 5) where more than one row shares the slot (the first,
+   * in row order, was placed — a T-slot key names the SLOT, not an
+   * INSTANCE, so `buildInstanceTable` can render two columns for the same
+   * period label while this can only ever hold one value). Never populated
+   * for an `instanceKey` / `instanceKeyPrefix` resolution — those are a
+   * single, unambiguous instance by construction (or, for a prefix,
+   * "first in order" IS the stated parity contract, not an accident worth
+   * flagging every time it fires).
+   */
+  ambiguous: string[]
+  /**
+   * The four v1 sidecars, one row per instance, keyed by LEGACY base names —
+   * `instanceRowsFromView` verbatim, one call per category. These are the
+   * `structural` map entries `bankStatementInstances` / `financialStatementInstances`
+   * / `epfStatementInstances` / `payslipInstances`: v1 shipped them as
+   * sibling arrays beside the flat record, and they still are one, just not
+   * a member of `record` — the flat record's OWN keys never held instance
+   * rows, so putting these here rather than flattening them into `record` is
+   * the honest shape, not a convenience.
+   */
+  instances: {
+    financialStatementInstances: InstanceRow[]
+    bankStatementInstances: InstanceRow[]
+    epfStatementInstances: InstanceRow[]
+    payslipInstances: InstanceRow[]
+  }
+}
+
+/** The v1 key's own trailing period suffix — `bankBalanceT1` -> `1`. Matches
+ * ONLY the bare `T[1-9]` tail: the `(PriorYear)?` branch `v1-migration-map.ts`'s
+ * `TIME_PERIOD_SUFFIX` also carries is UNREACHABLE for a `mapped` entry as of
+ * the round 2 map correction (the six `…PriorYearT{n}` keys are
+ * `needs-decision` now, not `mapped`) — see that regex's own doc comment. */
+const T_SLOT_KEY_SUFFIX = /T([1-9])$/
+
+interface AddressLookup {
+  found: boolean
+  value?: unknown
+  /**
+   * Set by the plain-address lookup (more than one instance carries the
+   * field) and, since M-2 (round 5), by the T-slot lookup too (more than one
+   * row shares the slot) — see `ambiguous` above.
+   */
+  multiple?: boolean
+  /**
+   * L-5 (round 5): only ever set by the T-slot lookup, on a miss — names
+   * WHICH of its three distinct not-found causes applied (`valueAtTSlot`'s
+   * own doc). Unset elsewhere; those callers' `missingReason` locals in
+   * `flatRecordFromView` are specific enough on their own.
+   */
+  reason?: string
+}
+
+/**
+ * H-2 (round 5): PRESENCE, not nullishness. `record.parties[key] ??
+ * record.facility[key] ?? record.system[key]` — the line this replaces —
+ * fell through to the NEXT bucket whenever the current one held an explicit
+ * `null`, so `parties: { jurisdiction: null }` beside `facility: {
+ * jurisdiction: 'X' }` silently returned the WRONG bucket's value, and it
+ * was inconsistent about it: a null in the LAST bucket (`system`) still got
+ * placed (nothing left to fall through to), so the same "null means try
+ * again" rule gave two different answers depending on which bucket happened
+ * to hold the null. Walks `parties` -> `facility` -> `system`, the SAME
+ * order and the SAME three buckets, but stops at the FIRST one that carries
+ * the key AT ALL (`Object.prototype.hasOwnProperty`, never a nullish check)
+ * — exactly the rule `valueAtPlainAddress` already applies to a v2 field
+ * envelope. A bucket's explicit `null` is a real assertion (v1 served null
+ * for an empty relocated column) and is placed as `null`, never treated as
+ * "try the next bucket".
+ */
+function relocatedBucketValue(record: ApplicationRecordLike | undefined, key: string): AddressLookup {
+  for (const bucket of [record?.parties, record?.facility, record?.system]) {
+    if (bucket && Object.prototype.hasOwnProperty.call(bucket, key)) {
+      return { found: true, value: bucket[key] }
+    }
+  }
+  return { found: false }
+}
+
+/**
+ * L-6 (round 5): the ONE normalization `flatRecordFromView` performs on a
+ * relocated value (`ApplicationRecordLike`'s own doc names the reason) — a
+ * `Date` instance becomes its ISO string, v1's own shape for every
+ * relocated timestamp. Applied uniformly to every relocated key, not only
+ * `createdAt`/`updatedAt`, because the record contract does not name here
+ * which keys a caller might hand a `Date` for.
+ */
+function normalizeRelocatedValue(value: unknown): unknown {
+  return value instanceof Date ? value.toISOString() : value
+}
+
+/** A per-call memo of `instanceRowPairsFromView`, keyed by category — see `rowPairsCache` below. */
+type RowPairsLookup = (view: CanonicalView, category: AdapterCategory) => InstanceRowPair[]
+
+/**
+ * L-4 (round 5): a CALL-LOCAL memo of `instanceRowPairsFromView` — one
+ * rebuild per category actually looked up during a single `flatRecordFromView`
+ * call, not a module-level cache (a `CanonicalView` is call-scoped data;
+ * caching across calls would leak one application's rows into another's
+ * lookup, or go stale against a re-fetched view of the SAME application).
+ *
+ * Paired with M-1 (same finding): once `valueAtPlainAddress` reads row-pair
+ * order instead of raw view order, it — like `valueAtTSlot` already did —
+ * calls `instanceRowPairsFromView` once per key that shares a category, and
+ * most keys DO share one (`finxtract-bank-statement` alone backs 8 T-slot
+ * base columns x up to 6 periods). Measured on the round-5 fixture: 504
+ * T-slot `mapped` keys with a plain (non-instance) address, each rebuilding
+ * `instanceRowPairsFromView` for its category from scratch before this fix.
+ * A fresh cache per `flatRecordFromView` call turns that into one rebuild
+ * per DISTINCT category actually visited.
+ */
+function rowPairsCache(): RowPairsLookup {
+  const cache = new Map<AdapterCategory, InstanceRowPair[]>()
+  return (view, category) => {
+    const cached = cache.get(category)
+    if (cached) return cached
+    const pairs = instanceRowPairsFromView(view, category)
+    cache.set(category, pairs)
+    return pairs
+  }
+}
+
+/**
+ * L-1 (round 5): whether two candidate values from different attestors count
+ * as AGREEING, for `ambiguous` purposes — the SAME rule everywhere a
+ * candidate-value comparison happens (this function, the `mapped-fanout`
+ * disagreement check below). `===` alone is too strict: v1 stored some
+ * values as decimal STRINGS where v2 types the equivalent canonical field as
+ * a NUMBER (`flatRecordFromView`'s own "VALUE COERCION: NONE" section names
+ * this exact mismatch), so two attestors reporting the literal same fact —
+ * one via a v1-shaped string sidecar, one via a v2 numeric envelope — must
+ * not read as a disagreement merely because of which JS type carried it.
+ *
+ * `looksNumeric` gates the numeric comparison so `null`/`undefined`/`false`
+ * are never coerced through `Number(...)` (`Number(null) === 0` would read a
+ * cleared field as agreeing with a real zero). Falls back to a plain
+ * `String()` compare for anything that isn't numeric on both sides.
+ */
+function looksNumeric(value: unknown): boolean {
+  if (typeof value === 'number') return !Number.isNaN(value)
+  if (typeof value === 'string' && value.trim() !== '') return !Number.isNaN(Number(value))
+  return false
+}
+
+function candidateValuesAgree(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (looksNumeric(a) && looksNumeric(b)) return Number(a) === Number(b)
+  return String(a) === String(b)
+}
+
+/**
+ * `mapped` with a plain address: the value of the FIRST instance of
+ * `address.category` that carries `address.field` at all —
+ * `Object.prototype.hasOwnProperty`, not a truthy/defined check, because a
+ * field explicitly asserting a falsy value (0, '', false) is still asserted.
+ *
+ * M-1 (round 5): "first" means the SAME period-sorted order the rendered
+ * file-field tables use (`instanceRowPairsFromView`, via `rowPairsFor` —
+ * L-4's call-local cache), not the view's raw extraction-array order, which
+ * this used to read directly. Before this fix, a category whose upload
+ * order disagreed with its period order (a later upload, earlier period —
+ * exactly the shape F5 sorts for) could place THIS scalar from a DIFFERENT
+ * document than the one the table's own T1 column shows for the SAME field
+ * — one function telling a reader two different facts about the same slot.
+ * `valueAtTSlot` already read the resolved rows for this reason; this makes
+ * it one derivation for the whole function instead of two that could
+ * silently disagree.
+ *
+ * `multiple: true` (L-1, round 5 — corrected from "more than one instance
+ * carries the field"): only when a DIFFERING candidate value exists
+ * (`candidateValuesAgree`), never merely because more than one instance
+ * carries the field. Two SSM uploads reporting the identical `companyName`
+ * are not a disagreement, and flagging them as one buried the keys that
+ * genuinely disagree in noise.
+ *
+ * L-2 (round 5): "first" prefers the first instance whose value is NOT one
+ * of `isSentinelValue`'s sentinels — the same rule `processIhsDetailsFromView`
+ * applies before ever showing a value to a reviewer. Before this fix, an
+ * earlier instance's blank/'Not Specified'/false could win the slot while a
+ * LATER instance held the real value, so a scoring consumer of `record`
+ * read the sentinel while the detail panel (reading the SAME view through
+ * its own, per-instance loop) showed the real name. If every instance
+ * carries only a sentinel, the first is placed anyway — v1's own wide
+ * column held exactly that, and there is no better answer available.
+ */
+function valueAtPlainAddress(view: CanonicalView, address: V1Address, rowPairsFor: RowPairsLookup): AddressLookup {
+  const instances = rowPairsFor(view, assertAdapterCategory(address.category)).map((p) => p.instance)
+  const withField = instances.filter((i) => Object.prototype.hasOwnProperty.call(i.fields, address.field))
+  if (withField.length === 0) return { found: false }
+  const values = withField.map((i) => i.fields[address.field]!.value)
+  const nonSentinelIndex = values.findIndex((v) => !isSentinelValue(v))
+  const index = nonSentinelIndex === -1 ? 0 : nonSentinelIndex
+  const multiple = values.some((v, i) => i !== index && !candidateValuesAgree(v, values[index]))
+  return { found: true, value: values[index], multiple }
+}
+
+/** `mapped` with `instanceKey`: the ONE instance whose `instanceKey` equals it. */
+function valueAtInstanceKey(view: CanonicalView, address: V1Address): AddressLookup {
+  const instances = view.categories[address.category]?.instances ?? []
+  const inst = instances.find((i) => i.instanceKey === address.instanceKey)
+  if (!inst || !Object.prototype.hasOwnProperty.call(inst.fields, address.field)) return { found: false }
+  return { found: true, value: inst.fields[address.field]!.value }
+}
+
+/**
+ * `mapped` with `instanceKeyPrefix`: the FIRST instance (in view order)
+ * whose key EQUALS the prefix, or continues it at a `#`-delimited boundary
+ * (`document-intake` keys are `<docType>#<n>`, e.g. `bankStatements#1`). v1
+ * held ONE value per pointer column (a JSON array of paths collapsed to a
+ * single wide cell); v2 keys one instance per file, so first-in-order is the
+ * stated parity choice, not an arbitrary one — the same reason this path
+ * never contributes to `ambiguous`.
+ *
+ * L-3 (round 5): a bare `startsWith(prefix)` — this function's old body —
+ * matches any LONGER prefix too: `bankStatements` is a prefix of
+ * `bankStatementsExtraordinary`, so a doc type introduced later whose name
+ * extends an existing one would silently steal the shorter type's match
+ * whenever it sorts first. The `#` boundary makes `bankStatements` match
+ * only `bankStatements` itself or `bankStatements#<n>`, never a sibling doc
+ * type that merely starts with the same letters.
+ */
+function valueAtInstanceKeyPrefix(view: CanonicalView, address: V1Address): AddressLookup {
+  const instances = view.categories[address.category]?.instances ?? []
+  const prefix = address.instanceKeyPrefix!
+  const inst = instances.find((i) => i.instanceKey === prefix || i.instanceKey.startsWith(`${prefix}#`))
+  if (!inst || !Object.prototype.hasOwnProperty.call(inst.fields, address.field)) return { found: false }
+  return { found: true, value: inst.fields[address.field]!.value }
+}
+
+/**
+ * A T-slot family member (`bankBalanceT1`, …): the row at this exact period,
+ * read the same way the rendered file-field tables read it — `base` is the
+ * shared legacy name every sibling in the family strips to
+ * (`v1LegacyBaseNameOf`, not a second regex-strip here: reusing it means this
+ * can never disagree with what `instanceRowsFromView` actually wrote onto the
+ * row), and the row itself comes from `rowPairsFor` (L-4's call-local cache
+ * of `instanceRowPairsFromView`) — the SAME rows and the SAME `timePeriodOf`
+ * cascade the rendered tables use — not a second derivation of "which period
+ * is this" that could silently disagree with what a reader sees on the
+ * file-field table for the same instance.
+ *
+ * M-2 (round 5): a T-slot key names a SLOT, not an INSTANCE — `buildInstanceTable`
+ * happily renders two columns for two rows sharing one period label, but this
+ * function can only ever place ONE value under the key. Before this fix, more
+ * than one row sharing `tSlot` silently picked the first (still the rule —
+ * v1's own wide column could hold only one value too) with no signal that a
+ * second, un-placed row existed; `multiple: true` now surfaces that choice
+ * into `ambiguous`, the same way the plain-address lookup already does for
+ * its own multi-instance case.
+ */
+function valueAtTSlot(view: CanonicalView, address: V1Address, tSlot: string, rowPairsFor: RowPairsLookup): AddressLookup {
+  // L-5 (round 5): three DISTINCT not-found causes, each its own `reason` —
+  // `flatRecordFromView` used to report ONE fixed string ("no T{n}
+  // instance") regardless of which of these three actually happened, which
+  // reads identically to a reader whether the address has no base name at
+  // all, the slot has no row, or the row exists but never carried this
+  // field. (The first cause is DEFENSIVE: every T-slot `mapped` key's own
+  // address always contributes its base to `v1LegacyBaseNameOf`'s index —
+  // see that function's own doc — so it is unreachable via `v1MigrationKeys()`
+  // today; named anyway so a future change to that invariant fails loud
+  // rather than falling back to a misleading "no row" message.)
+  const base = v1LegacyBaseNameOf(address.category, address.field)
+  if (base === null) return { found: false, reason: 'no legacy base name' }
+  const rows = rowPairsFor(view, assertAdapterCategory(address.category)).map((p) => p.row)
+  const withSlot = rows.filter((r) => r.timePeriod === tSlot)
+  if (withSlot.length === 0) return { found: false, reason: `no ${tSlot} row` }
+  const withField = withSlot.filter((r) => Object.prototype.hasOwnProperty.call(r, base))
+  if (withField.length === 0) return { found: false, reason: `${tSlot} row lacks ${base}` }
+  return { found: true, value: withField[0]![base], multiple: withField.length > 1 }
+}
+
+/**
+ * The v1 flat record's shape, re-derived from a `CanonicalView` — the
+ * migration map (`src/v1-migration-map.ts`) run FORWARD. `record` is
+ * OPTIONAL: pass it to place the `relocated` keys too (the application
+ * record's own surface, NOT adapter data — see below); omit it and every
+ * `relocated` key reports `unplaced` instead of throwing.
+ *
+ * ITERATES `v1MigrationKeys()`, NOT `view.categories` — deliberately, so a
+ * v1 key with no v2 value today is a REPORTED fact (`unplaced`), never a
+ * silently absent one; this is how a parity spec finds its residuals. Per
+ * key, dispatch on the map entry's OWN disposition:
+ *
+ * - `mapped` with `instanceKeyPrefix`: `valueAtInstanceKeyPrefix` (first
+ *   instance whose key equals the prefix or continues it at a `#` boundary
+ *   (L-3, round 5 — never a bare `startsWith`, which a longer sibling prefix
+ *   could steal) — v1 held one path per pointer column, so first-in-order is
+ *   the parity choice).
+ * - `mapped` with `instanceKey`: `valueAtInstanceKey` (the one instance
+ *   naming it).
+ * - `mapped`, key ends in a bare `T[1-9]` (`T_SLOT_KEY_SUFFIX` — the
+ *   `(PriorYear)?` branch is unreachable for `mapped` post-round-2, see that
+ *   const's doc): `valueAtTSlot` — the T-slot family row lookup. A miss
+ *   distinguishes THREE causes (L-5, round 5 — see that function's own doc):
+ *   `'no legacy base name'`, `'no T{n} row'`, `'T{n} row lacks <base>'`.
+ * - `mapped`, anything else: `valueAtPlainAddress` — the single-instance
+ *   scalar read, `ambiguous` on a real collision.
+ * - `mapped-fanout` (`incorporatedDate` only, today): resolve BOTH addresses
+ *   via `valueAtPlainAddress`, in the map's own address order; place the
+ *   FIRST one with a value; if a second address also has a value and it
+ *   DIFFERS from the first, or either address's own lookup was itself
+ *   ambiguous, record `ambiguous`. Neither address having a value → `unplaced`.
+ * - `relocated`: the three top-level specials read straight off `record`
+ *   (`ihsId` <- `applicationId`, `status` <- `status`, `statusDescription` <-
+ *   `statusDescription`); every other relocated key walks `record.parties`
+ *   -> `record.facility` -> `record.system`, PRESENCE not nullishness (H-2,
+ *   round 5 — `relocatedBucketValue`, corrected from a `??` chain that fell
+ *   through an explicit `null` in an earlier bucket to a LATER bucket that
+ *   also happened to carry the key, silently returning the wrong bucket's
+ *   value). A bucket's `null` is placed as `null` — v1 served null for an
+ *   empty relocated column, and that is a real assertion, not "try the next
+ *   bucket". `record` undefined, or the key present in NONE of the buckets
+ *   -> `unplaced`, reason `` `relocated (surface: ${entry.surface}): not on
+ *   the application record` `` (M-3, round 5 — names the surface so a
+ *   parity spec can tell "the record genuinely does not carry this" from
+ *   "the caller forgot a bucket"; 48 of 51 relocated keys carry
+ *   `GET /lender/applications/:ihsId`, 3 carry the consent engine).
+ * - `retired`, `vocabulary-gap`, `needs-decision`, `mapped-pending-build`,
+ *   `structural`: NEVER placed, regardless of what the view holds —
+ *   `unplaced` with the map entry's own `note`/`reason` string (never
+ *   empty in the current map for these five dispositions). `structural`
+ *   covers seven entries: the four instance sidecars this function DOES
+ *   still surface, via the separate `instances` member below (NOT a member
+ *   of `record` — v1 shipped them as sibling arrays beside the flat record,
+ *   not flat keys, and this function keeps that shape); `documentMetadata`
+ *   (v1's sidecar for File name/type/size — v2 carries that as canonical
+ *   `document-intake` fields, so it has no destination of its OWN); `fieldProvenance`
+ *   (v1's sidecar map — superseded by the per-value envelope; see
+ *   `fieldProvenanceFromView`, which is the v2 equivalent for a caller that
+ *   wants it); `invoiceInstances` (no invoice category exists in the
+ *   registry yet).
+ *
+ * VALUE COERCION: NONE. Whatever the envelope (or, for a T-slot key, the
+ * `InstanceRow`) holds is placed verbatim — v2 types some values v1 stored
+ * as strings (e.g. a decimal) as numbers; the consumer's own `coerceFieldValue`
+ * already handles both, and stringifying here would be a second, competing
+ * opinion about the value's type.
+ *
+ * THE OVERLAY PROJECTION: nothing to do, deliberately. When `view` was read
+ * under the lender-overlay projection (`?overlay=mine`), an overlaid
+ * envelope's `value` already IS the overlaid one — the same thing v1's own
+ * details-merge did — so every placement above reads it through unchanged.
+ * `originalValue` (the attested value an overlay replaced) has no v1-shaped
+ * home; a caller that needs it reads `fieldProvenanceFromView`'s
+ * `IhsFieldProvenanceWithOriginal.originalValue` instead.
+ */
+export function flatRecordFromView(view: CanonicalView, record?: ApplicationRecordLike): FlatRecordFromView {
+  const out: Record<string, unknown> = {}
+  const unplaced: { key: string; disposition: string; reason: string }[] = []
+  const ambiguous: string[] = []
+  // L-4 (round 5): one row-pairs rebuild per category per CALL, not per key.
+  const rowPairsFor = rowPairsCache()
+
+  for (const key of v1MigrationKeys()) {
+    const entry = v1MigrationEntry(key)! // key came from the map itself; never null
+
+    if (entry.disposition === 'mapped') {
+      const address = entry.address!
+      let result: AddressLookup
+      let missingReason: string
+
+      if (address.instanceKeyPrefix !== undefined) {
+        result = valueAtInstanceKeyPrefix(view, address)
+        missingReason = 'mapped: no instance with this key prefix'
+      } else if (address.instanceKey !== undefined) {
+        result = valueAtInstanceKey(view, address)
+        missingReason = 'mapped: no instance with this instance key'
+      } else {
+        const tSlotMatch = T_SLOT_KEY_SUFFIX.exec(key)
+        if (tSlotMatch) {
+          const tSlot = `T${tSlotMatch[1]}`
+          result = valueAtTSlot(view, address, tSlot, rowPairsFor)
+          // L-5 (round 5): `result.reason` names WHICH of the three distinct
+          // causes applied; the fallback below is defensive only — every
+          // real miss from `valueAtTSlot` sets one.
+          missingReason = result.reason ?? `no ${tSlot} instance`
+        } else {
+          result = valueAtPlainAddress(view, address, rowPairsFor)
+          missingReason = 'mapped: no instance carries this field'
+        }
+      }
+
+      if (result.found) {
+        out[key] = result.value
+        if (result.multiple) ambiguous.push(key)
+      } else {
+        unplaced.push({ key, disposition: entry.disposition, reason: missingReason })
+      }
+    } else if (entry.disposition === 'mapped-fanout') {
+      const addresses = entry.addresses!
+      let placedValue: unknown
+      let placed = false
+      let anyMultiple = false
+      const foundValues: unknown[] = []
+
+      for (const address of addresses) {
+        const r = valueAtPlainAddress(view, address, rowPairsFor)
+        if (r.multiple) anyMultiple = true
+        if (r.found) {
+          foundValues.push(r.value)
+          if (!placed) {
+            placedValue = r.value
+            placed = true
+          }
+        }
+      }
+
+      if (placed) {
+        out[key] = placedValue
+        // L-1 (round 5): the SAME agreement rule the plain-address lookup
+        // uses — a strict `!==` flagged two attestors reporting the
+        // identical fact under different JS types (a v1 decimal string vs a
+        // v2 typed number) as a disagreement.
+        const disagree = foundValues.some((v) => !candidateValuesAgree(v, foundValues[0]))
+        if (anyMultiple || disagree) ambiguous.push(key)
+      } else {
+        unplaced.push({ key, disposition: entry.disposition, reason: 'mapped-fanout: neither address has a value' })
+      }
+    } else if (entry.disposition === 'relocated') {
+      let found: boolean
+      let value: unknown
+      if (key === 'ihsId') {
+        value = record?.applicationId
+        found = value !== undefined
+      } else if (key === 'status') {
+        value = record?.status
+        found = value !== undefined
+      } else if (key === 'statusDescription') {
+        value = record?.statusDescription
+        found = value !== undefined
+      } else {
+        const lookup = relocatedBucketValue(record, key)
+        found = lookup.found
+        value = lookup.value
+      }
+
+      if (found) out[key] = normalizeRelocatedValue(value)
+      else {
+        // M-3 (round 5): names the SURFACE (`entry.surface` — 48 of 51
+        // relocated keys are `GET /lender/applications/:ihsId`, 3 are the
+        // consent engine) so a parity spec can tell "the record genuinely
+        // does not carry this" from "the caller forgot a bucket" — the old
+        // bare string read identically for both.
+        unplaced.push({
+          key,
+          disposition: entry.disposition,
+          reason: `relocated (surface: ${entry.surface ?? 'unknown'}): not on the application record`,
+        })
+      }
+    } else {
+      // retired, vocabulary-gap, structural, needs-decision, mapped-pending-build:
+      // never placed, regardless of what the view holds.
+      unplaced.push({ key, disposition: entry.disposition, reason: entry.note ?? entry.reason ?? '' })
+    }
+  }
+
+  return {
+    record: out,
+    unplaced,
+    ambiguous,
+    instances: {
+      financialStatementInstances: instanceRowsFromView(view, assertAdapterCategory('financial-statement')),
+      bankStatementInstances: instanceRowsFromView(view, assertAdapterCategory('finxtract-bank-statement')),
+      epfStatementInstances: instanceRowsFromView(view, assertAdapterCategory('epf-statement')),
+      payslipInstances: instanceRowsFromView(view, assertAdapterCategory('payslip')),
+    },
+  }
 }

@@ -161,6 +161,28 @@ describe('v1 migration map', () => {
     }
   });
 
+  it('SYS-3334 round 2 — the six VN prior-year comparative keys are needs-decision, not mapped (the map correction)', () => {
+    // netProfitPriorYearT1..T3 / totalEquityPriorYearT1..T3 used to resolve
+    // through the SAME wide-column-feeder address as their current-year
+    // siblings (netProfitT{n} / totalEquityT{n}): financialStatementSpecVN.ts
+    // writes the comparative on the SAME row as the current-year value, the
+    // registry declares no PriorYear field, and the T-suffix-stripping the
+    // generator uses to find a feeder collapses "PriorYearT1" and "T1" to
+    // the same base — so a forward walk through the map returned the
+    // CURRENT-year value under the PRIOR-year name. Pinned here so a future
+    // map regen cannot silently put them back without this test noticing.
+    for (const base of ['netProfitPriorYear', 'totalEquityPriorYear']) {
+      for (const n of [1, 2, 3]) {
+        const key = `${base}T${n}`;
+        expect(v1MigrationEntry(key)!.disposition, key).toBe('needs-decision');
+        expect(v1Addresses(key), key).toEqual([]);
+      }
+    }
+    // The six moved OUT of `mapped` and INTO `needs-decision` — nowhere else.
+    expect(v1KeysByDisposition('mapped').length).toBe(667);
+    expect(v1KeysByDisposition('needs-decision').length).toBe(11);
+  });
+
   it('v1Addresses returns every attestor, not just the first', () => {
     // Proves the accessor a consumer will actually loop over, on the one
     // shape where taking [0] silently drops half the answer.

@@ -114,6 +114,18 @@ export {
   documentHashOfKey,
   documentHashOfPath,
   legacyOrdinalOfKey,
+  // SYS-3334: buildFileFieldTables's instance-shaped sibling — the fourth
+  // and last flat file-field function to get one.
+  instanceRowsFromView,
+  buildFileFieldTablesFromView,
+  // SYS-3334 F3 (round 2 review): the provenance synthesis hoisted out of
+  // buildFileFieldTablesFromView — collision-aware, and usable on its own.
+  fieldProvenanceFromView,
+  // SYS-3334: the v1-shape bridge — the migration map run FORWARD (v1 key ->
+  // address -> value), so a consumer walking every flat key (an evaluation
+  // data factory, MatchingUtil, jurisdictionOf, the SSM panel) reads a
+  // CanonicalView through one map instead of each growing its own reverse walk.
+  flatRecordFromView,
   APPLICATION_RECORD_CURRENCY_FIELDS,
   registryMoneyLegacyNames,
   buildDocumentRows,
@@ -180,6 +192,9 @@ export type {
   FileFieldTableData,
   FileFieldTableItem,
   IhsFieldProvenance,
+  // SYS-3334 F3 (round 2 review): IhsFieldProvenance + the overlay-replaced
+  // value, for fieldProvenanceFromView's return shape.
+  IhsFieldProvenanceWithOriginal,
   DocumentRow,
   DocumentRowCapabilities,
   DocumentFileMetadata,
@@ -192,6 +207,10 @@ export type { CategorySpec } from './ihs-processing.js'
 // so the host can name what it is attesting as `document-intake` rows rather
 // than declaring a private copy of it.
 export type { ParsedDocFile } from './ihs-processing.js'
+
+// SYS-3334: the v1-shape bridge's own types — the record half of the v2 read
+// pair (structural, so core need not import the SDK) and its return shape.
+export type { ApplicationRecordLike, FlatRecordFromView } from './ihs-processing.js'
 
 // ── Source Adapter framework (SYS-2440) ──────────────────────────────
 // The contract for ingesting unstructured / partner-specific data
@@ -284,6 +303,7 @@ export {
   v1KeysByDisposition,
   v1KeyForAddress,
   v1AddressHasKeyedEntries,
+  v1LegacyBaseNameOf,
 } from './v1-migration-map.js';
 
 // SYS-3334: the v2 canonical envelope. Owned here rather than in the lender
@@ -292,6 +312,11 @@ export {
 // external lenders holding @finsys/lender-client (which re-exports these).
 export type {
   CanonicalFieldEnvelope,
+  // SYS-3421: declared in 8.1.0's first candidate but left out of this list —
+  // finsys-api's resolver found it (TS2305) and had to mirror the interface
+  // locally. Every member of the envelope is exported, or the wire shape is
+  // not owned here at all.
+  CanonicalAttestation,
   CanonicalInstance,
   CanonicalCategory,
   CanonicalView,

@@ -89,7 +89,15 @@ export interface CanonicalFieldEnvelope {
  * correction can stand beside the extraction it corrects.
  */
 export interface CanonicalAttestation {
-  value: number | boolean | string
+  /**
+   * `null` is a real attestation: a lender CLEARED the field (SYS-3421). The
+   * envelope's own `value` never carries null — a resolved clear makes the
+   * field ABSENT from the instance — but the attestation list must still
+   * show that someone said "nothing", or a later, lower-ranked value would
+   * appear uncontested. Unlike the envelope, this is the ledger, not the
+   * answer.
+   */
+  value: number | boolean | string | null
   /** 'extraction' | 'form-intake' | 'manual' | … — the assertion class the resolver ranks. */
   origin: string
   adapterId: string
@@ -106,8 +114,58 @@ export interface CanonicalInstance {
   adapterId: string
   adapterVersion: number
   runId?: number
+  /**
+   * ISO-8601, UTC (`Z` offset), e.g. `'2026-08-19T00:00:00.000Z'`. Carried
+   * verbatim onto a synthesized `IhsFieldProvenance.observedAt` entry
+   * (`fieldProvenanceFromView`, `ihs-processing.ts`) — a plain string, never
+   * parsed there. SYS-3334 M-5 (round 5) removed the one place this used to
+   * be COMPARED as a string (a temporal tie-break for two instances
+   * contending on one slot): every key that comparison was ever consulted on
+   * has its provenance entry deleted regardless of the result (H2, round 4),
+   * so the comparison was computing an answer nobody could read. If a future
+   * consumer reintroduces ordering by this field, the same requirement
+   * applies: every writer must use this SAME format, because two
+   * same-format, same-offset timestamps order lexicographically exactly as
+   * they order in time, and a writer emitting a different offset or
+   * precision would silently break that ordering without either side
+   * raising an error.
+   */
   observedAt?: string
   fields: Record<string, CanonicalFieldEnvelope>
+  /**
+   * The v1 wide-table slot this instance projected to (`'T1'`..`'T6'`, or a
+   * financial-statement `'T3'`), carried through the migration window ONLY:
+   * present when the source row stored one, absent when it did not (a
+   * post-cutover financial-statement coordinate v1 discarded, an alt-data
+   * instance that never had a wide column). Consumers reproducing a v1
+   * shape read THIS, never a derived position; consumers on v2 ignore it.
+   * Retires with the wide table.
+   *
+   * SHAPE CONTRACT (M4, SYS-3334 round 4): `/^T[1-9]\d*$/` — bare `T`
+   * followed by a positive integer, no leading zero, no whitespace, no
+   * suffix. finsys-api has not shipped this member as of 2026-08-19, so no
+   * producer has violated it yet; every consumer (`timePeriodOf`,
+   * `ihs-processing.ts`, the cheapest place to pin it before one does)
+   * REJECTS a value outside this shape rather than trimming or coercing it
+   * — a rejected value is treated as absent, falling through to a derived
+   * period, so a producer bug is visible as a DIFFERENT period rather than
+   * accepted verbatim into a column header or a provenance key.
+   */
+  legacySlot?: string
+  /** A per-instance human label the source row carried (a bank statement's issuing bank). */
+  sourceLabel?: string
+  /**
+   * The 1-based period coordinate of a period-aware document instance
+   * (financial statements: 1 = the document's own current fiscal year, 2 =
+   * its prior comparative year), when the source row stores one. Distinct
+   * from `legacySlot`: a year-2 document's own current-year column has
+   * position 1 and NO legacy slot (v1 discarded it) — the coordinate is how
+   * a consumer selects "the true current-year row" without the T-slot
+   * projection guessing for it. Absent for rows that carry none (bank,
+   * payslip, EPF, alt-data). Additive; the migration-window bridge copies
+   * it onto `InstanceRow.periodPosition` verbatim.
+   */
+  periodPosition?: number
 }
 
 export interface CanonicalCategory {

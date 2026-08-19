@@ -754,7 +754,7 @@
       "id": "payslip",
       "displayName": "Payslip (Document Extraction)",
       "description": "Fields extracted from an uploaded payslip document by the host's extraction pipeline. One instance per payslip document; each payslip covers a single pay period. Field names carry the 'payslip' prefix \u2014 the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
-      "canonicalTable": "ihspayslip",
+      "canonicalTable": "ihsPayslip",
       "fields": [
         {
           "name": "employerName",

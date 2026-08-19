@@ -706,6 +706,11 @@ const DOC_DISPLAY_NAMES: Record<string, string> = {
   form9: 'Form 9',
   epfStatements: 'EPF Statements',
   payslips: 'Payslips',
+  // SYS-3376: a host pointer slot (extraction: true) the catalog never named —
+  // an uploaded invoice rendered in NEITHER product. The slot list is owned by
+  // the host (finsys-api IHS_DOCUMENT_POINTER_FIELDS); the host carries the
+  // comparator that every slot is named here.
+  invoices: 'Invoices',
   ssm: 'SSM Company Profile',
   ic: 'Identity Card',
   ssm_registration_documents: 'Form 9',
@@ -727,6 +732,7 @@ const EXTRACTABLE_DOC_TYPES = new Set<string>([
   'form9',
   'epfStatements',
   'payslips',
+  'invoices',
   'ssm',
   'ic',
   'ssm_registration_documents',

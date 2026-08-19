@@ -211,6 +211,9 @@ export type { ParsedDocFile } from './ihs-processing.js'
 // SYS-3334: the v1-shape bridge's own types — the record half of the v2 read
 // pair (structural, so core need not import the SDK) and its return shape.
 export type { ApplicationRecordLike, FlatRecordFromView } from './ihs-processing.js'
+// SYS-3438: `ViewDocument` (documentsOfType's return type) was declared and
+// documented as exported in 8.1.0 and never added here — TS2459 for consumers.
+export type { ViewDocument } from './ihs-processing.js'
 
 // ── Source Adapter framework (SYS-2440) ──────────────────────────────
 // The contract for ingesting unstructured / partner-specific data

@@ -500,7 +500,15 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     // canonical over a promoted legacy sibling table (`ihsbankstatement`,
     // `ihsepfstatement`, ...) — so the invariant is the namespace prefix,
     // not the alt-data naming scheme.
-    if (typeof cat.canonicalTable !== "string" || !/^ihs[a-z0-9_]*$/.test(cat.canonicalTable)) {
+    //
+    // SYS-3327: the physical schema has ONE camel-cased table, `ihsPayslip`,
+    // and the database runs lower_case_table_names=0, so case is part of the
+    // name. This rule used to be lowercase-only — which meant the payslip
+    // declaration COULD NOT be written correctly and was written wrong, and
+    // its own test restated the wrong literal. The namespace prefix is the
+    // invariant; the case is the schema's to dictate. (SYS-3341 derives the
+    // table from the category id and retires the question.)
+    if (typeof cat.canonicalTable !== "string" || !/^ihs[A-Za-z0-9_]*$/.test(cat.canonicalTable)) {
       throw new Error(
         `adapter category data: ${where} canonicalTable must be an "ihs"-prefixed table identifier (got "${cat.canonicalTable}")`,
       );

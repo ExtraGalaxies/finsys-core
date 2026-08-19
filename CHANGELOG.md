@@ -6,6 +6,51 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [8.1.1] - 2026-08-19
+
+Patch. Three declared-vs-actual defects, each found after 8.1.0 froze; no
+API change, no consumer change — every consumer on `^8.1.0` picks this up on
+its next install and nothing needs a PR. This is intended to be the last core
+release until Phase 6 (9.0.0), barring a prioritized feature.
+
+### Fixed — `ViewDocument` is exported from the root (SYS-3438)
+
+- `documentsOfType()` returns `ViewDocument[]`, and the 8.1.0 notes said the
+  type was exported. It was declared `export interface` in `ihs-processing`
+  and never added to `index.ts` — the published d.ts had it outside the
+  `export {}` block, and `import type { ViewDocument } from '@finsys/core'`
+  was TS2459. Exported now, with a ROOT-entry pin (same shape as
+  `CanonicalAttestation`'s) so `tsc` fails if it is ever dropped again.
+
+### Fixed — the payslip category declares the table that exists (SYS-3327)
+
+- `finxtract-payslip.canonicalTable` read `ihspayslip`; the physical table is
+  `ihsPayslip` — the ONE camel-cased sibling (bank/epf/financial are
+  lowercase) — on a database with `lower_case_table_names=0`, so the declared
+  name resolved to no table at all. Measured on the finsim MySQL 2026-08-19.
+- The registry validator was lowercase-only (`/^ihs[a-z0-9_]*$/`), which is
+  WHY the declaration was wrong: it could not be written correctly, and its
+  test restated the wrong literal. The validator is case-preserving now; the
+  namespace prefix stays the invariant. Nothing resolves storage from
+  `canonicalTable` yet (finsys-api reaches every table through its entities),
+  so this changes no read; it stops the first consumer that does from
+  reading a table that is not there. The drift guard against the physical
+  schema belongs in the host, which has both. SYS-3341 (derive the table from
+  the category id) retires the question.
+
+### Fixed — invoices render in the documents table (SYS-3376)
+
+- `invoices` is a host pointer slot (finsys-api `IHS_DOCUMENT_POINTER_FIELDS`,
+  array storage, extraction: true) that the doc catalog never named, so
+  `buildDocumentRows` and `buildDocumentRowsFromView` both dropped it — an
+  uploaded invoice was stored, billed for on extraction, and rendered in
+  NEITHER product. It is a row now (label `Invoices`, extractable, not
+  re-uploadable), in catalog order: after payslips, before SSM. Consumers
+  that index rows positionally will see one more row where invoices exist;
+  the (docType, index) alignment with `resolveExtractionStatusFromView` is
+  unchanged. The slot list is host-owned; the comparator that every host
+  slot is in `getDocDisplayNames()` belongs beside the list, in finsys-api.
+
 ## [8.1.0] - 2026-08-18
 
 Additive. Nothing renamed, nothing removed — a consumer on 8.0.0 upgrades

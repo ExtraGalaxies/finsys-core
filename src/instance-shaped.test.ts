@@ -578,7 +578,10 @@ describe('buildDocumentRowsFromView — the documents table, from intake instanc
         inst('bankStatements#1', { documentType: 'bankStatements', pathInDms: `${DMS}${hashA}`, uploadedAt: '2026-08-01T00:00:00.000Z', uploadedBy: 'agent:7' }),
         inst('bankStatements#2', { documentType: 'bankStatements', pathInDms: `${DMS}${hashB}?sig=x` }, { observedAt: '2026-08-02T00:00:00.000Z' }),
         inst('ssm#3', { documentType: 'ssm', pathInDms: `${DMS}${'e'.repeat(64)}` }),
-        // A type the table does not show: dropped, as v1 dropped pointer columns outside DOC_DISPLAY_NAMES.
+        // SYS-3376: `invoices` is a host pointer slot (finsys-api's
+        // IHS_DOCUMENT_POINTER_FIELDS, extraction: true) that the catalog did
+        // not name, so an uploaded invoice rendered in NEITHER product. It is a
+        // row now, in catalog order (after payslips, before ssm).
         inst('invoices#4', { documentType: 'invoices', pathInDms: `${DMS}${'f'.repeat(64)}` }),
       ],
     },
@@ -595,9 +598,12 @@ describe('buildDocumentRowsFromView — the documents table, from intake instanc
       ['bankStatements', 0, hashA],
       ['bankStatements', 1, hashB],
       ['bankStatements', 2, hashD],
+      ['invoices', 0, 'f'.repeat(64)],
       ['ssm', 0, 'e'.repeat(64)],
     ])
-    expect(rows.some((r) => r.docType === 'invoices')).toBe(false)
+    const invoice = rows.find((r) => r.docType === 'invoices')!
+    expect(invoice.label).toBe('Invoices')
+    expect(invoice.capabilities.reExtract).toBe(true)
   })
 
   it('takes uploadedAt from the instance (field, else observedAt), uploadedBy from the field, and metadata from the sibling map first', () => {
@@ -605,7 +611,9 @@ describe('buildDocumentRowsFromView — the documents table, from intake instanc
     expect(rows[0]).toMatchObject({ fileName: 'jan.pdf', fileType: 'PDF', fileSize: 1234, uploadedAt: '2026-08-01T00:00:00.000Z', uploadedBy: 'agent:7', displayName: 'jan.pdf' })
     expect(rows[1]).toMatchObject({ fileName: null, uploadedAt: '2026-08-02T00:00:00.000Z', displayName: 'Bank Statements 2', path: `${DMS}${hashB}?sig=x` })
     expect(rows[2]).toMatchObject({ path: null, uploadedAt: null, displayName: 'Bank Statements 3', capabilities: { download: true, viewJson: true, reExtract: true, reUpload: true } })
-    expect(rows[3]).toMatchObject({ displayName: 'SSM Company Profile', capabilities: { viewJson: true } })
+    // rows[3] is the invoice since SYS-3376; SSM is the last row.
+    expect(rows[3]).toMatchObject({ displayName: 'Invoices', capabilities: { viewJson: true, reUpload: false } })
+    expect(rows[4]).toMatchObject({ displayName: 'SSM Company Profile', capabilities: { viewJson: true } })
   })
 
   it('aligns with resolveExtractionStatusFromView by (docType, index) AND by documentId — one order, one function', () => {

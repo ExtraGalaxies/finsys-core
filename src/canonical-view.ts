@@ -147,9 +147,23 @@ export interface CanonicalInstance {
    * producer has violated it yet; every consumer (`timePeriodOf`,
    * `ihs-processing.ts`, the cheapest place to pin it before one does)
    * REJECTS a value outside this shape rather than trimming or coercing it
-   * — a rejected value is treated as absent, falling through to a derived
-   * period, so a producer bug is visible as a DIFFERENT period rather than
-   * accepted verbatim into a column header or a provenance key.
+   * — a rejected value is treated as ABSENT, and is therefore never accepted
+   * verbatim into a column header or a provenance key.
+   *
+   * WHAT "ABSENT" RESOLVES TO depends on whether the instance carries a
+   * `periodPosition`, and this doc said otherwise until SYS-3517. It used to
+   * promise "falling through to a derived period, so a producer bug is
+   * visible as a DIFFERENT period". That is still true for an instance with
+   * NO coordinate. On a COORDINATE-bearing instance it is not: absence is an
+   * assertion there (see `periodPosition` below), so the period resolves to
+   * NULL rather than to something derived. For a position-1 row that
+   * genuinely owned T1, a malformed value therefore renders as
+   * `timePeriod: null, periodPosition: 1` — the same shape a consumer's
+   * coordinate branch selects for, so it would read as a true current-year
+   * row rather than as a visible anomaly. No producer emits an out-of-shape
+   * value today (probed against every sibling table, 2026-08-22); a producer
+   * that starts to should fail loudly at the emitter, because no consumer
+   * rule can make a malformed slot safe on a coordinate row.
    */
   legacySlot?: string
   /** A per-instance human label the source row carried (a bank statement's issuing bank). */
@@ -164,6 +178,35 @@ export interface CanonicalInstance {
    * projection guessing for it. Absent for rows that carry none (bank,
    * payslip, EPF, alt-data). Additive; the migration-window bridge copies
    * it onto `InstanceRow.periodPosition` verbatim.
+   *
+   * SHAPE CONTRACT: a finite number >= 1. Out of range is treated as absent
+   * — never coerced to 1, never rounded. The same test finsys-api's own
+   * projector applies on the way out, deliberately character for character:
+   * a receiver stricter than its producer discards values that were sent,
+   * which here would silently re-enable the fabricated slot below.
+   *
+   * PRESENCE OF THIS MEMBER CHANGES WHAT AN ABSENT `legacySlot` MEANS, and
+   * that is a real obligation on producers, not a consumer detail (SYS-3517
+   * rule 1b). On an instance with NO coordinate, an absent `legacySlot` is
+   * SILENCE: the consumer derives a period from the key or the ordering, as
+   * it always has. On an instance WITH one, it is an ASSERTION — the
+   * producer saying "the v1 model had no slot for this row" — and the
+   * period resolves to null instead of being derived.
+   *
+   * So a producer that stamps this member takes on the duty to stamp
+   * `legacySlot` on every row that HAS a v1 slot. Omitting one there no
+   * longer reads as "unknown, please derive"; it reads as "there is none",
+   * and the row goes slotless. The row this protects is a year-2 financial
+   * statement's own current fiscal year: stored at position 1 with no slot,
+   * under a HISTORICAL key ending `#T1` that a re-extraction adopted. Read
+   * the period off that key and the one null the coordinate model exists to
+   * preserve becomes a second claimant on T1, which is exactly the overlap
+   * projection DEVOPS-535 removed.
+   *
+   * This is the first member of this interface whose ABSENCE is meaningful,
+   * which is why it is stated here rather than left to the consumer's own
+   * cascade doc: a producer cannot honor a contract it can only read in a
+   * consumer's source.
    */
   periodPosition?: number
 }

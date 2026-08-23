@@ -1704,8 +1704,8 @@ describe('flatRecordFromView — valueAtPlainAddress reads F5\'s period-sorted o
 
 // ── M-2 (round 5): a T-slot key names a SLOT, not an INSTANCE ──────────
 
-describe('flatRecordFromView — two rows sharing a T-slot place the first AND flag ambiguous (M-2, round 5)', () => {
-  it('the scalar keeps the OLD rule (place the first); the NEW behavior is that the pick is now reported, not hidden (mutation: drop the `withSlot.length > 1` multiple flag -> ambiguous never fires even though two rows share T1)', () => {
+describe('flatRecordFromView — two rows sharing a T-slot place ONE of them AND flag ambiguous (M-2, round 5; the pick revised by SYS-3526)', () => {
+  it('the pick is reported, not hidden — and it is the LAST row, matching v1 and the instance path (mutation: drop the `withSlot.length > 1` multiple flag -> ambiguous never fires even though two rows share T1)', () => {
     const v2: CanonicalView = view({
       'finxtract-bank-statement': {
         cardinality: 'multi',
@@ -1716,7 +1716,12 @@ describe('flatRecordFromView — two rows sharing a T-slot place the first AND f
       },
     })
     const { record: out, ambiguous } = flatRecordFromView(v2)
-    expect(out['bankBalanceT1']).toBe(9000) // first row — the rule is unchanged
+    // SYS-3526: this line read 9000 ("first row — the rule is unchanged")
+    // until the three-consumer disagreement was measured. M-2's finding — a
+    // slot can hold two rows, a flat scalar can only hold one — is unchanged
+    // and is still what the assertion below pins; only WHICH one moved, to
+    // the one v1 and finsys-client both already served.
+    expect(out['bankBalanceT1']).toBe(9500)
     expect(ambiguous).toContain('bankBalanceT1')
 
     // The rendered table still shows BOTH columns under the same T1 header —
@@ -1882,5 +1887,959 @@ describe('flatRecordFromView — the relocated unplaced reason names the surface
     // is the consent engine, not the application record's own GET route.
     const consent = unplaced.find((u) => u.key === 'consentCrossSelling')!
     expect(consent.reason).toBe('relocated (surface: the consent engine): not on the application record')
+  })
+})
+
+// ── SYS-3517 F1: a slotless COORDINATE must not be fabricated into a slot ──
+
+/**
+ * The live shape, read off finsim's MySQL on 2026-08-22 (ihs 282 and 283,
+ * `ihsfinancialstatement`). Two financial-statement documents, four rows:
+ *
+ *   id  instanceKey                       timePeriod  periodPosition  netProfit
+ *   355 financialStatement:<doc1>#T1      T1          1               120000
+ *   356 financialStatement:<doc1>#T2      T2          2                90000
+ *   357 financialStatement:<doc2>#T1      NULL        1                77777
+ *   358 financialStatement:<doc2>#T3      T3          2                55555
+ *
+ * Row 357 is the DEVOPS-535 coordinate: document #2's OWN current fiscal
+ * year, which the pre-SYS-3003 slot model discarded and SYS-3003 stores at
+ * (instance, position 1) with a DELIBERATELY NULL slot. Its `#T1` suffix is
+ * not a period — it is a HISTORICAL ADOPTED KEY (financialStatementSpec.ts:
+ * "re-extraction of a pre-cutover document ADOPTS its existing `#T{n}` /
+ * `legacy:T{n}` rows ... the adopted row keeps its key and gains its
+ * periodPosition stamp"). The row's own slot is the NULL its producer wrote,
+ * not the number embedded in a key it inherited.
+ */
+const FS_DOC1 = `financialStatement:${'a'.repeat(64)}`
+const FS_DOC2 = `financialStatement:${'b'.repeat(64)}`
+
+const fsCoordinateView = (): CanonicalView =>
+  view({
+    'financial-statement': {
+      cardinality: 'multi',
+      instances: [
+        inst(`${FS_DOC1}#T1`, { netProfit: 120000 }, { legacySlot: 'T1', periodPosition: 1, runId: 1442 }),
+        inst(`${FS_DOC1}#T2`, { netProfit: 90000 }, { legacySlot: 'T2', periodPosition: 2, runId: 1442 }),
+        // The discarded coordinate: position 1, NO legacySlot, adopted `#T1` key.
+        inst(`${FS_DOC2}#T1`, { netProfit: 77777 }, { periodPosition: 1, runId: 1443 }),
+        inst(`${FS_DOC2}#T3`, { netProfit: 55555 }, { legacySlot: 'T3', periodPosition: 2, runId: 1443 }),
+      ],
+    },
+  })
+
+/**
+ * finsys-client's `selectFinancialRow` (app/evaluation/ihs_value_provider.ts),
+ * mirrored EXACTLY — the coordinate scan first (DEVOPS-535), then the T-slot
+ * scan, both last-match-wins. Mirrored rather than imported because that
+ * resolver lives in a different repo and this package's contract to it is
+ * the row shape, not the code. If the mirror and the original ever diverge,
+ * the divergence is the finding.
+ */
+function selectFinancialRowMirror(
+  rows: ReturnType<typeof instanceRowsFromView>,
+  offset: number,
+  period: 'currentYear' | 'priorYear',
+): Record<string, unknown> | null {
+  if (offset === 1 && period === 'currentYear') {
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const c = rows[i]!
+      if (c.timePeriod === null && c.periodPosition === 1) return c
+    }
+  }
+  const wanted = `T${offset + (period === 'currentYear' ? 1 : 2)}`
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i]!.timePeriod === wanted) return rows[i]!
+  }
+  return null
+}
+
+describe('timePeriodOf — a periodPosition with no legacySlot is a SLOTLESS coordinate, not a #T{n} to be read off the key (SYS-3517 F1)', () => {
+  it('the year-2 document\'s own current-year row keeps timePeriod null, and its adopted #T1 key does NOT become slot T1 (mutation: let the HASH_PERIOD_SUFFIX rule run for a coordinate-bearing instance -> "T1")', () => {
+    const rows = instanceRowsFromView(fsCoordinateView(), 'financial-statement')
+    const byKey = new Map(rows.map((r) => [r.instanceKey, r]))
+
+    // The coordinate row: the wire stated a position AND stated no slot.
+    expect(byKey.get(`${FS_DOC2}#T1`)).toMatchObject({ timePeriod: null, periodPosition: 1 })
+
+    // Its three siblings each carry a real slot, and every one is untouched.
+    expect(byKey.get(`${FS_DOC1}#T1`)).toMatchObject({ timePeriod: 'T1', periodPosition: 1 })
+    expect(byKey.get(`${FS_DOC1}#T2`)).toMatchObject({ timePeriod: 'T2', periodPosition: 2 })
+    expect(byKey.get(`${FS_DOC2}#T3`)).toMatchObject({ timePeriod: 'T3', periodPosition: 2 })
+
+    // Exactly ONE row claims T1. A second claimant is the defect: it makes
+    // `latest/currentYear` a coin-toss decided by the view's emission order.
+    expect(rows.filter((r) => r.timePeriod === 'T1')).toHaveLength(1)
+  })
+
+  it('the DEVOPS-535 resolution replayed on this bridge\'s own rows: latest/currentYear 120000, latest-1/currentYear 77777, latest-1/priorYear 55555 (mutation: restore the fabricated T1 -> 77777 / 90000, the retired projection DEVOPS-535 removed)', () => {
+    const rows = instanceRowsFromView(fsCoordinateView(), 'financial-statement')
+
+    expect(selectFinancialRowMirror(rows, 0, 'currentYear')!['netProfit']).toBe(120000)
+    // The number the whole of DEVOPS-535 exists to return: document #2's OWN
+    // current year, NOT document #1's prior-year overlap (90000).
+    expect(selectFinancialRowMirror(rows, 1, 'currentYear')!['netProfit']).toBe(77777)
+    expect(selectFinancialRowMirror(rows, 1, 'priorYear')!['netProfit']).toBe(55555)
+  })
+
+  it('the fix is invariant under the view\'s emission order — the SAME four instances shuffled resolve identically (the lexical-instanceKey order finsys-api actually emits is one of these permutations)', () => {
+    const shuffled = view({
+      'financial-statement': {
+        cardinality: 'multi',
+        instances: [
+          inst(`${FS_DOC2}#T1`, { netProfit: 77777 }, { periodPosition: 1, runId: 1443 }),
+          inst(`${FS_DOC2}#T3`, { netProfit: 55555 }, { legacySlot: 'T3', periodPosition: 2, runId: 1443 }),
+          inst(`${FS_DOC1}#T1`, { netProfit: 120000 }, { legacySlot: 'T1', periodPosition: 1, runId: 1442 }),
+          inst(`${FS_DOC1}#T2`, { netProfit: 90000 }, { legacySlot: 'T2', periodPosition: 2, runId: 1442 }),
+        ],
+      },
+    })
+    const rows = instanceRowsFromView(shuffled, 'financial-statement')
+    expect(selectFinancialRowMirror(rows, 0, 'currentYear')!['netProfit']).toBe(120000)
+    expect(selectFinancialRowMirror(rows, 1, 'currentYear')!['netProfit']).toBe(77777)
+  })
+})
+
+describe('timePeriodOf — the #T{n} rule is NARROWED, not removed (SYS-3517 F1, neighbor check)', () => {
+  it('rule 2 still answers for an instance with a #T{n} key and NO coordinate on the wire — a pre-SYS-3003 producer is unchanged (mutation: return null whenever legacySlot is absent -> the whole pre-coordinate corpus loses its periods)', () => {
+    const preCoordinate = view({
+      'financial-statement': {
+        cardinality: 'multi',
+        instances: [
+          inst(`${FS_DOC1}#T1`, { netProfit: 120000 }),
+          inst(`${FS_DOC1}#T2`, { netProfit: 90000 }),
+        ],
+      },
+    })
+    const rows = instanceRowsFromView(preCoordinate, 'financial-statement')
+    expect(rows.map((r) => r.timePeriod)).toEqual(['T1', 'T2'])
+    // And no coordinate is invented for them either.
+    expect(rows.every((r) => !('periodPosition' in r))).toBe(true)
+  })
+
+  it('a coordinate row WITH a well-shaped legacySlot still takes rule 1 verbatim — the narrowing reads the slot\'s ABSENCE, never its presence', () => {
+    const v2 = view({
+      'financial-statement': {
+        cardinality: 'multi',
+        // Key says #T2, wire says the slot is T3. Rule 1 wins, as F4 pinned.
+        instances: [inst(`${FS_DOC1}#T2`, { netProfit: 1000 }, { legacySlot: 'T3', periodPosition: 2 })],
+      },
+    })
+    expect(instanceRowsFromView(v2, 'financial-statement')[0]!.timePeriod).toBe('T3')
+  })
+
+  it('an OUT-OF-SHAPE legacySlot on a coordinate row is still rejected (M4) and, being rejected, reads as ABSENT — so the coordinate rule takes it, not the key\'s #T{n}', () => {
+    const v2 = view({
+      'financial-statement': {
+        cardinality: 'multi',
+        instances: [inst(`${FS_DOC2}#T1`, { netProfit: 77777 }, { legacySlot: '2026-06', periodPosition: 1 })],
+      },
+    })
+    // M4's contract: a rejected value is treated as if the member were never
+    // set. With a coordinate present, "never set" now means slotless.
+    expect(instanceRowsFromView(v2, 'financial-statement')[0]!.timePeriod).toBeNull()
+  })
+
+  it('NEIGHBOR: every non-financial document category is untouched — none of them carries periodPosition on the wire, so the cascade they see is byte-identical', () => {
+    const others = view({
+      'finxtract-bank-statement': {
+        cardinality: 'multi',
+        instances: [
+          inst(`bankStatement:${'1'.repeat(64)}`, { closingBalance: 5000 }, { legacySlot: 'T1' }),
+          inst(`bankStatement:${'2'.repeat(64)}`, { closingBalance: 6000 }),
+          inst('legacy:T3', { closingBalance: 7000 }),
+        ],
+      },
+      payslip: {
+        cardinality: 'multi',
+        instances: [
+          inst(`payslip:${'3'.repeat(64)}`, { payslipNetPay: 4000 }),
+          inst(`payslip:${'4'.repeat(64)}`, { payslipNetPay: 4200 }),
+        ],
+      },
+      'epf-statement': {
+        cardinality: 'multi',
+        instances: [inst(`epfStatement:${'5'.repeat(64)}`, { epfAccountBalance: 88000 }, { legacySlot: 'T2' })],
+      },
+      'company-profile': {
+        cardinality: 'multi',
+        instances: [inst('ssm:x', { companyName: 'Granite Holdings' })],
+      },
+      'company-registration': {
+        cardinality: 'multi',
+        instances: [inst('form9:x', { companyIncorporationDate: '2019-03-01' })],
+      },
+      'person-identity': {
+        cardinality: 'multi',
+        instances: [inst(`ic:${'6'.repeat(64)}`, { personName: 'SITI BINTI ALI' })],
+      },
+    })
+    // 1111 carries its slot verbatim (T1); 2222 has neither slot nor suffix and
+    // takes the position fallback (documentsOfType puts it at index 1 -> T2);
+    // legacy:T3 names its own slot. None of the three changes.
+    expect(instanceRowsFromView(others, 'finxtract-bank-statement').map((r) => r.timePeriod)).toEqual(['T1', 'T2', 'T3'])
+    expect(instanceRowsFromView(others, 'payslip').map((r) => r.timePeriod)).toEqual(['T1', 'T2'])
+    expect(instanceRowsFromView(others, 'epf-statement').map((r) => r.timePeriod)).toEqual(['T2'])
+    expect(instanceRowsFromView(others, 'company-profile').map((r) => r.timePeriod)).toEqual(['T1'])
+    expect(instanceRowsFromView(others, 'company-registration').map((r) => r.timePeriod)).toEqual(['T1'])
+    expect(instanceRowsFromView(others, 'person-identity').map((r) => r.timePeriod)).toEqual(['T1'])
+  })
+})
+
+// ── SYS-3517 F1: the measured consequence for the RENDERED table ──────
+
+describe('buildFileFieldTablesFromView — a slotless coordinate row loses its (wrong) T1 column header and gets its instance key instead (SYS-3517 F1, measured consequence)', () => {
+  it('pins the header a slotless row renders under, because BOTH the old and the new one are unsatisfactory and the choice belongs to the table\'s owner, not to this fix', () => {
+    const table = buildFileFieldTablesFromView(fsCoordinateView())['financials']!
+    const netProfit = table.items.find((i) => i.displayName.toLowerCase().includes('net profit'))!
+
+    // BEFORE this fix (measured 2026-08-22): ['T1', 'T1 (2)', 'T2', 'T3'] —
+    // the coordinate row collided with the real T1 and `instanceColumnLabels`
+    // disambiguated it to 'T1 (2)', a header that ASSERTS a second T1 slot
+    // exists. It does not; that is the F1 defect rendered.
+    //
+    // AFTER: the row has no slot, so `instanceColumnLabel` falls back to
+    // `row.instanceKey` — honest, and a 64-hex column header in a
+    // lender-facing table. Deliberately NOT papered over here: naming the
+    // period a document carries that the v1 slot model has NO NAME FOR is a
+    // display decision, and these labels are the literal object keys of
+    // `FileFieldTableItem.data`, so any vocabulary invented here becomes a
+    // payload contract that cannot be withdrawn without a major. Follow-up
+    // ticket, table owner's call.
+    expect(netProfit.timePeriods).toEqual(['T1', 'T2', 'T3', `${FS_DOC2}#T1`])
+    expect(netProfit.data['T1']).toBe(120000)
+    expect(netProfit.data['T2']).toBe(90000)
+    expect(netProfit.data['T3']).toBe(55555)
+    expect(netProfit.data[`${FS_DOC2}#T1`]).toBe(77777)
+    // The value is not lost and no column claims a slot it does not hold.
+    expect(netProfit.timePeriods.filter((p) => p === 'T1')).toHaveLength(1)
+  })
+
+  it('the GENUINE T1 column regains its confidence dot — the fabricated T1 used to collide with it on the provenance key, and the collision guard deletes both sides (mutation: revert rule 1b -> netProfitT1 is in `collided` and carries no entry)', () => {
+    // H2 (round 4) DROPS a collided provenance key rather than resolving it
+    // to a winner, because rendering the winner's confidence on the loser's
+    // column is wrong-but-plausible. That guard is right, and before this fix
+    // it was being triggered by a collision this package invented: the
+    // coordinate row's adopted `#T1` key was read as slot T1, so two rows
+    // wrote `netProfitT1` and the REAL T1 column lost its dot as collateral.
+    //
+    // The slotless row contributes no period key at all now
+    // (`fieldProvenanceFromView`: `isDocCategory && period !== null`), so
+    // there is nothing to collide with and the real T1 keeps its entry. The
+    // coordinate row still gets its own exact-key entry where the map has
+    // one; it simply no longer claims a slot.
+    const withConfidence = view({
+      'financial-statement': {
+        cardinality: 'multi',
+        instances: [
+          inst(`${FS_DOC1}#T1`, {}, { legacySlot: 'T1', periodPosition: 1, runId: 1442 }),
+          inst(`${FS_DOC2}#T1`, {}, { periodPosition: 1, runId: 1443 }),
+        ].map((i, idx) => ({
+          ...i,
+          fields: {
+            netProfit: {
+              value: idx === 0 ? 120000 : 77777,
+              confidentiality: 'internal' as const,
+              confidence: idx === 0 ? 0.97 : 0.62,
+            },
+          },
+        })),
+      },
+    })
+
+    const { provenance, collided } = fieldProvenanceFromView(withConfidence)
+    expect(collided).not.toContain('netProfitT1')
+    expect(provenance['netProfitT1']?.confidence).toBe(0.97)
+    expect(provenance['netProfitT1']?.sourceRunId).toBe('1442')
+  })
+})
+
+// ── SYS-3517 F2: NOT FIXED HERE — this package cannot know arrival order ──
+
+describe('instanceRowPairsFromView — a contested slot resolves to the LAST-EMITTED row, so the VIEW\'s emission order decides which document a lender scores on (SYS-3517 F2)', () => {
+  /**
+   * F2 is REAL and is NOT fixed in this package, deliberately. Read this
+   * before "fixing" the sort.
+   *
+   * The consumer's rule (finsys-client `selectFinancialRow`) is LAST MATCHING
+   * ROW WINS, and its own doc names the reason: "rows arrive id-ASC ... that
+   * id-ASC arrival order is the load-bearing cross-repo invariant here —
+   * instance rows carry no id client-side, so a finsys-api ordering change
+   * would silently flip which row wins a contested slot."
+   *
+   * Under V2 that invariant does not hold. Executed against the finsim MySQL
+   * on 2026-08-22:
+   *
+   *     SELECT id, instanceKey FROM ihsfinancialstatement WHERE ihsId = 283
+   *     -> 369, 370, 367, 368            (NOT id-ASC)
+   *     EXPLAIN ... -> key: UQ_ihsfinancialstatement_instance_period_key
+   *
+   * The read service issues `find({ where: { ihsId } })` with no `order`, so
+   * MySQL answers from the (ihsId, instanceKey, coalesce(periodPosition,0))
+   * unique index and the rows arrive in LEXICAL instanceKey order.
+   * `instanceKey` is `financialStatement:<sha256 of the file bytes>#T{n}` —
+   * so which of two documents wins a contested slot is decided by a content
+   * hash.
+   *
+   * THIS FUNCTION IS NOT THE PLACE TO REPAIR THAT, for one reason:
+   * `CanonicalInstance` carries no arrival ordinal. The only orderable
+   * members are `runId` and `observedAt`, and NEITHER is equivalent to the
+   * id-ASC rule the consumer documents. Counter-example that decides it: a
+   * re-extraction UPDATES a row in place (the unique key above is what makes
+   * it an update), so the row keeps its low id and gains a HIGH runId. Order
+   * by runId and the re-extracted older document jumps ahead of a
+   * later-uploaded one; order by id, as v1 does, and it does not. Choosing
+   * runId here would be inventing an order that looks right and changes
+   * which filing a lender scores on in exactly the case a bureau cares
+   * about.
+   *
+   * What this package CAN guarantee, and does, is that it never destroys the
+   * order it was handed — the F5 period sort is STABLE, so relative order
+   * within a slot is the view's own. That is what the tests below pin, so
+   * the guarantee cannot be lost silently while the emitter is fixed.
+   *
+   * THE FIX BELONGS IN THE EMITTER, in two parts:
+   *   1. finsys-api `ihsCanonicalReadService`: add `order: { id: "ASC" }` to
+   *      the per-category `find()`. Restores the documented invariant today.
+   *      SHIPPED — finsys-api #611, merged 2026-08-22, confirmed present in
+   *      the running sim container's own `dist`. The measurements quoted
+   *      above therefore describe the state BEFORE that merge; they are kept
+   *      as the record of why the clause exists, not as current behavior.
+   *      SYS-3526 is the consequence: with arrival order restored, this
+   *      package's FLAT path was left taking the first match where every
+   *      other consumer takes the last (see its own describe below).
+   *   2. Durably: the view should carry the ordinal explicitly (an additive
+   *      `CanonicalInstance.sequence`, monotonic per (ihsId, category)), so
+   *      the contract stops depending on a database's index choice. A
+   *      consumer cannot verify (1) and can verify (2). STILL OPEN.
+   */
+  it('two rows genuinely sharing slot T1 (a legacy:T1 row and its superseding hashed re-extraction) resolve to whichever the VIEW emitted last — both orders shown', () => {
+    const hashed = inst(`financialStatement:${'a'.repeat(64)}#T1`, { netProfit: 250000 }, { legacySlot: 'T1', periodPosition: 1, runId: 1354 })
+    const legacy = inst('legacy:T1', { netProfit: 100000 }, { legacySlot: 'T1', periodPosition: 1, runId: 1352 })
+
+    // The order finsys-api actually emits today (lexical: 'f' < 'l'): the
+    // STALE pre-hash row is last, so last-wins picks 100000 — the F2 bug,
+    // reproduced on ihs 268.
+    const asEmitted = instanceRowsFromView(view({ 'financial-statement': { cardinality: 'multi', instances: [hashed, legacy] } }), 'financial-statement')
+    expect(selectFinancialRowMirror(asEmitted, 0, 'currentYear')!['netProfit']).toBe(100000)
+
+    // The order id-ASC would have produced: the fresh hashed row is last.
+    const idAsc = instanceRowsFromView(view({ 'financial-statement': { cardinality: 'multi', instances: [legacy, hashed] } }), 'financial-statement')
+    expect(selectFinancialRowMirror(idAsc, 0, 'currentYear')!['netProfit']).toBe(250000)
+  })
+
+  it('the F5 period sort is STABLE, so this package preserves whatever order the view gave it — the property the emitter fix depends on (mutation: replace the comparator with one that breaks period ties -> the two orders above stop differing, and the emitter fix stops being able to work)', () => {
+    const rows = (order: CanonicalInstance[]) =>
+      instanceRowsFromView(view({ 'financial-statement': { cardinality: 'multi', instances: order } }), 'financial-statement').map((r) => r['netProfit'])
+
+    const a = inst(`financialStatement:${'a'.repeat(64)}#T1`, { netProfit: 1 }, { legacySlot: 'T1' })
+    const b = inst(`financialStatement:${'b'.repeat(64)}#T1`, { netProfit: 2 }, { legacySlot: 'T1' })
+    const c = inst(`financialStatement:${'c'.repeat(64)}#T2`, { netProfit: 3 }, { legacySlot: 'T2' })
+
+    // Same three instances, two emission orders. T2 is sorted after both T1s
+    // in each, and the two T1s keep the order they arrived in.
+    expect(rows([a, c, b])).toEqual([1, 2, 3])
+    expect(rows([b, c, a])).toEqual([2, 1, 3])
+  })
+})
+
+// ── SYS-3517 F1: an out-of-shape coordinate is ABSENT on both surfaces ──
+
+describe('instanceRowsFromView — an out-of-shape periodPosition is treated as absent by BOTH the period rule and the row (SYS-3517 F1)', () => {
+  it('periodPosition 0 does not silence the period cascade AND does not reach the row (mutation: spread on `!== undefined` instead of the shape gate -> the row advertises periodPosition 0 on a slot derived as if no coordinate existed)', () => {
+    const v2 = view({
+      'financial-statement': {
+        cardinality: 'multi',
+        instances: [
+          inst(`${FS_DOC1}#T1`, { netProfit: 120000 }, { periodPosition: 0 }),
+          inst(`${FS_DOC1}#T2`, { netProfit: 90000 }, { periodPosition: -1 }),
+        ],
+      },
+    })
+    const rows = instanceRowsFromView(v2, 'financial-statement')
+    // Rule 1b never fired: no coordinate was on the wire in a shape this
+    // package trusts, so rule 2 answered exactly as it always has.
+    expect(rows.map((r) => r.timePeriod)).toEqual(['T1', 'T2'])
+    // And the row does not claim one either — the two surfaces agree.
+    expect(rows.every((r) => !('periodPosition' in r))).toBe(true)
+  })
+
+  it('SYS-3526 release prep: a FRACTIONAL coordinate is HONORED, because the producer\'s own gate admits it — a receiver must not be stricter than its producer (mutation: restore `Number.isInteger` in coordinateOf -> the row silently loses the coordinate and its adopted #T1 key fabricates slot T1 again)', () => {
+    // `coordinateOf` used to require `Number.isInteger`; finsys-api's
+    // `projectInstance` requires `Number.isFinite && >= 1`. A 2.5 therefore
+    // crossed the wire and was silently DROPPED here — and dropping it is
+    // not a no-op: with the coordinate gone, rule 1b does not fire, the
+    // adopted `#T1` key is read as slot T1, and the exact DEVOPS-535
+    // overlap this ticket removed comes back for that row.
+    //
+    // Unreachable today — the column is `int` — but the two gates should
+    // read the same, and if they must differ the RECEIVER is the wrong one
+    // to be stricter: it turns a producer's out-of-range value into a
+    // fabricated slot instead of a visible null.
+    const v2 = view({
+      'financial-statement': {
+        cardinality: 'multi',
+        instances: [inst(`${FS_DOC1}#T1`, { netProfit: 120000 }, { periodPosition: 2.5 })],
+      },
+    })
+    const rows = instanceRowsFromView(v2, 'financial-statement')
+    expect(rows[0]!.timePeriod).toBeNull()
+    expect(rows[0]!.periodPosition).toBe(2.5)
+    // And it is inert for the consumer that reads coordinates: the client's
+    // branch tests `periodPosition === 1`, which 2.5 is not — so this row is
+    // simply slotless, exactly as v1 treated a NULL-timePeriod row.
+    expect(rows[0]!.periodPosition).not.toBe(1)
+  })
+})
+
+// ── SYS-3517 F1: F6's blank-key rescue must not undo rule 1b ───────────
+
+describe('instanceRowsFromView — the F6 blank-instanceKey rescue does not re-fabricate a slot rule 1b withheld (SYS-3517 F1)', () => {
+  it('a lone slotless COORDINATE instance keyed \'\' stays null instead of being rescued to T1 (mutation: drop the coordinate clause from the F6 guard -> "T1", and rule 1b is undone eight lines after it fired)', () => {
+    // F6 exists for DISPLAY: a single-cardinality category's one instance
+    // carries instanceKey '' by contract, `timePeriodOf` answers null, and
+    // the table would render a blank column header — so it is labelled T1,
+    // "the same way any other lone document would position-fallback to T1".
+    //
+    // That reasoning holds only for a row whose period is UNKNOWN. A
+    // coordinate row's period is KNOWN and is deliberately none. No producer
+    // emits this shape today (financial-statement is `multi`, and every
+    // coordinate key is non-empty), which is exactly why the guard belongs
+    // here now: rule 1b must be a rule, not a suggestion a later branch can
+    // overturn, and the cost of pinning it before a producer exists is one
+    // clause.
+    const v2 = view({
+      'financial-statement': {
+        cardinality: 'single',
+        instances: [inst('', { netProfit: 77777 }, { periodPosition: 1 })],
+      },
+    })
+    const rows = instanceRowsFromView(v2, 'financial-statement')
+    expect(rows[0]!.timePeriod).toBeNull()
+    expect(rows[0]!.periodPosition).toBe(1)
+  })
+
+  it('F6 is otherwise untouched — a blank-key instance with NO coordinate is still rescued to T1, and two of them still get #1 / #2', () => {
+    const lone = view({
+      'finxtract-bank-statement': { cardinality: 'single', instances: [inst('', { closingBalance: 5000 })] },
+    })
+    expect(instanceRowsFromView(lone, 'finxtract-bank-statement')[0]!.timePeriod).toBe('T1')
+
+    const two = view({
+      'finxtract-bank-statement': {
+        cardinality: 'single',
+        instances: [inst('', { closingBalance: 5000 }), inst('', { closingBalance: 6000 })],
+      },
+    })
+    expect(instanceRowsFromView(two, 'finxtract-bank-statement').map((r) => r.timePeriod)).toEqual(['#1', '#2'])
+  })
+})
+
+// ── SYS-3517: the PARITY oracle — v1 and v2 must answer the same ───────
+
+/**
+ * Phase 5's mandate is PARITY with the eval system, so a v1/v2 disagreement
+ * on the same underlying data is a DEFECT and v2 is the wrong one. That gives
+ * a stronger oracle than any hand-picked expectation: it cannot drift with
+ * anyone's opinion of the right number.
+ *
+ * Both sides below are built from ONE row set — the actual
+ * `ihsfinancialstatement` rows, measured on finsim 2026-08-22 (ihs 282) —
+ * and each mirrors the finsys-api function that serves that side:
+ *
+ *   v1  `ihsService.getIhsDetailsById` -> `financialStatementInstances`:
+ *       `findWithOptions({ where: { ihsId }, order: { id: "ASC" } })`, each row
+ *       through `IhsFinancialStatement.toInstanceRow()`, which copies the row
+ *       MINUS a fixed meta exclusion list — so `timePeriod` is the DB column
+ *       VERBATIM, NULL included, and `periodPosition` is deliberately kept.
+ *
+ *   v2  `ihsCanonicalReadService` -> `instanceRowsFromView`:
+ *       `find({ where: { ihsId } })` with NO order, each row through
+ *       `projectInstance`, whose migration-window block is
+ *       `legacySlot = row.timePeriod || undefined` and
+ *       `periodPosition = finite && >= 1 ? row.periodPosition : undefined`.
+ *
+ * Mirrored rather than imported: finsys-api is a different repo, and the
+ * contract between them is this row shape. A divergence between a mirror and
+ * its original is itself the finding.
+ *
+ * THE UNIT ORACLE IS THE FAST NET; THE SYSTEM ORACLE IS THE PROOF. The same
+ * relation was executed end to end on 2026-08-22 against the finsim stack —
+ * two finsys-client containers, byte-identical image and env, differing only
+ * in `APPLICATION_READ_SHAPE` (v1 / v2), driven over
+ * `POST /api/v1/application/evaluate-flexible/{ihsId}` for 54 applications
+ * carrying financial statements x 6 eval models, comparing the resolved
+ * `evaluationResults.variables`:
+ *
+ *     BEFORE this fix   62 evaluable pairs   39 agree   23 DIVERGE
+ *     AFTER  this fix   72 evaluable pairs   65 agree    7 DIVERGE
+ *
+ * The 7 that remain are three applications (184, 268, 270) and all three are
+ * the SAME shape: two rows claiming one T-slot, resolved by the emission
+ * order F2 describes. Nothing else diverges. Ten pairs that previously could
+ * not evaluate under v2 at all now do and agree ("RatioVariable Solvency
+ * Ratio must have non-zero denominator" fell 18 -> 8): a fabricated T1 was
+ * feeding 0 into a ratio denominator.
+ *
+ * `evaluationDataHash` is NOT a usable oracle and was not used as one: it
+ * diverges on 72 of 72 pairs, including every pair whose resolved variables
+ * agree exactly, because the flat record is separately re-derived through
+ * the migration map under v2. That is a real and separate Phase 5 gap; it
+ * is not this ticket, and a hash comparison would have reported this fix as
+ * having changed nothing.
+ */
+interface FsDbRow {
+  id: number
+  instanceKey: string
+  timePeriod: string | null
+  periodPosition: number | null
+  netProfit: number
+}
+
+/** finsim `ihsfinancialstatement`, ihsId 282, verbatim (netProfit column). */
+const IHS_282: FsDbRow[] = [
+  { id: 355, instanceKey: `${FS_DOC1}#T1`, timePeriod: 'T1', periodPosition: 1, netProfit: 120000 },
+  { id: 356, instanceKey: `${FS_DOC1}#T2`, timePeriod: 'T2', periodPosition: 2, netProfit: 90000 },
+  { id: 357, instanceKey: `${FS_DOC2}#T1`, timePeriod: null, periodPosition: 1, netProfit: 77777 },
+  { id: 358, instanceKey: `${FS_DOC2}#T3`, timePeriod: 'T3', periodPosition: 2, netProfit: 55555 },
+]
+
+/** v1's sidecar array: id ASC, `toInstanceRow()`. */
+function v1SidecarRows(rows: FsDbRow[]): Record<string, unknown>[] {
+  return [...rows]
+    .sort((a, b) => a.id - b.id)
+    .map(({ instanceKey, timePeriod, periodPosition, netProfit }) => ({
+      instanceKey,
+      timePeriod,
+      ...(periodPosition !== null ? { periodPosition } : {}),
+      netProfit,
+    }))
+}
+
+/** v2's view: `projectInstance`'s migration-window block, in the given emission order. */
+function v2ViewOf(rows: FsDbRow[]): CanonicalView {
+  return view({
+    'financial-statement': {
+      cardinality: 'multi',
+      instances: rows.map((r) => ({
+        instanceKey: r.instanceKey,
+        adapterId: 'finxtract-financial-statement',
+        adapterVersion: 1,
+        ...(r.timePeriod ? { legacySlot: r.timePeriod } : {}),
+        ...(typeof r.periodPosition === 'number' && Number.isFinite(r.periodPosition) && r.periodPosition >= 1
+          ? { periodPosition: r.periodPosition }
+          : {}),
+        fields: { netProfit: { value: r.netProfit, confidentiality: 'internal' } },
+      })),
+    },
+  })
+}
+
+/** Every address the DEVOPS-535 model exercises, resolved. */
+const ADDRESSES = [
+  ['latest/currentYear', 0, 'currentYear'],
+  ['latest/priorYear', 0, 'priorYear'],
+  ['latest-1/currentYear', 1, 'currentYear'],
+  ['latest-1/priorYear', 1, 'priorYear'],
+] as const
+
+function resolveAll(rows: Record<string, unknown>[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [name, offset, period] of ADDRESSES) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    out[name] = selectFinancialRowMirror(rows as any, offset, period)?.['netProfit'] ?? 'FieldNotAvailable'
+  }
+  return out
+}
+
+describe('PARITY — the v1 sidecar and the v2 bridge must resolve the same numbers from the same rows (SYS-3517)', () => {
+  it('every address agrees, and neither side is asserted against a hand-picked expectation (mutation: revert rule 1b -> v2 answers 77777/90000 where v1 answers 120000/77777)', () => {
+    const v1 = resolveAll(v1SidecarRows(IHS_282))
+    const v2 = resolveAll(instanceRowsFromView(v2ViewOf([...IHS_282].sort((a, b) => a.id - b.id)), 'financial-statement'))
+    expect(v2).toEqual(v1)
+
+    // Stated once, for a reader — NOT the oracle. If this line and the
+    // agreement above ever disagree, the agreement is the one to trust.
+    expect(v1).toEqual({
+      'latest/currentYear': 120000,
+      'latest/priorYear': 90000,
+      'latest-1/currentYear': 77777,
+      'latest-1/priorYear': 55555,
+    })
+  })
+
+  it('the ROW SHAPE agrees too, on the three members the resolver reads — a value can agree by luck, a shape cannot', () => {
+    const shape = (rows: Record<string, unknown>[]) =>
+      rows.map((r) => [r['instanceKey'], r['timePeriod'], r['periodPosition'] ?? null])
+    const v1 = shape(v1SidecarRows(IHS_282))
+    const v2 = shape(instanceRowsFromView(v2ViewOf([...IHS_282].sort((a, b) => a.id - b.id)), 'financial-statement'))
+    // Same rows, same slots (NULL included), same coordinates. Order differs
+    // only by the F5 period sort, which is why this compares as a SET.
+    expect([...v2].sort()).toEqual([...v1].sort())
+  })
+
+  it('PARITY IS NOT YET REACHABLE FROM THIS PACKAGE for the emission order — the F2 half, quantified', () => {
+    // ihs 268's shape: a `legacy:T1` row and the hashed re-extraction that
+    // superseded it, BOTH carrying slot T1. v1 sorts id ASC, so the fresh row
+    // is last and last-wins picks it. v2's emitter has no ORDER BY, MySQL
+    // answers from the (ihsId, instanceKey, coalesce(periodPosition,0))
+    // unique index, and 'financialStatement:…' sorts before 'legacy:…' — so
+    // the STALE row is last instead. Executed 2026-08-22; see the F2
+    // describe block above for the EXPLAIN.
+    const rows268: FsDbRow[] = [
+      { id: 293, instanceKey: 'legacy:T1', timePeriod: 'T1', periodPosition: 1, netProfit: 100000 },
+      { id: 299, instanceKey: `${FS_DOC1}#T1`, timePeriod: 'T1', periodPosition: 1, netProfit: 250000 },
+    ]
+    const lexical = [...rows268].sort((a, b) => a.instanceKey.localeCompare(b.instanceKey))
+
+    const v1 = resolveAll(v1SidecarRows(rows268))
+    const v2AsEmitted = resolveAll(instanceRowsFromView(v2ViewOf(lexical), 'financial-statement'))
+    const v2IdAsc = resolveAll(instanceRowsFromView(v2ViewOf([...rows268].sort((a, b) => a.id - b.id)), 'financial-statement'))
+
+    // The divergence, pinned as a live fact rather than left to a comment.
+    expect(v1['latest/currentYear']).toBe(250000)
+    expect(v2AsEmitted['latest/currentYear']).toBe(100000)
+
+    // And the proof that ONE line in the emitter closes it: hand this
+    // package the same rows in id-ASC order and parity holds exactly.
+    expect(v2IdAsc).toEqual(v1)
+  })
+
+  it('GATE, NOW LIVE (owner: finsys-api) — parity holds on the order finsys-api ACTUALLY emits', () => {
+    // This was `it.skip`, waiting on `ihsCanonicalReadService`'s per-category
+    // `find({ where: { ihsId } })` to gain `order: { id: "ASC" }` — the same
+    // clause `ihsService.getIhsDetailsById` already carried three lines from
+    // a comment explaining why ("SQL guarantees no order without ORDER BY;
+    // making it explicit here turns that premise into a contract"), which v2
+    // had not copied. finsys-api #611 shipped it (merged 2026-08-22; verified
+    // in the RUNNING sim container's own `dist`, not only in the PR). So the
+    // emission order this asserts on is id-ASC, and the gate is a live pin on
+    // the cross-repo contract rather than a promissory note.
+    //
+    // It was never fixable in this package: `CanonicalInstance` carries no
+    // id, and neither orderable member is equivalent to id-ASC. A
+    // re-extraction UPDATES a row in place, so it keeps its low id and gains
+    // a HIGH runId — order by runId and a re-extracted older filing jumps
+    // ahead of a later-uploaded one. Inventing that order would change which
+    // filing a lender scores on, which is the thing this ticket exists to
+    // stop.
+    //
+    // STILL OPEN, and the reason this stays a named gate rather than becoming
+    // an ordinary assertion: the contract now depends on an `ORDER BY` in
+    // another repo, which no consumer can verify. The durable form is an
+    // additive `CanonicalInstance.sequence`, monotonic per (ihsId, category).
+    // Until that exists, a silent revert of #611 is invisible from here — the
+    // test above ("the answer tracks EMISSION order") is what states the
+    // dependency out loud.
+    const rows268: FsDbRow[] = [
+      { id: 293, instanceKey: 'legacy:T1', timePeriod: 'T1', periodPosition: 1, netProfit: 100000 },
+      { id: 299, instanceKey: `${FS_DOC1}#T1`, timePeriod: 'T1', periodPosition: 1, netProfit: 250000 },
+    ]
+    const asEmitted = [...rows268].sort((a, b) => a.id - b.id)
+    expect(resolveAll(instanceRowsFromView(v2ViewOf(asEmitted), 'financial-statement'))).toEqual(
+      resolveAll(v1SidecarRows(rows268)),
+    )
+  })
+})
+
+// ── SYS-3526: the FLAT path's contested-slot tiebreak ──────────────────
+
+/**
+ * THREE CONSUMERS OF ONE CASCADE, AND THIS WAS THE ONE THAT DISAGREED.
+ * "Two rows claim one T-slot — which value does a lender score on?" had
+ * three answers before this fix:
+ *
+ *   v1                   `ihsService.getIhsDetailsById` merges each sibling
+ *                        row's `toSuffixedObject()` into ONE accumulating
+ *                        object under `order: { id: "ASC" }` — so the LAST
+ *                        row by id owns the slot. finsys-api's own comment
+ *                        on each of the four list reads calls this the
+ *                        "later-masks-earlier" contract (SYS-2916).
+ *   v2, instance path    finsys-client `selectFinancialRow` — LAST matching
+ *                        row wins, over `instanceRowsFromView`'s stable,
+ *                        view-ordered rows.
+ *   v2, flat path        `valueAtTSlot` — `withField[0]`, the FIRST match.
+ *
+ * finsys-api #611 (merged) added `order: { id: "ASC" }` to the v2 read. Its
+ * shipped comment states the contract it was written against: "the v1 slot
+ * resolver's tie-break is last-matching-row-wins ... @finsys/core's bridge
+ * preserves the order it is handed (its sort is stable) - it cannot restore
+ * one it never got." That fix makes THIS path deterministically wrong rather
+ * than accidentally so: `withField[0]` is now guaranteed to be the OLDEST
+ * row, every time.
+ *
+ * WHAT "LAST" MEANS HERE — checked, not assumed. `valueAtTSlot` reads
+ * `rowPairsFor`, i.e. `instanceRowPairsFromView`, whose only reordering is
+ * the F5 numeric-period sort. That sort is STABLE and every row in
+ * `withSlot` shares one period by construction, so those rows keep the
+ * VIEW's own emission order. The last element of `withField` is therefore
+ * the last-ARRIVING row that carries the field, given a view emitted in
+ * arrival order — which is exactly what #611 now guarantees, and the
+ * stability half is pinned two describes up ("the F5 period sort is
+ * STABLE").
+ *
+ * WHERE IT IS STILL NOT EXACTLY v1 — two shapes, neither reachable from
+ * this package, both stated rather than papered over:
+ *
+ *  1. v1 OVERWRITES WITH NULL. `toSuffixedObject()` emits every
+ *     non-excluded column INCLUDING a null one, so a later row's null
+ *     blanks an earlier row's real value. `projectInstance` omits a null
+ *     field from the canonical instance entirely, deliberately (its
+ *     decision 3: a gated field and a never-produced field must be
+ *     indistinguishable, so both are absent). This package therefore
+ *     cannot see that the later row had a null to write, and answers the
+ *     earlier row's value where v1 answered null. The canonical plane does
+ *     not carry the fact; no rule here can recover it.
+ *  2. v1 PRE-FILTERS BY RECENCY before spreading. Financial statements drop
+ *     any T1 row whose `financialYearEnd` is not the newest
+ *     (`filterFinancialStatementsForFlatSpread`, SYS-2972); bank statements
+ *     keep only the newest `statementDate` per period
+ *     (`filterBankStatementsForFlatSpread`, SYS-2979). Both then spread
+ *     last-wins over whatever survives. EPF and payslip have no filter at
+ *     all, so for them v1 is pure last-write-wins and the oracle below is
+ *     unconditional. `financialYearEnd` has NO v1 wide column (it is on
+ *     `toSuffixedObject`'s exclusion list and absent from the migration
+ *     map), so it never reaches an `InstanceRow` and the financial filter
+ *     is not even expressible here. Replicating either would make this
+ *     function a SECOND implementation of "which document is newest" —
+ *     precisely the drift SYS-2994 was filed to stop on the finsys-api
+ *     side — so it deliberately does not. Where a filter would change the
+ *     answer, the old first-match rule was not right either; last-match is
+ *     right whenever the newer document has the higher id, which is the
+ *     ordinary case and the measured one.
+ */
+interface SlotRow {
+  id: number
+  instanceKey: string
+  timePeriod: string | null
+  value: number | string
+}
+
+/**
+ * v1's flat spread for ONE sibling table, mirrored: id ASC, each row's
+ * `toSuffixedObject()` merged into one accumulating object. A NULL-slot row
+ * has no suffixed representation at all (SYS-3003) and contributes nothing.
+ * Mirrored rather than imported for the same reason `v1SidecarRows` above
+ * is: finsys-api is a different repo and this row shape is the contract.
+ */
+function v1FlatSpread(rows: SlotRow[], base: string): Record<string, unknown> {
+  let data: Record<string, unknown> = {}
+  for (const r of [...rows].sort((a, b) => a.id - b.id)) {
+    if (r.timePeriod === null) continue
+    data = { ...data, [`${base}${r.timePeriod}`]: r.value }
+  }
+  return data
+}
+
+/** The SAME rows as a view, in the emission order given. */
+const slotView = (category: string, field: string, rows: SlotRow[]): CanonicalView =>
+  view({
+    [category]: {
+      cardinality: 'multi',
+      instances: rows.map((r) =>
+        inst(r.instanceKey, { [field]: r.value }, r.timePeriod !== null ? { legacySlot: r.timePeriod } : {}),
+      ),
+    },
+  })
+
+/** id-ASC — the order finsys-api emits since #611, and the order v1 always read. */
+const idAsc = (rows: SlotRow[]): SlotRow[] => [...rows].sort((a, b) => a.id - b.id)
+
+/**
+ * Both sides from ONE row set, neither asserted against a hand-picked
+ * number: v1's flat spread vs `flatRecordFromView`, on the v1 key the
+ * migration map itself names for this (category, field).
+ */
+function assertFlatParity(category: string, field: string, rows: SlotRow[]): Record<string, unknown> {
+  const base = v1LegacyBaseNameOf(category, field)
+  expect(base, `${category}.${field} has no v1 wide column`).not.toBeNull()
+  const v1Record = v1FlatSpread(rows, base!)
+  const { record: v2Record } = flatRecordFromView(slotView(category, field, idAsc(rows)))
+  for (const key of Object.keys(v1Record)) {
+    expect(v2Record[key], key).toEqual(v1Record[key])
+  }
+  return v1Record
+}
+
+describe('SYS-3526 — a contested T-slot resolves LAST-WRITE-WINS on the flat path, as v1 and the instance path both already do', () => {
+  it('financial statements, the ihs 268 shape: a legacy:T1 row and the hashed re-extraction that superseded it (mutation: restore `withField[0]` -> 100000 where v1 serves 250000)', () => {
+    const rows: SlotRow[] = [
+      { id: 293, instanceKey: 'legacy:T1', timePeriod: 'T1', value: 100000 },
+      { id: 299, instanceKey: `${FS_DOC1}#T1`, timePeriod: 'T1', value: 250000 },
+    ]
+    const v1Record = assertFlatParity('financial-statement', 'netProfit', rows)
+
+    // Stated once, for a reader — NOT the oracle. If this line and the
+    // agreement above ever disagree, the agreement is the one to trust.
+    expect(v1Record['netProfitT1']).toBe(250000)
+  })
+
+  it('EPF: v1 applies NO recency filter to this table, so its spread is pure last-write-wins and the oracle is unconditional', () => {
+    const rows: SlotRow[] = [
+      { id: 11, instanceKey: 'epf:old', timePeriod: 'T1', value: 4000 },
+      { id: 12, instanceKey: 'epf:new', timePeriod: 'T1', value: 5200 },
+      { id: 13, instanceKey: 'epf:t2', timePeriod: 'T2', value: 6100 },
+    ]
+    const v1Record = assertFlatParity('epf-statement', 'totalContribution', rows)
+    expect(v1Record).toEqual({ epfTotalContributionT1: 5200, epfTotalContributionT2: 6100 })
+  })
+
+  it('payslip: the other unfiltered table — three rows on one slot resolve to the highest id, not the lowest', () => {
+    const rows: SlotRow[] = [
+      { id: 21, instanceKey: 'payslip:a', timePeriod: 'T1', value: 3000 },
+      { id: 22, instanceKey: 'payslip:b', timePeriod: 'T1', value: 3100 },
+      { id: 23, instanceKey: 'payslip:c', timePeriod: 'T1', value: 3200 },
+    ]
+    const v1Record = assertFlatParity('payslip', 'basicPay', rows)
+    expect(v1Record['payslipBasicPayT1']).toBe(3200)
+  })
+
+  it('bank statements: two accounts on one month, same statementDate — v1\'s newest-per-period filter is a no-op on this shape, so last-write-wins is the whole rule', () => {
+    const rows: SlotRow[] = [
+      { id: 31, instanceKey: 'bankStatement:aaa', timePeriod: 'T1', value: 9000 },
+      { id: 32, instanceKey: 'bankStatement:bbb', timePeriod: 'T1', value: 9500 },
+    ]
+    const v1Record = assertFlatParity('finxtract-bank-statement', 'closingBalance', rows)
+    expect(v1Record['bankBalanceT1']).toBe(9500)
+  })
+
+  it('NOT VACUOUS: the answer tracks EMISSION order, so it agrees with v1 only on the id-ASC order #611 now emits — the reverse order still answers the stale number', () => {
+    const rows: SlotRow[] = [
+      { id: 293, instanceKey: 'legacy:T1', timePeriod: 'T1', value: 100000 },
+      { id: 299, instanceKey: `${FS_DOC1}#T1`, timePeriod: 'T1', value: 250000 },
+    ]
+    const v1Record = v1FlatSpread(rows, 'netProfit')
+    const emitted = (order: SlotRow[]) =>
+      flatRecordFromView(slotView('financial-statement', 'netProfit', order)).record['netProfitT1']
+
+    expect(emitted(idAsc(rows))).toBe(v1Record['netProfitT1'])
+    // The pre-#611 lexical order ('financialStatement:…' < 'legacy:…') put
+    // the stale row last. This package cannot repair that and does not
+    // pretend to — see the F2 describe above. Pinned so that if the two
+    // orders ever stop differing, the emitter fix has silently stopped
+    // being load-bearing.
+    expect(emitted([...rows].sort((a, b) => a.instanceKey.localeCompare(b.instanceKey)))).toBe(100000)
+  })
+
+  it('NEIGHBOR: an UNCONTESTED slot is byte-identical in all four categories that reach this lookup — the fix only ever decides between rows, never picks one out of one', () => {
+    // The complete caller surface: 504 mapped T-slot keys, four categories,
+    // derived from the map rather than listed (a fifth category gaining a
+    // T-slot family shows up here as a failure, not as silence).
+    const reached = new Set(
+      v1MigrationKeys()
+        .filter((k) => /T[1-9]$/.test(k))
+        .flatMap((k) => v1Addresses(k) ?? [])
+        .filter((a) => a.instanceKey === undefined && a.instanceKeyPrefix === undefined)
+        .map((a) => a.category),
+    )
+    expect([...reached].sort()).toEqual([
+      'epf-statement',
+      'financial-statement',
+      'finxtract-bank-statement',
+      'payslip',
+    ])
+
+    const oneEach: [string, string, string, number][] = [
+      ['epf-statement', 'totalContribution', 'epfTotalContributionT1', 4000],
+      ['financial-statement', 'netProfit', 'netProfitT1', 120000],
+      ['finxtract-bank-statement', 'closingBalance', 'bankBalanceT1', 12000],
+      ['payslip', 'basicPay', 'payslipBasicPayT1', 3000],
+    ]
+    for (const [category, field, key, value] of oneEach) {
+      const rows: SlotRow[] = [{ id: 1, instanceKey: `${category}:only`, timePeriod: 'T1', value }]
+      const { record: out, ambiguous } = flatRecordFromView(slotView(category, field, rows))
+      expect(out[key], key).toBe(value)
+      expect(ambiguous, key).not.toContain(key)
+    }
+  })
+
+  it('the M-2 ambiguity signal is UNCHANGED — the pick is still reported, it is just a different pick', () => {
+    const rows: SlotRow[] = [
+      { id: 1, instanceKey: 'bankStatement:aaa', timePeriod: 'T1', value: 9000 },
+      { id: 2, instanceKey: 'bankStatement:bbb', timePeriod: 'T1', value: 9500 },
+    ]
+    const { ambiguous } = flatRecordFromView(slotView('finxtract-bank-statement', 'closingBalance', rows))
+    expect(ambiguous).toContain('bankBalanceT1')
+  })
+
+  it('a row that does NOT carry the field is not a candidate — v1 spreads only the columns a row has, so the last row WITH the field wins, not the last row', () => {
+    const v2: CanonicalView = view({
+      'finxtract-bank-statement': {
+        cardinality: 'multi',
+        instances: [
+          inst('bankStatement:aaa', { closingBalance: 9000 }, { legacySlot: 'T1' }),
+          // Same slot, no closingBalance at all. `projectInstance` omits a
+          // null column, so this is exactly what an all-null re-extraction
+          // looks like on the canonical plane — and residual 1 above is the
+          // reason it is not the same thing v1 does.
+          inst('bankStatement:bbb', { accountNumber: '123' }, { legacySlot: 'T1' }),
+        ],
+      },
+    })
+    const { record: out, ambiguous } = flatRecordFromView(v2)
+    expect(out['bankBalanceT1']).toBe(9000)
+    expect(ambiguous).not.toContain('bankBalanceT1')
+  })
+})
+
+// ── SYS-3517: the PARITY SCOPE RULE, and the one open question in it ───
+
+/**
+ * WHEN THE PARITY ASSERTION APPLIES. Phase 5's mandate is that the eval
+ * system answers the same under either read shape, so:
+ *
+ *   written ENTIRELY through v1 (submission AND every edit)
+ *       -> eval(read v1) MUST EQUAL eval(read v2)
+ *   any v2 write anywhere in its history
+ *       -> no v1 counterpart exists; OUT OF SCOPE, do not assert equality
+ *
+ * The line is the WRITE path, not the read path: a v2 write can determine
+ * WHICH VALUE GETS READ, and can express things v1 could not (coordinates,
+ * unbounded instances), so there is no v1 answer to be equal to.
+ *
+ * OPEN QUESTION, raised by Kain and NOT resolved by assumption: does the
+ * LENDER EDIT OVERLAY count as a v2 write? What was established by reading
+ * the code and querying the sim on 2026-08-22 — a trace, not a conclusion:
+ *
+ *  - The overlay store `ihs_field_overlay.fields` is a JSON object keyed by
+ *    LEGACY WIDE-COLUMN names. Read off live rows, not off a doc comment:
+ *    `{"fullName": "...", "bankBalanceT1": "2222.22"}`. On that evidence a
+ *    staged edit cannot express anything v1 could not, which argues the
+ *    overlay is a v1-vocabulary write and such an application stays IN
+ *    scope.
+ *  - BOTH reads apply it: v1 via `ihsService.getIhsDetailsById`'s
+ *    `getActiveOverlay`, v2 via `ihsCanonicalOverlayService` on
+ *    `?overlay=mine` — which finsys-client's scoring path DOES request
+ *    (`evaluate_controller.ts`, `getApplicationV2(ihsId, {overlay:'mine'})`).
+ *  - BUT the v2 side can DROP a staged edit the v1 side applies:
+ *    `CanonicalView.overlay.unprojected` names any staged column that could
+ *    not be placed on the canonical plane, and `ihsCanonicalOverlayService`'s
+ *    own M2 note says financial-statement T-slot columns are effectively
+ *    unprojectable in exactly the two-rows-share-a-timePeriod state this
+ *    ticket is about. That is a SECOND parity-defect class, adjacent to
+ *    SYS-3517 and not fixed by it.
+ *  - No sim fixture exercises the combination: joining `ihs_field_overlay`
+ *    to `ihsfinancialstatement` returns NO application, so the 72-pair
+ *    v1-vs-v2 sweep run for this ticket contains zero overlay-bearing
+ *    financial-statement records and settles nothing here.
+ *
+ * WHO SETTLES IT: SYS-3415's owner (that ticket is the Phase 5 work on this
+ * overlay). What is needed first is the FIXTURE — an application submitted
+ * through v1, edited through the overlay, carrying two financial-statement
+ * documents — which does not exist anywhere today.
+ */
+describe('PARITY SCOPE — the lender edit overlay (SYS-3517, open question; owner SYS-3415)', () => {
+  it.skip('GATE — a v1-submitted, overlay-edited application evals the same under both read shapes', () => {
+    // Flips to live when a fixture exists (finsim: v1 submission + lender
+    // overlay edit + two financial-statement documents) AND SYS-3415's owner
+    // confirms the overlay is a v1-vocabulary write. If it is NOT — if some
+    // staged edit can only be expressed on the canonical plane — then this
+    // assertion is wrong to make at all and this block should be DELETED
+    // with that finding recorded, not made to pass.
+    //
+    // Deliberately not asserting against a fabricated view: a fixture this
+    // test invents would prove the fixture, not the system. The evidence has
+    // to come from the sim, the way the rest of this ticket's did.
+    expect.unreachable('no fixture: see this describe block for what is needed and who owns it')
   })
 })

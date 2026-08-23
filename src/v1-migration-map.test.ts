@@ -183,6 +183,32 @@ describe('v1 migration map', () => {
     expect(v1KeysByDisposition('needs-decision').length).toBe(11);
   });
 
+  it('SYS-3517 — every per-category instance sidecar v1 serves has a disposition, icInstances included', () => {
+    // `icInstances` was ABSENT from the map while five sibling sidecars were
+    // present, so a consumer porting off v1 had no answer for exactly one
+    // category. The cause is the one this file's generator docstring already
+    // names for `consents`: THE KEY LIST IS A UNION OF LIVE RECORDS, and
+    // finsys-api emits this key CONDITIONALLY —
+    // `if (canonicalRows.ic?.length) data.icInstances = ...`
+    // (ihsService.ts) — where the other five are assigned unconditionally,
+    // as `[]` when empty. No sampled record had an IC extraction row, so no
+    // measurement could ever have contained the key, and nothing could
+    // report it missing. Checked 2026-08-22: of the seven conditionally
+    // assigned keys in that serializer, this was the only one the union
+    // missed.
+    for (const key of [
+      'financialStatementInstances',
+      'bankStatementInstances',
+      'epfStatementInstances',
+      'payslipInstances',
+      'invoiceInstances',
+      'icInstances',
+    ]) {
+      expect(v1MigrationEntry(key), key).not.toBeNull();
+      expect(v1MigrationEntry(key)!.disposition, key).toBe('structural');
+    }
+  });
+
   it('v1Addresses returns every attestor, not just the first', () => {
     // Proves the accessor a consumer will actually loop over, on the one
     // shape where taking [0] silently drops half the answer.

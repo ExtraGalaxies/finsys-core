@@ -2770,6 +2770,10 @@
       "disposition": "mapped",
       "via": "wide-column-feeder"
     },
+    "icInstances": {
+      "disposition": "structural",
+      "note": "v2 exposes these as person-identity instances (the IC / passport extraction; the v1 sidecar already carries the canonical person* names, SYS-3163)"
+    },
     "icName": {
       "address": {
         "category": "person-identity",

@@ -4,7 +4,168 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [8.1.2] - 2026-08-23
+
+Patch, and every item in it is a PARITY FIX rather than a change anyone chose.
+Phase 5's mandate is that the eval system answers the same under either read
+shape, so a v1/v2 divergence on data v1 itself wrote means **v2 is the wrong
+one** — which makes each of these a correction, not a breaking change, even
+where the correction is visible. Three consumer-visible effects fall out of
+the first fix and are described in those terms below, because a consumer
+diffing a before-picture will see them and should not have to re-derive
+whether they are intended.
+
+Measured end to end on the finsim stack 2026-08-22: two finsys-client
+containers, byte-identical image and env, differing only in
+`APPLICATION_READ_SHAPE` (v1 / v2), driven over
+`POST /api/v1/application/evaluate-flexible/{ihsId}` for 54 applications
+carrying financial statements × 6 eval models, comparing resolved
+`evaluationResults.variables` — **62 evaluable pairs, 39 agreeing, 23
+diverging before; 72 evaluable pairs, 65 agreeing, 7 diverging after.** Ten
+pairs that could not evaluate under v2 at all now do and agree
+("RatioVariable Solvency Ratio must have non-zero denominator" fell 18 → 8):
+a fabricated T1 was feeding 0 into a ratio denominator. The 7 remaining are
+one shape — two rows claiming one T-slot. The sweep numbers above were taken
+with the FIRST fix only; the second fix below closes
+this package's half of it.
+
+### Fixed — a coordinate row's ABSENT `legacySlot` is an assertion, not silence (SYS-3517)
+
+- `timePeriodOf` gained one rule, between the existing rules 1 and 2, and it
+  is a STOP rather than another derivation: when an instance carries a
+  well-shaped `periodPosition` and no usable `legacySlot`, its period is
+  `null`. A producer that stores a category by (instance, period) coordinate
+  stamps `legacySlot` on every row that HAS a v1 slot, so on such a row the
+  slot's absence is the producer saying "the v1 model had no slot for this
+  one". Rules 2-4 are all approximations of a slot the wire did not state,
+  and on a coordinate row each of them manufactures one.
+- The row this protects is DEVOPS-535's: a year-2 financial statement's own
+  current fiscal year, stored at position 1 with `timePeriod = NULL` — the
+  only (year, position) pair that maps to null. Its key routinely ends `#T1`,
+  which is not a period but a HISTORICAL key the re-extraction adopted.
+  Reading the period off that key rewrites the one null the coordinate model
+  exists to preserve into a second claimant on slot T1, so the consumer's
+  coordinate branch (`timePeriod === null && periodPosition === 1`) can never
+  fire — reinstating, under v2 only, the exact overlap projection DEVOPS-535
+  removed. Measured on a two-document fixture: 90000 returned where the document
+  says 77777, and on 282 the fabricated claimant also won `latest/currentYear`,
+  returning 77777 where 120000 was right.
+- **SCOPE, checked rather than assumed:** `periodPosition` is emitted only for
+  a row whose table carries the column, which today is financial statements
+  alone. Every bank / payslip / EPF / SSM / Form 9 / IC / alt-data instance
+  has no coordinate, so this rule cannot fire for them and their cascade is
+  byte-identical.
+- **This is a new obligation on producers, and it is stated in the published
+  `.d.ts`** (`CanonicalInstance.periodPosition`): it is the first member of
+  that interface whose ABSENCE is meaningful, so a producer that stamps a
+  coordinate must stamp `legacySlot` wherever a v1 slot exists. Omitting one
+  there no longer reads as "unknown, derive it"; it reads as "there is none".
+
+Three consumer-visible effects on the same data, all of them the correction
+rather than a regression:
+
+1. **A slotless row's `data` key changes from `T1 (2)` to its instance key.**
+   Before, the coordinate row collided with the real T1 and
+   `instanceColumnLabels` disambiguated it to `T1 (2)` — a header ASSERTING
+   that a second T1 slot exists. It does not. With no slot, the label falls
+   back to `row.instanceKey`, which is honest and is a 64-hex column header in
+   a lender-facing table. **This is parity, not a new shape:** v1's own
+   sidecar carries `timePeriod: null` on that row and renders it through the
+   SAME `instanceColumnLabel`, so v1 already shows that header. Naming the
+   period a document carries that the v1 slot model has no name for is a
+   display decision, and these labels are the literal object keys of
+   `FileFieldTableItem.data`, so any vocabulary invented here would become a
+   payload contract. Left to the table's owner as a follow-up.
+2. **`timePeriods` ordering changes.** `['T1', 'T1 (2)', 'T2', 'T3']` becomes
+   `['T1', 'T2', 'T3', '<instanceKey>']` — a row with no parseable period
+   sorts last (unchanged F5 rule), where the fabricated `T1 (2)` used to sort
+   second. Consumers indexing that array positionally see the move; consumers
+   reading it as keys into `data` do not.
+3. **The genuine T1 column REGAINS its confidence dot.** The fabricated T1
+   wrote the same `netProfitT1` provenance key as the real T1, and the
+   collision guard (which deletes BOTH sides rather than rendering the
+   winner's confidence on the loser's column) removed it. A slotless row
+   contributes no period key at all, so there is nothing to collide with and
+   the real column keeps its entry. Pinned by a test whose mutation puts
+   `netProfitT1` back in `collided`.
+
+### Fixed — a contested T-slot resolves LAST-write-wins on the flat path (SYS-3526)
+
+- Three consumers answer "two rows claim one T-slot, which value does a lender
+  score on?" and this was the one that disagreed. v1's
+  `getIhsDetailsById` merges each sibling row's `toSuffixedObject()` into one
+  accumulating object under `order: { id: "ASC" }` — the LAST row by id owns
+  the slot, and finsys-api's own comment on all four list reads calls that
+  "later-masks-earlier" behavior a contract rather than an accident.
+  finsys-client's `selectFinancialRow` is also last-matching-row-wins.
+  `flatRecordFromView` took `withField[0]`, the FIRST match. It now takes the
+  last.
+- finsys-api #611 added `order: { id: "ASC" }` to the v2 read — correct, and
+  necessary for the instance path — which made this path *deterministically*
+  wrong rather than accidentally so: `withField[0]` became guaranteed to be
+  the OLDEST row. Measured on a fixture pairing a stale `legacy:T1` row
+  and the hashed re-extraction that superseded it both claim T1: v1 served the
+  fresh value, the flat path served the stale one.
+- "Last" means last-by-ARRIVAL, and that holds on two facts, both pinned:
+  the emitter now hands rows over in id order, and `instanceRowPairsFromView`
+  does not destroy it — its period sort is stable, and rows contending on one
+  slot share a period by construction, so they reach the lookup in the view's
+  own emission order.
+- **Where this is still not exactly v1, stated rather than papered over.**
+  (a) v1 overwrites with NULL: `toSuffixedObject()` emits every non-excluded
+  column including a null one, so a later row's null blanks an earlier row's
+  value; the canonical projection omits a null field entirely and deliberately
+  (a gated field and a never-produced field must be indistinguishable), so
+  this package cannot see that a null was there to write. (b) v1 pre-filters
+  by recency before spreading — financial statements drop a T1 row whose
+  `financialYearEnd` is not the newest, bank statements keep only the newest
+  `statementDate` per period; EPF and payslip have no filter, so for those two
+  v1 is pure last-write-wins. `financialYearEnd` has no v1 wide column, so it
+  never reaches the v1-shaped instance row this function reads — but it IS
+  carried on the canonical instance beside it, so the filter is REACHABLE and
+  was declined, not impossible: reading it here would make this a second
+  implementation of "which document is newest", the drift SYS-2994 exists to
+  stop on the finsys-api side.
+  The cost of declining, measured rather than assumed: last-match is right
+  whenever the newer document also has the higher id — the ordinary case — and
+  WRONG when it has the lower id. On the finsim corpus that is 12 of 50
+  contested financial T1 groups and 6 of 21 contested bank buckets, against 53
+  divergences closed across the four categories. Net strongly positive, NOT
+  strictly positive, and those 18 are exactly the groups first-match got right.
+  finsys-api's own SYS-2972 comment names the class: "'Newest' is by
+  `financialYearEnd` ... NOT by row id, since upload order and fiscal recency
+  are independent." The durable fix is producer-side and filed separately.
+- Behavior otherwise unchanged: an uncontested slot picks one row out of one
+  and is byte-identical, the `ambiguous` signal still reports that a contested
+  slot was decided, and a row that does not carry the field is still not a
+  candidate.
+
+### Fixed — `icInstances` has a disposition in the v1 migration map (SYS-3517)
+
+- Five per-category instance sidecars were in the map and the sixth was not,
+  so a consumer porting off v1 had no answer for exactly one category. The
+  cause is the one the map generator's own docstring already names for
+  `consents`: **the key list is a union of live records, and a conditionally
+  emitted key is invisible to it.** finsys-api writes `icInstances` under
+  `if (canonicalRows.ic?.length)` where the other five are assigned
+  unconditionally as `[]`, so no sampled subject could contribute the key and
+  nothing could report it missing. Declared in the generator next to that
+  evidence and unioned in — the measurement stays a measurement. Audited
+  against every conditional assignment in that serializer: of seven,
+  `icInstances` was the only one the union missed.
+
+### Changed — `periodPosition` is accepted in exactly the shape its producer emits
+
+- The coordinate gate was `Number.isInteger(p) && p >= 1`; finsys-api's
+  projector uses `Number.isFinite(p) && p >= 1`. A receiver stricter than its
+  producer discards values that were sent, and here that is not inert: with
+  the coordinate dropped, the rule above does not fire, the row's adopted
+  `#T{n}` key is read as a real slot, and the DEVOPS-535 overlap returns for
+  that row. The two gates now read the same. Unreachable today — the column is
+  `int` — so this is a consistency fix, made while it is still free. An
+  admitted-but-odd coordinate is inert downstream: the consumer branch tests
+  `periodPosition === 1`, so such a row is simply slotless, which is what v1
+  did with a NULL-`timePeriod` row too.
 
 ## [8.1.1] - 2026-08-19
 

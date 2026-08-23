@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [8.1.2] - 2026-08-23
 
 Patch, and every item in it is a PARITY FIX rather than a change anyone chose.
 Phase 5's mandate is that the eval system answers the same under either read

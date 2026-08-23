@@ -25,7 +25,8 @@ diverging before; 72 evaluable pairs, 65 agreeing, 7 diverging after.** Ten
 pairs that could not evaluate under v2 at all now do and agree
 ("RatioVariable Solvency Ratio must have non-zero denominator" fell 18 → 8):
 a fabricated T1 was feeding 0 into a ratio denominator. The 7 remaining are
-one shape — two rows claiming one T-slot — and the second fix below closes
+one shape — two rows claiming one T-slot. The sweep numbers above were taken
+with the FIRST fix only; the second fix below closes
 this package's half of it.
 
 ### Fixed — a coordinate row's ABSENT `legacySlot` is an assertion, not silence (SYS-3517)
@@ -46,7 +47,7 @@ this package's half of it.
   exists to preserve into a second claimant on slot T1, so the consumer's
   coordinate branch (`timePeriod === null && periodPosition === 1`) can never
   fire — reinstating, under v2 only, the exact overlap projection DEVOPS-535
-  removed. Measured on finsim ihs 282/283: 90000 returned where the document
+  removed. Measured on a two-document fixture: 90000 returned where the document
   says 77777, and on 282 the fabricated claimant also won `latest/currentYear`,
   returning 77777 where 120000 was right.
 - **SCOPE, checked rather than assumed:** `periodPosition` is emitted only for
@@ -102,7 +103,7 @@ rather than a regression:
 - finsys-api #611 added `order: { id: "ASC" }` to the v2 read — correct, and
   necessary for the instance path — which made this path *deterministically*
   wrong rather than accidentally so: `withField[0]` became guaranteed to be
-  the OLDEST row. Measured on finsim ihs 268, where a stale `legacy:T1` row
+  the OLDEST row. Measured on a fixture pairing a stale `legacy:T1` row
   and the hashed re-extraction that superseded it both claim T1: v1 served the
   fresh value, the flat path served the stale one.
 - "Last" means last-by-ARRIVAL, and that holds on two facts, both pinned:
@@ -119,12 +120,21 @@ rather than a regression:
   by recency before spreading — financial statements drop a T1 row whose
   `financialYearEnd` is not the newest, bank statements keep only the newest
   `statementDate` per period; EPF and payslip have no filter, so for those two
-  v1 is pure last-write-wins. `financialYearEnd` has no v1 wide column at all
-  and never reaches an instance row, so that filter is not expressible here,
-  and replicating either would make this a second implementation of "which
-  document is newest" — the drift SYS-2994 exists to stop on the finsys-api
-  side. Where a filter would change the answer, first-match was not right
-  either.
+  v1 is pure last-write-wins. `financialYearEnd` has no v1 wide column, so it
+  never reaches the v1-shaped instance row this function reads — but it IS
+  carried on the canonical instance beside it, so the filter is REACHABLE and
+  was declined, not impossible: reading it here would make this a second
+  implementation of "which document is newest", the drift SYS-2994 exists to
+  stop on the finsys-api side.
+  The cost of declining, measured rather than assumed: last-match is right
+  whenever the newer document also has the higher id — the ordinary case — and
+  WRONG when it has the lower id. On the finsim corpus that is 12 of 50
+  contested financial T1 groups and 6 of 21 contested bank buckets, against 53
+  divergences closed across the four categories. Net strongly positive, NOT
+  strictly positive, and those 18 are exactly the groups first-match got right.
+  finsys-api's own SYS-2972 comment names the class: "'Newest' is by
+  `financialYearEnd` ... NOT by row id, since upload order and fiscal recency
+  are independent." The durable fix is producer-side and filed separately.
 - Behavior otherwise unchanged: an uncontested slot picks one row out of one
   and is byte-identical, the `ambiguous` signal still reports that a contested
   slot was decided, and a row that does not carry the field is still not a

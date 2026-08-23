@@ -186,7 +186,41 @@ STRUCTURAL = {
     'epfStatementInstances': 'v2 exposes these as epf-statement instances',
     'payslipInstances': 'v2 exposes these as payslip instances',
     'invoiceInstances': 'no invoice category is declared — SYS-3376',
+    'icInstances': 'v2 exposes these as person-identity instances (the IC / passport '
+                   'extraction; the v1 sidecar already carries the canonical person* '
+                   'names, SYS-3163)',
 }
+
+# ---------------------------------------------------------------------------
+# THE UNION IS NOT THE LAST WORD, and this is the class of key it cannot see.
+#
+# The docstring above says a single capture describes a record and only the
+# union describes the surface. True, and still not sufficient: a key the
+# serializer emits CONDITIONALLY is invisible to a union of records that
+# happen not to have that data. `consents` was the first instance of this
+# (fixed by measuring 150 records instead of 1); `icInstances` is the second,
+# and 150 records did not fix it, because finsys-api writes
+#
+#     if (canonicalRows.ic?.length) data.icInstances = ...      (ihsService.ts)
+#
+# while every sibling sidecar (financialStatement/bankStatement/epfStatement/
+# payslip/invoice Instances) is assigned UNCONDITIONALLY, as [] when empty.
+# So the corpus can only ever contain this key if a sampled subject happened
+# to have an IC extraction row, and none did.
+#
+# The measurement stays a measurement: `v1-response-keys.json` is not
+# hand-edited. Keys the measurement provably cannot reach are DECLARED here,
+# next to the evidence, and unioned in. Audited 2026-08-22 against every
+# conditional `data.<key> =` assignment in that serializer — supplementaryDoc,
+# consents, clientUserId, fieldProvenance and documentMetadata are all already
+# in the corpus; icInstances was the only one missing.
+CONDITIONAL_KEYS = {
+    'icInstances': 'emitted only when the subject has an IC extraction row '
+                   '(ihsService.ts: `if (canonicalRows.ic?.length)`), so no union '
+                   'of live records is guaranteed to contain it.',
+}
+for _k in CONDITIONAL_KEYS:
+    v1.setdefault(_k, None)
 
 DOC_POINTERS = {
     'bankStatements', 'financialStatements', 'epfStatements', 'payslips', 'ssm', 'form9',

@@ -1548,19 +1548,28 @@ function instancePositions(view: CanonicalView, category: AdapterCategory): Map<
 }
 
 /**
- * `InstanceRow.timePeriod` for one instance, FOUR rules in priority order —
- * widened from three by SYS-3334 F4 (round 2 review):
+ * `InstanceRow.timePeriod` for one instance, FIVE rules in priority order —
+ * widened from three by SYS-3334 F4 (round 2 review), and from four by
+ * SYS-3517 F1 (rule 1b, which is a STOP, not another derivation):
  *
  * 1. `instance.legacySlot`, VERBATIM, when present AND it matches
  *    `LEGACY_SLOT_SHAPE` (M4, round 4 — see that constant's doc: rejected
- *    outright when it does not, never trimmed or coerced, and rules 2-4
+ *    outright when it does not, never trimmed or coerced, and rules 1b-4
  *    below are consulted exactly as if the member were absent). This is the
  *    actual v1 slot the source row stored (finsys-api's provenance-on-the-wire
  *    fix puts it on the instance) — the uploader-declared slot on the file
  *    entry (bank `month`, EPF `year`, payslip `period`), not a re-derivation
- *    of it. When it is present AND well-shaped, rules 2-4 below are not even
- *    consulted: the wire already answered the question they exist to
+ *    of it. When it is present AND well-shaped, rules 1b-4 below are not
+ *    even consulted: the wire already answered the question they exist to
  *    approximate.
+ * 1b. NULL, when the instance carries a `periodPosition` (SYS-3517 F1 — see
+ *    the rule's own comment in the function body for the mechanism and the
+ *    measurement). A coordinate producer stamps `legacySlot` on every row
+ *    that has a v1 slot, so having reached this line the wire has said
+ *    there is none — an ANSWER, not silence, and the only one of the five
+ *    rules that ends the cascade rather than deriving something. Rules 2-4
+ *    all approximate a slot from a key or an ordering; on a coordinate row
+ *    each of them manufactures a slot the producer deliberately withheld.
  * 2. A `#T{n}` suffix on the key IS the period (financial statements:
  *    `financialStatement:<hash>#T2` -> 'T2' — two periods, one document).
  * 3. A `legacy:T{n}` key names its slot directly (`legacyOrdinalOfKey`).
@@ -1599,15 +1608,102 @@ function instancePositions(view: CanonicalView, category: AdapterCategory): Map<
  * trimmed: trimming `'T1 '` to `'T1'` would silently accept a producer bug
  * that put a stray character on the wire, and this member's whole job is to
  * carry the wire's own claim verbatim. A rejected value is treated as
- * ABSENT — `timePeriodOf` falls through to rule 2, exactly as if
- * `legacySlot` had never been set — so a producer bug renders as a
- * DIFFERENT (derived) period rather than as one that looks legitimate in a
- * column header or a provenance key.
+ * ABSENT — the cascade continues exactly as if `legacySlot` had never been
+ * set — so a producer bug never renders as a period that looks legitimate in
+ * a column header or a provenance key.
+ *
+ * CORRECTED (SYS-3517): this used to say "falls through to rule 2", and
+ * since rule 1b that is true only for a row carrying no `periodPosition`. On
+ * a COORDINATE row, "as if absent" now means the cascade STOPS at rule 1b
+ * and the period is null — the coordinate producer's own statement that this
+ * row had no v1 slot, which is the whole point of that rule. Two
+ * consequences, both deliberate:
+ *
+ *  - The out-of-shape value is still never consumed, and rejecting it and
+ *    then stopping is strictly safer than rejecting it and then deriving a
+ *    slot off the key, which is what rule 2 would have done.
+ *  - For a POSITION-1 row that genuinely owned T1, a malformed `legacySlot`
+ *    now renders `timePeriod: null, periodPosition: 1` — exactly the shape
+ *    finsys-client's coordinate branch SELECTS for, so such a producer bug
+ *    would read as a true current-year row rather than as a visible anomaly.
+ *    UNREACHABLE today and pinned by a test rather than left to trust:
+ *    probed against the finsim MySQL 2026-08-22, no value outside
+ *    `/^T[1-9]\d*$/` exists in any of the four sibling tables. If a producer
+ *    ever emits one, the answer is a loud rejection at the emitter, not a
+ *    third rule here.
  */
 const LEGACY_SLOT_SHAPE = /^T[1-9]\d*$/
 
+/**
+ * SYS-3517 F1 — the shape `periodPosition` is trusted in, and the same
+ * discipline as `LEGACY_SLOT_SHAPE`: a finite number >= 1, per
+ * `CanonicalInstance.periodPosition`'s declared "1-based period
+ * coordinate". A value outside it (0, a negative, a non-finite number) is
+ * treated as ABSENT — the instance is read as carrying no coordinate at
+ * all and rules 2-4 run exactly as they always did — never coerced into
+ * "the current-year row".
+ *
+ * THE GATE IS THE PRODUCER'S, CHARACTER FOR CHARACTER (SYS-3526 release
+ * prep). finsys-api's projector applies `Number.isFinite(p) && p >= 1`
+ * (`ihsCanonicalReadService.projectInstance`, B9), citing this package's
+ * `legacySlot` precedent; this was written as `Number.isInteger` and was
+ * therefore STRICTER than the producer it receives from. That is the wrong
+ * direction for a receiver, and not a harmless one: a `2.5` crossed the wire
+ * and was silently dropped here, and dropping the coordinate un-fires rule
+ * 1b, so the row's adopted `#T{n}` key gets read as a real slot and the
+ * DEVOPS-535 overlap comes back for exactly that row. Out of range is now
+ * out of range on both sides and nothing in between is invented. Unreachable
+ * today either way — the column is `int` — which is why this is a
+ * consistency fix rather than a defect fix, and why it is cheap to make now.
+ *
+ * An admitted-but-odd coordinate is inert downstream rather than dangerous:
+ * the consumer branch that reads coordinates tests `periodPosition === 1`,
+ * so a 2.5 row is simply slotless — which is what v1 did with a
+ * NULL-timePeriod row too.
+ */
+function coordinateOf(instance: CanonicalInstance): number | null {
+  const p = instance.periodPosition
+  return typeof p === 'number' && Number.isFinite(p) && p >= 1 ? p : null
+}
+
 function timePeriodOf(instance: CanonicalInstance, positions: Map<string, number>): string | null {
   if (instance.legacySlot && LEGACY_SLOT_SHAPE.test(instance.legacySlot)) return instance.legacySlot
+  // RULE 1b (SYS-3517 F1). A `periodPosition` on the wire says the producer
+  // stores this category by (instance, period) COORDINATE — and a coordinate
+  // producer stamps `legacySlot` on every row that HAS a v1 slot. So on such
+  // an instance the slot's absence is INFORMATIVE, not silence: it is the
+  // producer saying "the v1 model had no slot for this row", and the correct
+  // period is null. Rules 2-4 below are all DERIVATIONS of a slot the wire
+  // did not state, and running any of them here manufactures one.
+  //
+  // The row this protects is DEVOPS-535's: a year-2 financial statement's
+  // OWN current fiscal year, stored at position 1 with `timePeriod = NULL`
+  // (financialStatementSpec.ts `slotFor`, the only (year, position) pair
+  // that maps to null). Its key routinely ends `#T1` — not a period, but a
+  // HISTORICAL KEY the re-extraction ADOPTED ("Historical keys are never
+  // rewritten ... the adopted row keeps its key and gains its
+  // periodPosition stamp"). Reading the period off that key rewrites the
+  // one null the coordinate model exists to preserve into a second claimant
+  // on slot T1, and the finsys-client resolver's coordinate branch
+  // (`timePeriod === null && periodPosition === 1`) can then never fire —
+  // reinstating, under V2 only, the exact overlap projection DEVOPS-535
+  // removed. Measured on finsim 2026-08-22, ihs 282/283: 90000 returned
+  // where the document says 77777, and on ihs 282 the fabricated claimant
+  // also won `latest/currentYear`, returning 77777 where 120000 was right.
+  //
+  // NOT a widening of rule 1: this reads the slot's ABSENCE, never its
+  // presence. A coordinate row that DOES carry a well-shaped `legacySlot`
+  // took rule 1 above and never reaches here, and an out-of-shape one is
+  // absent by M4's own contract, so it lands here — slotless, which is what
+  // "treated as absent" means once a coordinate is on the wire.
+  //
+  // SCOPE, checked rather than assumed: `periodPosition` is emitted only for
+  // a row whose table carries the column, which today is financial
+  // statements alone (`CanonicalInstance.periodPosition`; finsys-api B9).
+  // Every bank / payslip / EPF / SSM / Form 9 / IC / alt-data instance has
+  // no coordinate, so this rule cannot fire for them and their cascade is
+  // byte-identical.
+  if (coordinateOf(instance) !== null) return null
   const hashSuffix = HASH_PERIOD_SUFFIX.exec(instance.instanceKey)
   if (hashSuffix) return `T${hashSuffix[1]}`
   const legacyOrdinal = legacyOrdinalOfKey(instance.instanceKey)
@@ -1698,9 +1794,25 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
       // deliberately), and the finsys-client resolver selects the true
       // current-year row by it. Without this the flat-vs-view rows differ on
       // exactly the column that decides which number a lender scores on.
-      ...(instance.periodPosition !== undefined ? { periodPosition: instance.periodPosition } : {}),
+      //
+      // SYS-3517 F1: through `coordinateOf`, the SAME gate rule 1b applies,
+      // so the row can never advertise a coordinate the period rule refused
+      // to honor. A row carrying `periodPosition: 0` beside a slot derived
+      // as if no coordinate existed is a declared-vs-actual drift of the
+      // kind this package's release notes are organised against, and the
+      // resolver's `periodPosition === 1` test would read it as a real
+      // coordinate on a row that was never treated as one.
+      ...(coordinateOf(instance) !== null ? { periodPosition: instance.periodPosition } : {}),
     }
-    if (row.timePeriod === null && instance.instanceKey === '') {
+    // SYS-3517 F1: the `coordinateOf` clause is new. F6's rescue is for a
+    // period that is UNKNOWN (nothing on the wire named one, so label the
+    // lone document T1 rather than render a blank header). A coordinate
+    // row's period is KNOWN and is deliberately none — rule 1b just said so
+    // — and rescuing it would re-fabricate, eight lines later, the very slot
+    // that rule withheld. No producer emits `instanceKey: ''` WITH a
+    // coordinate today; the clause is here so rule 1b cannot be undone by a
+    // branch written for a different question if one ever does.
+    if (row.timePeriod === null && instance.instanceKey === '' && coordinateOf(instance) === null) {
       // SYS-3334 F6 (round 2): a single-cardinality category's ONE instance
       // carries instanceKey '' by convention (canonical-view.ts's own
       // contract) — and IS slot 1, the same way any other lone document
@@ -2466,12 +2578,61 @@ function valueAtInstanceKeyPrefix(view: CanonicalView, address: V1Address): Addr
  *
  * M-2 (round 5): a T-slot key names a SLOT, not an INSTANCE — `buildInstanceTable`
  * happily renders two columns for two rows sharing one period label, but this
- * function can only ever place ONE value under the key. Before this fix, more
- * than one row sharing `tSlot` silently picked the first (still the rule —
- * v1's own wide column could hold only one value too) with no signal that a
- * second, un-placed row existed; `multiple: true` now surfaces that choice
- * into `ambiguous`, the same way the plain-address lookup already does for
- * its own multi-instance case.
+ * function can only ever place ONE value under the key. More than one row
+ * sharing `tSlot` used to pick silently, with no signal that a second,
+ * un-placed row existed; `multiple: true` surfaces that choice into
+ * `ambiguous`, the same way the plain-address lookup already does for its own
+ * multi-instance case.
+ *
+ * SYS-3526 — WHICH one it picks is LAST, not first, and that is the whole of
+ * this fix. Three consumers resolve a contested slot and this was the only one
+ * that disagreed:
+ *
+ *   v1                 `ihsService.getIhsDetailsById` merges each sibling
+ *                      row's `toSuffixedObject()` into ONE accumulating object
+ *                      under `order: { id: "ASC" }` — the LAST row by id owns
+ *                      the slot. All four tables that reach this lookup carry
+ *                      that clause, under finsys-api's own SYS-2916 comment
+ *                      naming "the suffixed spread's later-masks-earlier
+ *                      behavior" as a contract rather than an accident.
+ *   v2 instance path   finsys-client `selectFinancialRow` — last matching row
+ *                      wins, over `instanceRowsFromView`'s rows.
+ *   v2 flat path       THIS function, which took `withField[0]`.
+ *
+ * finsys-api #611 added `order: { id: "ASC" }` to the v2 read, which is what
+ * the other two consumers need and what its own shipped comment says it is
+ * for. It also made this path deterministically wrong rather than
+ * accidentally so: `withField[0]` became guaranteed to be the OLDEST row.
+ *
+ * "LAST" IS LAST-BY-ARRIVAL, and that holds because of two facts, not one:
+ * the emitter now hands over rows in id order, and `instanceRowPairsFromView`
+ * does not destroy it — its F5 period sort is STABLE, and every row in
+ * `withSlot` shares a period by construction, so those rows are still in the
+ * view's own emission order when they get here. Both halves are pinned by
+ * tests; neither is assumed.
+ *
+ * TWO SHAPES WHERE THIS IS STILL NOT EXACTLY v1, neither reachable from this
+ * package, both named so nobody re-derives them as bugs:
+ *
+ *  1. v1 overwrites with NULL. `toSuffixedObject()` emits every non-excluded
+ *     column including a null one, so a later row's null blanks an earlier
+ *     row's real value. `projectInstance` OMITS a null field from the
+ *     canonical instance (deliberately: a gated field and a never-produced
+ *     field must be indistinguishable, so both are absent), so a null is not
+ *     a candidate here at all — `withField` cannot see it, and this answers
+ *     the earlier row's value where v1 answered null.
+ *  2. v1 pre-filters by recency BEFORE spreading — financial statements drop
+ *     a T1 row whose `financialYearEnd` is not the newest (SYS-2972), bank
+ *     statements keep only the newest `statementDate` per period (SYS-2979);
+ *     EPF and payslip have no filter, so for them v1 is pure
+ *     last-write-wins. `financialYearEnd` has no v1 wide column at all, so it
+ *     never reaches an `InstanceRow` and that filter is not expressible here.
+ *     Replicating either would make this function a SECOND implementation of
+ *     "which document is newest" — the drift SYS-2994 was filed to stop on
+ *     the finsys-api side — so it deliberately does not. Where a filter would
+ *     change the answer, first-match was not right either; last-match is
+ *     right whenever the newer document has the higher id, which is the
+ *     ordinary case and the measured one.
  */
 function valueAtTSlot(view: CanonicalView, address: V1Address, tSlot: string, rowPairsFor: RowPairsLookup): AddressLookup {
   // L-5 (round 5): three DISTINCT not-found causes, each its own `reason` —
@@ -2491,7 +2652,10 @@ function valueAtTSlot(view: CanonicalView, address: V1Address, tSlot: string, ro
   if (withSlot.length === 0) return { found: false, reason: `no ${tSlot} row` }
   const withField = withSlot.filter((r) => Object.prototype.hasOwnProperty.call(r, base))
   if (withField.length === 0) return { found: false, reason: `${tSlot} row lacks ${base}` }
-  return { found: true, value: withField[0]![base], multiple: withField.length > 1 }
+  // SYS-3526: the LAST row that carries the field, not the first — see this
+  // function's doc for the three-consumer disagreement this closes, and for
+  // why "last" is last-by-arrival here rather than merely last-in-array.
+  return { found: true, value: withField[withField.length - 1]![base], multiple: withField.length > 1 }
 }
 
 /**

@@ -4,6 +4,80 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — the subject-scoped canonical view (SYS-3542 / SYS-3463a)
+
+- `SubjectCanonicalView`, `SubjectCanonicalCategory` and `SubjectInstance` —
+  a new set of types living alongside `CanonicalView` in
+  `canonical-view.ts`, for the response `CanonicalView`'s own doc names and
+  declines to be: one SUBJECT's merged data across every application
+  (`ihsId`) the subject registry has attached to them, rather than one
+  application's. `SubjectInstance` widens `CanonicalInstance` with
+  `source: { sourceIhsId }` (a constant at `CanonicalView`'s single-
+  application scope, so absent there); `SubjectCanonicalCategory` omits
+  `cardinality`, and `SubjectInstance` itself omits `legacySlot` and
+  `periodPosition` (both `Omit`-ted, not merely left undocumented) — all
+  three describe exactly one application's v1 reconstruction and stop
+  meaning anything once merged across several. `source.sourceIhsId` is how
+  a consumer gets any of them back: from that application's own
+  `CanonicalView`, where they still mean something.
+- `subjectViewFromRecords` (`subject-canonical-view.ts`), the one function
+  that builds the shape above out of several applications'
+  `CanonicalView`s, and its input type `SubjectViewRecord` (`{ subjectKind,
+  view }` — `sourceIhsId` is read off `view.ihsId`, not duplicated onto a
+  second field). Rules worth knowing before using it:
+  - **Per-source instance-key qualification.** A raw `instanceKey` is
+    routinely `''` for a single-cardinality category, and two applications
+    both carrying one would collide if merged unqualified — the second
+    would silently look like a second copy of the first in any keyed
+    lookup. Every merged instance's key is rewritten to
+    `${sourceIhsId}#${rawInstanceKey}` before it is returned. Two records
+    naming the SAME `ihsId` throw, rather than silently reproducing this
+    exact collision under a different name.
+  - **Latest-first, applied to the merge, genuinely order-independent.**
+    `CanonicalAddress` already commits this package to "latest by
+    observedAt" as the resolution rule for an unaddressed field;
+    `subjectViewFromRecords` applies the same rule to the merge itself,
+    parsing `observedAt` with `Date.parse` (never comparing the raw string
+    — a mixed UTC offset or mixed precision across different adapters and
+    applications silently misorders a string comparison) and sorting each
+    category's instances latest-first. An absent or unparseable
+    `observedAt` ranks oldest, same as `CanonicalInstance.legacySlot`'s own
+    "malformed is treated as absent" rule. When `observedAt` ranks equal —
+    including a category where NO instance carries one at all — the
+    tie-break is `sourceIhsId` descending, not array position: the result
+    is the same regardless of the order records were passed in, in every
+    case, not only when at least one timestamp is present.
+  - **Facts-only input, enforced.** A record whose `CanonicalView` carries
+    `overlay` (a lender-overlay projection, `?overlay=mine`) throws rather
+    than being merged in — silently dropping `overlay` while keeping its
+    staged values would disclose a lender's uncommitted edit as subject
+    fact, with the one marker that could have flagged it removed.
+  - `subjectKind` disagreement across records for one subject, and an empty
+    `records` argument, both throw rather than guess — see the function's
+    own doc for why.
+  - A merged instance's `fields` object is fresh (safe to reassign a field
+    on without touching the source `CanonicalView`); the field envelopes
+    themselves are not cloned, matching how every existing consumer in this
+    package already treats them — see the function's own "ALIASING" doc.
+- `SubjectViewError` and its `SubjectViewErrorCode` discriminant — every
+  refusal above throws this, not a bare `Error`. **The `code` is the
+  contract; the message is not.** A caller branches on
+  `error.code === 'subject-kind-disagreement'` (etc.), never on the message
+  text — the four codes are `'no-records'`, `'subject-kind-disagreement'`,
+  `'duplicate-source-ihs-id'`, `'overlay-projection-present'`. Structure
+  matches this package's one existing precedent for a typed, caller-
+  branchable error (`AdapterError`, `adapter.ts`). Prefer `error.code` over
+  `error instanceof SubjectViewError` alone: a bundler that ends up with two
+  copies of this package's module graph produces two different
+  `SubjectViewError` constructors, and `instanceof` can silently fail
+  across that boundary where a string comparison on `.code` does not.
+
+Purely additive: five new exported types, two new exported values
+(`subjectViewFromRecords`, `SubjectViewError`), nothing existing renamed,
+removed, or narrowed. **Minor.**
+
 ## [8.1.2] - 2026-08-23
 
 Patch, and every item in it is a PARITY FIX rather than a change anyone chose.

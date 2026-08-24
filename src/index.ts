@@ -324,4 +324,18 @@ export type {
   CanonicalCategory,
   CanonicalView,
   CanonicalAddress,
+  // SYS-3542 (SYS-3463a): the subject-scoped counterpart CanonicalView's own
+  // doc anticipates by name. See canonical-view.ts for why these cannot be
+  // interchangeable with the application-scoped types above.
+  SubjectInstance,
+  SubjectCanonicalCategory,
+  SubjectCanonicalView,
 } from './canonical-view.js';
+
+// SYS-3542 (SYS-3463a): the one merge that builds a SubjectCanonicalView out
+// of several applications' CanonicalViews. Kept in its own module rather
+// than canonical-view.ts — see that file's "WHAT THIS FILE IS NOT" note and
+// subject-canonical-view.ts's own doc for why instance-selection logic lives
+// apart from the types it selects over.
+export type { SubjectViewRecord, SubjectViewErrorCode } from './subject-canonical-view.js';
+export { subjectViewFromRecords, SubjectViewError } from './subject-canonical-view.js';

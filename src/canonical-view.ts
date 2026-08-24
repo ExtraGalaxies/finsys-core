@@ -122,13 +122,21 @@ export interface CanonicalInstance {
    * be COMPARED as a string (a temporal tie-break for two instances
    * contending on one slot): every key that comparison was ever consulted on
    * has its provenance entry deleted regardless of the result (H2, round 4),
-   * so the comparison was computing an answer nobody could read. If a future
-   * consumer reintroduces ordering by this field, the same requirement
-   * applies: every writer must use this SAME format, because two
-   * same-format, same-offset timestamps order lexicographically exactly as
-   * they order in time, and a writer emitting a different offset or
-   * precision would silently break that ordering without either side
-   * raising an error.
+   * so the comparison was computing an answer nobody could read.
+   *
+   * SYS-3542 REINTRODUCED ordering by this field — `subjectViewFromRecords`
+   * (`subject-canonical-view.ts`) sorts a subject's merged instances by it.
+   * It does NOT reintroduce the string comparison the paragraph above
+   * describes as removed: a raw string comparison silently breaks on two
+   * inputs this package cannot police at the type level (mixed UTC offsets —
+   * `+08:00`, this estate's own timezone, sorts as "later" than an earlier
+   * moment written as `Z`; mixed precision — a no-millis `Z` timestamp
+   * outsorts every millisecond-precision one, because `'Z'` > `'.'`
+   * byte-for-byte) — so that function parses with `Date.parse` instead and
+   * documents its own rule for a value that fails to parse. Read that
+   * function's own doc before adding a second ordering consumer of this
+   * field; the requirement is "parse it", not "trust the format" — a single
+   * drifting producer is exactly what a raw string comparison cannot catch.
    */
   observedAt?: string
   fields: Record<string, CanonicalFieldEnvelope>
@@ -267,4 +275,103 @@ export interface CanonicalAddress {
    * Absent: latest by observedAt, which is what v1's flat mirror actually did.
    */
   instanceKey?: string
+}
+
+/**
+ * SYS-3542 (SYS-3463a) — the subject-scoped view `CanonicalView`'s own doc
+ * anticipates and declines to be: "Do not write code that assumes this is
+ * interchangeable with a subject-scoped view. That response would carry
+ * source attribution per instance and would re-scope or omit `cardinality`."
+ * This is that response.
+ *
+ * A `CanonicalInstance` widened with the application it came from. Subject
+ * scope means MULTIPLE applications (`ihsId`s) can each contribute an
+ * instance to one category, so source attribution — a constant at
+ * `CanonicalView`'s single-application scope, and therefore absent there —
+ * becomes per-instance information here.
+ *
+ * `instanceKey` DIVERGES from `CanonicalInstance`'s own contract ("'' for a
+ * single-cardinality category") and that divergence is load-bearing, not
+ * cosmetic: two applications, each carrying a single-cardinality instance,
+ * both key it `''`. Merged unqualified, the second instance is
+ * indistinguishable from the first in any keyed lookup built over the
+ * category's instances — silently collapsing two applications' worth of data
+ * into one. `subjectViewFromRecords` (`subject-canonical-view.ts`) rewrites
+ * every instance's key to
+ * `${sourceIhsId}#${rawInstanceKey}` before it is ever returned, using the
+ * same `#`-boundary convention `document-intake` keys and the per-adapter
+ * disambiguation in `ihs-processing.ts` already use for a compound key: `''`
+ * from ihsId 1042 and `''` from ihsId 1058 land as `'1042#'` and `'1058#'`,
+ * never colliding.
+ *
+ * TWO `CanonicalInstance` MEMBERS ARE OMITTED (SYS-3542 review, F12), for the
+ * same reason `SubjectCanonicalCategory` omits `cardinality` — republishing
+ * them here would tell a consumer the opposite of what is true, because each
+ * describes exactly one application's structure and stops meaning anything
+ * once merged across several:
+ *   - `legacySlot` — the v1 wide-table slot THIS INSTANCE projected to.
+ *     Three applications can each legitimately own `T1`; carried through
+ *     unchanged that reads as the "two instances contending for one slot"
+ *     defect shape `ihs-processing.ts` documents as a real collision.
+ *   - `periodPosition` — orders periods WITHIN one application's own v1
+ *     reconstruction; across applications it orders nothing.
+ * `source.sourceIhsId` (below) is how a consumer that genuinely needs either
+ * value gets it back: go to that application's own `CanonicalView`, which is
+ * where the field means something.
+ */
+export interface SubjectInstance extends Omit<CanonicalInstance, 'legacySlot' | 'periodPosition'> {
+  source: {
+    sourceIhsId: number
+  }
+}
+
+/**
+ * `CanonicalCategory` re-scoped to a subject: `cardinality` is OMITTED, not
+ * carried through unchanged — `CanonicalView`'s own doc names this exact
+ * requirement. `cardinality` described one adapter's per-APPLICATION
+ * contract ('single' = at most one instance per application). At subject
+ * scope a subject with three applications legitimately carries three
+ * instances of a 'single'-cardinality category, one per source — republishing
+ * the flag here would tell a consumer the opposite of what is true, which is
+ * worse than omitting it: `'single'` used to license reading `instances[0]`
+ * as THE value, full stop. That license does not survive the re-scoping —
+ * `instances` can legitimately hold more than one CURRENT instance (a
+ * subject with a live application in two lenders' pipelines, several bank
+ * accounts each with their own statement) — but `instances[0]` is not
+ * meaningless; see its own doc below for what it IS.
+ */
+export interface SubjectCanonicalCategory {
+  /**
+   * Sorted LATEST-FIRST by `observedAt`, across every source application,
+   * regardless of the order records were merged in — see
+   * `subjectViewFromRecords`'s own doc (`subject-canonical-view.ts`) for the
+   * parsing rule, the tie-break, and the secondary key.
+   *
+   * `instances[0]` is therefore well-defined: the single instance
+   * `CanonicalAddress`'s existing "latest wins" rule would pick for an
+   * unaddressed field. It is NOT license to ignore `instances[1..]` — see
+   * this interface's own doc above for why `'single'`'s old licence to do
+   * that does not survive the re-scoping. `[0]` names the latest instance,
+   * not the only one that matters.
+   */
+  instances: SubjectInstance[]
+}
+
+/**
+ * THE SCOPE OF THIS RESPONSE IS ONE SUBJECT — every application the subject
+ * registry (IC / SSM regno) has attached to them, merged. Where
+ * `CanonicalView` is deliberately silent about which application produced an
+ * instance (a per-response constant at that scope), this type is deliberately
+ * silent about `cardinality` (see `SubjectCanonicalCategory`) and explicit
+ * about source (see `SubjectInstance`) — the two swap places, which is the
+ * whole reason the two types cannot be interchangeable and must not drift
+ * apart from each other unnoticed. `subjectViewFromRecords` in
+ * `subject-canonical-view.ts` is the one function that builds this shape;
+ * read that file for the merge and ordering rules, which are a runtime
+ * decision this file deliberately does not make (see "WHAT THIS FILE IS NOT"
+ * on `CanonicalView`, above).
+ */
+export interface SubjectCanonicalView {
+  subjectKind: string
+  categories: Record<string, SubjectCanonicalCategory>
 }

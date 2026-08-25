@@ -88,7 +88,12 @@ contract of `subjectViewFromRecords`, and the meaning of a merged
   compared FIELD BY FIELD. **That order carries NO temporal meaning and must
   never be rendered as one.** Its only job is to keep the merge genuinely
   order-independent — the same instance leads regardless of which record the
-  caller listed first. There is no honest replacement proxy: the one per-record
+  caller listed first. There is no honest replacement proxy left once `recordRef` is opaque — and
+that opacity is this change's own choice, not a constraint it inherited. The
+ticket permitted the narrower fix ("within one furnisher it may stand; across
+furnishers it must not"); dropping the proxy at BOTH scopes goes further,
+because a per-record ordering key that nobody may reason about cannot honestly
+order anything, at any scope. Stated as a decision rather than a discovery: the one per-record
   axis a furnisher could have ordered by is `recordRef`, which this package
   makes opaque precisely so nobody reasons from it.
 - **`SubjectCanonicalCategory.contestedLead` is new (additive, optional).**
@@ -130,15 +135,30 @@ scope.
 - **finsys-api's subject assembly** — builds `SubjectViewRecord`s and must now
   stamp `source` from the credentialed pull channel rather than letting
   `view.ihsId` stand in.
-- **finsys-client's subject seat** — de-qualifies instance keys by slicing at
-  the first `#`, on the stated argument that "sourceIhsId is numeric, so the
-  FIRST `#` is unambiguously the qualification boundary even when the raw key
-  itself contains one." That argument collapses under an opaque qualifier, and
-  the key it was slicing is no longer qualified at all: the seat must read
-  `instance.source` structurally and stop parsing.
-- **`@finsys/lender-client`**, which re-exports this package's canonical types.
-  Whether its re-export list covers the `Subject*` types was not verified from
-  this repo.
+- **finsys-client's subject seat, on the in-flight SYS-3544/SYS-3550 branches**
+  (`finsys-client` main has no reference to these types) — de-qualifies
+  instance keys by slicing at the first `#`, on the stated argument that
+  "sourceIhsId is numeric, so the FIRST `#` is unambiguously the qualification
+  boundary even when the raw key itself contains one." That argument collapses
+  under an opaque qualifier, and the key it was slicing is no longer qualified
+  at all: the seat must read `instance.source` structurally and stop parsing.
+- **`@finsys/lender-client` is NOT affected.** Checked rather than assumed: it
+  contains no `Subject*` reference and re-exports nothing from this package.
+
+### One departure from the decision of record, named
+
+The 2026-08-25 amendment on the contribution design page says "instance-key
+qualification and the duplicate check both key on the pair." The duplicate
+check does. **Instance-key qualification is REMOVED, not re-keyed** — there is
+no character guaranteed absent from two opaque strings, so any joined key is
+ambiguous (`('a','b#c')` and `('a#b','c')` collapse to the same thing, and a
+legitimate furnisher's subject would throw `duplicate-source-record`). A test
+pins exactly that pair.
+
+Keying the qualification on the pair would have meant joining it. So the code
+does what the amendment MEANT — identity is the pair, and nothing reconstructs
+it from text — by doing the opposite of what it literally said. Recorded here
+rather than left for a reader to notice the mismatch.
 
 ### Cost
 
@@ -153,15 +173,29 @@ are per subject-view assembly.
 
 ## [8.2.0] - 2026-08-24
 
-**Recorded retroactively on 2026-08-25 (SYS-3554).** This release was published
-to the registry without a version bump or a changelog entry ever being
-committed: `package.json` on `main` said `8.1.2` while the registry served
-`8.2.0`, so **no committed state produced the published artifact**. That is the
-exact "a DECLARED fact drifting from an ACTUAL one" class the publish preflight
-(DEVOPS-687) guards, and it would have failed two of that preflight's four
-checks — version disagreement and a missing changelog entry. The entry below
-describes what 8.2.0 actually shipped; it is written after the fact so the
-record is honest, not because anything changed on the wire.
+**Recorded retroactively on 2026-08-25 (SYS-3554), and never published to
+public npm.** `registry.npmjs.org` holds `8.0.0, 8.1.0, 8.1.1, 8.1.2` and its
+`latest` is `8.1.2`; `8.2.0` exists only on the local Verdaccio the CRA arc
+stacks against. It was published from a working tree whose version bump was
+never committed — `package.json` said `8.1.2` — so **no committed state
+produced the published artifact**.
+
+The useful lesson is not that the publish preflight (DEVOPS-687) would have
+caught it. That preflight guards the GitHub-Release path, and by hypothesis
+that path never ran: **a manual Verdaccio publish bypasses it entirely.** A
+guard on one route says nothing about a package that left by another.
+
+Three consequences worth stating plainly rather than leaving a reader to infer:
+
+- Public npm goes `8.1.2` → `9.0.0`. A consumer reading this file will find an
+  `8.2.0` section describing a version they cannot install. That is deliberate;
+  deleting it would make the record less true, not more.
+- **The entire `Subject*` surface has never shipped publicly.** `SubjectInstance`
+  appears zero times in the 8.1.2 tree. So every item marked BREAKING in 9.0.0
+  below breaks nothing on public npm — it breaks Verdaccio consumers, which is
+  the CRA arc's own in-flight branches and nobody else.
+- The entry below is written after the fact so the record is honest, not
+  because anything changed on the wire.
 
 ### Added — the subject-scoped canonical view (SYS-3542 / SYS-3463a)
 

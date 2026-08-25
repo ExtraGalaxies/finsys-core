@@ -436,8 +436,18 @@ export interface SubjectCanonicalCategory {
    * from MORE THAN ONE source, i.e. `observedAt` (the only evidential ordering
    * key this package has) ranks them equal and the merge has no honest way to
    * say which is later. Lists the distinct sources involved, in the order they
-   * appear in `instances`. Absent — the normal case — means `instances[0]` won
-   * on evidence.
+   * appear in `instances`. Absent means only that no tie SPANS sources: it
+   * does NOT mean `instances[0]` won on evidence. A tie confined to one
+   * source is also absent, and there `[0]` won on the producer's own array
+   * order — one producer ordering its own instances is not a disagreement
+   * between sources, which is the only thing this flag reports.
+   *
+   * HOW OFTEN IT FIRES depends on the category, and "normal case" would be
+   * the wrong word for some of them. `observedAt` is optional on adapter
+   * output, so on a category where no producer supplies it EVERY
+   * multi-source category ties and carries this flag. A flag that is always
+   * on gets ignored, so a renderer should say WHICH sources disagree, not
+   * merely that they do.
    *
    * WHY THIS EXISTS RATHER THAN A TIE-BREAK THAT PICKS ONE. Until SYS-3554
    * the merge broke such a tie on `sourceIhsId` descending, a recency proxy

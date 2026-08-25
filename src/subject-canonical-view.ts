@@ -414,21 +414,23 @@ function contestedLeadOf(instances: readonly SubjectInstance[]): { sources: Subj
 }
 
 /**
- * Merge one subject's applications into the one subject-scoped view. See
+ * Merge one subject's contributed records into the one subject-scoped view. See
  * this file's own doc for the ordering rule, the parsing rule, the
  * tie-break, and the aliasing contract.
  *
  * `subjectKind` DISAGREEMENT ACROSS RECORDS: every record here is asserted
  * by its caller to describe the SAME subject, so a differing `subjectKind`
  * is not a value to reconcile — a subject's kind does not change between
- * applications, so a mismatch means the caller mismatched something upstream
- * (joined the wrong applications to a subject, or the subject registry
+ * contributed records, so a mismatch means the caller mismatched something
+ * upstream (joined the wrong records to a subject, or the subject registry
  * itself is wrong). Silently picking one, or worse, invisibly overriding one
  * value with another, would hide exactly that bug — the same reasoning
  * `applyAggregation` already applies to a numeric operator fed a non-numeric
  * value in `adapter-aggregation.ts` ("the operator was misused ... and
- * silent coercion would mask the bug"). So this throws, naming every ihsId
- * and kind involved, rather than guessing.
+ * silent zero-coercion would mask the bug"). So this throws, naming every
+ * SOURCE PAIR and kind involved — see `describeSource`, which quotes each
+ * half separately precisely so a message can never be parsed back into a
+ * pair — rather than guessing.
  *
  * A DUPLICATE SOURCE **PAIR** ACROSS RECORDS (SYS-3542 review's F3, rescoped
  * by SYS-3554): throws, naming the repeated pair. Uniqueness at subject scope

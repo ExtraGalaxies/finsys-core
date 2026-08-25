@@ -1124,6 +1124,28 @@ describe('subjectViewFromRecords — per-field recency across sources (SYS-3464)
       expect(category.contestedLead!.sources).toEqual(category.fieldsByInstanceKey['']!.f!.contested!.sources)
     })
 
+    /**
+     * F2 — `Object.is`, not `===`, and no test could see the difference
+     * before this one. The choice is argued at length in two docblocks and
+     * the changelog, and a future "simplification" to `===` passed the
+     * entire suite. A justification nothing can falsify is decoration.
+     *
+     * `-0` and `0` are not the same attested figure — and `JSON.parse('-0')`
+     * really is `-0`, so it arrives off the wire. Two `NaN`s are not a
+     * source disagreeing with itself.
+     */
+    it('GUARD: -0 and 0 are a disagreement (Object.is, not ===)', () => {
+      const category = twoAtOneInstant(-0 as unknown as string, 0 as unknown as string)
+      expect(category.fieldsByInstanceKey['']!.f!.contested).toBeDefined()
+    })
+
+    it('GUARD: NaN against NaN is NOT a disagreement (Object.is, not ===)', () => {
+      const category = twoAtOneInstant(NaN as unknown as string, NaN as unknown as string)
+      const selection = category.fieldsByInstanceKey['']!.f!
+      expect(selection.contested).toBeUndefined()
+      expect('contested' in selection).toBe(false)
+    })
+
     it('does NOT fire when the tied sources AGREE — an agreement is not a finding', () => {
       const category = twoAtOneInstant('Same Employer Sdn Bhd', 'Same Employer Sdn Bhd')
       const selection = category.fieldsByInstanceKey['']!.f!
@@ -1182,8 +1204,16 @@ describe('subjectViewFromRecords — per-field recency across sources (SYS-3464)
         }),
       ]).categories.c!
       expect(category.fieldsByInstanceKey['']!.f!.contested!.sources.map((s) => s.furnisherId)).toEqual(['a', 'b'])
-      // A real timestamp still beats both, per field as per row.
-      expect(category.fieldsByInstanceKey['']!.f!.observedAt).toBeUndefined()
+      // Neither observation carries a usable timestamp (one absent, one
+      // unparseable), so this asserts the PROVENANCE carried through, not a
+      // precedence between them.
+      //
+      // F3: the key must be ABSENT, not present-and-undefined — same reason
+      // `contested`'s absence is pinned that way. `.toBeUndefined()` alone
+      // passes either way, so it cannot see the guard that omits it.
+      const sel = category.fieldsByInstanceKey['']!.f!
+      expect(sel.observedAt).toBeUndefined()
+      expect('observedAt' in sel).toBe(false)
     })
   })
 

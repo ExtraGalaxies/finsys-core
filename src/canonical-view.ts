@@ -455,11 +455,26 @@ export interface SubjectFieldSelection {
    * SYS-3464 — present IFF the observations that tie at the top rank FOR THIS
    * FIELD come from more than one source AND do not all carry the same
    * `envelope.value`. Lists the distinct sources involved, in the order they
-   * appear in `instances`. Deliberately the same shape as
+   * appear in `instances`. NOTE what the list is: every source tied at this
+   * field's top rank, INCLUDING any that agree with the winning value. It
+   * is "who was in the tie", not "who dissented" — a renderer saying "a, b
+   * and c disagree" would misattribute an agreeing source. Deliberately the
+   * same shape as
    * `SubjectCanonicalCategory.contestedLead` — one mechanism for reporting a
    * conflict, read the same way at both grains.
    *
-   * THE PREDICATE IS NARROWER THAN `contestedLead`'S, AND THAT IS THE POINT.
+   * THE TWO PREDICATES ARE DIFFERENT, AND NEITHER IMPLIES THE OTHER. Do not
+   * read this one as nested inside `contestedLead` — a consumer that checks
+   * `contested` only when `contestedLead` is present WILL render a disputed
+   * field as uncontested, which is the "not misleading" failure this exists
+   * to prevent. Each flag looks at its own top rank, and those differ: if
+   * the newest ROW is from one source alone, `contestedLead` is absent —
+   * yet an older field whose own newest observation ties between two other
+   * sources still reports `contested` here. It also runs the other way: a
+   * cross-source tie at row grain where every source states the same value
+   * gives `contestedLead` with nothing contested.
+   *
+   * WHY THIS ONE ALSO REQUIRES DISAGREEMENT.
    * At row grain the merge cannot know whether two tied rows disagree —
    * "the value" is not defined for a row. At field grain it can see the
    * values, so an AGREEMENT is not reported as a finding: SYS-3464's

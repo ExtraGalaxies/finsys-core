@@ -116,6 +116,25 @@ order anything, at any scope. Stated as a decision rather than a discovery: the 
   misleading" forbids. A tie WITHIN one record does not fire it — one producer
   ordering its own instances is not a disagreement between sources.
 
+### Changed — `SubjectViewErrorCode`
+
+**BREAKING**: `'duplicate-source-ihs-id'` is **removed** and replaced by
+`'duplicate-source-record'`; `'missing-source-identity'` is **added**. The full
+set is now `'no-records'`, `'subject-kind-disagreement'`,
+`'missing-source-identity'`, `'duplicate-source-record'`,
+`'overlay-projection-present'`. A caller with an exhaustive `switch` on this
+union gets a compile error, which is the intent.
+
+- `'duplicate-source-record'` fires on a repeated `(furnisherId, recordRef)`
+  PAIR — two copies of one furnished record. **Two DIFFERENT furnishers sharing
+  a `recordRef` is no longer an error**; that was the defect.
+- `'missing-source-identity'` fires when either half is absent or empty. An
+  empty `furnisherId` is every furnisher at once — the pre-SYS-3554 world
+  spelled with a different character — and an empty `recordRef` collides with
+  every other ref-less record from the same furnisher.
+- Error MESSAGES now name the source pair rather than an `ihsId`. As always,
+  **the `code` is the contract and the message is not.**
+
 ### Added — per-field recency across sources (SYS-3464)
 
 **`SubjectCanonicalCategory.fieldsByInstanceKey` is new and REQUIRED**
@@ -171,7 +190,15 @@ top rank FOR THAT FIELD span more than one source **and** disagree about
 `envelope.value`. Deliberately the same shape as `contestedLead`
 (`{ sources: SubjectSource[] }`, distinct, in `instances` order) — two
 mechanisms disagreeing about how a conflict is reported would be worse than
-either. The PREDICATE is narrower on purpose: at row grain the merge cannot
+either, and NEITHER IMPLIES THE OTHER — do not read the field flag as nested
+inside the row one. Each looks at its own top rank: a field can be contested
+while the lead row is not (its newest observation ties between two sources that
+did not write the newest row), and the lead row can be contested with nothing
+contested (a cross-source tie where every source states the same value). A
+consumer that checks `contested` only when `contestedLead` is present will
+render a disputed field as uncontested.
+
+The field flag additionally requires DISAGREEMENT: at row grain the merge cannot
 know whether two tied rows disagree, because "the value" is not defined for a
 row; at field grain it can, and an agreement is not a finding. So
 `contestedLead` present with **no** field contested is a coherent answer —
@@ -213,25 +240,6 @@ the bureau's assembly path in finsys-api. The contract is written in
 `subject-canonical-view.ts`'s own docblock, next to the code that depends on
 it, so that getting the order wrong requires contradicting a written rule.
 
-### Changed — `SubjectViewErrorCode`
-
-**BREAKING**: `'duplicate-source-ihs-id'` is **removed** and replaced by
-`'duplicate-source-record'`; `'missing-source-identity'` is **added**. The full
-set is now `'no-records'`, `'subject-kind-disagreement'`,
-`'missing-source-identity'`, `'duplicate-source-record'`,
-`'overlay-projection-present'`. A caller with an exhaustive `switch` on this
-union gets a compile error, which is the intent.
-
-- `'duplicate-source-record'` fires on a repeated `(furnisherId, recordRef)`
-  PAIR — two copies of one furnished record. **Two DIFFERENT furnishers sharing
-  a `recordRef` is no longer an error**; that was the defect.
-- `'missing-source-identity'` fires when either half is absent or empty. An
-  empty `furnisherId` is every furnisher at once — the pre-SYS-3554 world
-  spelled with a different character — and an empty `recordRef` collides with
-  every other ref-less record from the same furnisher.
-- Error MESSAGES now name the source pair rather than an `ihsId`. As always,
-  **the `code` is the contract and the message is not.**
-
 ### Consumers this breaks that do not live in this repo
 
 Named here so nobody has to re-derive them; fixing them is not this release's
@@ -257,10 +265,12 @@ inferred, and both left for their own tickets:
   and `app/evaluation/evaluation_data.ts` on the in-flight SYS-3544/SYS-3550
   branches. `evaluationDataFromSubjectView` does exactly the thing this release
   documents as the defect — `const latest = category.instances[0]` followed by
-  `Object.entries(latest.fields)` — and its own docblock already names the
-  consequence: "a field carried only by an older instance is neither placed nor
-  recorded — fail-open ... it does mean this set is not a complete inventory of
-  the subject." That is SYS-3464 in the scoring seat. The fix is to read
+  `Object.entries(latest.fields)`. The seat already names the consequence in
+  writing, though in a neighbouring function and on one branch only —
+  `unaddressableReferencedFields`'s docblock on the SYS-3550 branch: "a field
+  carried only by an older instance is neither placed nor recorded — fail-open
+  ... this set is not a complete inventory of the subject." That is SYS-3464 in
+  the scoring seat, already understood there and not yet fixed. The fix is to read
   `fieldsByInstanceKey`; a score built on the latest ROW is built on a subject
   file missing fields the bureau holds.
 - **finsys-api's bureau assembly**, `src/services/bureauInquiryService.ts`

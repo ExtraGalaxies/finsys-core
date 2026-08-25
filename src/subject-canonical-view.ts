@@ -133,7 +133,8 @@
  *      SYS-3464's principle, two records that can disagree about a disputed
  *      value are worse than one incomplete record, and the disagreement is
  *      itself the finding. The per-field resolution that would legitimately
- *      settle a contested lead is SYS-3464's job, not this merge's.
+ *      settle a contested lead SHIPPED in SYS-3464, in this same version —
+ *      see `buildFieldSelections` below. This sentence used to defer to it.
  *
  * WITHIN ONE SOURCE nothing changed and nothing needed to: `compareSources`
  * returns 0 for two instances of the same record, so they keep their relative
@@ -217,6 +218,31 @@
  * `buildFieldSelections` below resolves each field independently, so a field
  * survives on the newest instance that actually carried it.
  *
+ * A SECOND CALLER CONTRACT THIS FUNCTION CANNOT ENFORCE: an `instanceKey`
+ * that is non-empty must MEAN THE SAME THING across furnishers, or the
+ * caller must not let both into one merge.
+ *
+ * Selection is keyed on `instanceKey` precisely so that fields describing
+ * two different things are never fused — two bank statements are two
+ * accounts. But that protection is only as good as the key. A content-derived
+ * key (a document hash) compares across furnishers; a bare ordinal like
+ * `bankStatements#1` does not, and two furnishers both using it for
+ * DIFFERENT accounts will have their fields resolved into one selection map
+ * per field — an account number from one and a closing balance from the
+ * other. That is a row nobody attested, and it is the failure this design
+ * calls WORSE than the erasure it fixes, because a fabricated figure reads
+ * as a fact while a missing one reads as missing.
+ *
+ * Nothing here can detect it. Core sees two opaque strings that happen to be
+ * equal and has no way to ask whether they denote the same document. The
+ * obligation is the ingest side's: normalize keys to something comparable,
+ * or namespace them per furnisher before they reach this function. What
+ * this function CAN do, and does, is make the result inspectable rather than
+ * silent — every `SubjectFieldSelection` names its own `source`, so fields
+ * under one key resolving to different furnishers is visible field by field
+ * to a caller that looks. It will not look unless told to; hence this
+ * paragraph.
+ *
  * THE ROW-LATEST CONTRACT IS UNCHANGED FOR APPLICATION SCOPE, deliberately.
  * `CanonicalView` describes ONE application, where one document produces one
  * coherent row and the newest document supersedes the older wholesale — that
@@ -252,7 +278,7 @@
  * per FIELD. Under row-latest a late filter dropped one row's worth of
  * fields; under per-field selection a single removed row can change the
  * winner of any subset of the fields in its category, so a post-hoc filter
- * cannot be repaired by re-reading the remaining instances — the whole
+ * cannot be repaired LOCALLY, field by field — the whole
  * selection has to be recomputed from the filtered record set, which means
  * calling this function again with the correct input.
  *
@@ -588,7 +614,8 @@ function buildFieldSelections(
       if (claimed.observedAt !== undefined) selection.observedAt = claimed.observedAt
       // BOTH conditions, and neither alone: more than one source ties, AND
       // they do not agree. See `SubjectFieldSelection.contested` for why the
-      // predicate is narrower than `contestedLead`'s.
+      // predicate DIFFERS from `contestedLead`'s; neither implies the
+      // other. See that field's own doc.
       if (claimed.disputed && claimed.tiedSources.length > 1) {
         selection.contested = { sources: claimed.tiedSources }
       }

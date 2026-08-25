@@ -4,7 +4,367 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [9.0.0] - 2026-08-25
+
+**MAJOR — the bureau gains a furnisher axis (SYS-3554).** Every breaking item
+below is one defect: `sourceIhsId` — an auto-increment primary key belonging to
+ONE finsys-api instance — was being used as a global identity, as a merge key,
+and as a recency proxy. A credit bureau aggregates from MANY furnishers, each
+running their own instance, so lender A's application 7 and lender B's
+application 7 are the same number and mean nothing to each other. That is the
+product, not an edge case.
+
+Two of the three consequences were SILENT. Read the migration notes below
+before upgrading: this changes the shape of `SubjectInstance`, the input
+contract of `subjectViewFromRecords`, and the meaning of a merged
+`instanceKey`.
+
+**This release also carries SYS-3464 — per-field recency across sources.** It
+is in this version rather than a later one because it is the same function and
+the same selection: `subjectViewFromRecords`'s pick was rewritten, not extended
+beside. The two tickets are one defect from two angles — a bureau merging many
+furnishers' records had no furnisher axis (3554) and no per-FIELD axis either
+(3464), so a fresher PARTIAL row from one source silently blanked every field
+another source had supplied.
+
+### What was actually wrong
+
+1. **It threw.** Two legitimate furnishers contributing about one subject
+   raised `duplicate-source-ihs-id`, and that subject failed EVERY inquiry.
+2. **It merged silently.** Instance keys were qualified as
+   `` `${sourceIhsId}#${rawInstanceKey}` ``, so two furnishers' instances landed
+   under one key — one lender's financial statement in another's place inside a
+   credit report, with no error anywhere.
+3. **It misordered silently.** The `observedAt` tie-break ranked by
+   `sourceIhsId` DESCENDING, and its own docblock stated the assumption that
+   broke it: a proxy for "which application is newer" that holds "in every
+   producer this package has observed" — singular producer. Across furnishers it
+   systematically preferred whoever had the higher sequence numbers.
+
+### Changed — identity is the pair `(furnisherId, recordRef)`
+
+- **`SubjectInstance.source` is now `SubjectSource`**
+  (`{ furnisherId: string; recordRef: string }`), replacing
+  `{ sourceIhsId: number }`. **BREAKING for every reader of
+  `instance.source.sourceIhsId`.** Both members are strings deliberately:
+  `recordRef` is opaque BY CONTRACT (the furnisher's own identifier, on which
+  the bureau's only legitimate operations are equality and handing it back on
+  the s.31 correction channel), and a numeric type invites exactly the
+  reasoning that produced this defect — `b.source.sourceIhsId -
+  a.source.sourceIhsId` was a subtraction of two unrelated sequences, and it
+  typechecked. A string cannot be subtracted, so the old tie-break no longer
+  compiles in any consumer either.
+- **`SubjectViewRecord` gains a required `source: SubjectSource`**, and
+  `subjectViewFromRecords` NO LONGER READS `view.ihsId` for identity, keying or
+  ordering. **BREAKING for every caller.** The previous doc argued that reading
+  it off the view avoided "a second place for the two to disagree"; that
+  argument inverts once a bureau exists, because `view` is PAYLOAD — a document
+  pulled from a furnisher, which must not be able to say who it is. Furnisher
+  identity derives from the CREDENTIALED CHANNEL: every pull is bureau-initiated
+  against one furnisher's endpoint with that furnisher's credential, so the
+  caller knows the answer before reading a byte of the payload. `view.ihsId`
+  remains on `CanonicalView` as provenance.
+- **`SubjectSource` and `sameSubjectSource` are new exports.**
+  `sameSubjectSource(a, b)` is the supported way to ask whether two instances
+  came from the same furnished record. **Never join the pair into a string.**
+  Both halves are opaque, so no delimiter is safe: `('a', 'b#c')` and
+  `('a#b', 'c')` are two different sources that any `#`-join maps to one value.
+  For a keyed lookup, nest the maps (`Map<furnisherId, Map<recordRef, …>>`).
+
+### Changed — a merged `instanceKey` is RAW again
+
+- **`subjectViewFromRecords` no longer rewrites `instanceKey`.** It passes
+  through exactly as the producer wrote it, `''` for a single-cardinality
+  category included. **BREAKING for anything that parsed the old qualified key
+  — in particular any consumer de-qualifying by slicing at the first `#`.**
+  **Uniqueness at subject scope is now the TUPLE
+  `(source.furnisherId, source.recordRef, instanceKey)`**; a consumer keying on
+  `instanceKey` alone is wrong, because two records will legitimately both key
+  an instance `''`.
+- Re-delimiting the old scheme was considered and rejected. Its reversibility
+  rested on the qualifier being numeric; with an opaque qualifier there is no
+  character guaranteed absent from both halves, and a scheme whose correctness
+  rests on "this delimiter probably will not appear" fails SILENTLY — the same
+  failure class as the collision it would be fixing. The source is carried
+  structurally instead, and nobody parses anything.
+
+### Changed — the recency tie-break is gone, and its absence is disclosed
+
+- **`sourceIhsId`-descending is removed.** When `observedAt` ranks equal
+  (a real tie, or absent/unparseable on both sides), instances are ordered by a
+  deterministic lexicographic comparison of `furnisherId` then `recordRef`,
+  compared FIELD BY FIELD. **That order carries NO temporal meaning and must
+  never be rendered as one.** Its only job is to keep the merge genuinely
+  order-independent — the same instance leads regardless of which record the
+  caller listed first. There is no honest replacement proxy left once `recordRef` is opaque — and
+that opacity is this change's own choice, not a constraint it inherited. The
+ticket permitted the narrower fix ("within one furnisher it may stand; across
+furnishers it must not"); dropping the proxy at BOTH scopes goes further,
+because a per-record ordering key that nobody may reason about cannot honestly
+order anything, at any scope. Stated as a decision rather than a discovery: the one per-record
+  axis a furnisher could have ordered by is `recordRef`, which this package
+  makes opaque precisely so nobody reasons from it.
+- **`SubjectCanonicalCategory.contestedLead` is new (additive, optional).**
+  Present iff the instances tied at the top of `instances` come from more than
+  one source; it lists the distinct sources involved, in the order they appear.
+  **`instances[0]` is only "the latest" when `contestedLead` is absent.** Per
+  SYS-3464's principle — two records that can disagree about a disputed value
+  are worse than one incomplete record, and the disagreement is itself the
+  finding — the merge stops inventing an answer and reports the question.
+  A consumer's obligation is to SURFACE it, not to resolve it: rendering a
+  contested lead as a single uncontested value is what s.29 RACUN's "not
+  misleading" forbids. A tie WITHIN one record does not fire it — one producer
+  ordering its own instances is not a disagreement between sources.
+
+### Changed — `SubjectViewErrorCode`
+
+**BREAKING**: `'duplicate-source-ihs-id'` is **removed** and replaced by
+`'duplicate-source-record'`; `'missing-source-identity'` is **added**. The full
+set is now `'no-records'`, `'subject-kind-disagreement'`,
+`'missing-source-identity'`, `'duplicate-source-record'`,
+`'overlay-projection-present'`. A caller with an exhaustive `switch` on this
+union gets a compile error, which is the intent.
+
+- `'duplicate-source-record'` fires on a repeated `(furnisherId, recordRef)`
+  PAIR — two copies of one furnished record. **Two DIFFERENT furnishers sharing
+  a `recordRef` is no longer an error**; that was the defect.
+- `'missing-source-identity'` fires when either half is absent or empty. An
+  empty `furnisherId` is every furnisher at once — the pre-SYS-3554 world
+  spelled with a different character — and an empty `recordRef` collides with
+  every other ref-less record from the same furnisher.
+- Error MESSAGES now name the source pair rather than an `ihsId`. As always,
+  **the `code` is the contract and the message is not.**
+
+### Added — per-field recency across sources (SYS-3464)
+
+**`SubjectCanonicalCategory.fieldsByInstanceKey` is new and REQUIRED**
+(`instanceKey` → field name → `SubjectFieldSelection`; always present, `{}` for
+a category with no instances). **`SubjectFieldSelection` is a new export.** By
+this package's own semver rule a required member is a MAJOR — it lands inside
+this one rather than forcing a second, and it breaks only code that CONSTRUCTS
+a `SubjectCanonicalCategory` (a fixture), never code that reads one. As with
+every other item here, nothing on public npm is affected: the whole `Subject*`
+surface has never shipped publicly.
+
+- **The defect.** `instances` is sorted latest-ROW-first, and a consumer that
+  spread `instances[0].fields` flat had performed latest-row-wins. At subject
+  scope that ERASES: a fresher partial row from one source blanks every field
+  of that category another source supplied, and nothing errors. The
+  `ihs_field_attestation` entity docblock states the same consequence at
+  application scope — an attestation written as an ordinary canonical row with
+  a fresh `observedAt` "would become latest and blank every OTHER field of that
+  category". s.29 RACUN requires Complete and Not misleading, and a subject
+  file that drops a field nobody retracted fails both. The duty binds the
+  licensee (FHD), not SI; this is the module the licensee discharges it with.
+- **The fix.** For each canonical field, the most recent observation across all
+  sources, carrying **its own** provenance (`source`, `instanceKey`,
+  `observedAt`) rather than the row's. A field the newest row did not mention
+  survives at the value the newest row that DID mention it attested.
+- **`instances` is unchanged and is still the ledger.** Read it for the
+  history, the full attestation trail, and to render a disagreement. Read
+  `fieldsByInstanceKey` for a field's value.
+
+**Application scope is deliberately untouched.** `CanonicalView` describes ONE
+application, where one document produces one coherent row and the newest
+supersedes the older wholesale — that is correct, and every v1 consumer holds
+it through Phases 4 and 5. The bureau converts the row shape at the boundary;
+it does not inherit it as its read semantics. `flatRecordFromView`,
+`fieldProvenanceFromView` and the v1 flat mirror are byte-identical.
+
+**Selection is keyed on `instanceKey`, and that is a decision.** Fields from
+two different instance keys describe two different things — two bank statements
+in one category are two accounts — so fusing them would fabricate a row nobody
+attested, which is a worse "not misleading" failure than the erasure being
+fixed. `''` (single cardinality, the erasure case) is an ordinary key here.
+Note this makes `instanceKey` mean something different from what it means for
+uniqueness: uniqueness at subject scope is still the tuple
+`(furnisherId, recordRef, instanceKey)`, while COMPARABILITY — "are these two
+observations about the same slot?" — is the key alone. Cross-furnisher
+comparability of a NON-EMPTY key is the producers' assertion, not this
+package's, which is why every selection names its own source and instance: a
+fusion is inspectable field by field rather than silent.
+
+**Same-field disagreement: surfaced, not resolved.**
+`SubjectFieldSelection.contested` is present iff the observations tied at the
+top rank FOR THAT FIELD span more than one source **and** disagree about
+`envelope.value`. Deliberately the same shape as `contestedLead`
+(`{ sources: SubjectSource[] }`, distinct, in `instances` order) — two
+mechanisms disagreeing about how a conflict is reported would be worse than
+either, and NEITHER IMPLIES THE OTHER — do not read the field flag as nested
+inside the row one. Each looks at its own top rank: a field can be contested
+while the lead row is not (its newest observation ties between two sources that
+did not write the newest row), and the lead row can be contested with nothing
+contested (a cross-source tie where every source states the same value). A
+consumer that checks `contested` only when `contestedLead` is present will
+render a disputed field as uncontested.
+
+The field flag additionally requires DISAGREEMENT: at row grain the merge cannot
+know whether two tied rows disagree, because "the value" is not defined for a
+row; at field grain it can, and an agreement is not a finding. So
+`contestedLead` present with **no** field contested is a coherent answer —
+"the lead row is arbitrary and nothing is actually disputed" — not an
+inconsistency. Values are compared with `Object.is` (`-0` and `0` are not the
+same attested figure; two `NaN`s are not a source disagreeing with itself) and
+only `value` is compared, never the whole envelope: two sources agreeing on the
+figure and differing on `confidence` are not in disagreement about the fact.
+
+### The filter-ordering contract (SYS-3448 / SYS-3462) — stated here, enforced elsewhere
+
+Row-level filters **must run BEFORE `subjectViewFromRecords`, never after it.**
+`records` must already contain only rows that passed the SYS-3448 quarantine
+gate (released, not quarantined / superseded / retired) and the SYS-3462
+disclosure class (this subscriber, this purpose).
+
+Filtering AFTER the pick lets a newer restricted or quarantined row shadow a
+readable older one: the newer row wins the field, the filter removes it
+downstream, and the older row's value — which the subscriber was entitled to
+see — does not come back, because the selection that would have chosen it has
+already been computed and discarded. The field is silently ABSENT. For
+quarantine that is statutorily wrong; for disclosure it fails closed, which
+sounds safe and is not, because a missing field and a withheld field are
+indistinguishable to the reader. Nothing errors either way.
+
+**SYS-3464 makes the invariant stricter rather than inheriting it: it now binds
+per FIELD.** Under row-latest a late filter dropped one row's worth of fields.
+Under per-field selection one removed row can change the winner of any subset
+of its category's fields, so a post-hoc filter cannot be repaired by re-reading
+the remaining instances — the selection must be recomputed from the filtered
+record set, i.e. by calling the function again with the correct input.
+
+**`@finsys/core` cannot enforce this and does not pretend to.** Quarantine
+state and disclosure class live in finsys-api's own store; neither is on
+`CanonicalView`, neither is on `SubjectViewRecord`, and this package has no
+reader for either, so a record that should have been filtered is
+indistinguishable here from one correctly released. The enforcement point is
+the bureau's assembly path in finsys-api. The contract is written in
+`subject-canonical-view.ts`'s own docblock, next to the code that depends on
+it, so that getting the order wrong requires contradicting a written rule.
+
+### Consumers this breaks that do not live in this repo
+
+Named here so nobody has to re-derive them; fixing them is not this release's
+scope.
+
+- **finsys-api's subject assembly** — builds `SubjectViewRecord`s and must now
+  stamp `source` from the credentialed pull channel rather than letting
+  `view.ihsId` stand in.
+- **finsys-client's subject seat, on the in-flight SYS-3544/SYS-3550 branches**
+  (`finsys-client` main has no reference to these types) — de-qualifies
+  instance keys by slicing at the first `#`, on the stated argument that
+  "sourceIhsId is numeric, so the FIRST `#` is unambiguously the qualification
+  boundary even when the raw key itself contains one." That argument collapses
+  under an opaque qualifier, and the key it was slicing is no longer qualified
+  at all: the seat must read `instance.source` structurally and stop parsing.
+- **`@finsys/lender-client` is NOT affected.** Checked rather than assumed: it
+  contains no `Subject*` reference and re-exports nothing from this package.
+
+SYS-3464 adds two more, both READ by grep in local checkouts rather than
+inferred, and both left for their own tickets:
+
+- **finsys-client's subject seat**, `app/evaluation/subject_view_validation.ts`
+  and `app/evaluation/evaluation_data.ts` on the in-flight SYS-3544/SYS-3550
+  branches. `evaluationDataFromSubjectView` does exactly the thing this release
+  documents as the defect — `const latest = category.instances[0]` followed by
+  `Object.entries(latest.fields)`. The seat already names the consequence in
+  writing, though in a neighbouring function and on one branch only —
+  `unaddressableReferencedFields`'s docblock on the SYS-3550 branch: "a field
+  carried only by an older instance is neither placed nor recorded — fail-open
+  ... this set is not a complete inventory of the subject." That is SYS-3464 in
+  the scoring seat, already understood there and not yet fixed. The fix is to read
+  `fieldsByInstanceKey`; a score built on the latest ROW is built on a subject
+  file missing fields the bureau holds.
+- **finsys-api's bureau assembly**, `src/services/bureauInquiryService.ts`
+  (`subjectViewFromRecords(viewRecords)`). Two obligations, not one: stamp
+  `source` from the credentialed pull channel (SYS-3554, above), and keep the
+  filter ordering above. As observed in the `api-arc` checkout, ordering is
+  currently correct BY CONSTRUCTION rather than by rule — it reads only
+  `ContributionReportableRecord` rows for the subject digest, so the release
+  gate is the query. That property is what SYS-3462's disclosure class must
+  preserve: it belongs in (or before) that query, never as a filter over the
+  assembled view.
+
+**Not verified, and marked as such:** whether any other repo constructs a
+`SubjectCanonicalCategory` literal (which the new required member would break).
+Only `finsys-api`, `finsys-client` and `@finsys/lender-client` were searched.
+
+### One departure from the decision of record, named
+
+The 2026-08-25 amendment on the contribution design page says "instance-key
+qualification and the duplicate check both key on the pair." The duplicate
+check does. **Instance-key qualification is REMOVED, not re-keyed** — there is
+no character guaranteed absent from two opaque strings, so any joined key is
+ambiguous (`('a','b#c')` and `('a#b','c')` collapse to the same thing, and a
+legitimate furnisher's subject would throw `duplicate-source-record`). A test
+pins exactly that pair.
+
+Keying the qualification on the pair would have meant joining it. So the code
+does what the amendment MEANT — identity is the pair, and nothing reconstructs
+it from text — by doing the opposite of what it literally said. Recorded here
+rather than left for a reader to notice the mismatch.
+
+### Cost
+
+**SYS-3554's numbers**, measured on this package's own merge, before and after,
+at two sizes (2000 calls each, warmed, five runs): **288 instances (12 records
+× 8 categories × 3 instances) — 0.183 ms → 0.179 ms per call**, a small
+improvement, because the per-instance template-literal key construction is
+gone. **2400 instances (40 × 12 × 5) — 1.83 ms → 2.00 ms per call**, about 9%
+slower, because the tie comparison does up to two string comparisons where it
+used to do one numeric subtraction, and `contestedLead` adds a linear scan of
+the tied prefix.
+
+**SYS-3554 → SYS-3464, and this one is materially slower.** Same harness (2000
+calls, 200-call warmup, five runs, median reported), 6 fields per instance,
+measured on the commit before this change and on it:
+
+| fixture | before | after | |
+|---|---|---|---|
+| 288 instances, every `observedAt` distinct | 0.0775 ms | 0.1220 ms | **1.57×** |
+| 288 instances, every `observedAt` equal | 0.1378 ms | 0.2235 ms | **1.62×** |
+| 2400 instances, every `observedAt` distinct | 0.6286 ms | 0.9609 ms | **1.53×** |
+| 2400 instances, every `observedAt` equal | 1.0599 ms | 2.1824 ms | **2.06×** |
+
+Stated plainly rather than softened: the function now does per-FIELD work where
+it did per-ROW work, so the cost scales with fields-per-instance and roughly
+doubles at this fixture's six. That is the ticket, not a regression to tune
+away — but it is real, it is on every subject-view assembly, and a bureau
+assembling a report for a subject with many contributed records pays it.
+
+**Two honesty notes on the numbers above.** First, the SYS-3554 row and the
+SYS-3464 rows are NOT comparable to each other: the 3554 measurement used a
+different fixture (its field count was never recorded) on a different day, so
+only each row's own before/after delta means anything. Second, the earlier note
+was taken on a NO-TIE fixture only — the case where the disclosure work costs
+nothing. The all-tie row is the expensive one and it is included here for that
+reason: `observedAt` is optional on adapter output, so a category where no
+producer supplies it ties on EVERY instance, which is a real configuration and
+not a pathological fixture.
+
+## [8.2.0] - 2026-08-24
+
+**Recorded retroactively on 2026-08-25 (SYS-3554), and never published to
+public npm.** `registry.npmjs.org` holds `8.0.0, 8.1.0, 8.1.1, 8.1.2` and its
+`latest` is `8.1.2`; `8.2.0` exists only on the local Verdaccio the CRA arc
+stacks against. It was published from a working tree whose version bump was
+never committed — `package.json` said `8.1.2` — so **no committed state
+produced the published artifact**.
+
+The useful lesson is not that the publish preflight (DEVOPS-687) would have
+caught it. That preflight guards the GitHub-Release path, and by hypothesis
+that path never ran: **a manual Verdaccio publish bypasses it entirely.** A
+guard on one route says nothing about a package that left by another.
+
+Three consequences worth stating plainly rather than leaving a reader to infer:
+
+- Public npm goes `8.1.2` → `9.0.0`. A consumer reading this file will find an
+  `8.2.0` section describing a version they cannot install. That is deliberate;
+  deleting it would make the record less true, not more.
+- **The entire `Subject*` surface has never shipped publicly.** `SubjectInstance`
+  appears zero times in the 8.1.2 tree. So every item marked BREAKING in 9.0.0
+  below breaks nothing on public npm — it breaks Verdaccio consumers, which is
+  the CRA arc's own in-flight branches and nobody else.
+- The entry below is written after the fact so the record is honest, not
+  because anything changed on the wire.
 
 ### Added — the subject-scoped canonical view (SYS-3542 / SYS-3463a)
 
@@ -77,6 +437,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Purely additive: five new exported types, two new exported values
 (`subjectViewFromRecords`, `SubjectViewError`), nothing existing renamed,
 removed, or narrowed. **Minor.**
+
+> **Superseded by 9.0.0.** Every rule described above — the
+> `${sourceIhsId}#${rawInstanceKey}` qualification, the `sourceIhsId`
+> tie-break, the `duplicate-source-ihs-id` refusal, and
+> `source: { sourceIhsId }` itself — was written when the bureau had one
+> furnisher and is wrong the moment it has two. See 9.0.0.
 
 ## [8.1.2] - 2026-08-23
 

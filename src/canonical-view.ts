@@ -397,6 +397,93 @@ export interface SubjectInstance extends Omit<CanonicalInstance, 'legacySlot' | 
 }
 
 /**
+ * SYS-3464 — ONE canonical field's winning observation, with the provenance of
+ * THAT OBSERVATION rather than of the row it happened to arrive in.
+ *
+ * WHY THIS TYPE EXISTS. Until SYS-3464 the only way to read a field at subject
+ * scope was `instances[0].fields[name]` — latest ROW wins, spread flat. For a
+ * lending application that is correct: one document produces one coherent row
+ * and the newest document supersedes the older wholesale. For a bureau merging
+ * contributed lender data, CCRIS, SSM and adapter signals into ONE subject
+ * picture it is not, and the failure is silent: a fresher PARTIAL row from one
+ * source erases every field of that category the other sources supplied, and
+ * nothing errors. `ihs_field_attestation`'s own docblock states the same
+ * consequence at application scope — an attestation written as an ordinary
+ * canonical row with a fresh `observedAt` "would become latest and blank every
+ * OTHER field of that category". s.29 RACUN requires Complete and Not
+ * misleading; a subject file that drops a field nobody retracted fails both on
+ * its face. The duty binds the licensee, not SI — this is the module the
+ * licensee discharges it with.
+ *
+ * `envelope` IS THE VALUE, and it is named `envelope` rather than `value`
+ * deliberately: `selection.value` would sit one dot away from
+ * `envelope.value` and mean something different, which is the kind of
+ * near-miss that reads correctly in review and returns an object where a
+ * string was expected.
+ */
+export interface SubjectFieldSelection {
+  /**
+   * The winning `CanonicalFieldEnvelope` — the SAME object reference the
+   * contributing `SubjectInstance` holds, not a copy. See
+   * `subjectViewFromRecords`'s own ALIASING section: nothing in this package
+   * mutates an envelope in place, and this member is deliberately consistent
+   * with `SubjectInstance.fields` rather than deep-cloning a wire payload.
+   */
+  envelope: CanonicalFieldEnvelope
+  /**
+   * WHO furnished THIS FIELD's winning observation. It is routinely NOT the
+   * source of `instances[0]` — that is the entire point of per-field
+   * selection, and a renderer that labels a merged category with one source
+   * is misattributing every field that came from another.
+   */
+  source: SubjectSource
+  /**
+   * The raw `instanceKey` of the instance this value came from. Always equal
+   * to the key this selection is filed under in `fieldsByInstanceKey`;
+   * repeated on the selection so that a selection passed around on its own
+   * still names its own instance.
+   */
+  instanceKey: string
+  /**
+   * The winning observation's own `observedAt`, verbatim — absent when that
+   * instance carried none, exactly as `CanonicalInstance.observedAt` is
+   * absent. A value that failed to parse is carried through here unchanged
+   * even though it ranked oldest; this member is provenance, not the rank.
+   */
+  observedAt?: string
+  /**
+   * SYS-3464 — present IFF the observations that tie at the top rank FOR THIS
+   * FIELD come from more than one source AND do not all carry the same
+   * `envelope.value`. Lists the distinct sources involved, in the order they
+   * appear in `instances`. Deliberately the same shape as
+   * `SubjectCanonicalCategory.contestedLead` — one mechanism for reporting a
+   * conflict, read the same way at both grains.
+   *
+   * THE PREDICATE IS NARROWER THAN `contestedLead`'S, AND THAT IS THE POINT.
+   * At row grain the merge cannot know whether two tied rows disagree —
+   * "the value" is not defined for a row. At field grain it can see the
+   * values, so an AGREEMENT is not reported as a finding: SYS-3464's
+   * principle is that "the disagreement is itself the finding", and a flag
+   * that fires on two sources saying the same thing is the "always on, so
+   * ignored" failure `contestedLead`'s own doc warns about. So
+   * `contestedLead` present with no field contested is a coherent, useful
+   * answer — "the lead ROW is arbitrary, and no field is actually disputed"
+   * — not an inconsistency between the two flags.
+   *
+   * A CONSUMER'S OBLIGATION IS TO SURFACE IT, NOT RESOLVE IT. `envelope` still
+   * holds one of the tied values (whichever the deterministic, temporally
+   * meaningless source order put first), because a report needs something to
+   * render; presenting it as uncontested is what s.29's "not misleading"
+   * forbids. Absent means only that no tie SPANS sources with differing
+   * values: a tie confined to ONE source is also absent, because one producer
+   * ordering its own instances is not a disagreement between sources.
+   */
+  contested?: {
+    sources: SubjectSource[]
+  }
+}
+
+/**
  * `CanonicalCategory` re-scoped to a subject: `cardinality` is OMITTED, not
  * carried through unchanged — `CanonicalView`'s own doc names this exact
  * requirement. `cardinality` described one adapter's per-APPLICATION
@@ -426,11 +513,61 @@ export interface SubjectCanonicalCategory {
    * the SYS-3554 misordering under a new name. Check `contestedLead` before
    * treating `[0]` as an answer.
    *
+   * SYS-3464: TO READ A FIELD'S VALUE, READ `fieldsByInstanceKey`, NOT
+   * `instances[0].fields`. This array is the LEDGER — every contributed
+   * observation, latest-first — and a row is only ever wholly superseded by a
+   * later row within one furnisher's own world. Spreading `[0].fields` flat at
+   * subject scope drops every field the newer, partial row did not mention,
+   * which is the SYS-3464 defect. `instances` remains what a consumer walks to
+   * show the disagreement, the history, or a field's full attestation trail.
+   *
    * It is never license to ignore `instances[1..]` either — see this
    * interface's own doc above for why `'single'`'s old licence to do that does
    * not survive the re-scoping.
    */
   instances: SubjectInstance[]
+  /**
+   * SYS-3464 — the per-field selection: `instanceKey` → field name →
+   * `SubjectFieldSelection`. ALWAYS PRESENT (an empty object for a category
+   * with no instances), so a consumer never has to branch on its absence.
+   *
+   * FOR EACH FIELD, the most recent observation ACROSS ALL SOURCES, carrying
+   * its own provenance rather than the row's. This is the member that fixes
+   * the erasure `instances[0].fields` causes at subject scope — read that
+   * paragraph above first.
+   *
+   * IT IS KEYED ON `instanceKey`, AND THAT NESTING IS A DECISION, NOT
+   * PACKAGING. Fields from two DIFFERENT instance keys describe two different
+   * things — two bank statements in one category are two accounts, not two
+   * observations of one — so fusing them would fabricate a row nobody
+   * attested: an account number from one statement beside a closing balance
+   * from another. That is a worse "not misleading" failure than the erasure
+   * this member exists to fix, so per-field recency is resolved WITHIN a key
+   * and never across keys. `''` (a single-cardinality category, the erasure
+   * case) is an ordinary key here and is where two furnishers' observations
+   * legitimately meet.
+   *
+   * NOTE WHAT THAT MAKES THE KEY MEAN, because it is not what `SubjectInstance`
+   * uses it for. UNIQUENESS at subject scope is still the tuple
+   * `(furnisherId, recordRef, instanceKey)` — two records legitimately both key
+   * an instance `''`, and keying uniqueness on `instanceKey` alone is wrong.
+   * COMPARABILITY is a different question with a different answer: two
+   * observations filed under one `instanceKey` are two statements about the
+   * same slot, which is exactly the pair per-field recency must resolve. The
+   * cross-furnisher comparability of a NON-EMPTY key is the producers'
+   * assertion and not this package's — a key carrying a document hash compares
+   * across furnishers, a bare ordinal (`bankStatements#1`) does not — which is
+   * why every selection names its own `source` and `instanceKey`: a fusion
+   * here is inspectable field by field rather than silent.
+   *
+   * A null-prototype object, like `SubjectCanonicalView.categories`: both the
+   * instance key and the field name are producer-supplied text off the wire,
+   * and a plain `{}` lets either one named `__proto__` read back
+   * `Object.prototype` — so a "have I already claimed this field?" check
+   * answers for something nobody furnished and the real observation is
+   * silently dropped.
+   */
+  fieldsByInstanceKey: Record<string, Record<string, SubjectFieldSelection>>
   /**
    * SYS-3554 — present IFF the instances tied at the top of `instances` come
    * from MORE THAN ONE source, i.e. `observedAt` (the only evidential ordering
@@ -465,8 +602,17 @@ export interface SubjectCanonicalCategory {
    *
    * A CONSUMER'S OBLIGATION IS TO SURFACE IT, NOT TO RESOLVE IT. Rendering a
    * contested lead as a single uncontested value is what s.29 RACUN's "not
-   * misleading" forbids; the per-field resolution that would legitimately
-   * settle it (with per-field provenance) is SYS-3464's, not this merge's.
+   * misleading" forbids.
+   *
+   * SYS-3464 SHIPPED the per-field resolution this doc used to defer to, and
+   * it NARROWS what this flag should make a consumer do rather than replacing
+   * it. This one still answers only "is the lead ROW arbitrary" — it cannot
+   * see values, so it fires on two sources that tie at the top even when they
+   * agree about every field. `SubjectFieldSelection.contested` answers the
+   * sharper question per field, and fires only on an actual disagreement. This
+   * flag present with no field contested is therefore the ordinary,
+   * informative case, not a contradiction: the row order is arbitrary and
+   * nothing is disputed.
    */
   contestedLead?: {
     sources: SubjectSource[]

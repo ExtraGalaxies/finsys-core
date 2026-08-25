@@ -201,11 +201,76 @@
  * produces two different `SubjectViewError` constructors, and `instanceof`
  * silently fails across that boundary while `.code` does not, because it is
  * a plain string comparison rather than a prototype-chain check.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * PER-FIELD RECENCY (SYS-3464), AND WHY IT IS BUREAU-SIDE ONLY. The sort
+ * above orders ROWS. A consumer that then spreads `instances[0].fields` flat
+ * has performed latest-ROW-wins, and at subject scope that ERASES: a fresher
+ * PARTIAL row from one source blanks every field of that category another
+ * source supplied, and nothing errors. `ihs_field_attestation`'s own docblock
+ * states the same consequence at application scope — an attestation written
+ * as an ordinary canonical row with a fresh `observedAt` "would become latest
+ * and blank every OTHER field of that category". s.29 RACUN requires
+ * Complete and Not misleading; a subject file that silently drops a field
+ * nobody retracted fails both. `fieldsByInstanceKey` is the fix:
+ * `buildFieldSelections` below resolves each field independently, so a field
+ * survives on the newest instance that actually carried it.
+ *
+ * THE ROW-LATEST CONTRACT IS UNCHANGED FOR APPLICATION SCOPE, deliberately.
+ * `CanonicalView` describes ONE application, where one document produces one
+ * coherent row and the newest document supersedes the older wholesale — that
+ * is correct, every v1 consumer holds it through Phases 4 and 5, and nothing
+ * in this ticket touches it. The bureau CONVERTS the row shape at the
+ * boundary; it does not inherit it as its read semantics. Per-field selection
+ * therefore exists ONLY on the subject-scoped shape this file builds, and
+ * `flatRecordFromView` / `fieldProvenanceFromView` (`ihs-processing.ts`,
+ * application scope) are untouched by it.
+ *
+ * FILTER ORDERING — A CALLER CONTRACT THIS FUNCTION CANNOT ENFORCE, stated
+ * here so that getting it wrong requires contradicting a written rule.
+ *
+ *   Every row-level filter must run BEFORE `subjectViewFromRecords`, never
+ *   after it. Concretely: the SYS-3448 quarantine gate (is this contributed
+ *   row released, or is it quarantined / superseded / retired?) and the
+ *   SYS-3462 disclosure class (may THIS subscriber, for THIS purpose, see
+ *   this row?) both decide row by row, and `records` must already contain
+ *   only the rows that survived both.
+ *
+ * WHY THE ORDER IS THE WHOLE OF IT. Filtering AFTER the pick lets a newer
+ * restricted or quarantined row shadow a readable older one: the newer row
+ * wins the field here, the filter then removes it downstream, and the older
+ * row's value — which the subscriber was entitled to see — does not come
+ * back, because the selection that would have chosen it has already been
+ * computed and thrown away. The field is silently ABSENT. For quarantine
+ * that is statutorily wrong (data the licensee holds and may disclose is
+ * missing from the file); for disclosure it fails CLOSED, which sounds safe
+ * and is not, because a missing field and a withheld field are indistinguish-
+ * able to the reader. Nothing errors in either case.
+ *
+ * SYS-3464 makes the invariant STRICTER, not merely inherited: it now binds
+ * per FIELD. Under row-latest a late filter dropped one row's worth of
+ * fields; under per-field selection a single removed row can change the
+ * winner of any subset of the fields in its category, so a post-hoc filter
+ * cannot be repaired by re-reading the remaining instances — the whole
+ * selection has to be recomputed from the filtered record set, which means
+ * calling this function again with the correct input.
+ *
+ * THIS FUNCTION CANNOT CHECK ANY OF IT, and says so rather than implying a
+ * guard it does not have. Quarantine state and disclosure class live in
+ * finsys-api's own store; neither is on `CanonicalView`, neither is on
+ * `SubjectViewRecord`, and this package has no reader for either. A record
+ * that should have been filtered is indistinguishable here from one that was
+ * correctly released. The enforcement point is the bureau's assembly path in
+ * finsys-api (the portal's BFF and sole enforcement point); this is the
+ * contract that path owes, written next to the code that depends on it.
  */
 import type {
+  CanonicalFieldEnvelope,
   CanonicalView,
   SubjectCanonicalCategory,
   SubjectCanonicalView,
+  SubjectFieldSelection,
   SubjectInstance,
   SubjectSource,
 } from './canonical-view.js'
@@ -414,9 +479,136 @@ function contestedLeadOf(instances: readonly SubjectInstance[]): { sources: Subj
 }
 
 /**
+ * One field's winner while it is still being decided. Not exported and not the
+ * wire shape: `rank` is a parsed number that must never reach a consumer (it
+ * would be a second, subtly different encoding of `observedAt`), and
+ * `tiedSources` / `disputed` are the two halves of a `contested` decision that
+ * cannot be made until every instance has been seen.
+ */
+interface FieldSelectionInProgress {
+  envelope: CanonicalFieldEnvelope
+  source: SubjectSource
+  instanceKey: string
+  observedAt: string | undefined
+  /** `timeRank` of the winning observation — the rank a later instance must EQUAL to be a tie. */
+  rank: number
+  /** Distinct sources observed at that same rank, in `instances` order, winner first. */
+  tiedSources: SubjectSource[]
+  /** Set once any tied observation carries a different `envelope.value` than the winner's. */
+  disputed: boolean
+}
+
+/**
+ * SYS-3464 — the per-field selection, filled into `into` (the category's own
+ * `fieldsByInstanceKey`). Read `SubjectFieldSelection` and
+ * `SubjectCanonicalCategory.fieldsByInstanceKey` (`canonical-view.ts`) for what
+ * this member means and why it is keyed on `instanceKey`; this doc is the HOW.
+ *
+ * REQUIRES `instances` ALREADY SORTED latest-first by `sortSubjectInstances`,
+ * exactly as `contestedLeadOf` does, and for the same reason: sorted input
+ * turns "the most recent observation of this field" into "the FIRST instance
+ * that carries it", which is one linear pass instead of a scan per field. It
+ * also makes the tie test cheap — because rank descends, the only instances
+ * that can tie a claimed field are the ones immediately following it at the
+ * same rank, so an instance whose rank differs is strictly older for that
+ * field and is skipped without comparison.
+ *
+ * WHY THE CLAIM IS PER (instanceKey, fieldName) AND NOT PER FIELD NAME ALONE:
+ * see the "chimera" paragraph on `fieldsByInstanceKey`. Two instance keys are
+ * two different things, and fusing their fields fabricates a row nobody
+ * attested.
+ *
+ * `Object.is` RATHER THAN `===` on the value comparison, because the two
+ * differ on exactly the inputs a numeric canonical field can produce: `-0`
+ * and `0` are `===` but are not the same attested figure, and two `NaN`s are
+ * not `===` but are the same (useless) reading, which would otherwise report
+ * a source as disagreeing with ITSELF on a re-observation. Only `value` is
+ * compared, never the whole envelope: two sources that agree on the figure
+ * and differ on `confidence` are not in disagreement about the fact, and
+ * reporting them as contested is the "always on, so ignored" failure
+ * `contestedLead`'s own doc warns about.
+ */
+function buildFieldSelections(
+  instances: readonly SubjectInstance[],
+  into: Record<string, Record<string, SubjectFieldSelection>>,
+): void {
+  // Object.create(null) at BOTH levels, and not for symmetry: an instanceKey
+  // and a field name are each producer-supplied text off the wire, so either
+  // one spelled '__proto__' would read back Object.prototype from a plain
+  // `{}` accumulator — the "have I claimed this field yet?" test below would
+  // answer for a field nobody furnished, and the real observation would be
+  // dropped with no error. Same hazard as the categoryId one above.
+  const inProgress: Record<string, Record<string, FieldSelectionInProgress>> = Object.create(null)
+
+  for (const instance of instances) {
+    const rank = timeRank(instance.observedAt)
+    const { fields, instanceKey, observedAt, source } = instance
+    const claimedForKey = (inProgress[instanceKey] ??= Object.create(null))
+    // `Object.keys` and an index rather than `Object.entries`, which allocates
+    // a two-element array per field on a path that runs once per field of
+    // every instance of every category of every record.
+    for (const fieldName of Object.keys(fields)) {
+      const claimed = claimedForKey[fieldName]
+      if (claimed === undefined) {
+        claimedForKey[fieldName] = {
+          envelope: fields[fieldName]!,
+          source,
+          instanceKey,
+          observedAt,
+          rank,
+          tiedSources: [source],
+          disputed: false,
+        }
+        continue
+      }
+      // Strictly older for THIS field — superseded, and it is superseded per
+      // field rather than per row, which is the whole ticket.
+      if (claimed.rank !== rank) continue
+      if (!claimed.tiedSources.some((seen) => sameSubjectSource(seen, source))) {
+        claimed.tiedSources.push(source)
+      }
+      if (!Object.is(claimed.envelope.value, fields[fieldName]!.value)) claimed.disputed = true
+    }
+  }
+
+  for (const instanceKey of Object.keys(inProgress)) {
+    const claimedForKey = inProgress[instanceKey]!
+    const emitted: Record<string, SubjectFieldSelection> = Object.create(null)
+    for (const fieldName of Object.keys(claimedForKey)) {
+      const claimed = claimedForKey[fieldName]!
+      const selection: SubjectFieldSelection = {
+        envelope: claimed.envelope,
+        source: claimed.source,
+        instanceKey: claimed.instanceKey,
+      }
+      // Assigned only when there IS one, same rule as `contestedLead` and for
+      // the same reason: an always-present `observedAt: undefined` serializes
+      // as an explicit null in some encoders, and a null timestamp reads as a
+      // value rather than as an absence.
+      if (claimed.observedAt !== undefined) selection.observedAt = claimed.observedAt
+      // BOTH conditions, and neither alone: more than one source ties, AND
+      // they do not agree. See `SubjectFieldSelection.contested` for why the
+      // predicate is narrower than `contestedLead`'s.
+      if (claimed.disputed && claimed.tiedSources.length > 1) {
+        selection.contested = { sources: claimed.tiedSources }
+      }
+      emitted[fieldName] = selection
+    }
+    into[instanceKey] = emitted
+  }
+}
+
+/**
  * Merge one subject's contributed records into the one subject-scoped view. See
  * this file's own doc for the ordering rule, the parsing rule, the
- * tie-break, and the aliasing contract.
+ * tie-break, the aliasing contract, and — SYS-3464 — per-field recency plus
+ * the filter-ordering contract a caller owes this function.
+ *
+ * IT RETURNS TWO ANSWERS, NOT ONE, AND THEY ARE FOR DIFFERENT QUESTIONS.
+ * `instances` is the ledger, ordered latest-row-first. `fieldsByInstanceKey`
+ * is the per-field selection, and it is what a consumer reads to get a FIELD's
+ * value; spreading `instances[0].fields` flat is latest-ROW-wins and erases
+ * every field the newest partial row did not mention (SYS-3464).
  *
  * `subjectKind` DISAGREEMENT ACROSS RECORDS: every record here is asserted
  * by its caller to describe the SAME subject, so a differing `subjectKind`
@@ -565,7 +757,14 @@ export function subjectViewFromRecords(records: readonly SubjectViewRecord[]): S
     // behaves differently from one that reads this.
     const source = record.source
     for (const [categoryId, category] of Object.entries(record.view.categories)) {
-      const bucket = (categories[categoryId] ??= { instances: [] })
+      // `fieldsByInstanceKey` is created empty HERE and filled by
+      // `buildFieldSelections` below rather than being replaced wholesale, so
+      // there is no sentinel object and no window in which the member is
+      // absent. Null-prototype for the reason its own doc gives.
+      const bucket = (categories[categoryId] ??= {
+        instances: [],
+        fieldsByInstanceKey: Object.create(null),
+      })
       for (const instance of category.instances) {
         // F12: legacySlot/periodPosition are deleted from the object, not
         // only from the type — see this file's own "PER-APPLICATION MEMBERS
@@ -599,6 +798,10 @@ export function subjectViewFromRecords(records: readonly SubjectViewRecord[]): S
     // some encoders and read as "contested, sources unknown".
     const contestedLead = contestedLeadOf(bucket.instances)
     if (contestedLead !== undefined) bucket.contestedLead = contestedLead
+    // AFTER the sort, and it depends on it — see `buildFieldSelections`'s own
+    // doc. The row order above decides which instance LEADS; this decides what
+    // each FIELD's value is, and at subject scope those are different answers.
+    buildFieldSelections(bucket.instances, bucket.fieldsByInstanceKey)
   }
 
   return { subjectKind, categories }

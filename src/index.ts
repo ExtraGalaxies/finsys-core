@@ -333,6 +333,11 @@ export type {
   // SYS-3554: the (furnisherId, recordRef) pair that identifies a contributed
   // observation, replacing SubjectInstance's old `{ sourceIhsId: number }`.
   SubjectSource,
+  // SYS-3464: one canonical field's winning observation, carrying THAT
+  // observation's provenance rather than the row's. Reached through
+  // SubjectCanonicalCategory.fieldsByInstanceKey, which is what a consumer
+  // reads for a field's value instead of spreading instances[0].fields flat.
+  SubjectFieldSelection,
 } from './canonical-view.js';
 
 // SYS-3542 (SYS-3463a): the one merge that builds a SubjectCanonicalView out

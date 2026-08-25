@@ -945,3 +945,393 @@ describe('subjectViewFromRecords — legacySlot and periodPosition are stripped,
     expect('periodPosition' in merged.categories.c!.instances[0]!).toBe(false)
   })
 })
+
+/**
+ * SYS-3464 — per-field recency across sources.
+ *
+ * CLOCK (this block, restating the file header's rule because this block is
+ * the one that turns on `observedAt` ordering hardest): every timestamp below
+ * is a literal ISO string, compared only against another literal in the same
+ * fixture. Nothing reads the wall clock, nothing is expressed relative to now,
+ * and `subjectViewFromRecords` still never touches `Date` beyond `Date.parse`
+ * of a literal it was handed. There is nothing to freeze.
+ */
+describe('subjectViewFromRecords — per-field recency across sources (SYS-3464)', () => {
+  /**
+   * THE DEFECT, STATED AS A TEST. Furnisher A supplied two fields in January;
+   * furnisher B supplied ONE of them in June. Row-latest collapses the
+   * category to B's newer row and spreads it flat, so `monthlyIncome` — which
+   * nobody retracted and which the subject's file still holds — vanishes. That
+   * is s.29 RACUN's Complete and Not-misleading limbs failing at once, with
+   * nothing erroring anywhere.
+   */
+  it('does not let a fresher PARTIAL row erase a field another source supplied', () => {
+    const older = record(src('furnisher-a', '1'), 'individual', {
+      categories: {
+        'applicant-identity': {
+          cardinality: 'single',
+          instances: [
+            instance({
+              instanceKey: '',
+              observedAt: '2026-01-01T00:00:00.000Z',
+              fields: {
+                employerName: envelope('Old Employer Sdn Bhd'),
+                monthlyIncome: envelope('4200'),
+              },
+            }),
+          ],
+        },
+      },
+    })
+    const newerButPartial = record(src('furnisher-b', '1'), 'individual', {
+      categories: {
+        'applicant-identity': {
+          cardinality: 'single',
+          instances: [
+            instance({
+              instanceKey: '',
+              observedAt: '2026-06-01T00:00:00.000Z',
+              fields: { employerName: envelope('New Employer Sdn Bhd') },
+            }),
+          ],
+        },
+      },
+    })
+
+    for (const [label, merged] of [
+      ['older-first', subjectViewFromRecords([older, newerButPartial])],
+      ['newer-first', subjectViewFromRecords([newerButPartial, older])],
+    ] as const) {
+      const selected = merged.categories['applicant-identity']!.fieldsByInstanceKey['']!
+      expect(selected.employerName!.envelope.value, `${label}: employerName`).toBe('New Employer Sdn Bhd')
+      // The whole ticket, in one assertion: the field the newer row did not
+      // mention is still there, at the value the older row attested.
+      expect(selected.monthlyIncome!.envelope.value, `${label}: monthlyIncome`).toBe('4200')
+    }
+  })
+
+  it('carries PER-FIELD provenance — the winning field names its own source, instance and observedAt, not the row lead"s', () => {
+    const older = record(src('furnisher-a', '1'), 'individual', {
+      categories: {
+        c: {
+          instances: [
+            instance({
+              instanceKey: '',
+              observedAt: '2026-01-01T00:00:00.000Z',
+              fields: { kept: envelope('from-a'), superseded: envelope('stale') },
+            }),
+          ],
+        },
+      },
+    })
+    const newer = record(src('furnisher-b', '2'), 'individual', {
+      categories: {
+        c: {
+          instances: [
+            instance({
+              instanceKey: '',
+              observedAt: '2026-06-01T00:00:00.000Z',
+              fields: { superseded: envelope('fresh') },
+            }),
+          ],
+        },
+      },
+    })
+
+    const category = subjectViewFromRecords([older, newer]).categories.c!
+    const selected = category.fieldsByInstanceKey['']!
+
+    expect(selected.superseded!.source).toEqual({ furnisherId: 'furnisher-b', recordRef: '2' })
+    expect(selected.superseded!.observedAt).toBe('2026-06-01T00:00:00.000Z')
+    // The row lead is furnisher-b. `kept` must NOT inherit it.
+    expect(category.instances[0]!.source.furnisherId).toBe('furnisher-b')
+    expect(selected.kept!.source).toEqual({ furnisherId: 'furnisher-a', recordRef: '1' })
+    expect(selected.kept!.observedAt).toBe('2026-01-01T00:00:00.000Z')
+    expect(selected.kept!.instanceKey).toBe('')
+  })
+
+  it('keeps a field that exists ONLY on the oldest of three observations', () => {
+    const build = (ref: string, observedAt: string, fields: Record<string, ReturnType<typeof envelope>>) =>
+      record(src(`furnisher-${ref}`, ref), 'individual', {
+        categories: { c: { instances: [instance({ instanceKey: '', observedAt, fields })] } },
+      })
+
+    const merged = subjectViewFromRecords([
+      build('c', '2026-06-01T00:00:00.000Z', { common: envelope('newest') }),
+      build('b', '2026-03-01T00:00:00.000Z', { common: envelope('middle') }),
+      build('a', '2026-01-01T00:00:00.000Z', { common: envelope('oldest'), onlyOnOldest: envelope('survives') }),
+    ])
+
+    const selected = merged.categories.c!.fieldsByInstanceKey['']!
+    expect(selected.common!.envelope.value).toBe('newest')
+    expect(selected.onlyOnOldest!.envelope.value).toBe('survives')
+    expect(selected.onlyOnOldest!.source.furnisherId).toBe('furnisher-a')
+  })
+
+  it('preserves single-source behavior where it was already correct — the newer of one furnisher"s own instances wins the field', () => {
+    const merged = subjectViewFromRecords([
+      record(src('furnisher-a', '1'), 'individual', {
+        categories: {
+          c: {
+            instances: [
+              instance({ instanceKey: '', observedAt: '2026-01-01T00:00:00.000Z', fields: { f: envelope('old') } }),
+              instance({ instanceKey: '', observedAt: '2026-06-01T00:00:00.000Z', fields: { f: envelope('new') } }),
+            ],
+          },
+        },
+      }),
+    ])
+    const category = merged.categories.c!
+    // Row-latest and per-field agree here, which is the point: the fix does
+    // not move a case that was already right.
+    expect(category.instances[0]!.fields.f!.value).toBe('new')
+    expect(category.fieldsByInstanceKey['']!.f!.envelope.value).toBe('new')
+    expect(category.fieldsByInstanceKey['']!.f!.contested).toBeUndefined()
+    expect(category.contestedLead).toBeUndefined()
+  })
+
+  describe('same-field disagreement at the same instant', () => {
+    function twoAtOneInstant(aValue: string, bValue: string) {
+      return subjectViewFromRecords([
+        record(src('furnisher-a', '1'), 'individual', {
+          categories: {
+            c: {
+              instances: [
+                instance({ instanceKey: '', observedAt: '2026-06-01T00:00:00.000Z', fields: { f: envelope(aValue) } }),
+              ],
+            },
+          },
+        }),
+        record(src('furnisher-b', '2'), 'individual', {
+          categories: {
+            c: {
+              instances: [
+                instance({ instanceKey: '', observedAt: '2026-06-01T00:00:00.000Z', fields: { f: envelope(bValue) } }),
+              ],
+            },
+          },
+        }),
+      ]).categories.c!
+    }
+
+    it('SURFACES the conflict rather than resolving it, in contestedLead"s own shape', () => {
+      const category = twoAtOneInstant('Employer A', 'Employer B')
+      expect(category.fieldsByInstanceKey['']!.f!.contested!.sources).toEqual([
+        { furnisherId: 'furnisher-a', recordRef: '1' },
+        { furnisherId: 'furnisher-b', recordRef: '2' },
+      ])
+      // Same tie, same shape, at the two grains — the row lead is contested too.
+      expect(category.contestedLead!.sources).toEqual(category.fieldsByInstanceKey['']!.f!.contested!.sources)
+    })
+
+    it('does NOT fire when the tied sources AGREE — an agreement is not a finding', () => {
+      const category = twoAtOneInstant('Same Employer Sdn Bhd', 'Same Employer Sdn Bhd')
+      const selection = category.fieldsByInstanceKey['']!.f!
+      expect(selection.contested).toBeUndefined()
+      expect('contested' in selection).toBe(false)
+      // ...and the row-grain flag still fires, because at row grain the merge
+      // cannot see values. The two grains disagreeing HERE is the answer, not
+      // an inconsistency: "the lead row is arbitrary, and no field is disputed."
+      expect(category.contestedLead!.sources).toHaveLength(2)
+    })
+
+    it('does NOT fire when the tie is confined to one source, matching contestedLead', () => {
+      const category = subjectViewFromRecords([
+        record(src('furnisher-a', '1'), 'individual', {
+          categories: {
+            c: {
+              instances: [
+                instance({ instanceKey: '', observedAt: '2026-06-01T00:00:00.000Z', fields: { f: envelope('first') } }),
+                instance({ instanceKey: '', observedAt: '2026-06-01T00:00:00.000Z', fields: { f: envelope('second') } }),
+              ],
+            },
+          },
+        }),
+      ]).categories.c!
+      expect(category.fieldsByInstanceKey['']!.f!.contested).toBeUndefined()
+      expect(category.contestedLead).toBeUndefined()
+      expect(category.fieldsByInstanceKey['']!.f!.envelope.value).toBe('first')
+    })
+
+    it('counts only the observations tied at the TOP rank for that field', () => {
+      const at = (furnisherId: string, observedAt: string, value: string) =>
+        record(src(furnisherId, '1'), 'individual', {
+          categories: { c: { instances: [instance({ instanceKey: '', observedAt, fields: { f: envelope(value) } })] } },
+        })
+      const category = subjectViewFromRecords([
+        at('a', '2026-06-01T00:00:00.000Z', 'lead-one'),
+        at('b', '2026-06-01T00:00:00.000Z', 'lead-two'),
+        at('c', '2020-01-01T00:00:00.000Z', 'ancient'),
+      ]).categories.c!
+      expect(category.fieldsByInstanceKey['']!.f!.contested!.sources.map((s) => s.furnisherId)).toEqual(['a', 'b'])
+    })
+
+    it('treats an ABSENT and an UNPARSEABLE observedAt as one rank, so they contest each other per field', () => {
+      const category = subjectViewFromRecords([
+        record(src('a', '1'), 'individual', {
+          categories: { c: { instances: [instance({ instanceKey: '', fields: { f: envelope('absent') } })] } },
+        }),
+        record(src('b', '1'), 'individual', {
+          categories: {
+            c: {
+              instances: [
+                instance({ instanceKey: '', observedAt: 'not-a-timestamp', fields: { f: envelope('unparseable') } }),
+              ],
+            },
+          },
+        }),
+      ]).categories.c!
+      expect(category.fieldsByInstanceKey['']!.f!.contested!.sources.map((s) => s.furnisherId)).toEqual(['a', 'b'])
+      // A real timestamp still beats both, per field as per row.
+      expect(category.fieldsByInstanceKey['']!.f!.observedAt).toBeUndefined()
+    })
+  })
+
+  /**
+   * THE CHIMERA GUARD. Per-field selection is scoped to `instanceKey` — two
+   * bank statements in one category are two different accounts, not two
+   * observations of one. Fusing their fields would fabricate a row nobody
+   * attested, which is a worse "not misleading" failure than the erasure this
+   * ticket fixes.
+   */
+  it('never fuses fields across two different instanceKeys', () => {
+    const merged = subjectViewFromRecords([
+      record(src('furnisher-a', '1'), 'individual', {
+        categories: {
+          bankStatements: {
+            cardinality: 'multi',
+            instances: [
+              instance({
+                instanceKey: 'bankStatements#1',
+                observedAt: '2026-01-01T00:00:00.000Z',
+                fields: { accountNumber: envelope('111'), closingBalance: envelope('10') },
+              }),
+              instance({
+                instanceKey: 'bankStatements#2',
+                observedAt: '2026-06-01T00:00:00.000Z',
+                fields: { accountNumber: envelope('222') },
+              }),
+            ],
+          },
+        },
+      }),
+    ])
+    const byKey = merged.categories.bankStatements!.fieldsByInstanceKey
+    expect(Object.keys(byKey).sort()).toEqual(['bankStatements#1', 'bankStatements#2'])
+    expect(byKey['bankStatements#1']!.accountNumber!.envelope.value).toBe('111')
+    expect(byKey['bankStatements#1']!.closingBalance!.envelope.value).toBe('10')
+    // The newer, partial instance does not inherit the older one's balance.
+    expect(byKey['bankStatements#2']!.accountNumber!.envelope.value).toBe('222')
+    expect(byKey['bankStatements#2']!.closingBalance).toBeUndefined()
+  })
+
+  it('merges two furnishers under one instanceKey without either erasing the other', () => {
+    const merged = subjectViewFromRecords([
+      record(src('furnisher-a', '1'), 'individual', {
+        categories: {
+          docs: {
+            instances: [
+              instance({
+                instanceKey: 'payslip#abc',
+                observedAt: '2026-01-01T00:00:00.000Z',
+                fields: { gross: envelope('5000'), net: envelope('4100') },
+              }),
+            ],
+          },
+        },
+      }),
+      record(src('furnisher-b', '1'), 'individual', {
+        categories: {
+          docs: {
+            instances: [
+              instance({
+                instanceKey: 'payslip#abc',
+                observedAt: '2026-06-01T00:00:00.000Z',
+                fields: { gross: envelope('5500') },
+              }),
+            ],
+          },
+        },
+      }),
+    ])
+    const selected = merged.categories.docs!.fieldsByInstanceKey['payslip#abc']!
+    expect(selected.gross!.envelope.value).toBe('5500')
+    expect(selected.gross!.source.furnisherId).toBe('furnisher-b')
+    expect(selected.net!.envelope.value).toBe('4100')
+    expect(selected.net!.source.furnisherId).toBe('furnisher-a')
+  })
+
+  it('hands back the SAME envelope reference the instance holds — the aliasing contract is unchanged', () => {
+    const source = record(src('a', '1'), 'individual', {
+      categories: { c: { instances: [instance({ instanceKey: '', fields: { f: envelope('original') } })] } },
+    })
+    const merged = subjectViewFromRecords([source])
+    expect(merged.categories.c!.fieldsByInstanceKey['']!.f!.envelope).toBe(
+      source.view.categories.c!.instances[0]!.fields.f!,
+    )
+  })
+
+  /**
+   * F10's hazard, one level further down: `instanceKey` and a FIELD NAME are
+   * both producer-supplied text off the wire, and a plain-object accumulator
+   * lets either one named `__proto__` read back `Object.prototype` — so a
+   * "have I already claimed this field?" check answers for something nobody
+   * furnished, and the real observation is silently dropped.
+   */
+  it('does not confuse a "__proto__" instanceKey or field name with Object.prototype', () => {
+    const categories = JSON.parse(
+      `{"c":{"instances":[{"instanceKey":"__proto__","adapterId":"t","adapterVersion":1,` +
+        `"fields":{"__proto__":{"value":"deep","confidentiality":"internal"}}}]}}`,
+    ) as CanonicalView['categories']
+
+    const byKey = subjectViewFromRecords([record(src('a', '1'), 'individual', { categories })]).categories.c!
+      .fieldsByInstanceKey
+    expect(Object.prototype.hasOwnProperty.call(byKey, '__proto__')).toBe(true)
+    const selected = (byKey as Record<string, Record<string, { envelope: { value: unknown } }>>)['__proto__']!
+    expect(Object.prototype.hasOwnProperty.call(selected, '__proto__')).toBe(true)
+    expect(selected['__proto__']!.envelope.value).toBe('deep')
+  })
+
+  it('gives an empty category an empty selection map rather than omitting the member', () => {
+    const merged = subjectViewFromRecords([
+      record(src('a', '1'), 'individual', { categories: { c: { instances: [] } } }),
+    ])
+    expect(merged.categories.c!.fieldsByInstanceKey).toEqual({})
+  })
+
+  it('is order-independent — the same selection whichever record is fed first', () => {
+    const a = record(src('furnisher-a', '1'), 'individual', {
+      categories: {
+        c: {
+          instances: [
+            instance({
+              instanceKey: '',
+              observedAt: '2026-01-01T00:00:00.000Z',
+              fields: { one: envelope('a-one'), two: envelope('a-two') },
+            }),
+          ],
+        },
+      },
+    })
+    const b = record(src('furnisher-b', '2'), 'individual', {
+      categories: {
+        c: {
+          instances: [
+            instance({
+              instanceKey: '',
+              observedAt: '2026-06-01T00:00:00.000Z',
+              fields: { two: envelope('b-two'), three: envelope('b-three') },
+            }),
+          ],
+        },
+      },
+    })
+
+    const forward = subjectViewFromRecords([a, b]).categories.c!.fieldsByInstanceKey
+    const reverse = subjectViewFromRecords([b, a]).categories.c!.fieldsByInstanceKey
+    expect(JSON.stringify(forward)).toBe(JSON.stringify(reverse))
+    expect(forward['']!.one!.envelope.value).toBe('a-one')
+    expect(forward['']!.two!.envelope.value).toBe('b-two')
+    expect(forward['']!.three!.envelope.value).toBe('b-three')
+  })
+})

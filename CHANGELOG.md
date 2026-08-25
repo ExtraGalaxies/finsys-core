@@ -4,7 +4,164 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [9.0.0] - 2026-08-25
+
+**MAJOR — the bureau gains a furnisher axis (SYS-3554).** Every breaking item
+below is one defect: `sourceIhsId` — an auto-increment primary key belonging to
+ONE finsys-api instance — was being used as a global identity, as a merge key,
+and as a recency proxy. A credit bureau aggregates from MANY furnishers, each
+running their own instance, so lender A's application 7 and lender B's
+application 7 are the same number and mean nothing to each other. That is the
+product, not an edge case.
+
+Two of the three consequences were SILENT. Read the migration notes below
+before upgrading: this changes the shape of `SubjectInstance`, the input
+contract of `subjectViewFromRecords`, and the meaning of a merged
+`instanceKey`.
+
+### What was actually wrong
+
+1. **It threw.** Two legitimate furnishers contributing about one subject
+   raised `duplicate-source-ihs-id`, and that subject failed EVERY inquiry.
+2. **It merged silently.** Instance keys were qualified as
+   `` `${sourceIhsId}#${rawInstanceKey}` ``, so two furnishers' instances landed
+   under one key — one lender's financial statement in another's place inside a
+   credit report, with no error anywhere.
+3. **It misordered silently.** The `observedAt` tie-break ranked by
+   `sourceIhsId` DESCENDING, and its own docblock stated the assumption that
+   broke it: a proxy for "which application is newer" that holds "in every
+   producer this package has observed" — singular producer. Across furnishers it
+   systematically preferred whoever had the higher sequence numbers.
+
+### Changed — identity is the pair `(furnisherId, recordRef)`
+
+- **`SubjectInstance.source` is now `SubjectSource`**
+  (`{ furnisherId: string; recordRef: string }`), replacing
+  `{ sourceIhsId: number }`. **BREAKING for every reader of
+  `instance.source.sourceIhsId`.** Both members are strings deliberately:
+  `recordRef` is opaque BY CONTRACT (the furnisher's own identifier, on which
+  the bureau's only legitimate operations are equality and handing it back on
+  the s.31 correction channel), and a numeric type invites exactly the
+  reasoning that produced this defect — `b.source.sourceIhsId -
+  a.source.sourceIhsId` was a subtraction of two unrelated sequences, and it
+  typechecked. A string cannot be subtracted, so the old tie-break no longer
+  compiles in any consumer either.
+- **`SubjectViewRecord` gains a required `source: SubjectSource`**, and
+  `subjectViewFromRecords` NO LONGER READS `view.ihsId` for identity, keying or
+  ordering. **BREAKING for every caller.** The previous doc argued that reading
+  it off the view avoided "a second place for the two to disagree"; that
+  argument inverts once a bureau exists, because `view` is PAYLOAD — a document
+  pulled from a furnisher, which must not be able to say who it is. Furnisher
+  identity derives from the CREDENTIALED CHANNEL: every pull is bureau-initiated
+  against one furnisher's endpoint with that furnisher's credential, so the
+  caller knows the answer before reading a byte of the payload. `view.ihsId`
+  remains on `CanonicalView` as provenance.
+- **`SubjectSource` and `sameSubjectSource` are new exports.**
+  `sameSubjectSource(a, b)` is the supported way to ask whether two instances
+  came from the same furnished record. **Never join the pair into a string.**
+  Both halves are opaque, so no delimiter is safe: `('a', 'b#c')` and
+  `('a#b', 'c')` are two different sources that any `#`-join maps to one value.
+  For a keyed lookup, nest the maps (`Map<furnisherId, Map<recordRef, …>>`).
+
+### Changed — a merged `instanceKey` is RAW again
+
+- **`subjectViewFromRecords` no longer rewrites `instanceKey`.** It passes
+  through exactly as the producer wrote it, `''` for a single-cardinality
+  category included. **BREAKING for anything that parsed the old qualified key
+  — in particular any consumer de-qualifying by slicing at the first `#`.**
+  **Uniqueness at subject scope is now the TUPLE
+  `(source.furnisherId, source.recordRef, instanceKey)`**; a consumer keying on
+  `instanceKey` alone is wrong, because two records will legitimately both key
+  an instance `''`.
+- Re-delimiting the old scheme was considered and rejected. Its reversibility
+  rested on the qualifier being numeric; with an opaque qualifier there is no
+  character guaranteed absent from both halves, and a scheme whose correctness
+  rests on "this delimiter probably will not appear" fails SILENTLY — the same
+  failure class as the collision it would be fixing. The source is carried
+  structurally instead, and nobody parses anything.
+
+### Changed — the recency tie-break is gone, and its absence is disclosed
+
+- **`sourceIhsId`-descending is removed.** When `observedAt` ranks equal
+  (a real tie, or absent/unparseable on both sides), instances are ordered by a
+  deterministic lexicographic comparison of `furnisherId` then `recordRef`,
+  compared FIELD BY FIELD. **That order carries NO temporal meaning and must
+  never be rendered as one.** Its only job is to keep the merge genuinely
+  order-independent — the same instance leads regardless of which record the
+  caller listed first. There is no honest replacement proxy: the one per-record
+  axis a furnisher could have ordered by is `recordRef`, which this package
+  makes opaque precisely so nobody reasons from it.
+- **`SubjectCanonicalCategory.contestedLead` is new (additive, optional).**
+  Present iff the instances tied at the top of `instances` come from more than
+  one source; it lists the distinct sources involved, in the order they appear.
+  **`instances[0]` is only "the latest" when `contestedLead` is absent.** Per
+  SYS-3464's principle — two records that can disagree about a disputed value
+  are worse than one incomplete record, and the disagreement is itself the
+  finding — the merge stops inventing an answer and reports the question.
+  A consumer's obligation is to SURFACE it, not to resolve it: rendering a
+  contested lead as a single uncontested value is what s.29 RACUN's "not
+  misleading" forbids. A tie WITHIN one record does not fire it — one producer
+  ordering its own instances is not a disagreement between sources.
+
+### Changed — `SubjectViewErrorCode`
+
+**BREAKING**: `'duplicate-source-ihs-id'` is **removed** and replaced by
+`'duplicate-source-record'`; `'missing-source-identity'` is **added**. The full
+set is now `'no-records'`, `'subject-kind-disagreement'`,
+`'missing-source-identity'`, `'duplicate-source-record'`,
+`'overlay-projection-present'`. A caller with an exhaustive `switch` on this
+union gets a compile error, which is the intent.
+
+- `'duplicate-source-record'` fires on a repeated `(furnisherId, recordRef)`
+  PAIR — two copies of one furnished record. **Two DIFFERENT furnishers sharing
+  a `recordRef` is no longer an error**; that was the defect.
+- `'missing-source-identity'` fires when either half is absent or empty. An
+  empty `furnisherId` is every furnisher at once — the pre-SYS-3554 world
+  spelled with a different character — and an empty `recordRef` collides with
+  every other ref-less record from the same furnisher.
+- Error MESSAGES now name the source pair rather than an `ihsId`. As always,
+  **the `code` is the contract and the message is not.**
+
+### Consumers this breaks that do not live in this repo
+
+Named here so nobody has to re-derive them; fixing them is not this release's
+scope.
+
+- **finsys-api's subject assembly** — builds `SubjectViewRecord`s and must now
+  stamp `source` from the credentialed pull channel rather than letting
+  `view.ihsId` stand in.
+- **finsys-client's subject seat** — de-qualifies instance keys by slicing at
+  the first `#`, on the stated argument that "sourceIhsId is numeric, so the
+  FIRST `#` is unambiguously the qualification boundary even when the raw key
+  itself contains one." That argument collapses under an opaque qualifier, and
+  the key it was slicing is no longer qualified at all: the seat must read
+  `instance.source` structurally and stop parsing.
+- **`@finsys/lender-client`**, which re-exports this package's canonical types.
+  Whether its re-export list covers the `Subject*` types was not verified from
+  this repo.
+
+### Cost
+
+Measured on this package's own merge, before and after, at two sizes (2000
+calls each, warmed, five runs): **288 instances (12 records × 8 categories × 3
+instances) — 0.183 ms → 0.179 ms per call**, a small improvement, because the
+per-instance template-literal key construction is gone. **2400 instances (40 ×
+12 × 5) — 1.83 ms → 2.00 ms per call**, about 9% slower, because the tie
+comparison does up to two string comparisons where it used to do one numeric
+subtraction, and `contestedLead` adds a linear scan of the tied prefix. Both
+are per subject-view assembly.
+
+## [8.2.0] - 2026-08-24
+
+**Recorded retroactively on 2026-08-25 (SYS-3554).** This release was published
+to the registry without a version bump or a changelog entry ever being
+committed: `package.json` on `main` said `8.1.2` while the registry served
+`8.2.0`, so **no committed state produced the published artifact**. That is the
+exact "a DECLARED fact drifting from an ACTUAL one" class the publish preflight
+(DEVOPS-687) guards, and it would have failed two of that preflight's four
+checks — version disagreement and a missing changelog entry. The entry below
+describes what 8.2.0 actually shipped; it is written after the fact so the
+record is honest, not because anything changed on the wire.
 
 ### Added — the subject-scoped canonical view (SYS-3542 / SYS-3463a)
 
@@ -77,6 +234,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Purely additive: five new exported types, two new exported values
 (`subjectViewFromRecords`, `SubjectViewError`), nothing existing renamed,
 removed, or narrowed. **Minor.**
+
+> **Superseded by 9.0.0.** Every rule described above — the
+> `${sourceIhsId}#${rawInstanceKey}` qualification, the `sourceIhsId`
+> tie-break, the `duplicate-source-ihs-id` refusal, and
+> `source: { sourceIhsId }` itself — was written when the bureau had one
+> furnisher and is wrong the moment it has two. See 9.0.0.
 
 ## [8.1.2] - 2026-08-23
 

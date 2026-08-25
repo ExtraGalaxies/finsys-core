@@ -330,6 +330,9 @@ export type {
   SubjectInstance,
   SubjectCanonicalCategory,
   SubjectCanonicalView,
+  // SYS-3554: the (furnisherId, recordRef) pair that identifies a contributed
+  // observation, replacing SubjectInstance's old `{ sourceIhsId: number }`.
+  SubjectSource,
 } from './canonical-view.js';
 
 // SYS-3542 (SYS-3463a): the one merge that builds a SubjectCanonicalView out
@@ -338,4 +341,8 @@ export type {
 // subject-canonical-view.ts's own doc for why instance-selection logic lives
 // apart from the types it selects over.
 export type { SubjectViewRecord, SubjectViewErrorCode } from './subject-canonical-view.js';
-export { subjectViewFromRecords, SubjectViewError } from './subject-canonical-view.js';
+// SYS-3554: `sameSubjectSource` is the supported way to ask whether two
+// SubjectInstances came from the same furnished record — exported so that no
+// consumer builds a joined `${furnisherId}#${recordRef}` key to do it, which
+// is ambiguous because both halves are opaque. See SubjectSource's own doc.
+export { subjectViewFromRecords, sameSubjectSource, SubjectViewError } from './subject-canonical-view.js';

@@ -278,31 +278,104 @@ export interface CanonicalAddress {
 }
 
 /**
+ * SYS-3554 — WHO furnished an observation, as the bureau knows it.
+ *
+ * THE PAIR IS THE IDENTITY. A contributed observation is identified by
+ * `(furnisherId, recordRef)` and by nothing else. Neither half identifies
+ * anything on its own: a furnisher contributes many records, and a record ref
+ * is scoped to the furnisher that issued it, so two furnishers using the same
+ * ref have said nothing to each other. This replaces `{ sourceIhsId: number }`,
+ * which was one furnisher's auto-increment primary key doing the work of a
+ * global identity — the SYS-3554 defect. A bureau aggregating many furnishers
+ * is the product, not an edge case, and lender A's application 7 and lender
+ * B's application 7 are the same number.
+ *
+ * BOTH MEMBERS ARE STRINGS, AND THAT IS DELIBERATE RATHER THAN INCIDENTAL.
+ * `recordRef` is opaque BY CONTRACT: it is the furnisher's own identifier,
+ * meaningful only to the furnisher that minted it, and the bureau's only
+ * legitimate operations on it are equality and handing it back on the s.31
+ * correction channel. A numeric type would invite exactly the reasoning that
+ * produced the defect being fixed here — `b.source.sourceIhsId -
+ * a.source.sourceIhsId` was a subtraction of two furnishers' unrelated
+ * sequence numbers, and it typechecked. A string cannot be subtracted, so the
+ * old tie-break is not merely removed from this package: it no longer
+ * COMPILES in any consumer either. The same argument covers `furnisherId`:
+ * bureau-minted and stable, but never an ordinal.
+ *
+ * NEVER JOIN THE TWO INTO A STRING. Both halves are opaque, so no delimiter is
+ * safe: `'a' + '#' + 'b#c'` and `'a#b' + '#' + 'c'` are one value, and code
+ * that splits a joined key back apart recovers the wrong half without any
+ * signal that it did. Consumers key on the PAIR — a `Map<furnisherId,
+ * Map<recordRef, …>>`, or `sameSubjectSource` (`subject-canonical-view.ts`)
+ * on a linear scan. This is not stylistic: finsys-client's subject seat
+ * de-qualifies today by slicing at the first `#`, and its own docblock states
+ * the argument that made that safe — "sourceIhsId is numeric, so the FIRST `#`
+ * is unambiguously the qualification boundary even when the raw key itself
+ * contains one." Once the qualifier is an opaque string that argument
+ * collapses, which is why the qualification scheme is gone rather than
+ * re-delimited (see `SubjectInstance.instanceKey` below).
+ *
+ * IT NEVER APPEARS IN REPORT CONTENT. s.25(1)(a) wants the source's NAME AND
+ * ADDRESS, which live on the bureau's furnisher registry keyed by
+ * `furnisherId`; `recordRef` flows back to the furnisher that issued it on the
+ * s.31 correction path and nowhere else. An identifier is only ever presented
+ * to the party that minted it — the same rule that removed `ihsId` from the
+ * subscriber wire.
+ */
+export interface SubjectSource {
+  /**
+   * BUREAU-MINTED and stable — the bureau's own furnisher-registry id, which
+   * is local to the bureau and shares a keyspace with nothing outside it.
+   *
+   * IT IS STAMPED FROM THE CREDENTIALED CHANNEL, NEVER FROM PAYLOAD CONTENT.
+   * Every pull is bureau-initiated against one furnisher's endpoint with that
+   * furnisher's credential, so the bureau already knows who it is pulling from
+   * at the moment of authentication. No furnisher self-declares its identity
+   * here and no payload can spoof it — which is why `subjectViewFromRecords`
+   * takes this on `SubjectViewRecord` rather than reading it off the
+   * `CanonicalView` it is given.
+   */
+  furnisherId: string
+  /**
+   * The furnisher's own identifier for the record this instance came from —
+   * OPAQUE, furnisher-scoped, and never parsed, ordered or arithmetically
+   * compared. At a finsys-api furnisher it happens to be an application id;
+   * that is a fact about one furnisher's implementation and not a contract,
+   * and every consumer that reasons from it is reintroducing SYS-3554.
+   */
+  recordRef: string
+}
+
+/**
  * SYS-3542 (SYS-3463a) — the subject-scoped view `CanonicalView`'s own doc
  * anticipates and declines to be: "Do not write code that assumes this is
  * interchangeable with a subject-scoped view. That response would carry
  * source attribution per instance and would re-scope or omit `cardinality`."
  * This is that response.
  *
- * A `CanonicalInstance` widened with the application it came from. Subject
- * scope means MULTIPLE applications (`ihsId`s) can each contribute an
- * instance to one category, so source attribution — a constant at
+ * A `CanonicalInstance` widened with the source that furnished it. Subject
+ * scope means MULTIPLE records, from MULTIPLE furnishers, can each contribute
+ * an instance to one category, so source attribution — a constant at
  * `CanonicalView`'s single-application scope, and therefore absent there —
  * becomes per-instance information here.
  *
- * `instanceKey` DIVERGES from `CanonicalInstance`'s own contract ("'' for a
- * single-cardinality category") and that divergence is load-bearing, not
- * cosmetic: two applications, each carrying a single-cardinality instance,
- * both key it `''`. Merged unqualified, the second instance is
- * indistinguishable from the first in any keyed lookup built over the
- * category's instances — silently collapsing two applications' worth of data
- * into one. `subjectViewFromRecords` (`subject-canonical-view.ts`) rewrites
- * every instance's key to
- * `${sourceIhsId}#${rawInstanceKey}` before it is ever returned, using the
- * same `#`-boundary convention `document-intake` keys and the per-adapter
- * disambiguation in `ihs-processing.ts` already use for a compound key: `''`
- * from ihsId 1042 and `''` from ihsId 1058 land as `'1042#'` and `'1058#'`,
- * never colliding.
+ * `instanceKey` IS THE RAW, UNQUALIFIED KEY (SYS-3554), exactly as
+ * `CanonicalInstance` documents it — `''` for a single-cardinality category
+ * included. UNIQUENESS IS THE TUPLE `(source.furnisherId, source.recordRef,
+ * instanceKey)`, and a consumer that keys on `instanceKey` alone is wrong at
+ * this scope: two records will legitimately both key an instance `''`.
+ *
+ * This REVERSES SYS-3542, which rewrote every key to
+ * `${sourceIhsId}#${rawInstanceKey}` so that a lookup over the category's
+ * instances could stay one-dimensional. That scheme depended on the qualifier
+ * being numeric to be reversible, and on one furnisher's id space being
+ * global to be unique — neither survives a second furnisher. Re-delimiting it
+ * was considered and rejected: both halves of `(furnisherId, recordRef)` are
+ * opaque strings, so there is no character guaranteed absent from both, and a
+ * scheme whose correctness rests on "this delimiter probably will not appear"
+ * fails SILENTLY, which is the same failure class as the collision it would be
+ * fixing. The source is therefore carried STRUCTURALLY, in `source` below, and
+ * nobody parses anything.
  *
  * TWO `CanonicalInstance` MEMBERS ARE OMITTED (SYS-3542 review, F12), for the
  * same reason `SubjectCanonicalCategory` omits `cardinality` — republishing
@@ -315,14 +388,12 @@ export interface CanonicalAddress {
  *     defect shape `ihs-processing.ts` documents as a real collision.
  *   - `periodPosition` — orders periods WITHIN one application's own v1
  *     reconstruction; across applications it orders nothing.
- * `source.sourceIhsId` (below) is how a consumer that genuinely needs either
- * value gets it back: go to that application's own `CanonicalView`, which is
+ * `source` (below) is how a consumer that genuinely needs either value gets it
+ * back: ask that furnisher for that record's own `CanonicalView`, which is
  * where the field means something.
  */
 export interface SubjectInstance extends Omit<CanonicalInstance, 'legacySlot' | 'periodPosition'> {
-  source: {
-    sourceIhsId: number
-  }
+  source: SubjectSource
 }
 
 /**
@@ -342,19 +413,54 @@ export interface SubjectInstance extends Omit<CanonicalInstance, 'legacySlot' | 
  */
 export interface SubjectCanonicalCategory {
   /**
-   * Sorted LATEST-FIRST by `observedAt`, across every source application,
+   * Sorted LATEST-FIRST by `observedAt`, across every source record,
    * regardless of the order records were merged in — see
    * `subjectViewFromRecords`'s own doc (`subject-canonical-view.ts`) for the
-   * parsing rule, the tie-break, and the secondary key.
+   * parsing rule and for what happens when `observedAt` cannot separate two
+   * instances.
    *
-   * `instances[0]` is therefore well-defined: the single instance
-   * `CanonicalAddress`'s existing "latest wins" rule would pick for an
-   * unaddressed field. It is NOT license to ignore `instances[1..]` — see
-   * this interface's own doc above for why `'single'`'s old licence to do
-   * that does not survive the re-scoping. `[0]` names the latest instance,
-   * not the only one that matters.
+   * `instances[0]` is the single instance `CanonicalAddress`'s existing
+   * "latest wins" rule would pick for an unaddressed field — BUT ONLY WHEN
+   * `contestedLead` IS ABSENT. When it is present, `[0]`'s position ahead of
+   * the other tied instances is arbitrary, and reading it as "the latest" is
+   * the SYS-3554 misordering under a new name. Check `contestedLead` before
+   * treating `[0]` as an answer.
+   *
+   * It is never license to ignore `instances[1..]` either — see this
+   * interface's own doc above for why `'single'`'s old licence to do that does
+   * not survive the re-scoping.
    */
   instances: SubjectInstance[]
+  /**
+   * SYS-3554 — present IFF the instances tied at the top of `instances` come
+   * from MORE THAN ONE source, i.e. `observedAt` (the only evidential ordering
+   * key this package has) ranks them equal and the merge has no honest way to
+   * say which is later. Lists the distinct sources involved, in the order they
+   * appear in `instances`. Absent — the normal case — means `instances[0]` won
+   * on evidence.
+   *
+   * WHY THIS EXISTS RATHER THAN A TIE-BREAK THAT PICKS ONE. Until SYS-3554
+   * the merge broke such a tie on `sourceIhsId` descending, a recency proxy
+   * whose own docblock stated the assumption that killed it: applications are
+   * "id-ordered by creation in every producer this package has observed" —
+   * singular producer. Across furnishers that proxy systematically prefers
+   * whoever has higher sequence numbers, silently, with no signal to any
+   * consumer that an ordering had been invented. There is no replacement
+   * proxy available: the only per-record axis a furnisher could have ordered
+   * by is `recordRef`, which this package makes opaque precisely so nobody
+   * reasons from it. So the merge stops inventing an answer and reports the
+   * question instead, per SYS-3464's principle — two records that can
+   * disagree about a disputed value are worse than one incomplete record, and
+   * the disagreement is itself the finding.
+   *
+   * A CONSUMER'S OBLIGATION IS TO SURFACE IT, NOT TO RESOLVE IT. Rendering a
+   * contested lead as a single uncontested value is what s.29 RACUN's "not
+   * misleading" forbids; the per-field resolution that would legitimately
+   * settle it (with per-field provenance) is SYS-3464's, not this merge's.
+   */
+  contestedLead?: {
+    sources: SubjectSource[]
+  }
 }
 
 /**

@@ -122,13 +122,21 @@ export interface CanonicalInstance {
    * be COMPARED as a string (a temporal tie-break for two instances
    * contending on one slot): every key that comparison was ever consulted on
    * has its provenance entry deleted regardless of the result (H2, round 4),
-   * so the comparison was computing an answer nobody could read. If a future
-   * consumer reintroduces ordering by this field, the same requirement
-   * applies: every writer must use this SAME format, because two
-   * same-format, same-offset timestamps order lexicographically exactly as
-   * they order in time, and a writer emitting a different offset or
-   * precision would silently break that ordering without either side
-   * raising an error.
+   * so the comparison was computing an answer nobody could read.
+   *
+   * SYS-3542 REINTRODUCED ordering by this field — `subjectViewFromRecords`
+   * (`subject-canonical-view.ts`) sorts a subject's merged instances by it.
+   * It does NOT reintroduce the string comparison the paragraph above
+   * describes as removed: a raw string comparison silently breaks on two
+   * inputs this package cannot police at the type level (mixed UTC offsets —
+   * `+08:00`, this estate's own timezone, sorts as "later" than an earlier
+   * moment written as `Z`; mixed precision — a no-millis `Z` timestamp
+   * outsorts every millisecond-precision one, because `'Z'` > `'.'`
+   * byte-for-byte) — so that function parses with `Date.parse` instead and
+   * documents its own rule for a value that fails to parse. Read that
+   * function's own doc before adding a second ordering consumer of this
+   * field; the requirement is "parse it", not "trust the format" — a single
+   * drifting producer is exactly what a raw string comparison cannot catch.
    */
   observedAt?: string
   fields: Record<string, CanonicalFieldEnvelope>
@@ -267,4 +275,380 @@ export interface CanonicalAddress {
    * Absent: latest by observedAt, which is what v1's flat mirror actually did.
    */
   instanceKey?: string
+}
+
+/**
+ * SYS-3554 — WHO furnished an observation, as the bureau knows it.
+ *
+ * THE PAIR IS THE IDENTITY. A contributed observation is identified by
+ * `(furnisherId, recordRef)` and by nothing else. Neither half identifies
+ * anything on its own: a furnisher contributes many records, and a record ref
+ * is scoped to the furnisher that issued it, so two furnishers using the same
+ * ref have said nothing to each other. This replaces `{ sourceIhsId: number }`,
+ * which was one furnisher's auto-increment primary key doing the work of a
+ * global identity — the SYS-3554 defect. A bureau aggregating many furnishers
+ * is the product, not an edge case, and lender A's application 7 and lender
+ * B's application 7 are the same number.
+ *
+ * BOTH MEMBERS ARE STRINGS, AND THAT IS DELIBERATE RATHER THAN INCIDENTAL.
+ * `recordRef` is opaque BY CONTRACT: it is the furnisher's own identifier,
+ * meaningful only to the furnisher that minted it, and the bureau's only
+ * legitimate operations on it are equality and handing it back on the s.31
+ * correction channel. A numeric type would invite exactly the reasoning that
+ * produced the defect being fixed here — `b.source.sourceIhsId -
+ * a.source.sourceIhsId` was a subtraction of two furnishers' unrelated
+ * sequence numbers, and it typechecked. A string cannot be subtracted, so the
+ * old tie-break is not merely removed from this package: it no longer
+ * COMPILES in any consumer either. The same argument covers `furnisherId`:
+ * bureau-minted and stable, but never an ordinal.
+ *
+ * NEVER JOIN THE TWO INTO A STRING. Both halves are opaque, so no delimiter is
+ * safe: `'a' + '#' + 'b#c'` and `'a#b' + '#' + 'c'` are one value, and code
+ * that splits a joined key back apart recovers the wrong half without any
+ * signal that it did. Consumers key on the PAIR — a `Map<furnisherId,
+ * Map<recordRef, …>>`, or `sameSubjectSource` (`subject-canonical-view.ts`)
+ * on a linear scan. This is not stylistic: finsys-client's subject seat
+ * de-qualifies today by slicing at the first `#`, and its own docblock states
+ * the argument that made that safe — "sourceIhsId is numeric, so the FIRST `#`
+ * is unambiguously the qualification boundary even when the raw key itself
+ * contains one." Once the qualifier is an opaque string that argument
+ * collapses, which is why the qualification scheme is gone rather than
+ * re-delimited (see `SubjectInstance.instanceKey` below).
+ *
+ * IT NEVER APPEARS IN REPORT CONTENT. s.25(1)(a) wants the source's NAME AND
+ * ADDRESS, which live on the bureau's furnisher registry keyed by
+ * `furnisherId`; `recordRef` flows back to the furnisher that issued it on the
+ * s.31 correction path and nowhere else. An identifier is only ever presented
+ * to the party that minted it — the same rule that removed `ihsId` from the
+ * subscriber wire.
+ */
+export interface SubjectSource {
+  /**
+   * BUREAU-MINTED and stable — the bureau's own furnisher-registry id, which
+   * is local to the bureau and shares a keyspace with nothing outside it.
+   *
+   * IT IS STAMPED FROM THE CREDENTIALED CHANNEL, NEVER FROM PAYLOAD CONTENT.
+   * Every pull is bureau-initiated against one furnisher's endpoint with that
+   * furnisher's credential, so the bureau already knows who it is pulling from
+   * at the moment of authentication. No furnisher self-declares its identity
+   * here and no payload can spoof it — which is why `subjectViewFromRecords`
+   * takes this on `SubjectViewRecord` rather than reading it off the
+   * `CanonicalView` it is given.
+   */
+  furnisherId: string
+  /**
+   * The furnisher's own identifier for the record this instance came from —
+   * OPAQUE, furnisher-scoped, and never parsed, ordered or arithmetically
+   * compared. At a finsys-api furnisher it happens to be an application id;
+   * that is a fact about one furnisher's implementation and not a contract,
+   * and every consumer that reasons from it is reintroducing SYS-3554.
+   */
+  recordRef: string
+}
+
+/**
+ * SYS-3542 (SYS-3463a) — the subject-scoped view `CanonicalView`'s own doc
+ * anticipates and declines to be: "Do not write code that assumes this is
+ * interchangeable with a subject-scoped view. That response would carry
+ * source attribution per instance and would re-scope or omit `cardinality`."
+ * This is that response.
+ *
+ * A `CanonicalInstance` widened with the source that furnished it. Subject
+ * scope means MULTIPLE records, from MULTIPLE furnishers, can each contribute
+ * an instance to one category, so source attribution — a constant at
+ * `CanonicalView`'s single-application scope, and therefore absent there —
+ * becomes per-instance information here.
+ *
+ * `instanceKey` IS THE RAW, UNQUALIFIED KEY (SYS-3554), exactly as
+ * `CanonicalInstance` documents it — `''` for a single-cardinality category
+ * included. UNIQUENESS IS THE TUPLE `(source.furnisherId, source.recordRef,
+ * instanceKey)`, and a consumer that keys on `instanceKey` alone is wrong at
+ * this scope: two records will legitimately both key an instance `''`.
+ *
+ * This REVERSES SYS-3542, which rewrote every key to
+ * `${sourceIhsId}#${rawInstanceKey}` so that a lookup over the category's
+ * instances could stay one-dimensional. That scheme depended on the qualifier
+ * being numeric to be reversible, and on one furnisher's id space being
+ * global to be unique — neither survives a second furnisher. Re-delimiting it
+ * was considered and rejected: both halves of `(furnisherId, recordRef)` are
+ * opaque strings, so there is no character guaranteed absent from both, and a
+ * scheme whose correctness rests on "this delimiter probably will not appear"
+ * fails SILENTLY, which is the same failure class as the collision it would be
+ * fixing. The source is therefore carried STRUCTURALLY, in `source` below, and
+ * nobody parses anything.
+ *
+ * TWO `CanonicalInstance` MEMBERS ARE OMITTED (SYS-3542 review, F12), for the
+ * same reason `SubjectCanonicalCategory` omits `cardinality` — republishing
+ * them here would tell a consumer the opposite of what is true, because each
+ * describes exactly one application's structure and stops meaning anything
+ * once merged across several:
+ *   - `legacySlot` — the v1 wide-table slot THIS INSTANCE projected to.
+ *     Three applications can each legitimately own `T1`; carried through
+ *     unchanged that reads as the "two instances contending for one slot"
+ *     defect shape `ihs-processing.ts` documents as a real collision.
+ *   - `periodPosition` — orders periods WITHIN one application's own v1
+ *     reconstruction; across applications it orders nothing.
+ * `source` (below) is how a consumer that genuinely needs either value gets it
+ * back: ask that furnisher for that record's own `CanonicalView`, which is
+ * where the field means something.
+ */
+export interface SubjectInstance extends Omit<CanonicalInstance, 'legacySlot' | 'periodPosition'> {
+  source: SubjectSource
+}
+
+/**
+ * SYS-3464 — ONE canonical field's winning observation, with the provenance of
+ * THAT OBSERVATION rather than of the row it happened to arrive in.
+ *
+ * WHY THIS TYPE EXISTS. Until SYS-3464 the only way to read a field at subject
+ * scope was `instances[0].fields[name]` — latest ROW wins, spread flat. For a
+ * lending application that is correct: one document produces one coherent row
+ * and the newest document supersedes the older wholesale. For a bureau merging
+ * contributed lender data, CCRIS, SSM and adapter signals into ONE subject
+ * picture it is not, and the failure is silent: a fresher PARTIAL row from one
+ * source erases every field of that category the other sources supplied, and
+ * nothing errors. `ihs_field_attestation`'s own docblock states the same
+ * consequence at application scope — an attestation written as an ordinary
+ * canonical row with a fresh `observedAt` "would become latest and blank every
+ * OTHER field of that category". s.29 RACUN requires Complete and Not
+ * misleading; a subject file that drops a field nobody retracted fails both on
+ * its face. The duty binds the licensee, not SI — this is the module the
+ * licensee discharges it with.
+ *
+ * `envelope` IS THE VALUE, and it is named `envelope` rather than `value`
+ * deliberately: `selection.value` would sit one dot away from
+ * `envelope.value` and mean something different, which is the kind of
+ * near-miss that reads correctly in review and returns an object where a
+ * string was expected.
+ */
+export interface SubjectFieldSelection {
+  /**
+   * The winning `CanonicalFieldEnvelope` — the SAME object reference the
+   * contributing `SubjectInstance` holds, not a copy. See
+   * `subjectViewFromRecords`'s own ALIASING section: nothing in this package
+   * mutates an envelope in place, and this member is deliberately consistent
+   * with `SubjectInstance.fields` rather than deep-cloning a wire payload.
+   */
+  envelope: CanonicalFieldEnvelope
+  /**
+   * WHO furnished THIS FIELD's winning observation. It is routinely NOT the
+   * source of `instances[0]` — that is the entire point of per-field
+   * selection, and a renderer that labels a merged category with one source
+   * is misattributing every field that came from another.
+   */
+  source: SubjectSource
+  /**
+   * The raw `instanceKey` of the instance this value came from. Always equal
+   * to the key this selection is filed under in `fieldsByInstanceKey`;
+   * repeated on the selection so that a selection passed around on its own
+   * still names its own instance.
+   */
+  instanceKey: string
+  /**
+   * The winning observation's own `observedAt`, verbatim — absent when that
+   * instance carried none, exactly as `CanonicalInstance.observedAt` is
+   * absent. A value that failed to parse is carried through here unchanged
+   * even though it ranked oldest; this member is provenance, not the rank.
+   */
+  observedAt?: string
+  /**
+   * SYS-3464 — present IFF the observations that tie at the top rank FOR THIS
+   * FIELD come from more than one source AND do not all carry the same
+   * `envelope.value`. Lists the distinct sources involved, in the order they
+   * appear in `instances`. NOTE what the list is: every source tied at this
+   * field's top rank, INCLUDING any that agree with the winning value. It
+   * is "who was in the tie", not "who dissented" — a renderer saying "a, b
+   * and c disagree" would misattribute an agreeing source. Deliberately the
+   * same shape as
+   * `SubjectCanonicalCategory.contestedLead` — one mechanism for reporting a
+   * conflict, read the same way at both grains.
+   *
+   * THE TWO PREDICATES ARE DIFFERENT, AND NEITHER IMPLIES THE OTHER. Do not
+   * read this one as nested inside `contestedLead` — a consumer that checks
+   * `contested` only when `contestedLead` is present WILL render a disputed
+   * field as uncontested, which is the "not misleading" failure this exists
+   * to prevent. Each flag looks at its own top rank, and those differ: if
+   * the newest ROW is from one source alone, `contestedLead` is absent —
+   * yet an older field whose own newest observation ties between two other
+   * sources still reports `contested` here. It also runs the other way: a
+   * cross-source tie at row grain where every source states the same value
+   * gives `contestedLead` with nothing contested.
+   *
+   * WHY THIS ONE ALSO REQUIRES DISAGREEMENT.
+   * At row grain the merge cannot know whether two tied rows disagree —
+   * "the value" is not defined for a row. At field grain it can see the
+   * values, so an AGREEMENT is not reported as a finding: SYS-3464's
+   * principle is that "the disagreement is itself the finding", and a flag
+   * that fires on two sources saying the same thing is the "always on, so
+   * ignored" failure `contestedLead`'s own doc warns about. So
+   * `contestedLead` present with no field contested is a coherent, useful
+   * answer — "the lead ROW is arbitrary, and no field is actually disputed"
+   * — not an inconsistency between the two flags.
+   *
+   * A CONSUMER'S OBLIGATION IS TO SURFACE IT, NOT RESOLVE IT. `envelope` still
+   * holds one of the tied values (whichever the deterministic, temporally
+   * meaningless source order put first), because a report needs something to
+   * render; presenting it as uncontested is what s.29's "not misleading"
+   * forbids. Absent means only that no tie SPANS sources with differing
+   * values: a tie confined to ONE source is also absent, because one producer
+   * ordering its own instances is not a disagreement between sources.
+   */
+  contested?: {
+    sources: SubjectSource[]
+  }
+}
+
+/**
+ * `CanonicalCategory` re-scoped to a subject: `cardinality` is OMITTED, not
+ * carried through unchanged — `CanonicalView`'s own doc names this exact
+ * requirement. `cardinality` described one adapter's per-APPLICATION
+ * contract ('single' = at most one instance per application). At subject
+ * scope a subject with three applications legitimately carries three
+ * instances of a 'single'-cardinality category, one per source — republishing
+ * the flag here would tell a consumer the opposite of what is true, which is
+ * worse than omitting it: `'single'` used to license reading `instances[0]`
+ * as THE value, full stop. That license does not survive the re-scoping —
+ * `instances` can legitimately hold more than one CURRENT instance (a
+ * subject with a live application in two lenders' pipelines, several bank
+ * accounts each with their own statement) — but `instances[0]` is not
+ * meaningless; see its own doc below for what it IS.
+ */
+export interface SubjectCanonicalCategory {
+  /**
+   * Sorted LATEST-FIRST by `observedAt`, across every source record,
+   * regardless of the order records were merged in — see
+   * `subjectViewFromRecords`'s own doc (`subject-canonical-view.ts`) for the
+   * parsing rule and for what happens when `observedAt` cannot separate two
+   * instances.
+   *
+   * `instances[0]` is the single instance `CanonicalAddress`'s existing
+   * "latest wins" rule would pick for an unaddressed field — BUT ONLY WHEN
+   * `contestedLead` IS ABSENT. When it is present, `[0]`'s position ahead of
+   * the other tied instances is arbitrary, and reading it as "the latest" is
+   * the SYS-3554 misordering under a new name. Check `contestedLead` before
+   * treating `[0]` as an answer.
+   *
+   * SYS-3464: TO READ A FIELD'S VALUE, READ `fieldsByInstanceKey`, NOT
+   * `instances[0].fields`. This array is the LEDGER — every contributed
+   * observation, latest-first — and a row is only ever wholly superseded by a
+   * later row within one furnisher's own world. Spreading `[0].fields` flat at
+   * subject scope drops every field the newer, partial row did not mention,
+   * which is the SYS-3464 defect. `instances` remains what a consumer walks to
+   * show the disagreement, the history, or a field's full attestation trail.
+   *
+   * It is never license to ignore `instances[1..]` either — see this
+   * interface's own doc above for why `'single'`'s old licence to do that does
+   * not survive the re-scoping.
+   */
+  instances: SubjectInstance[]
+  /**
+   * SYS-3464 — the per-field selection: `instanceKey` → field name →
+   * `SubjectFieldSelection`. ALWAYS PRESENT (an empty object for a category
+   * with no instances), so a consumer never has to branch on its absence.
+   *
+   * FOR EACH FIELD, the most recent observation ACROSS ALL SOURCES, carrying
+   * its own provenance rather than the row's. This is the member that fixes
+   * the erasure `instances[0].fields` causes at subject scope — read that
+   * paragraph above first.
+   *
+   * IT IS KEYED ON `instanceKey`, AND THAT NESTING IS A DECISION, NOT
+   * PACKAGING. Fields from two DIFFERENT instance keys describe two different
+   * things — two bank statements in one category are two accounts, not two
+   * observations of one — so fusing them would fabricate a row nobody
+   * attested: an account number from one statement beside a closing balance
+   * from another. That is a worse "not misleading" failure than the erasure
+   * this member exists to fix, so per-field recency is resolved WITHIN a key
+   * and never across keys. `''` (a single-cardinality category, the erasure
+   * case) is an ordinary key here and is where two furnishers' observations
+   * legitimately meet.
+   *
+   * NOTE WHAT THAT MAKES THE KEY MEAN, because it is not what `SubjectInstance`
+   * uses it for. UNIQUENESS at subject scope is still the tuple
+   * `(furnisherId, recordRef, instanceKey)` — two records legitimately both key
+   * an instance `''`, and keying uniqueness on `instanceKey` alone is wrong.
+   * COMPARABILITY is a different question with a different answer: two
+   * observations filed under one `instanceKey` are two statements about the
+   * same slot, which is exactly the pair per-field recency must resolve. The
+   * cross-furnisher comparability of a NON-EMPTY key is the producers'
+   * assertion and not this package's — a key carrying a document hash compares
+   * across furnishers, a bare ordinal (`bankStatements#1`) does not — which is
+   * why every selection names its own `source` and `instanceKey`: a fusion
+   * here is inspectable field by field rather than silent.
+   *
+   * A null-prototype object, like `SubjectCanonicalView.categories`: both the
+   * instance key and the field name are producer-supplied text off the wire,
+   * and a plain `{}` lets either one named `__proto__` read back
+   * `Object.prototype` — so a "have I already claimed this field?" check
+   * answers for something nobody furnished and the real observation is
+   * silently dropped.
+   */
+  fieldsByInstanceKey: Record<string, Record<string, SubjectFieldSelection>>
+  /**
+   * SYS-3554 — present IFF the instances tied at the top of `instances` come
+   * from MORE THAN ONE source, i.e. `observedAt` (the only evidential ordering
+   * key this package has) ranks them equal and the merge has no honest way to
+   * say which is later. Lists the distinct sources involved, in the order they
+   * appear in `instances`. Absent means only that no tie SPANS sources: it
+   * does NOT mean `instances[0]` won on evidence. A tie confined to one
+   * source is also absent, and there `[0]` won on the producer's own array
+   * order — one producer ordering its own instances is not a disagreement
+   * between sources, which is the only thing this flag reports.
+   *
+   * HOW OFTEN IT FIRES depends on the category, and "normal case" would be
+   * the wrong word for some of them. `observedAt` is optional on adapter
+   * output, so on a category where no producer supplies it EVERY
+   * multi-source category ties and carries this flag. A flag that is always
+   * on gets ignored, so a renderer should say WHICH sources disagree, not
+   * merely that they do.
+   *
+   * WHY THIS EXISTS RATHER THAN A TIE-BREAK THAT PICKS ONE. Until SYS-3554
+   * the merge broke such a tie on `sourceIhsId` descending, a recency proxy
+   * whose own docblock stated the assumption that killed it: applications are
+   * "id-ordered by creation in every producer this package has observed" —
+   * singular producer. Across furnishers that proxy systematically prefers
+   * whoever has higher sequence numbers, silently, with no signal to any
+   * consumer that an ordering had been invented. There is no replacement
+   * proxy available: the only per-record axis a furnisher could have ordered
+   * by is `recordRef`, which this package makes opaque precisely so nobody
+   * reasons from it. So the merge stops inventing an answer and reports the
+   * question instead, per SYS-3464's principle — two records that can
+   * disagree about a disputed value are worse than one incomplete record, and
+   * the disagreement is itself the finding.
+   *
+   * A CONSUMER'S OBLIGATION IS TO SURFACE IT, NOT TO RESOLVE IT. Rendering a
+   * contested lead as a single uncontested value is what s.29 RACUN's "not
+   * misleading" forbids.
+   *
+   * SYS-3464 SHIPPED the per-field resolution this doc used to defer to, and
+   * it NARROWS what this flag should make a consumer do rather than replacing
+   * it. This one still answers only "is the lead ROW arbitrary" — it cannot
+   * see values, so it fires on two sources that tie at the top even when they
+   * agree about every field. `SubjectFieldSelection.contested` answers the
+   * sharper question per field, and fires only on an actual disagreement. This
+   * flag present with no field contested is therefore the ordinary,
+   * informative case, not a contradiction: the row order is arbitrary and
+   * nothing is disputed.
+   */
+  contestedLead?: {
+    sources: SubjectSource[]
+  }
+}
+
+/**
+ * THE SCOPE OF THIS RESPONSE IS ONE SUBJECT — every application the subject
+ * registry (IC / SSM regno) has attached to them, merged. Where
+ * `CanonicalView` is deliberately silent about which application produced an
+ * instance (a per-response constant at that scope), this type is deliberately
+ * silent about `cardinality` (see `SubjectCanonicalCategory`) and explicit
+ * about source (see `SubjectInstance`) — the two swap places, which is the
+ * whole reason the two types cannot be interchangeable and must not drift
+ * apart from each other unnoticed. `subjectViewFromRecords` in
+ * `subject-canonical-view.ts` is the one function that builds this shape;
+ * read that file for the merge and ordering rules, which are a runtime
+ * decision this file deliberately does not make (see "WHAT THIS FILE IS NOT"
+ * on `CanonicalView`, above).
+ */
+export interface SubjectCanonicalView {
+  subjectKind: string
+  categories: Record<string, SubjectCanonicalCategory>
 }

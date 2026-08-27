@@ -4,11 +4,12 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [9.1.0] - 2026-08-27
 
-_No version number and no date yet on purpose: the cut happens at integration
-for the SYS-3569 epic, and a heading that names a version before the tag exists
-is the drift the publish preflight was built to catch._
+_Cut at integration for the SYS-3569 epic. MINOR: this widens
+`CanonicalFieldNameLiteral` by one member, which is additive — no exhaustive
+switch over that union exists in this package, and the consumer typecheck
+passes at both `nodenext` and `bundler` resolution with `skipLibCheck: false`._
 
 ### Added
 

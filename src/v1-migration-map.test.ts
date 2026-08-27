@@ -179,8 +179,41 @@ describe('v1 migration map', () => {
       }
     }
     // The six moved OUT of `mapped` and INTO `needs-decision` — nowhere else.
-    expect(v1KeysByDisposition('mapped').length).toBe(667);
+    // 671 since SYS-3570: the four `tangibleAssets*` keys moved the other way,
+    // out of `vocabulary-gap` and into `mapped`, once financial-statement
+    // declared the field their reason said they needed. `needs-decision` is
+    // UNCHANGED at 11 — deliberately, because `currentAssetCash*` sits there
+    // and did not ride along (SYS-3574 owns that call).
+    expect(v1KeysByDisposition('mapped').length).toBe(671);
     expect(v1KeysByDisposition('needs-decision').length).toBe(11);
+  });
+
+  it('SYS-3570 — the four tangibleAssets keys address the declared field, and currentAssetCash is NOT dragged along with them', () => {
+    // The gap was silent in the direction that matters: finsys-api's
+    // computeMetrics writes `metrics.tangibleAssets` for every period (from
+    // the extraction's own total-tangible-assets line, falling back to
+    // totalAssets - intangibles), but the v2 read enumerates from core's
+    // category registry rather than from row keys — a column core does not
+    // declare cannot appear on the wire. So every eval model addressing
+    // `tangibleAssets@financialStatement/...` scored WITHOUT it and reported
+    // no error, including the shipped default SME template.
+    for (const key of ['tangibleAssets', 'tangibleAssetsT1', 'tangibleAssetsT2', 'tangibleAssetsT3']) {
+      expect(v1MigrationEntry(key)!.disposition, key).toBe('mapped');
+      expect(v1Addresses(key), key).toEqual([{ category: 'financial-statement', field: 'tangibleAssets' }]);
+    }
+
+    // The negative half, and the reason it is in the SAME test rather than a
+    // neighbouring one: these two keys arrived at the same sweep together and
+    // read as one job. They are not. `currentAssetCash` is `needs-decision`,
+    // NOT `vocabulary-gap` — the category already declares six overlapping
+    // cash fields, and which of them the extractor populates is the
+    // financial-statement owner's call (SYS-3574), not a name lookup. A
+    // future edit that "finishes the pair" by giving it an address makes this
+    // red, which is the point.
+    for (const key of ['currentAssetCashT1', 'currentAssetCashT2', 'currentAssetCashT3']) {
+      expect(v1MigrationEntry(key)!.disposition, key).toBe('needs-decision');
+      expect(v1Addresses(key), key).toEqual([]);
+    }
   });
 
   it('SYS-3517 — every per-category instance sidecar v1 serves has a disposition, icInstances included', () => {

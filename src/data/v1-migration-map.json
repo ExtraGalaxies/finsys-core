@@ -5533,24 +5533,36 @@
       "via": "name-equality"
     },
     "tangibleAssets": {
-      "disposition": "vocabulary-gap",
-      "reason": "the OWNING category is known \u2014 financial-statement feeds this column through financialStatementSpec.wideTableMirror \u2014 but it declares no field for it. An earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not a lookup.",
-      "via": "consumer-sweep"
+      "address": {
+        "category": "financial-statement",
+        "field": "tangibleAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
     },
     "tangibleAssetsT1": {
-      "disposition": "vocabulary-gap",
-      "reason": "the OWNING category is known \u2014 financial-statement feeds this column through financialStatementSpec.wideTableMirror \u2014 but it declares no field for it. An earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not a lookup.",
-      "via": "consumer-sweep"
+      "address": {
+        "category": "financial-statement",
+        "field": "tangibleAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
     },
     "tangibleAssetsT2": {
-      "disposition": "vocabulary-gap",
-      "reason": "the OWNING category is known \u2014 financial-statement feeds this column through financialStatementSpec.wideTableMirror \u2014 but it declares no field for it. An earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not a lookup.",
-      "via": "consumer-sweep"
+      "address": {
+        "category": "financial-statement",
+        "field": "tangibleAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
     },
     "tangibleAssetsT3": {
-      "disposition": "vocabulary-gap",
-      "reason": "the OWNING category is known \u2014 financial-statement feeds this column through financialStatementSpec.wideTableMirror \u2014 but it declares no field for it. An earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not a lookup.",
-      "via": "consumer-sweep"
+      "address": {
+        "category": "financial-statement",
+        "field": "tangibleAssets"
+      },
+      "disposition": "mapped",
+      "via": "wide-column-feeder"
     },
     "taxesT1": {
       "address": {

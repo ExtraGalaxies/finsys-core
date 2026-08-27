@@ -717,9 +717,12 @@ describe("finxtract-financial-statement category", () => {
   it("is declared with the promoted financial-statement sibling table", () => {
     const cat = categorySchemaOf("financial-statement");
     expect(cat.canonicalTable).toBe("ihsfinancialstatement");
-    // The canonical vocabulary is exactly the host's 122 financial
-    // metric keys, verbatim and unprefixed.
-    expect(cat.fields).toHaveLength(122);
+    // The canonical vocabulary is exactly the host's financial metric keys,
+    // verbatim and unprefixed. 123 since SYS-3570: `tangibleAssets` was the
+    // one host metric with no declared field, and the v2 read enumerates
+    // from THIS registry rather than from row keys — so a column core does
+    // not declare cannot leave the server however populated it is.
+    expect(cat.fields).toHaveLength(123);
   });
 
   it("declares the header/structural fields with their true types", () => {
@@ -1296,7 +1299,9 @@ describe("monetary fields and the closed unit set", () => {
     // obligationMonthlyInstallment. THREE here but only TWO in the
     // legacyName pin below — the third has no flat column to rename, because
     // five flat columns collapse into it. See that assertion.
-    expect(money.length).toBe(148);
+    // 149 since SYS-3570: financial-statement declares tangibleAssets, a
+    // money-valued statement aggregate like its totalAssets neighbour.
+    expect(money.length).toBe(149);
     for (const { cat, f } of money) {
       expect(f.type, `${cat}.${f.name} type`).toBe("number");
       expect(f.unit, `${cat}.${f.name} unit`).toBeUndefined();

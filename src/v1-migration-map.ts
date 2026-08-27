@@ -384,11 +384,13 @@ let legacyBaseNames: Map<string, string> | null = null;
  * a defect at all. Excluding any address with an instance discriminator
  * leaves exactly the T-slot families (`bankBalanceT1..T6`, `revenueT1..T3`,
  * `incorporatedDate`'s two-attestor fanout, …) — verified empirically against
- * the live (post-F1, post-map-correction) map: 616 instance-less addresses
- * across `mapped` / `mapped-fanout` / `mapped-pending-build`, converging to
- * 252 distinct (category, field) bases, 0 conflicts — the property this
- * function relies on, and the conflict guard below is what would catch a
- * regression of it.
+ * the live (post-F1, post-map-correction, post-SYS-3570) map: 620
+ * instance-less addresses across `mapped` / `mapped-fanout` /
+ * `mapped-pending-build`, converging to 253 distinct (category, field) bases,
+ * 0 conflicts — the property this function relies on, and the conflict guard
+ * below is what would catch a regression of it. (Was 616/252 before SYS-3570
+ * gave the four `tangibleAssets*` keys an address; they share one base, so
+ * they add four addresses and one base.)
  */
 function legacyBaseNameIndex(): Map<string, string> {
   if (legacyBaseNames) return legacyBaseNames;

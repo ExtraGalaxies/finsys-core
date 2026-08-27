@@ -180,12 +180,20 @@ describe('F1 — a mapped-fanout address resolves through v1LegacyBaseNameOf ins
     expect(item!.data['T1']).toBe('2019-03-01')
   })
 
-  it('names the parity delta: derives the unreachable financials set from the catalog + map at runtime — exactly {currentAssetCash, tangibleAssets}', () => {
-    // "Derives", not "lists": if a third catalog base name ever loses its
-    // address (or one of these two gains one), this recomputes from the
-    // live catalog + map rather than comparing against a hand-written list,
-    // so it fails the moment the set changes rather than silently agreeing
-    // with a stale expectation.
+  it('names the parity delta: derives the unreachable financials set from the catalog + map at runtime — exactly {currentAssetCash}', () => {
+    // "Derives", not "lists": if another catalog base name ever loses its
+    // address (or this one gains one), this recomputes from the live catalog
+    // + map rather than comparing against a hand-written list, so it fails
+    // the moment the set changes rather than silently agreeing with a stale
+    // expectation.
+    //
+    // SYS-3570 took `tangibleAssets` OUT of this set — the mechanism working
+    // as designed: declaring the field gave the four `tangibleAssets*` map
+    // keys a real address, and the derivation went green here without being
+    // told about it. `currentAssetCash` stays: it is `needs-decision`, not a
+    // vocabulary gap — the category already declares six overlapping cash
+    // fields and which one the extractor populates is the financial-statement
+    // owner's call (SYS-3574), not a name lookup.
     const group = getDocumentTypeGroups().find((g) => g.documentType === 'financialStatements')!
     const category = extractionCategoryOf(group.documentType)!
 
@@ -203,7 +211,7 @@ describe('F1 — a mapped-fanout address resolves through v1LegacyBaseNameOf ins
     }
 
     const unreachable = [...catalogBaseNames].filter((b) => !reachable.has(b)).sort()
-    expect(unreachable).toEqual(['currentAssetCash', 'tangibleAssets'])
+    expect(unreachable).toEqual(['currentAssetCash'])
   })
 
   it('M3 (round 4): the SAME derivation, over EVERY document-type group, not just financials — a base column losing its address in ANY group goes red, not only in the one this suite happened to pick', () => {
@@ -231,7 +239,8 @@ describe('F1 — a mapped-fanout address resolves through v1LegacyBaseNameOf ins
 
     expect(unreachableByGroup).toEqual({
       bank_statements: [],
-      financials: ['currentAssetCash', 'tangibleAssets'],
+      // SYS-3570 removed `tangibleAssets` from this group's unreachable set.
+      financials: ['currentAssetCash'],
       form9: [],
       ssm_documents: [],
       ic_documents: [],
@@ -430,7 +439,8 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
     // The registry side.
     expect(Object.fromEntries(getDocumentTypeGroups().map((g) => [g.documentType, categoryFieldsOf(extractionCategoryOf(g.documentType)!).length]))).toEqual({
       bankStatements: 8,
-      financialStatements: 122,
+      // 123 since SYS-3570 declared financial-statement.tangibleAssets.
+      financialStatements: 123,
       form9: 3,
       ssm: 16,
       ic: 9,
@@ -441,7 +451,7 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
     // wide table's slot width. Equal for six types. Financial statements: 13
     // on the first slot (and 0 on the second — v1's financial slots were
     // misaligned with its documents), so the only visible denominator change
-    // on the flip is 13 → 122 there, and it is a correction.
+    // on the flip is 13 → 123 there, and it is a correction.
     const oneOfEach = {
       bankStatements: '[{"path":"https://x/a"}]', financialStatements: '[{"path":"https://x/b"}]',
       form9: 'https://x/c', ssm: 'https://x/d', ic: 'https://x/e',
@@ -455,7 +465,7 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
     const r = resolveExtractionStatusFromView(v)
     for (const d of r.documents) expect(d.status).toBe(DocExtractionStatus.NotUploaded)
     expect(r.documents.find((d) => d.fileType === 'bankStatements')!.totalColumns).toBe(8)
-    expect(r.documents.find((d) => d.fileType === 'financialStatements')!.totalColumns).toBe(122)
+    expect(r.documents.find((d) => d.fileType === 'financialStatements')!.totalColumns).toBe(123)
   })
 
   const hashA = 'a'.repeat(64)

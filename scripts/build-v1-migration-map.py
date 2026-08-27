@@ -237,12 +237,15 @@ SWEEP = {
                       'wanted as an SME signal (Kain) but 0 of 8,474 rows populated and no canonical '
                       'field of the right kind — subject-company.companySizeCode is a coded BAND, this '
                       'is a raw COUNT. Needs a new employeeCount:number on subject-company.'),
-    'tangibleAssets': ('vocabulary-gap',
-                       'the OWNING category is known — financial-statement feeds this column through '
-                       'financialStatementSpec.wideTableMirror — but it declares no field for it. An '
-                       'earlier automated match to nonCurrentAssetIntangibleAssets was a SUBSTRING '
-                       'ARTIFACT: intangible assets are the opposite fact. Needs a declared field, not '
-                       'a lookup.'),
+    # SYS-3570 removed the 'tangibleAssets' override that sat here. Its reason
+    # ended "Needs a declared field, not a lookup", and financial-statement now
+    # DECLARES that field — so the override would suppress the very address it
+    # was asking for. With it gone the four keys resolve through the ordinary
+    # feeder branch (tangibleAssets IS in wideColumnFeeders.ts's
+    # FINANCIAL_STATEMENT_COLUMNS), and the substring artifact the docstring
+    # above warns about still cannot come back: address() resolves the base
+    # name EXACTLY, so nonCurrentAssetIntangibleAssets is unreachable from
+    # here by construction, not by an override.
     'currentAssetCash': ('needs-decision',
                          'eight plausible financial-statement targets (CashAndBankBalances, CashAtBanks, '
                          'CashOnHand, CashAndCashEquivalents, ...) and no exact match. Which the extractor '

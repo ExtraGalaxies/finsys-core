@@ -1232,6 +1232,12 @@
           "description": "Balance-sheet total: assets."
         },
         {
+          "name": "tangibleAssets",
+          "type": "number",
+          "kind": "money",
+          "description": "Balance-sheet total: tangible assets — the statement's own total-tangible-assets line where it declares one, otherwise total assets less intangible assets. Not the complement of nonCurrentAssetIntangibleAssets by name: that field is one intangible line item, this is an assets aggregate."
+        },
+        {
           "name": "currentLiabilitiesTradeCreditors",
           "type": "number",
           "kind": "money",

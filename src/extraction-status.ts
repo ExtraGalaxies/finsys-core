@@ -302,7 +302,7 @@ export function resolveExtractionStatus(
  *    Form 9 (3) — and, for financial statements, 13 on the first slot then 0
  *    on the second, because v1's financial slots were misaligned with its
  *    documents. So the ONLY user-visible denominator change is financial
- *    statements: 13 → 122 on the first document and 0 → 122 on the rest, and
+ *    statements: 13 → 123 on the first document and 0 → 123 on the rest, and
  *    that is a correction. The test pins BOTH sides — the flat path's numbers
  *    next to the registry's — so a drift on either is a decision.
  *

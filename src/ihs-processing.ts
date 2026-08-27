@@ -246,7 +246,7 @@ const PLAIN_NUMBER_FORMAT = new Intl.NumberFormat('en-US', {
 })
 
 /**
- * Formatters are cached because a 122-field financial statement across six
+ * Formatters are cached because a 123-field financial statement across six
  * periods constructs ~730 of them per render, server-side on the IHS detail
  * path. Measured: ~22.5ms per 1000 construct+format vs ~0.2ms cached.
  * `null` caches a code Intl rejects, so a bad value costs one throw, not one

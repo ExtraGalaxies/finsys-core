@@ -4,6 +4,77 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+_No version number and no date yet on purpose: the cut happens at integration
+for the SYS-3569 epic, and a heading that names a version before the tag exists
+is the drift the publish preflight was built to catch._
+
+### Added
+
+- **`financial-statement.tangibleAssets` (SYS-3570, epic SYS-3569).** A
+  money-valued balance-sheet aggregate, declared beside `totalAssets` and
+  shaped like it.
+
+  **The column was never missing — the DECLARATION was, and that is why
+  nothing reported it.** finsys-api's `financialStatementSpec.computeMetrics`
+  reads `getFinancialValue("total-tangible-assets")` off the extraction first
+  and falls back to `totalAssets - intangibles`, then assigns
+  `metrics.tangibleAssets` for every period. But the v2 read enumerates from
+  THIS registry — `allCategories()` / `categoryFieldsOf()` — and never from
+  row keys, so a column core does not declare cannot appear on the wire
+  however populated it is. Every eval model addressing
+  `tangibleAssets@financialStatement/latest/currentYear` therefore scored
+  without it, silently.
+
+  One correction to the premise, checked rather than quoted: the shipped
+  default SME template no longer carries that reference. SYS-3568 removed
+  `tangibleAssets@financialStatement/latest/currentYear` from it and pointed
+  the chain at `totalEquity` instead, on the stated grounds that "@finsys/core
+  declares no such field" (finsys-client
+  `tests/unit/sys_3550_component_coverage_gate.spec.ts`). That grounds is what
+  this ticket removes, so whether the template goes back to `tangibleAssets`
+  or `totalEquity` is now the intended semantics is an owner call, not a
+  consequence of this change. Models lenders authored from the older template
+  still carry the reference and are the population that was scoring silently.
+
+  Not to be confused with `nonCurrentAssetIntangibleAssets`, which is one
+  intangible line item and the opposite fact. The two spellings are close
+  enough that an early automated pass matched them to each other; the
+  generator's `address()` gate has refused substring matches ever since.
+
+### Changed
+
+- **The four `tangibleAssets*` keys in the v1 migration map move from
+  `vocabulary-gap` to `mapped`**, addressing
+  `financial-statement`/`tangibleAssets` via `wide-column-feeder` — which is
+  precisely what their reason asked for ("Needs a declared field, not a
+  lookup"). `mapped` goes 667 → 671; `vocabulary-gap` 10 → 6. The
+  corresponding override was removed from
+  `scripts/build-v1-migration-map.py`, so a regeneration reproduces this file
+  rather than reinstating the gap — verified by running the generator against
+  a finsys-api checkout and diffing: byte-identical.
+
+- **`tangibleAssets` leaves the financials parity delta.** The derived
+  unreachable set for the `financials` document group is now
+  `{currentAssetCash}` alone. That test derives rather than lists, so it went
+  green on this change without being told about it.
+
+### Notes
+
+- **`currentAssetCash` deliberately did NOT ride along.** It is
+  `needs-decision`, not `vocabulary-gap`: the category already declares six
+  overlapping cash fields and `currentAssetCash` is an unratified roll-up with
+  no extraction source of its own, so which field it means is the
+  financial-statement owner's call (SYS-3574) rather than a name lookup. The
+  `needs-decision` count is unchanged at 11, and a test now pins that
+  explicitly so a later edit "finishing the pair" is a visible decision.
+
+- **Consumers still have work to do; this ticket only makes it possible.**
+  Declaring the field is necessary and not sufficient — finsys-api must carry
+  the value onto the canonical row/envelope (SYS-3571) and finsys-client must
+  read it (SYS-3572). Until those land, the field is addressable and empty.
+
 ## [9.0.0] - 2026-08-25
 
 **MAJOR — the bureau gains a furnisher axis (SYS-3554).** Every breaking item

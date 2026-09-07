@@ -31,6 +31,21 @@ a consumer typecheck before release._
 
 ### Added
 
+- **Contract invariants between the map and the bridge** (`v1-contract-invariants.test.ts`).
+  Deliberately not scenario tests. The three core defects found this week —
+  SYS-3596, SYS-3602 and this one — were all found by inspection, and none was
+  reachable by an end-to-end run, because all three live in code paths nothing
+  currently exercises. They are Phase 6 time bombs precisely because they are
+  unreached today. A harness tests what the system DOES; these assert what it
+  PROMISES, in the package that owns the contract, in milliseconds.
+
+  Three assertions: every `instanceKeyPrefix` key returns an ARRAY (all 17,
+  including the 14 the SYS-3596 report never observed); the structural sidecars
+  the map says v2 exposes are actually emitted (skipped, naming SYS-3602 and the
+  field-authorization question that stops it being a one-liner); and the gap
+  between claimed and emitted is EXACTLY `icInstances`, so a second dropped
+  sidecar fails even while that one is open.
+
 - **`withheld`** — v1 serves it, the v2 successor deliberately refuses it, and
   there is no other destination. The honest answer to "where do I get this" is
   "nowhere, by design", which `relocated` obscured.

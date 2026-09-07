@@ -79,7 +79,15 @@ export type V1Disposition =
   /** A destination is wanted and no canonical field exists to be the destination. */
   | 'vocabulary-gap'
   /** More than one defensible destination; picking one needs an owner, not a lookup. */
-  | 'needs-decision';
+  | 'needs-decision'
+  /**
+   * SYS-3604 — v1 serves it, the v2 successor deliberately refuses it, and
+   * there is no other destination. Distinct from `relocated`, which promises
+   * a surface: six keys carried that promise naming an endpoint that had
+   * removed them in review, and `flatRecordFromView` quoted it back to the
+   * caller. The honest answer here is "nowhere, by design".
+   */
+  | 'withheld';
 
 /** How the address was derived. The first two are authored; the rest are weaker. */
 export type V1ResolutionSource =
@@ -140,6 +148,7 @@ const DISPOSITIONS: ReadonlySet<string> = new Set<V1Disposition>([
   'mapped-fanout',
   'mapped-pending-build',
   'relocated',
+  'withheld',
   'structural',
   'retired',
   'vocabulary-gap',

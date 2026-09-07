@@ -229,6 +229,62 @@ DOC_POINTERS = {
     'invoices', 'supplementaryDoc', 'tnbBills',
 }
 
+
+# ── SYS-3604 ────────────────────────────────────────────────────────────────
+# `surface` is a PROMISE to a consumer about where to go and get the value.
+# This script already treats a relocated key with NO surface as a defect ("it
+# reads as answered and is not"), but nothing checked whether the surface it
+# NAMES actually serves the key — so six keys claimed
+# `GET /lender/applications/:ihsId` while that endpoint deliberately refuses
+# them, and the claim reached a RUNTIME diagnostic: flatRecordFromView's
+# `unplaced` reason quotes `entry.surface`, so a consumer was told to fetch
+# from an endpoint that will not answer.
+#
+# The endpoint's behaviour is right — applicationRecordService removed them on
+# purpose, with reasons (lenderId "names the COMPETING lender", the user FKs
+# identify STAFF at the originating company, finxtractConfigId's "only meaning
+# is whose credentials were used"). The map's claim about it was the false part.
+APPLICATIONS_SURFACE = 'GET /lender/applications/:ihsId'
+
+
+def served_by_application_record():
+    """The keys GET /lender/applications/:ihsId actually returns.
+
+    Parsed from applicationRecordService.ts rather than restated here: a second
+    hand-maintained copy would drift exactly the way the surface claim did, and
+    drift silently, which is the whole defect.
+    """
+    src = (API / 'src/services/applicationRecordService.ts').read_text()
+    served = set()
+    for name in ('PARTY_FIELDS', 'FACILITY_FIELDS', 'SYSTEM_FIELDS'):
+        m = re.search(r'const ' + name + r' = \[(.*?)\] as const', src, re.S)
+        if not m:
+            raise SystemExit(
+                'SYS-3604: could not parse ' + name + ' out of '
+                'applicationRecordService.ts. This fails CLOSED rather than promise '
+                'a surface it could not verify — fix the parser, do not delete it.')
+        served |= set(re.findall(r'"([A-Za-z0-9_]+)"', m.group(1)))
+    # Lifted to the top level of the response rather than living in a bucket.
+    served |= {'applicationId', 'ihsId', 'status', 'statusDescription', 'consents'}
+    # Declared renames: the key IS served, under another name. Keep this tiny
+    # and explicit — it is the one place a mismatch is legitimately fine.
+    served |= {'clientUserId'}     # served as customerUserId (PARTY_FIELDS)
+    if len(served) < 30:
+        raise SystemExit(
+            'SYS-3604: parsed only ' + str(len(served)) + ' served keys, too few to '
+            'be real — the file shape changed and this check would pass vacuously.')
+    return served
+
+
+WITHHELD_REASON = (
+    'NOT served by ' + APPLICATIONS_SURFACE + ', deliberately: applicationRecordService '
+    'removed it in review before publication, because publication is what makes an API '
+    'permanent. v1 still serves it. There is no v2 destination — the honest answer to '
+    '"where do I get this" is "nowhere, by design", which `relocated` obscured.'
+)
+
+SERVED_BY_APPLICATION_RECORD = served_by_application_record()
+
 SWEEP = {
     'companyWebsite': ('retired',
                        'no consumer in six repos; absent from the core catalog entirely. The only '
@@ -462,8 +518,15 @@ for key in sorted(v1.keys()):
             e = {'disposition': disp, 'reason': reason, 'via': 'consumer-sweep'}
             # A relocated key that names no surface is the same defect as a
             # mapped key with no address: it reads as answered and is not.
+            # SYS-3604: and a surface that does not serve the key is the same
+            # defect again, one step further on — so the surface is only
+            # promised when the endpoint's own source says it is served.
             if disp == 'relocated':
-                e['surface'] = 'GET /lender/applications/:ihsId'
+                if key in SERVED_BY_APPLICATION_RECORD:
+                    e['surface'] = APPLICATIONS_SURFACE
+                else:
+                    e = {'disposition': 'withheld', 'via': e['via'],
+                         'reason': WITHHELD_REASON}
             entries[key] = e
         elif base in OBLIGATIONS:
             entries[key] = {
@@ -529,8 +592,17 @@ for key in sorted(v1.keys()):
         else:
             disp, target = audit.get(base, (None, None))
             if disp == 'NOT-ADAPTER' and target and target.startswith(('facility', 'workflow')):
-                entries[key] = {'disposition': 'relocated', 'via': 'column-audit',
-                                'surface': 'GET /lender/applications/:ihsId'}
+                # SYS-3604: this branch used to assign the surface
+                # UNCONDITIONALLY from a column-audit classification, with
+                # nothing comparing it against what the endpoint serves. That
+                # is how all six false claims were minted, and why every one of
+                # them carries `via: column-audit` and no note.
+                if key in SERVED_BY_APPLICATION_RECORD:
+                    entries[key] = {'disposition': 'relocated', 'via': 'column-audit',
+                                    'surface': APPLICATIONS_SURFACE}
+                else:
+                    entries[key] = {'disposition': 'withheld', 'via': 'column-audit',
+                                    'reason': WITHHELD_REASON}
             elif disp == 'NOT-ADAPTER' and target and target.startswith('consent'):
                 entries[key] = {'disposition': 'relocated', 'via': 'column-audit',
                                 'surface': 'the consent engine'}

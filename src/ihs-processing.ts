@@ -2540,13 +2540,50 @@ function valueAtInstanceKey(view: CanonicalView, address: V1Address): AddressLoo
 }
 
 /**
- * `mapped` with `instanceKeyPrefix`: the FIRST instance (in view order)
- * whose key EQUALS the prefix, or continues it at a `#`-delimited boundary
- * (`document-intake` keys are `<docType>#<n>`, e.g. `bankStatements#1`). v1
- * held ONE value per pointer column (a JSON array of paths collapsed to a
- * single wide cell); v2 keys one instance per file, so first-in-order is the
- * stated parity choice, not an arbitrary one — the same reason this path
- * never contributes to `ambiguous`.
+ * `mapped` with `instanceKeyPrefix`: EVERY instance whose key equals the
+ * prefix or continues it at a `#`-delimited boundary (`document-intake` keys
+ * are `<docType>#<sha256>`), aggregated into the array shape v1 held.
+ *
+ * SYS-3596 — this used to return the FIRST match only, and defended that as
+ * "the stated parity choice" on the premise that "v1 held ONE value per
+ * pointer column". That premise was wrong, and this package contradicted it
+ * in seventeen places: every migration-map entry resolving through this
+ * function says "SHAPE CHANGE, not a rename. The v1 column held a JSON array
+ * of paths". So six bank statements came back as one bare URL string, and
+ * `buildDocumentRows` — which feeds the document table — rendered one row.
+ * The other five were not listed, not downloadable, and (bankStatements and
+ * financialStatements being re-uploadable) not replaceable either.
+ *
+ * It stayed invisible because nothing user-facing reads the bridged fields
+ * today: finsys-client's detail page bypasses this bridge, and finsys-api
+ * does not import `flatRecordFromView` at all. It stops being invisible at
+ * Phase 6, when the flat columns drop and the published read has to be served
+ * from the canonical plane.
+ *
+ * ORDERED BY `periodPosition`, not view order — the same 1-based ordinal the
+ * rendered tables use, so the bridged list and the instance-shaped list agree
+ * on sequence. Instances without one sort last, in view order, which is the
+ * only stable answer when the plane does not say.
+ *
+ * Each entry carries `path`, plus `uploadedBy`/`createdAt` where the instance
+ * has them. Not `documentId` — see the note at the derivation.
+ *
+ * OBJECTS, not bare strings, and this is load-bearing rather than cosmetic:
+ * `parseFileField` returns an already-parsed array AS-IS, so an array of bare
+ * paths would reach `buildDocumentRows` with `file.path === undefined` on
+ * every entry — six rows, none downloadable. That would look like a fix
+ * (it is an array!) while being worse than the collapse it replaced.
+ *
+ * `month`/`year` are NOT emitted. v1 carried a real calendar period;
+ * `periodPosition` is an ordinal, not a date, and `document-intake` carries
+ * no statement period. Deriving `month` from `periodPosition` would render a
+ * confident T1..T6 that no data supports — the same reason
+ * `ihsCanonicalReadService` omits `confidence` rather than guessing it, since
+ * a fabricated value reads as evidence. The consumer's `timePeriod` therefore
+ * falls back to 'ALL'; that residual is tracked rather than papered over.
+ *
+ * Still never contributes to `ambiguous`: N documents under one v1 key is the
+ * DECLARED shape, not two attestors disagreeing about one fact.
  *
  * L-3 (round 5): a bare `startsWith(prefix)` — this function's old body —
  * matches any LONGER prefix too: `bankStatements` is a prefix of
@@ -2559,9 +2596,42 @@ function valueAtInstanceKey(view: CanonicalView, address: V1Address): AddressLoo
 function valueAtInstanceKeyPrefix(view: CanonicalView, address: V1Address): AddressLookup {
   const instances = view.categories[address.category]?.instances ?? []
   const prefix = address.instanceKeyPrefix!
-  const inst = instances.find((i) => i.instanceKey === prefix || i.instanceKey.startsWith(`${prefix}#`))
-  if (!inst || !Object.prototype.hasOwnProperty.call(inst.fields, address.field)) return { found: false }
-  return { found: true, value: inst.fields[address.field]!.value }
+  // The `#` boundary is L-3's fix and still matters: a bare startsWith would
+  // let `bankStatements` swallow `bankStatementsExtraordinary`.
+  const matches = instances.filter(
+    (i) => i.instanceKey === prefix || i.instanceKey.startsWith(`${prefix}#`),
+  )
+  const withField = matches.filter((i) =>
+    Object.prototype.hasOwnProperty.call(i.fields, address.field),
+  )
+  if (withField.length === 0) return { found: false }
+
+  const ordered = withField
+    .map((inst, viewOrder) => ({ inst, viewOrder }))
+    .sort((a, b) => {
+      const pa = a.inst.periodPosition
+      const pb = b.inst.periodPosition
+      if (pa !== undefined && pb !== undefined) return pa - pb || a.viewOrder - b.viewOrder
+      if (pa !== undefined) return -1
+      if (pb !== undefined) return 1
+      return a.viewOrder - b.viewOrder
+    })
+    .map(({ inst }) => {
+      const entry: Record<string, unknown> = { path: inst.fields[address.field]!.value }
+      // No `documentId` here, deliberately. `documentHashOfKey` looks like the
+      // right source and is NOT: it returns the segment BEFORE the `#`, so on
+      // a `<docType>#<n>` intake key it yields "bankStatements", the doc type.
+      // `buildDocumentRows` already derives the id from the path's last
+      // segment — the actual DMS content hash — so emitting a wrong one here
+      // would override a correct derivation with the field name.
+      const uploadedBy = inst.fields.uploadedBy?.value
+      if (uploadedBy !== undefined) entry.uploadedBy = uploadedBy
+      const uploadedAt = inst.fields.uploadedAt?.value
+      if (uploadedAt !== undefined) entry.createdAt = uploadedAt
+      return entry
+    })
+
+  return { found: true, value: ordered }
 }
 
 /**

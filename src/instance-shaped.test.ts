@@ -1589,7 +1589,11 @@ describe('flatRecordFromView — the v1 flat record\'s shape, re-derived from a 
     const { record: out } = flatRecordFromView(v2, record)
     expect(out['email']).toBe(v1.email)
     expect(out['mobilePhoneNo']).toBe(v1.mobilePhoneNo)
-    expect(out['bankStatements']).toBe(v1.bankStatements)
+    // SYS-3596: this key now aggregates to the v1 ARRAY shape rather than a
+    // bare scalar (see valueAtInstanceKeyPrefix). One intake instance in this
+    // fixture, so one entry — still proving the pointer RESOLVES, which is
+    // what this assertion was here for.
+    expect(out['bankStatements']).toEqual([{ path: v1.bankStatements }])
   })
 
   it('(j) mapped-fanout incorporatedDate: two agreeing attestors place cleanly; disagreeing attestors place the FIRST address (map order) and flag ambiguous (mutation: disagree check compares foundValues[0] against itself -> ambiguous never populates)', () => {
@@ -1813,7 +1817,7 @@ describe('flatRecordFromView — valueAtPlainAddress prefers the first NON-SENTI
 // ── L-3 (round 5): instanceKeyPrefix requires an exact key or a `#` boundary ──
 
 describe('flatRecordFromView — valueAtInstanceKeyPrefix does not let a longer sibling prefix steal the match (L-3, round 5)', () => {
-  it('bankStatementsExtraordinary#1 ahead of bankStatements#1 in view order does not win the "bankStatements" lookup (mutation: revert to bare `i.instanceKey.startsWith(prefix)` -> the Extraordinary row wins because it is listed first)', () => {
+  it('bankStatementsExtraordinary#1 ahead of bankStatements#1 in view order is EXCLUDED from the "bankStatements" lookup (mutation: revert to bare `i.instanceKey.startsWith(prefix)` -> the Extraordinary row is aggregated in alongside the real one)', () => {
     const v2: CanonicalView = view({
       'document-intake': {
         cardinality: 'multi',
@@ -1824,7 +1828,13 @@ describe('flatRecordFromView — valueAtInstanceKeyPrefix does not let a longer 
       },
     })
     const { record: out } = flatRecordFromView(v2)
-    expect(out['bankStatements']).toBe(`${DMS}right.pdf`)
+    // SYS-3596: aggregation makes this guard STRICTER, not weaker. Under the
+    // old first-match behaviour a broken boundary swapped one value for
+    // another; now it would silently add a foreign document to the list, so
+    // the assertion is on the whole set rather than on which one won.
+    expect((out['bankStatements'] as Array<{ path: string }>).map((e) => e.path)).toEqual([
+      `${DMS}right.pdf`,
+    ])
   })
 })
 

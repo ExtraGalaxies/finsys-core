@@ -4,6 +4,50 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.2.0] - 2026-09-07
+
+_MINOR. Restores a shape the v1 contract always had and this bridge stopped
+serving; it does not change a shape consumers were correctly relying on._
+
+### Fixed
+
+- **SYS-3596 — `flatRecordFromView` collapsed N documents to one.** All 17 v1
+  keys that resolve through `valueAtInstanceKeyPrefix` (`bankStatements`,
+  `financialStatements`, `supplementaryDoc`, `ssm`, `ic`, `form9`, `payslips`,
+  `epfStatements`, `invoices`, `consentForm`, `tnbBills`, and the six other
+  document pointers) returned the FIRST matching `document-intake` instance's
+  bare `pathInDms` string. v1 held a JSON array. Six bank statements came back
+  as one URL, so `buildDocumentRows` rendered one row — the other five were
+  not listed, not downloadable, and (for the re-uploadable types) not
+  replaceable.
+
+  The behaviour was deliberate and defended in a docblock as "the stated
+  parity choice", on the premise that "v1 held ONE value per pointer column".
+  The migration map's own entry for each of these 17 keys says the opposite —
+  "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths".
+
+  Now returns every matching instance, ordered by `periodPosition`, as
+  `{ path, uploadedBy?, createdAt? }` objects.
+
+  Three things it deliberately does NOT do:
+
+  - **No bare path strings.** `parseFileField` returns an already-parsed array
+    as-is, so an array of strings would reach `buildDocumentRows` with
+    `file.path === undefined` on every entry — six rows, none downloadable.
+    That would look like a fix while being worse than the bug.
+  - **No fabricated `month`/`year`.** v1 carried a real calendar period;
+    `periodPosition` is an ordinal, and `document-intake` carries no statement
+    period. Deriving one would render a confident T1..T6 that no data
+    supports. Consumers' `timePeriod` therefore reads `ALL`; tracked as a
+    residual on SYS-3596 rather than papered over.
+  - **No `documentId`.** `documentHashOfKey` returns the segment BEFORE the
+    `#`, which on a `<docType>#<n>` intake key is the doc type, not a hash.
+    `buildDocumentRows` already derives the id from the path's last segment.
+
+  The L-3 `#`-boundary guard is unchanged and is now stricter in effect: a
+  broken boundary used to swap one value for another, and would now add a
+  foreign document to the list.
+
 ## [9.1.0] - 2026-08-27
 
 _Cut at integration for the SYS-3569 epic. MINOR: this widens

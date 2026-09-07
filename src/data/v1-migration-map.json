@@ -222,13 +222,13 @@
       "via": "name-equality"
     },
     "assignedFromUserId": {
-      "disposition": "relocated",
-      "surface": "GET /lender/applications/:ihsId",
+      "disposition": "withheld",
+      "reason": "NOT served by GET /lender/applications/:ihsId, deliberately: applicationRecordService removed it in review before publication, because publication is what makes an API permanent. v1 still serves it. There is no v2 destination \u2014 the honest answer to \"where do I get this\" is \"nowhere, by design\", which `relocated` obscured.",
       "via": "column-audit"
     },
     "assignedToUserId": {
-      "disposition": "relocated",
-      "surface": "GET /lender/applications/:ihsId",
+      "disposition": "withheld",
+      "reason": "NOT served by GET /lender/applications/:ihsId, deliberately: applicationRecordService removed it in review before publication, because publication is what makes an API permanent. v1 still serves it. There is no v2 destination \u2014 the honest answer to \"where do I get this\" is \"nowhere, by design\", which `relocated` obscured.",
       "via": "column-audit"
     },
     "avgMaximumDemand": {
@@ -671,8 +671,8 @@
       "via": "column-audit"
     },
     "createdBy": {
-      "disposition": "relocated",
-      "surface": "GET /lender/applications/:ihsId",
+      "disposition": "withheld",
+      "reason": "NOT served by GET /lender/applications/:ihsId, deliberately: applicationRecordService removed it in review before publication, because publication is what makes an API permanent. v1 still serves it. There is no v2 destination \u2014 the honest answer to \"where do I get this\" is \"nowhere, by design\", which `relocated` obscured.",
       "via": "column-audit"
     },
     "createdByEmpCompanyID": {
@@ -2612,8 +2612,8 @@
       "via": "column-audit"
     },
     "finxtractConfigId": {
-      "disposition": "relocated",
-      "surface": "GET /lender/applications/:ihsId",
+      "disposition": "withheld",
+      "reason": "NOT served by GET /lender/applications/:ihsId, deliberately: applicationRecordService removed it in review before publication, because publication is what makes an API permanent. v1 still serves it. There is no v2 destination \u2014 the honest answer to \"where do I get this\" is \"nowhere, by design\", which `relocated` obscured.",
       "via": "column-audit"
     },
     "flexiRedrawOptIn": {
@@ -2948,8 +2948,8 @@
       "via": "name-equality"
     },
     "lenderId": {
-      "disposition": "relocated",
-      "surface": "GET /lender/applications/:ihsId",
+      "disposition": "withheld",
+      "reason": "NOT served by GET /lender/applications/:ihsId, deliberately: applicationRecordService removed it in review before publication, because publication is what makes an API permanent. v1 still serves it. There is no v2 destination \u2014 the honest answer to \"where do I get this\" is \"nowhere, by design\", which `relocated` obscured.",
       "via": "column-audit"
     },
     "lengthOfServiceMonth": {
@@ -5949,8 +5949,8 @@
       "via": "column-audit"
     },
     "updatedBy": {
-      "disposition": "relocated",
-      "surface": "GET /lender/applications/:ihsId",
+      "disposition": "withheld",
+      "reason": "NOT served by GET /lender/applications/:ihsId, deliberately: applicationRecordService removed it in review before publication, because publication is what makes an API permanent. v1 still serves it. There is no v2 destination \u2014 the honest answer to \"where do I get this\" is \"nowhere, by design\", which `relocated` obscured.",
       "via": "column-audit"
     },
     "vehicleCondition": {

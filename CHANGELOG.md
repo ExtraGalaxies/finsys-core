@@ -4,6 +4,52 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.0] - 2026-09-07
+
+_MINOR — widens `V1Disposition` by one member. Additive: the dispatch in
+`flatRecordFromView` is an if/else chain with a catch-all, not an exhaustive
+switch, so a new disposition lands in the never-placed branch by construction.
+Same standard 9.1.0 used for widening `CanonicalFieldNameLiteral`; confirm with
+a consumer typecheck before release._
+
+### Fixed
+
+- **SYS-3604 — the map promised a surface that refuses to serve the key.**
+  Six keys (`lenderId`, `assignedFromUserId`, `assignedToUserId`, `createdBy`,
+  `updatedBy`, `finxtractConfigId`) carried `disposition: relocated` naming
+  `GET /lender/applications/:ihsId`. That endpoint removed all six in review
+  before publication, deliberately and with reasons — `lenderId` "names the
+  COMPETING lender", the user FKs identify staff at the originating company,
+  `finxtractConfigId`'s "only meaning is whose credentials were used".
+
+  The endpoint is right; the map's claim about it was false. And the claim was
+  not merely documentation: `relocated` makes `flatRecordFromView` look the key
+  up and, on a miss, emit an `unplaced` reason **quoting `entry.surface`** — so
+  a consumer was told to fetch from an endpoint that will not answer.
+
+  All six now carry the new `withheld` disposition and a reason, and no surface.
+
+### Added
+
+- **`withheld`** — v1 serves it, the v2 successor deliberately refuses it, and
+  there is no other destination. The honest answer to "where do I get this" is
+  "nowhere, by design", which `relocated` obscured.
+
+### Changed
+
+- **`build-v1-migration-map.py` can no longer make the claim unverified.** Both
+  branches that assigned this surface did so *unconditionally* from a column-
+  audit classification, with nothing comparing the assignment against what the
+  endpoint serves — which is why all six carry `via: column-audit` and no note.
+  The generator now parses `PARTY_FIELDS`/`FACILITY_FIELDS`/`SYSTEM_FIELDS` out
+  of `applicationRecordService.ts` and emits `withheld` for anything absent. It
+  **fails closed** if it cannot parse those arrays, or if it parses implausibly
+  few keys, rather than promising a surface it could not verify.
+
+  The script already treated a *missing* surface as a defect — "it reads as
+  answered and is not". This is the same defect one step on: a surface that is
+  present and wrong.
+
 ## [9.2.0] - 2026-09-07
 
 _MINOR. Restores a shape the v1 contract always had and this bridge stopped

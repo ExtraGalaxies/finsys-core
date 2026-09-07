@@ -59,6 +59,11 @@ const DISPOSITIONS: readonly V1Disposition[] = [
   'retired',
   'vocabulary-gap',
   'needs-decision',
+  // SYS-3604 — v1 serves it, the v2 successor deliberately refuses it, and
+  // there is no other destination. Listed here as well as in the source's own
+  // set deliberately: this copy is an INDEPENDENT assertion, so a disposition
+  // added to the source without thought lands here as a failure.
+  'withheld',
 ];
 
 /** Dispositions that assert a destination exists. Everything else must not carry one. */
@@ -254,4 +259,55 @@ describe('v1 migration map', () => {
     expect(v1Addresses('a-key-that-does-not-exist')).toEqual([]);
     expect(v1MigrationEntry('a-key-that-does-not-exist')).toBeNull();
   });
+
+  // ── SYS-3604 ──────────────────────────────────────────────────────────
+  it('never promises a surface for a key that surface refuses to serve', () => {
+    // `surface` is a PROMISE about where to go and get the value, and it is
+    // not decorative: flatRecordFromView quotes it back to the caller in its
+    // `unplaced` reason. Six keys promised GET /lender/applications/:ihsId
+    // while applicationRecordService had deliberately removed them in review
+    // — so the map told consumers to fetch from an endpoint that refuses.
+    //
+    // The generator now reads the endpoint's own source and emits `withheld`
+    // instead. This pins the OUTCOME, so the six cannot quietly drift back to
+    // a claim if that check is ever bypassed or hand-edited.
+    const WITHHELD_BY_APPLICATION_RECORD = [
+      'lenderId',
+      'assignedFromUserId',
+      'assignedToUserId',
+      'createdBy',
+      'updatedBy',
+      'finxtractConfigId',
+    ]
+
+    for (const key of WITHHELD_BY_APPLICATION_RECORD) {
+      const entry = v1MigrationEntry(key)
+      expect(entry, `${key} should still be in the map`).toBeDefined()
+      expect(entry!.disposition, `${key} is not relocated — nothing serves it`).toBe('withheld')
+      expect(entry!.surface, `${key} must promise no surface`).toBeUndefined()
+      // Withheld without a reason is the same defect one step on: it reads as
+      // answered and is not.
+      expect(entry!.reason, `${key} must say WHY`).toBeTruthy()
+    }
+  })
+
+  it('every withheld key says why, and no relocated key is left without a surface', () => {
+    // The pair of invariants that make `withheld` honest rather than a place
+    // to hide keys nobody wants to think about.
+    let withheld = 0
+    for (const key of v1MigrationKeys()) {
+      const e = v1MigrationEntry(key)!
+      if (e.disposition === 'withheld') {
+        withheld++
+        expect(e.reason, `${key}: withheld must carry a reason`).toBeTruthy()
+        expect(e.surface, `${key}: withheld must NOT name a surface`).toBeUndefined()
+      }
+      if (e.disposition === 'relocated') {
+        expect(e.surface, `${key}: relocated must name its surface`).toBeTruthy()
+      }
+    }
+    // Premise guard: if this ever reads zero the assertions above are vacuous.
+    expect(withheld, 'no withheld keys — this test proves nothing').toBeGreaterThan(0)
+  })
+
 });

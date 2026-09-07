@@ -2775,7 +2775,7 @@ function valueAtTSlot(view: CanonicalView, address: V1Address, tSlot: string, ro
  *   "the caller forgot a bucket"; 48 of 51 relocated keys carry
  *   `GET /lender/applications/:ihsId`, 3 carry the consent engine).
  * - `retired`, `vocabulary-gap`, `needs-decision`, `mapped-pending-build`,
- *   `structural`: NEVER placed, regardless of what the view holds —
+ *   `structural`, `withheld`: NEVER placed, regardless of what the view holds —
  *   `unplaced` with the map entry's own `note`/`reason` string (never
  *   empty in the current map for these five dispositions). `structural`
  *   covers seven entries: the four instance sidecars this function DOES
@@ -2907,8 +2907,16 @@ export function flatRecordFromView(view: CanonicalView, record?: ApplicationReco
         })
       }
     } else {
-      // retired, vocabulary-gap, structural, needs-decision, mapped-pending-build:
-      // never placed, regardless of what the view holds.
+      // retired, vocabulary-gap, structural, needs-decision, mapped-pending-build,
+      // withheld: never placed, regardless of what the view holds.
+      //
+      // SYS-3604 — `withheld` lands here rather than in the `relocated` branch
+      // above, and that is the point of it existing. `relocated` LOOKS THE KEY
+      // UP in the application record and, on a miss, emits a reason quoting
+      // `entry.surface`. For a key the successor deliberately refuses, that
+      // told the caller to fetch from an endpoint that will not answer. Here
+      // the reason is the map's own, which says plainly that there is nowhere
+      // to go.
       unplaced.push({ key, disposition: entry.disposition, reason: entry.note ?? entry.reason ?? '' })
     }
   }

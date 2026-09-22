@@ -19,7 +19,7 @@ import { assertAdapterCategory, categorySchemaOf } from './adapter-categories.js
 import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
 
 /**
- * SYS-3705 — the byte-identity proof.
+ * SYS-3705 — the byte-identity proof for v1-lineage output.
  *
  * SYS-3705 changes how a document type resolves its extraction category, and
  * how a category's fields become instance rows and table columns, so that a
@@ -27,14 +27,24 @@ import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
  * every category that DOES have v1 lineage renders exactly as before.
  *
  * The digests below were computed by this test against the code as it stood
- * BEFORE the change (v9.3.0, 0618e34), and never regenerated since. Every
- * output the change could reach is serialized with JSON.stringify and hashed,
- * one SHA-256 per output, so equality is byte equality and a failure names
- * the output that moved. (A digest rather than a stored golden because the
+ * BEFORE the change (v9.3.0, 0618e34), and never regenerated since. Each
+ * output the change could reach, restricted to its v1 part (see below), is
+ * serialized with JSON.stringify and hashed, one SHA-256 per output, so
+ * equality is byte equality and a failure names the output that moved. (A digest rather than a stored golden because the
  * serialized fixture is ~0.5 MB. To see the actual diff, check out 0618e34,
  * dump `everyOutput()` to a file on both sides, and diff them.) The lists below are closed on purpose: they
  * name the categories and document types that existed then, so the fixture
  * is a function of that moment and not of whatever the registry holds today.
+ *
+ * WHAT IS PROVEN, EXACTLY. Byte identity of the v1 PART of each output
+ * below: for the v1 document types, v1 categories and v1 table groups, every
+ * row, table, provenance entry, detail and flat-record value is unchanged.
+ * NOT proven, and NOT true: that every output is unchanged whole. The status
+ * resolvers now also emit a row per NEW document type, so their `summary`
+ * totals rise by 2 (NotUploaded) — those rows and the summaries are filtered
+ * out of what is hashed here, and the change is disclosed in the CHANGELOG.
+ * Likewise the documents table and the table map gain the new types' own
+ * entries, which are filtered out.
  *
  * Do NOT update the snapshot to make this pass. A diff here means a
  * v1-lineage category now renders differently, which is the one thing
@@ -202,7 +212,8 @@ function flatFixture(): Record<string, unknown> {
  * The same fixture with the two SYS-3705 categories populated beside the v1
  * ones — a credit-bureau report (principal + one party) and a two-period
  * management account, both joined to intake rows. Their presence must not
- * move a single byte of any v1 output: a lineage-free category that leaked
+ * move a single byte of the v1 part of any output (their own rows are
+ * filtered out, see the file doc): a lineage-free category that leaked
  * into a shared structure (the provenance map, the detail panel, the flat
  * record, another group's table) would show up here and nowhere else.
  */
@@ -277,7 +288,7 @@ function digests(): Record<string, string> {
   return Object.fromEntries(Object.entries(everyOutput()).map(([k, v]) => [k, sha256(JSON.stringify(v))]))
 }
 
-describe('SYS-3705 — every v1-lineage category renders byte-identically to 9.3.0', () => {
+describe('SYS-3705 — the v1-lineage part of every view and flat output is byte-identical to 9.3.0', () => {
   it('the fixture exercises every path it claims to (a non-vacuous golden)', () => {
     const v = fixtureView()
     const tables = buildFileFieldTablesFromView(v)
@@ -301,7 +312,7 @@ describe('SYS-3705 — every v1-lineage category renders byte-identically to 9.3
     expect(withNew).toEqual(GOLDEN_DIGESTS_AT_9_3_0)
   })
 
-  it('matches the digests captured before the change, byte for byte', () => {
+  it('matches the digests captured before the change, byte for byte, v1 rows only', () => {
     // Diagnostics for a red run: SYS3705_DUMP=<path> writes the full outputs
     // so the same dump taken at 0618e34 can be diffed against it.
     if (process.env.SYS3705_DUMP) writeFileSync(process.env.SYS3705_DUMP, JSON.stringify(everyOutput(), null, 1) + '\n')

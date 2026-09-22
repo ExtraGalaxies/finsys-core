@@ -8,8 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 _MINOR — two categories, two document types, and one optional catalog tag.
 Additive to every type: `DocumentTypeGroup.extractionCategory`,
-`TaggedFieldData.extraction_category` and `CategorySpec.numericColumnNames` are
-all optional, and `AdapterCategoryId` / `CanonicalFieldNameLiteral` widen the
+`TaggedFieldData.extraction_category`, `CategorySpec.numericColumnNames` and
+`CategorySpec.noLegacyProvenance` are all optional, and `AdapterCategoryId` / `CanonicalFieldNameLiteral` widen the
 way 9.1.0 widened them. Read **Consumer-visible** below before release — two
 list outputs grow by default._
 
@@ -44,6 +44,8 @@ list outputs grow by default._
   lineage, which the instance-shaped renderers key by canonical field name.
 - **`CategorySpec.numericColumnNames`** — optional; when given, `isNumeric`
   follows it instead of the name heuristic.
+- **`CategorySpec.noLegacyProvenance`** — optional; when true, the table is
+  built without the v1-keyed provenance map (see Consumer-visible).
 
 ### Changed
 
@@ -59,26 +61,41 @@ list outputs grow by default._
     rows by canonical field name, and a `periodPosition` coordinate is the
     period (`T{n}`); `buildFileFieldTablesFromView` renders its table from the
     registry field list. Decided per category, never per field.
-  - Every v1-lineage category is **byte-identical**: pinned by
-    `sys3705-v1-lineage-golden.test.ts`, whose digests were taken on 9.3.0
+  - Every v1-lineage category's **rows are byte-identical** — per-document
+    rows, instance rows, table groups, provenance entries, detail-panel and
+    flat-record values, for the v1 document types and categories only. Pinned
+    by `sys3705-v1-lineage-golden.test.ts`, whose digests were taken on 9.3.0
     before the change, both on a representative fixture and with the new
-    categories populated beside it.
+    categories populated beside it. Outputs are NOT identical WHOLE: the new
+    types add rows of their own (below), and the status summaries change.
 
 ### Consumer-visible
 
 - `resolveExtractionStatus` and `resolveExtractionStatusFromView` emit two more
   documents per record (`experianReports`, `managementAccounts`, `NotUploaded`
-  when absent), so `summary.total` and `summary.notUploaded` rise by 2. The flat
-  path can never report them `Extracted` from data — they have no wide columns
-  — only from a succeeded job record.
+  when absent), so `summary.total` and `summary.notUploaded` rise by 2.
+- On the FLAT (v1) status path, `resolveExtractionStatus`, an UPLOADED
+  `experianReports` / `managementAccounts` document always has
+  `totalColumns: 0` and no populated columns, and is NEVER reported `extracted`
+  from data — the types have no wide columns, so there is no data to see. Its
+  status comes from the job record alone: `extracted` only when a job says
+  `succeeded`; `queued` / `processing` / `failed` as the job says; `uploaded`
+  when job records were passed but none names it (or it is still pending);
+  `unknown` when no job records were passed at all.
+  `resolveExtractionStatusFromView` reports them from the canonical view
+  (denominators 76 and 61).
 - `getDocumentTypeGroups()` returns 9 groups; `documentCategoryIds()` includes
   both new categories (so the detail panel excludes them, as it does every
   document category).
 - `flatRecordFromView` is unchanged and v1-map driven: the new categories never
   appear in a v1 flat record, by design.
-- The new tables carry no confidence dots yet. The synthesized provenance map is
-  keyed by v1 column name; keying canonical names into it would collide
-  (`companyNameT1` is Form 9's key) and remove a v1 table's dot.
+- The new tables carry no confidence dots or provenance yet, in either
+  direction. The synthesized provenance map is keyed by v1 column name + period,
+  and a canonical name + period can spell another category's key
+  (`companyNameT1` is Form 9's). So nothing is written into the map for them,
+  and nothing is read from it for them (`CategorySpec.noLegacyProvenance`, new
+  and optional) — otherwise a management account's company name would render
+  Form 9's confidence.
 
 ## [9.3.0] - 2026-09-07
 

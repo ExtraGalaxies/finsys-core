@@ -655,6 +655,14 @@ export interface CategorySpec {
    * from the column name as it always was.
    */
   numericColumnNames?: string[]
+  /**
+   * SYS-3705: true when this category's column names are NOT v1 base names.
+   * The provenance map is keyed `${v1BaseName}${period}`, so a non-v1 column
+   * name plus a period can spell a DIFFERENT category's key (a management
+   * account's `companyName` in T1 reads `companyNameT1`, which is Form 9's)
+   * and borrow its confidence. Such a table gets no provenance at all.
+   */
+  noLegacyProvenance?: boolean
 }
 
 export function buildFileFieldTablesFromInstances(
@@ -693,7 +701,8 @@ export function buildFileFieldTablesFromInstances(
     if (!instanceRows?.length) continue
 
     const table = buildInstanceTable(
-      groupName, spec.baseColumnNames, spec.displayName, instanceRows, fieldProvenance,
+      groupName, spec.baseColumnNames, spec.displayName, instanceRows,
+      spec.noLegacyProvenance ? undefined : fieldProvenance,
       spec.numericColumnNames ? new Set(spec.numericColumnNames) : undefined
     )
     if (table) tables[groupName] = table
@@ -2318,9 +2327,11 @@ export function fieldProvenanceFromView(
  * `categoryOverrides` path instead: its columns are the category's registry
  * fields in registry order, under their canonical names, numeric exactly
  * where the registry declares `type: "number"`. Those tables carry NO
- * provenance or confidence dots yet: the synthesized map below is keyed by v1
- * column name, and a canonical-name key there could collide with a v1 key
- * (`companyNameT1`) and knock out a v1 table's dot.
+ * provenance or confidence dots yet, in either direction: nothing is WRITTEN
+ * into the synthesized map below for them (it is keyed by v1 column name), and
+ * nothing is READ from it for them either (`CategorySpec.noLegacyProvenance`) —
+ * a canonical name plus a period can spell another category's v1 key
+ * (`companyNameT1` is Form 9's) and would borrow that document's confidence.
  *
  * PROVENANCE, WITHOUT A V1 SIDECAR — now `fieldProvenanceFromView` (SYS-3334
  * F3, round 2). `buildInstanceTable` (inside `buildFileFieldTablesFromInstances`)
@@ -2396,6 +2407,7 @@ export function buildFileFieldTablesFromView(
         displayName: group.label,
         baseColumnNames: fields.map((f) => f.name),
         numericColumnNames: fields.filter((f) => f.type === 'number').map((f) => f.name),
+        noLegacyProvenance: true,
       }
     }
   }

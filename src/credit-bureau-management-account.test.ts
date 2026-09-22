@@ -14,7 +14,8 @@ import {
   instanceRowsFromView,
   processIhsDetailsFromView,
 } from './ihs-processing.js'
-import { resolveExtractionStatusFromView, DocExtractionStatus } from './extraction-status.js'
+import { resolveExtractionStatus, resolveExtractionStatusFromView, DocExtractionStatus } from './extraction-status.js'
+import { ExtractionJobStatus } from './extraction.js'
 import { getDocumentTypeGroups } from './document-types.js'
 import type { AdapterCategory } from './adapter-categories.js'
 import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
@@ -27,8 +28,9 @@ import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
  * the frozen v1 migration map, and a field reached a table only through its
  * v1 legacy base name. A category born after the map had neither, so it
  * resolved to no category, rendered no table, and produced instance rows with
- * no metric keys — silently. The byte-identity proof that the fix leaves
- * every v1-lineage category untouched is sys3705-v1-lineage-golden.test.ts;
+ * no metric keys — silently. The proof that the fix leaves every v1-lineage
+ * category's rows byte-identical is sys3705-v1-lineage-golden.test.ts (its
+ * doc says exactly which outputs, and which parts of them, it covers);
  * this file pins what the fix DOES.
  */
 
@@ -212,6 +214,29 @@ describe('document types (SYS-3705)', () => {
     expect(documentCategoryIds().has(MA)).toBe(true)
   })
 
+  it('on the FLAT status path, an uploaded new-type document is never extracted from data — only a job record moves it', () => {
+    const rec = { managementAccounts: '[{"path":"https://x/a"}]', experianReports: 'https://x/b' }
+    const pick = (jobs?: Array<{ fileType: string; status: string }>) =>
+      resolveExtractionStatus(rec, jobs).documents
+        .filter((d) => d.fileType === 'managementAccounts' || d.fileType === 'experianReports')
+        .map((d) => [d.fileType, d.status, d.totalColumns, d.populatedColumns.length])
+    expect(pick()).toEqual([
+      ['experianReports', DocExtractionStatus.Unknown, 0, 0],
+      ['managementAccounts', DocExtractionStatus.Unknown, 0, 0],
+    ])
+    expect(pick([])).toEqual([
+      ['experianReports', DocExtractionStatus.Uploaded, 0, 0],
+      ['managementAccounts', DocExtractionStatus.Uploaded, 0, 0],
+    ])
+    expect(pick([
+      { fileType: 'experianReports', status: ExtractionJobStatus.Failed },
+      { fileType: 'managementAccounts', status: ExtractionJobStatus.Succeeded },
+    ])).toEqual([
+      ['experianReports', DocExtractionStatus.Failed, 0, 0],
+      ['managementAccounts', DocExtractionStatus.Extracted, 0, 0],
+    ])
+  })
+
   it('declares no v1 columns — the flat path has nothing to read for either', () => {
     for (const t of ['experianReports', 'managementAccounts']) {
       const group = getDocumentTypeGroups().find((g) => g.documentType === t)!
@@ -285,6 +310,33 @@ describe('the lineage fallback — a category with no v1 lineage renders under i
       ['experianReports', h('a'), { download: true, viewJson: true, reExtract: true, reUpload: false }],
       ['managementAccounts', h('b'), { download: true, viewJson: true, reExtract: true, reUpload: false }],
     ])
+  })
+
+  it('carries NO provenance or confidence on any cell, even when a v1 document writes the key its name-plus-period spells', () => {
+    // The synthesized provenance map is keyed by v1 column name + period.
+    // Form 9's companyName writes `companyNameT1`, which is exactly what the
+    // management account's companyName cell in period T1 would look up — so
+    // without a guard the management-account table borrows Form 9's
+    // confidence dot for a value Form 9 never attested.
+    const v = fixture()
+    v.categories['document-intake']!.instances.push(intake('form9#1', 'form9', h('c')))
+    v.categories['company-registration'] = {
+      cardinality: 'single',
+      instances: [inst(`form9:${h('c')}`, { companyName: 'Example Sdn Bhd', companyRegNo: '201501042079' })],
+    }
+    const tables = buildFileFieldTablesFromView(v)
+    // Precondition: Form 9's key IS in the map, and its own table carries the dot.
+    expect(fieldProvenanceFromView(v).provenance['companyNameT1']).toBeDefined()
+    expect(tables['form9']!.items.find((i) => i.displayName === 'Company Name')!.confidence).toEqual({ T1: 0.97 })
+
+    for (const group of ['credit_bureau_reports', 'management_accounts']) {
+      const table = tables[group]!
+      expect(table.items.length, group).toBeGreaterThan(0)
+      for (const item of table.items) {
+        expect(item.provenance, `${group} / ${item.displayName}`).toBeUndefined()
+        expect(item.confidence, `${group} / ${item.displayName}`).toBeUndefined()
+      }
+    }
   })
 
   it('stays out of the detail panel, the v1 flat record, and the provenance map', () => {

@@ -122,6 +122,9 @@ describe('groupFieldsByPattern', () => {
         'ic_documents',
         'epf_statements',
         'payslip_statements',
+        // SYS-3705
+        'credit_bureau_reports',
+        'management_accounts',
       ].sort(),
     )
     expect(grouped['bank_statements']).toHaveLength(6)

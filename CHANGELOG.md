@@ -4,6 +4,82 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 9.4.0
+
+_MINOR — two categories, two document types, and one optional catalog tag.
+Additive to every type: `DocumentTypeGroup.extractionCategory`,
+`TaggedFieldData.extraction_category` and `CategorySpec.numericColumnNames` are
+all optional, and `AdapterCategoryId` / `CanonicalFieldNameLiteral` widen the
+way 9.1.0 widened them. Read **Consumer-visible** below before release — two
+list outputs grow by default._
+
+### Added
+
+- **SYS-3705 — `credit-bureau-report`** (76 fields, table
+  `ihs_alt_data_credit_bureau_report`). Vendor-neutral: the first adapter is
+  host-side. ONE INSTANCE PER SUBJECT ENTRY, not per document — `section`
+  (`ccris` / `iriss` / `pbi-n`) and `subjectRole` (`principal` / `party`) say
+  which. `bureauScore` (the report's own score, i-SCORE on the first adapter),
+  counts and printed totals are numbers (11 money); every table
+  in the report is a JSON-string list, the company-profile precedent. No field
+  co-attests an applicant fact: a report subject is a third party as often as
+  the applicant.
+- **SYS-3705 — `management-account`** (61 fields, table
+  `ihs_alt_data_management_account`). Periodized — up to three periods per
+  document, stored per (instance, `periodPosition`). `companyName` attests the
+  shared `companyName` fact (a fourth attestor); every other field carries the
+  `mgmt` prefix, because the bare accounting names belong to
+  `financial-statement` and field names are global. 17 printed totals and one
+  host-computed total (money), 36 line-item categories (JSON-string lists), 6
+  period header fields. `mgmtRevenueTotal` is the one field NOT read off the
+  page: the statement prints revenue only as lines, so the host sums
+  `mgmtSalesRevenueItems` and leaves it absent if any line fails to parse.
+- **Document types `experianReports` and `managementAccounts`** in the catalog,
+  `DOC_DISPLAY_NAMES` and the extractable set (not re-uploadable). Registry
+  `schemaVersion` 1.4.0 → 1.5.0. Display names for every new field.
+- **`extraction_category` on a catalog `file` entry**, surfaced as
+  `DocumentTypeGroup.extractionCategory`. Entries of one type that disagree
+  throw at registry build.
+- **`canonicalNamedCategories()`** — the document categories with no v1
+  lineage, which the instance-shaped renderers key by canonical field name.
+- **`CategorySpec.numericColumnNames`** — optional; when given, `isNumeric`
+  follows it instead of the name heuristic.
+
+### Changed
+
+- **A category with no v1 lineage now renders.** Before, `extractionCategoryOf`
+  derived a document type's category only from the frozen v1 migration map, and
+  `instanceRowsFromView` kept only fields with a v1 legacy base name — so a
+  category born after the map resolved to nothing, and rendered and scored
+  nothing, silently. Now:
+  - `extractionCategoryOf` falls back to the catalog's `extraction_category`
+    when (and only when) the map is silent. A declaration that contradicts the
+    map throws.
+  - For a category in `canonicalNamedCategories()`, `instanceRowsFromView` keys
+    rows by canonical field name, and a `periodPosition` coordinate is the
+    period (`T{n}`); `buildFileFieldTablesFromView` renders its table from the
+    registry field list. Decided per category, never per field.
+  - Every v1-lineage category is **byte-identical**: pinned by
+    `sys3705-v1-lineage-golden.test.ts`, whose digests were taken on 9.3.0
+    before the change, both on a representative fixture and with the new
+    categories populated beside it.
+
+### Consumer-visible
+
+- `resolveExtractionStatus` and `resolveExtractionStatusFromView` emit two more
+  documents per record (`experianReports`, `managementAccounts`, `NotUploaded`
+  when absent), so `summary.total` and `summary.notUploaded` rise by 2. The flat
+  path can never report them `Extracted` from data — they have no wide columns
+  — only from a succeeded job record.
+- `getDocumentTypeGroups()` returns 9 groups; `documentCategoryIds()` includes
+  both new categories (so the detail panel excludes them, as it does every
+  document category).
+- `flatRecordFromView` is unchanged and v1-map driven: the new categories never
+  appear in a v1 flat record, by design.
+- The new tables carry no confidence dots yet. The synthesized provenance map is
+  keyed by v1 column name; keying canonical names into it would collide
+  (`companyNameT1` is Form 9's key) and remove a v1 table's dot.
+
 ## [9.3.0] - 2026-09-07
 
 _MINOR — widens `V1Disposition` by one member. Additive: the dispatch in

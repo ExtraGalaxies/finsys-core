@@ -109,6 +109,7 @@ export {
   processIhsDetailsFromView,
   documentCategoryIds,
   extractionCategoryOf,
+  canonicalNamedCategories,
   buildDocumentRowsFromView,
   documentsOfType,
   documentHashOfKey,

@@ -84,6 +84,25 @@ const GOLDEN_DIGESTS_AT_9_3_0: Record<string, string> = {
   resolveExtractionStatus: '50bc7ed584e0e0b315d23a58eee5fab4f29b4d4f2486ead3e436dbf4bd4cd1e0',
 }
 
+/**
+ * SYS-3720 MOVED THREE OF THESE, and the 9.3.0 digests above are kept as they
+ * were rather than regenerated. This fixture holds two legacy slots past its
+ * intake count — bank `legacy:T5` (three bank uploads) and financial-statement
+ * `legacy:T4` (one statement upload) — and before SYS-3720 each became a
+ * document of its own, with no identity. It no longer does. Each digest below
+ * was checked, before it was written here, to equal the 9.4.0 output with
+ * exactly those two synthesized documents removed (2 documents, 2 rows, 2
+ * status entries) and nothing else changed: both sides dumped with
+ * SYS3705_DUMP and compared. The other nine outputs are untouched, so they
+ * still answer to 9.3.0.
+ */
+const MOVED_BY_SYS3720: Record<string, string> = {
+  documentsOfType: 'bb7925a8dc1f5209e0ec2ef1820e50de99e066663ef8d99fdf84f8d8b0407adc',
+  buildDocumentRowsFromView: 'acf7c573a9ba81176c0f2333b39924745f9617dc97e86f6bbebed8456f2fe80c',
+  resolveExtractionStatusFromView: 'edf07271c37efd8a28d7d91a4a1c0065d37c3b90a3705832d58ab8847b053f26',
+}
+const EXPECTED_DIGESTS = { ...GOLDEN_DIGESTS_AT_9_3_0, ...MOVED_BY_SYS3720 }
+
 const NEW_DOCUMENT_TYPES = ['experianReports', 'managementAccounts']
 const NEW_GROUPS = ['credit_bureau_reports', 'management_accounts']
 /**
@@ -329,13 +348,24 @@ describe('SYS-3705 — the v1-lineage part of every view and flat output is byte
     expect(Object.keys(tables)).toEqual(expect.arrayContaining(NEW_GROUPS))
     expect(buildDocumentRowsFromView(v).filter((r) => NEW_DOCUMENT_TYPES.includes(r.docType))).toHaveLength(2)
     const withNew = Object.fromEntries(Object.entries(everyOutput(v)).map(([k, o]) => [k, sha256(JSON.stringify(o))]))
-    expect(withNew).toEqual(GOLDEN_DIGESTS_AT_9_3_0)
+    expect(withNew).toEqual(EXPECTED_DIGESTS)
   })
 
   it('matches the digests captured before the change, byte for byte, v1 rows only', () => {
     // Diagnostics for a red run: SYS3705_DUMP=<path> writes the full outputs
     // so the same dump taken at 0618e34 can be diffed against it.
     if (process.env.SYS3705_DUMP) writeFileSync(process.env.SYS3705_DUMP, JSON.stringify(everyOutput(), null, 1) + '\n')
-    expect(digests()).toEqual(GOLDEN_DIGESTS_AT_9_3_0)
+    expect(digests()).toEqual(EXPECTED_DIGESTS)
+  })
+
+  it('SYS-3720: the two past-intake legacy slots are no longer documents, and nothing else about those types moved', () => {
+    const v = fixtureView()
+    const intakeRows = v.categories['document-intake']!.instances
+    const bank = documentsOfType(v, intakeRows, 'bankStatements')
+    const fs = documentsOfType(v, intakeRows, 'financialStatements')
+    expect(bank.map((d) => d.hash)).toEqual([h('a'), h('b'), h('c'), h('9')])
+    expect(fs.map((d) => d.hash)).toEqual([h('d'), h('8')])
+    expect([...bank, ...fs].flatMap((d) => d.extraction.map((e) => e.instanceKey))).not.toContain('legacy:T5')
+    expect([...bank, ...fs].flatMap((d) => d.extraction.map((e) => e.instanceKey))).not.toContain('legacy:T4')
   })
 })

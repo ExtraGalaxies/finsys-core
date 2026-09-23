@@ -1401,8 +1401,10 @@ export function canonicalNamedCategories(): ReadonlySet<AdapterCategory> {
  * the Phase 6 blocker SYS-3378 names: until this exists, dropping a pointer
  * column blanks the documents table in both products.
  *
- * WHICH DOCUMENTS. Every `document-intake` instance whose `documentType` is a
- * type the table shows, in intake order — UNIONED with any document the
+ * WHICH DOCUMENTS. Every CURRENT `document-intake` instance whose
+ * `documentType` is a type the table shows, in intake order (a replaced
+ * upload keeps its intake row but is not listed — SYS-3721, see
+ * `documentsOfType`) — UNIONED with any document the
  * extraction categories know that intake does not (an upload predating the
  * intake writer; measured 1 of 1323 on the sim). The same union, in the same
  * order, that `resolveExtractionStatusFromView` walks, so a consumer aligning
@@ -1497,10 +1499,20 @@ export interface ViewDocument {
 
 /**
  * The documents of one type, in the order both instance-shaped functions use:
- * intake instances first (upload order), then any extracted document no
- * intake instance accounts for. Shared by `buildDocumentRowsFromView` and
+ * CURRENT intake instances first (upload order), then any extracted document
+ * no intake instance accounts for. Shared by `buildDocumentRowsFromView` and
  * `resolveExtractionStatusFromView` so their (docType, index) alignment is a
  * property of one function, not a coincidence of two.
+ *
+ * CURRENT ONLY (SYS-3721). Intake is append-only: a replaced upload keeps its
+ * row as the audit record. It is not listed here — see `currentIntakeOfType`
+ * for the signal — and its extraction, if any survived, is not resurrected as
+ * an extraction-only document either.
+ *
+ * LEGACY SLOTS (SYS-3720). A `legacy:T{n}` row carries a slot, not a
+ * document identity; `legacyDocumentOrdinal` says which document a slot
+ * belongs to. When intake holds documents of the type, a slot attaches to
+ * one of them or to nothing: it never becomes a document of its own.
  */
 export function documentsOfType(
   view: CanonicalView,
@@ -1516,9 +1528,10 @@ export function documentsOfType(
     if (h === null) {
       const n = legacyOrdinalOfKey(inst.instanceKey)
       if (n === null) continue // no identity and no slot: nothing to attribute it to
-      const list = legacyByOrdinal.get(n)
+      const ordinal = legacyDocumentOrdinal(docType, n)
+      const list = legacyByOrdinal.get(ordinal)
       if (list) list.push(inst)
-      else legacyByOrdinal.set(n, [inst])
+      else legacyByOrdinal.set(ordinal, [inst])
       continue
     }
     const list = byHash.get(h)
@@ -1527,8 +1540,8 @@ export function documentsOfType(
   }
   const out: ViewDocument[] = []
   const claimed = new Set<string>()
-  for (const inst of intake) {
-    if (inst.fields.documentType?.value !== docType) continue
+  const { current, superseded } = currentIntakeOfType(intake, docType)
+  for (const inst of current) {
     const path = stringOrNull(inst.fields.pathInDms?.value)
     const hash = path ? documentHashOfPath(path) : null
     const extraction = hash !== null ? (byHash.get(hash) ?? []) : []
@@ -1542,24 +1555,137 @@ export function documentsOfType(
       origin: 'intake',
     })
   }
+  // A replaced document's own extraction is not current either. Without this
+  // it would come straight back as an extraction-only document.
+  for (const inst of superseded) {
+    const path = stringOrNull(inst.fields.pathInDms?.value)
+    const hash = path ? documentHashOfPath(path) : null
+    if (hash !== null && !out.some((d) => d.hash === hash)) claimed.add(hash)
+  }
   const intakeCount = out.length
   for (const [hash, group] of byHash) {
     if (!claimed.has(hash)) out.push({ hash, path: null, uploadedAt: null, uploadedBy: null, extraction: group, origin: 'extraction-only' })
   }
-  // Legacy slot rows: positional, as v1 was — `legacy:T{n}` is the n-th
-  // INTAKE document's extraction, but only when that document has no hashed
-  // extraction (a hashed run for the same document supersedes its legacy
-  // duplicate). A slot beyond the intake documents is an extraction-only
-  // document with no identity: a pre-writer subject whose uploads left no
-  // intake row, still rendered, still counted, marked as such.
-  for (const n of [...legacyByOrdinal.keys()].sort((a, b) => a - b)) {
-    const group = legacyByOrdinal.get(n)!
-    const target = n >= 1 && n <= intakeCount ? out[n - 1]! : undefined
-    if (target && target.extraction.length === 0) out[n - 1] = { ...target, extraction: group }
-    else if (!target) out.push({ hash: null, path: null, uploadedAt: null, uploadedBy: null, extraction: group, origin: 'extraction-only' })
+  // Legacy slot rows, by the document they belong to (`legacyDocumentOrdinal`).
+  //  - Intake holds documents of this type: the slot attaches to its
+  //    document, or — when that document has hashed extraction, which
+  //    supersedes its legacy duplicate — to nothing. A slot with no document
+  //    to attach to is dropped from THIS list only: the field tables do not
+  //    read positions for a legacy row, so its rows still render there under
+  //    their own slot (`legacySlot`, else the one the key names) and, for a
+  //    financial statement, its period coordinate. Pinned for bank and for
+  //    the financial-statement shapes in sys3720-current-documents.test.ts. It never
+  //    becomes a document: that was SYS-3720, one statement listed as two.
+  //  - Intake holds none: a pre-writer subject whose uploads left no intake
+  //    row. Each document the slots describe is listed, marked
+  //    extraction-only, with no identity.
+  const fromLegacy = new Set<number>()
+  for (const ordinal of [...legacyByOrdinal.keys()].sort((a, b) => a - b)) {
+    const group = legacyByOrdinal.get(ordinal)!
+    if (intakeCount === 0) {
+      out.push({ hash: null, path: null, uploadedAt: null, uploadedBy: null, extraction: group, origin: 'extraction-only' })
+      continue
+    }
+    const at = legacyTargetIndex(docType, ordinal, intakeCount)
+    if (at === null) continue
+    const target = out[at]!
+    if (target.extraction.length === 0 || fromLegacy.has(at)) {
+      out[at] = { ...target, extraction: [...target.extraction, ...group] }
+      fromLegacy.add(at)
+    }
     // else: the target already has hashed extraction — the legacy rows are its superseded duplicate.
   }
   return out
+}
+
+/**
+ * SYS-3721 — which of a type's intake instances the application CURRENTLY
+ * holds, and which a later save replaced.
+ *
+ * THE SIGNAL. finsys-api attests the WHOLE pointer column on every save that
+ * touches it (`documentIntakeTriggerService.deriveDocumentIntakeInstances`
+ * runs over the saved column value, and all three writers pass the full
+ * value) and upserts each file onto (ihs, adapter, instance_key), which
+ * overwrites `observed_at`. So after any save, every file still in the column
+ * carries that save's `observedAt`, and a file the save dropped keeps an
+ * older one. Current = the instances at the newest `observedAt` of the type.
+ * Measured on the finsim database 2026-09-23: that rule agreed with "the path
+ * is in the current pointer column" on all 6,704 intake rows of the seven v1
+ * document types.
+ *
+ * Why not `uploadedAt`: no writer records it (NULL on every row measured),
+ * and an upload time says when a file arrived, not whether it is still held.
+ * Grouping by slot is not possible either: an intake row carries no month,
+ * year or slot, only its type and path.
+ *
+ * TIES. Instances sharing the newest instant are ALL current. That is the
+ * normal case, not an anomaly: one save attests every file it holds at one
+ * instant. Times are parsed (`Date.parse`), never compared as strings, so one
+ * instant written in two offsets or precisions is one instant.
+ *
+ * NO SIGNAL, NO FILTER. If any instance of the type has no parseable
+ * `observedAt`, every instance of the type is treated as current, as before
+ * this change. Hiding a document needs evidence.
+ *
+ * KNOWN RESIDUAL. A document removed WITHOUT a replacement leaves nothing to
+ * compare against: an emptied column triggers no save attestation, so the old
+ * rows stay newest and stay listed. That needs the producer, not this rule.
+ */
+function currentIntakeOfType(
+  intake: ReadonlyArray<CanonicalInstance>,
+  docType: string,
+): { current: CanonicalInstance[]; superseded: CanonicalInstance[] } {
+  return splitCurrentIntake(intake.filter((inst) => inst.fields.documentType?.value === docType))
+}
+
+/** `currentIntakeOfType`'s rule over intake instances already narrowed to one document type. */
+function splitCurrentIntake(
+  ofType: CanonicalInstance[],
+): { current: CanonicalInstance[]; superseded: CanonicalInstance[] } {
+  if (ofType.length <= 1) return { current: ofType, superseded: [] }
+  const times = ofType.map((inst) => (inst.observedAt === undefined ? NaN : Date.parse(inst.observedAt)))
+  if (times.some((t) => Number.isNaN(t))) return { current: ofType, superseded: [] }
+  const newest = Math.max(...times)
+  const current: CanonicalInstance[] = []
+  const superseded: CanonicalInstance[] = []
+  ofType.forEach((inst, i) => (times[i] === newest ? current : superseded).push(inst))
+  return { current, superseded }
+}
+
+/**
+ * SYS-3720 — which document a `legacy:T{n}` slot belongs to, 1-based.
+ *
+ * FINANCIAL STATEMENTS: a slot is a period, not a document. finsys-api's
+ * `financialStatementSpec.slotFor`: a year=1 statement fills T1 (its current
+ * year) and T2 (its prior year); a year=2 statement fills T3 (its prior year)
+ * and no slot for its current year. So T1 and T2 are the first statement and
+ * T3 is the second. No producer writes a financial-statement slot past T3; one
+ * that appears is left positional.
+ *
+ * BANK / EPF / PAYSLIP: a slot is the uploader-declared slot of ONE file —
+ * `legacyInstanceKey` is `legacy:T${month}` (bankStatementSpec),
+ * `legacy:T${year}` (epfStatementSpec), `legacy:T${period}` (payslipSpec).
+ * One slot, one document, so the slot number is the document's position
+ * whenever the pointer array is in slot order with no gaps — the same
+ * approximation `timePeriodOf`'s rule 4 documents.
+ */
+function legacyDocumentOrdinal(docType: string, slot: number): number {
+  if (docType === 'financialStatements') {
+    if (slot === 1 || slot === 2) return 1
+    if (slot === 3) return 2
+  }
+  return slot
+}
+
+/**
+ * The 0-based intake position a legacy document ordinal attaches to, or null
+ * when there is none. The one exception to "ordinal n is position n": a
+ * financial statement's second document (T3, a year=2 statement's prior year)
+ * on a subject with ONE statement is that statement — a lone year=2 upload.
+ */
+function legacyTargetIndex(docType: string, ordinal: number, intakeCount: number): number | null {
+  if (docType === 'financialStatements' && ordinal === 2 && intakeCount === 1) return 0
+  return ordinal >= 1 && ordinal <= intakeCount ? ordinal - 1 : null
 }
 
 /**
@@ -2755,9 +2881,14 @@ function valueAtInstanceKeyPrefix(view: CanonicalView, address: V1Address): Addr
   const prefix = address.instanceKeyPrefix!
   // The `#` boundary is L-3's fix and still matters: a bare startsWith would
   // let `bankStatements` swallow `bankStatementsExtraordinary`.
-  const matches = instances.filter(
+  const keyed = instances.filter(
     (i) => i.instanceKey === prefix || i.instanceKey.startsWith(`${prefix}#`),
   )
+  // SYS-3721: a v1 pointer column held the files the application CURRENTLY
+  // has — finsys-api's own v1 response still serves exactly that. A replaced
+  // upload keeps its append-only intake row, so the rows are narrowed by the
+  // same rule `documentsOfType` lists by (`currentIntakeOfType`).
+  const matches = address.category === 'document-intake' ? splitCurrentIntake(keyed).current : keyed
   const withField = matches.filter((i) =>
     Object.prototype.hasOwnProperty.call(i.fields, address.field),
   )

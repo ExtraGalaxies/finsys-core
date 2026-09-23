@@ -7,6 +7,7 @@ import {
   extractionCategoryOf,
   buildDocumentRowsFromView,
   documentHashOfKey,
+  documentsOfType,
   documentHashOfPath,
   legacyOrdinalOfKey,
   APPLICATION_RECORD_CURRENCY_FIELDS,
@@ -671,7 +672,11 @@ describe('legacy slot rows — positional, as v1 was, and only where identity is
   // whose ONLY extraction rows are `legacy:T{n}` — no document behind them.
   const hashA = 'a'.repeat(64)
   const hashB = 'b'.repeat(64)
-  it('legacy:T{n} attaches to the n-th intake document when it has no hashed extraction; a hashed run supersedes it; overflow is an observable extraction-only document', () => {
+  // SYS-3720 CHANGED THIS TEST. It used to pin a financial-statement slot as
+  // "the n-th intake document" and a slot past the intake count as a document
+  // of its own — which listed one statement as two. A financial-statement slot
+  // is a period: T1/T2 are the first statement, T3 the second.
+  it('financial statements: legacy:T1/T2 attach to the first intake statement, T3 to the second; a hashed run supersedes; no slot becomes a document', () => {
     const v = view({
       'document-intake': {
         cardinality: 'multi',
@@ -684,9 +689,9 @@ describe('legacy slot rows — positional, as v1 was, and only where identity is
         cardinality: 'multi',
         instances: [
           inst(`financialStatement:${hashB}#T1`, { revenue: 9 }), // doc 2, by identity
-          inst('legacy:T1', { revenue: 1 }), // doc 1 has no hashed rows → attaches
-          inst('legacy:T2', { revenue: 2 }), // doc 2 has hashed rows → superseded duplicate, ignored
-          inst('legacy:T3', { revenue: 3 }), // no third intake document → extraction-only, no identity
+          inst('legacy:T1', { revenue: 1 }), // doc 1's current year → attaches
+          inst('legacy:T2', { revenue: 2 }), // doc 1's prior year → attaches beside T1
+          inst('legacy:T3', { revenue: 3 }), // doc 2's prior year; doc 2 has hashed rows → superseded duplicate
         ],
       },
     })
@@ -694,15 +699,35 @@ describe('legacy slot rows — positional, as v1 was, and only where identity is
     expect(st.map((d) => [d.documentId ?? null, d.status, d.populatedColumns, d.unlinked ?? false])).toEqual([
       [hashA, DocExtractionStatus.Extracted, ['revenue'], false],
       [hashB, DocExtractionStatus.Extracted, ['revenue'], false],
-      [null, DocExtractionStatus.Extracted, ['revenue'], true],
     ])
     const rows = buildDocumentRowsFromView(v).filter((r) => r.docType === 'financialStatements')
     expect(rows.map((r) => [r.index, r.documentId, r.displayName])).toEqual([
       [0, hashA, 'Financial Statements 1'],
       [1, hashB, 'Financial Statements 2'],
-      [2, null, 'Financial Statements 3'],
     ])
-    expect(rows[2]!.capabilities.download).toBe(false)
+    const intake = v.categories['document-intake']!.instances
+    expect(documentsOfType(v, intake, 'financialStatements')[0]!.extraction.map((i) => i.instanceKey)).toEqual(['legacy:T1', 'legacy:T2'])
+  })
+
+  it('bank: legacy:T{n} is one file\'s declared slot, so it attaches to the n-th intake document; past the intake count it attaches to nothing', () => {
+    const v = view({
+      'document-intake': {
+        cardinality: 'multi',
+        instances: [
+          inst('bankStatements#1', { documentType: 'bankStatements', pathInDms: `${DMS}${hashA}` }),
+          inst('bankStatements#2', { documentType: 'bankStatements', pathInDms: `${DMS}${hashB}` }),
+        ],
+      },
+      'finxtract-bank-statement': {
+        cardinality: 'multi',
+        instances: [inst('legacy:T2', { closingBalance: 2 }), inst('legacy:T3', { closingBalance: 3 })],
+      },
+    })
+    const intake = v.categories['document-intake']!.instances
+    expect(documentsOfType(v, intake, 'bankStatements').map((d) => [d.hash, d.extraction.map((i) => i.instanceKey)])).toEqual([
+      [hashA, []],
+      [hashB, ['legacy:T2']],
+    ])
   })
 
   it('a legacy-only subject with no intake rows at all still renders and counts its slots', () => {

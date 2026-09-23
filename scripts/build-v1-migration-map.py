@@ -222,11 +222,42 @@ CONDITIONAL_KEYS = {
 for _k in CONDITIONAL_KEYS:
     v1.setdefault(_k, None)
 
+# SYS-3705 — keys a NEW COLUMN adds, which no past measurement can contain.
+#
+# finsim's spec 131 (NOW-2) found both from the outside: finsys-api began
+# serving them in its v1 response and the map had no disposition for either.
+# They are document pointers (see DOC_POINTERS below), declared here for the
+# same reason as CONDITIONAL_KEYS: the measured corpus predates them, and
+# `v1-response-keys.json` is a measurement, so it is not hand-edited.
+#
+# WHERE THE COLUMNS ARE. Both exist on finsys-api `integration/SYS-3598` and
+# NOT yet on `origin/main` (checked 2026-09-23 with `git grep` on each ref:
+# SYS-3675 migration 1786200000000 adds `ihs.experianReports`, a url_string
+# pointer; SYS-3703 migration 1786300000000 adds `ihs.managementAccounts`, a
+# path_array pointer; both are registered in src/config/documentPointerFields.ts).
+#
+# That does NOT block a rerun, and the reason is worth stating because the
+# opposite was assumed: this script reads finsys-api `origin/main` only for
+# the authored bridges (feeders, fieldMaps, the application-record arrays),
+# and a DOC_POINTERS key is emitted before any of them is consulted. Measured
+# 2026-09-23: a rerun against origin/main, which lacks both columns, wrote a
+# map byte-identical to the hand-edited one. What the finsys-api landing DOES
+# change is the corpus: once a fresh `v1-response-keys.json` measurement
+# contains both keys, this block is redundant and can go.
+NEW_POINTER_KEYS = {
+    'experianReports': 'SYS-3675: ihs.experianReports, a single-URL pointer (storage "single").',
+    'managementAccounts': 'SYS-3703: ihs.managementAccounts, a JSON {path} array (storage "array").',
+}
+for _k in NEW_POINTER_KEYS:
+    v1.setdefault(_k, None)
+
 DOC_POINTERS = {
     'bankStatements', 'financialStatements', 'epfStatements', 'payslips', 'ssm', 'form9',
     'ic', 'consentForm', 'myKadOrPassport', 'coreIncomeDoc', 'incomeSupportingDoc',
     'incomeEPF_iakaun', 'photocopyRegistrationCard', 'bankStatementOrSavingPassbook',
     'invoices', 'supplementaryDoc', 'tnbBills',
+    # SYS-3705 — see NEW_POINTER_KEYS above for why a rerun waits on finsys-api.
+    'experianReports', 'managementAccounts',
 }
 
 

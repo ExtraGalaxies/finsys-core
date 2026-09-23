@@ -162,7 +162,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 **Canonical table**: `ihs_alt_data_credit_bureau_report`
 
-**Column labels** (`instanceColumns`, SYS-3728): an instance is a report SUBJECT, not a period, so a table column is labeled `<subjectName> (<subjectRole>)` — principal first, then parties in section order, per document.
+**Column labels** (`instanceColumns`, SYS-3728): an instance is a report SUBJECT, not a period, so a table column is labeled `<subjectName> (<subjectRole>)` — principal first, then parties in section order, per document. When the table holds more than one report, each label also carries the report's identity: `· <reportOrderDate>`, else `· report <n>`.
 
 **Document type**: `experianReports` — declared on its catalog entry (`extraction_category`), because the type has no v1 wide-table columns for the migration map to derive it from (SYS-3705). Rendered under canonical field names.
 

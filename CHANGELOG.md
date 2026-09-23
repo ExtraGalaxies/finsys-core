@@ -7,8 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased] - 9.5.0
 
 _MINOR — a field type, `list`, and the table cell that renders it. Every type
-change is additive (a union widened, optional members added). 9.4.1 was cut but
-never published; its entries are folded in below and ship in this release. Read
+change is additive (a union widened, optional members added). Read
 **Consumer-visible** before release: the credit-bureau and management-account
 tables change shape, and `CanonicalFieldSpec.type` gains a member._
 
@@ -42,7 +41,10 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   field's value as rows. `columns` are the declared items in order, each
   `{ name, label, numeric, money }`; `rows` are formatted strings (money like
   any money cell, `-` for absent, a nested value as its JSON); `rawRows` is the
-  parsed array. Tolerant by design: a key no item declares is shown in a
+  parsed array. A number / money item formats only a finite number or a string
+  spelling a plain decimal; blank, boolean and non-finite are absent (`-`),
+  never 0, and any other text (`0x10`, `1,000.00`, `n/a`) is shown as written,
+  never converted. Tolerant by design: a key no item declares is shown in a
   trailing `other` column as `key: value; …`, never dropped; a stored key
   matches an item by its exact name or its kebab-case spelling, the exact key
   winning a clash; a value that is not a JSON array renders as one `value`
@@ -53,18 +55,24 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   table columns. `credit-bureau-report` declares it: columns read
   `<subjectName> (<subjectRole>)`, per document the principal first and then
   parties in section order (compared naturally), two subjects of one name
-  disambiguated `(2)`, an unnamed subject falling back to the old label. The
-  loader checks the named fields exist, the label and sequence are strings and
-  the role is an enum with a distinct `roleOrder`. `CategorySpec` gains the
+  disambiguated `(2)`, an unnamed subject falling back to the old label. When
+  the columns span more than one document (two reports), each label gains the
+  report's identity — `· <reportOrderDate>` (`documentLabelField`), else
+  `· report <n>` by document position — so two reports on one subject stay
+  distinguishable; a single report's labels are unchanged. The loader checks
+  the named fields exist, the label, sequence and document-label fields are
+  strings and the role is an enum with a distinct `roleOrder`. `CategorySpec` gains the
   optional `listItems` and `instanceColumns` the view path fills from these.
 - `adapter-categories.json` `schemaVersion` 1.5.0 → 1.6.0.
 
 ### Consumer-visible
 
 - **`formattedData` of a list cell is a count** ("22 entries", "1 entry"), not
-  the stored JSON — the backward-compatibility guarantee: a UI that does not yet
-  read `list` shows a count instead of a wall of JSON. `data` still carries the
-  stored value unchanged. `isNumeric` is false for every list item.
+  the stored JSON — so consumers that render `formattedData` and do not yet
+  read `list` show a count instead of a wall of JSON. A consumer that rebuilds
+  its text from `data` still shows the raw JSON (`data` carries the stored
+  value unchanged) and needs its own update to read `list`. `isNumeric` is
+  false for every list item.
 - **The credit-bureau table's column keys change**, from `T1 · ccris` /
   `T1 · pbi-1` to `Example Sdn Bhd (principal)` / `A Director (party)`, and
   its column ORDER changes (principal first). `timePeriods`, and the keys of
@@ -89,7 +97,14 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   `flatRecordFromView` for every fixture. Inside the two moved tables, every
   non-list item is identical apart from the bureau column relabel.
 
-### Fixed (from the unpublished 9.4.1)
+## [9.4.1] - 2026-09-23
+
+_PATCH — no exported API changes. `documentsOfType`, and through it
+`buildDocumentRowsFromView` and `resolveExtractionStatusFromView`, list fewer
+documents on two shapes: a financial statement read from legacy slots, and a
+replaced upload. Read **Consumer-visible** below._
+
+### Fixed
 
 - **SYS-3720 — one financial statement listed as two.** `documentsOfType` read
   a `legacy:T{n}` extraction row as "the n-th intake document", and a slot past
@@ -114,7 +129,7 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
     describe are still listed as extraction-only — now one per statement,
     not one per slot.
 
-### Changed (from the unpublished 9.4.1)
+### Changed
 
 - **SYS-3721 — v2 lists current documents only.** Intake is append-only, so a
   replaced upload keeps its `document-intake` row, and v2 listed it beside its
@@ -149,7 +164,7 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   year=2 statement FIRST would place `legacy:T3` on the second upload by the
   T1/T2-first, T3-second rule. Neither shape exists in the finsim database.
 
-### Consumer-visible (from the unpublished 9.4.1)
+### Consumer-visible
 
 - A pre-Phase-4b year=1 statement (one upload, `legacy:T1` + `legacy:T2`)
   lists 1 statement, not 2. A lone year=2 statement (`legacy:T3` only) lists

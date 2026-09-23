@@ -131,12 +131,21 @@ export interface ListItemSpec {
  *   roleOrder     — the roles, in the order their columns come.
  *   sequenceField — a string field ordering instances within one role,
  *                   compared naturally ("pbi-2" before "pbi-10").
+ *   documentLabelField — a string field identifying the source document,
+ *                   added to the label only when columns span documents.
  */
 export interface CategoryInstanceColumns {
   readonly labelField: string;
   readonly roleField?: string;
   readonly roleOrder?: ReadonlyArray<string>;
   readonly sequenceField?: string;
+  /**
+   * A string field naming the DOCUMENT an instance came from (a report's order
+   * date). Used only when a table's columns span more than one document, so two
+   * reports on one subject stay two identifiable columns: "<label> · <value>",
+   * or "<label> · report <n>" (n = the document's position) when absent.
+   */
+  readonly documentLabelField?: string;
 }
 
 export interface CanonicalFieldSpec {
@@ -381,7 +390,7 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
 export const LIST_OVERFLOW_COLUMN = "other";
 
 const LIST_ITEM_PROPERTIES = new Set(["name", "displayName", "type", "kind"]);
-const INSTANCE_COLUMNS_PROPERTIES = new Set(["labelField", "roleField", "roleOrder", "sequenceField"]);
+const INSTANCE_COLUMNS_PROPERTIES = new Set(["labelField", "roleField", "roleOrder", "sequenceField", "documentLabelField"]);
 
 /**
  * SYS-3728: validate a list field's `items`, and refuse everything a list
@@ -480,11 +489,16 @@ function validateInstanceColumns(
     const seq = fieldNamed("sequenceField", ic.sequenceField);
     if (seq.type !== "string") throw new Error(`${at}: sequenceField "${seq.name}" must be a string field`);
   }
+  if (ic.documentLabelField !== undefined) {
+    const doc = fieldNamed("documentLabelField", ic.documentLabelField);
+    if (doc.type !== "string") throw new Error(`${at}: documentLabelField "${doc.name}" must be a string field`);
+  }
   return Object.freeze({
     labelField: ic.labelField as string,
     ...(ic.roleField !== undefined ? { roleField: ic.roleField as string } : {}),
     ...(ic.roleOrder !== undefined ? { roleOrder: Object.freeze([...(ic.roleOrder as string[])]) } : {}),
     ...(ic.sequenceField !== undefined ? { sequenceField: ic.sequenceField as string } : {}),
+    ...(ic.documentLabelField !== undefined ? { documentLabelField: ic.documentLabelField as string } : {}),
   });
 }
 

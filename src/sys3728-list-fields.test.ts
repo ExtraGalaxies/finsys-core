@@ -294,6 +294,9 @@ describe('SYS-3728 — the loader refuses a malformed list declaration', () => {
     ['a role field without an order', { labelField: 'label', roleField: 'role' }, /roleOrder/],
     ['a duplicated role', { labelField: 'label', roleField: 'role', roleOrder: ['a', 'a'] }, /roleOrder/],
     ['an unknown sequence field', { labelField: 'label', sequenceField: 'nope' }, /sequenceField "nope"/],
+    ['a list as the sequence', { labelField: 'label', sequenceField: 'lines' }, /sequenceField "lines".*string/],
+    ['a list as the document label', { labelField: 'label', documentLabelField: 'lines' }, /documentLabelField "lines".*string/],
+    ['an unknown document label field', { labelField: 'label', documentLabelField: 'nope' }, /documentLabelField "nope"/],
     ['an unknown property', { labelField: 'label', sortBy: 'x' }, /unknown property "sortBy"/],
   ])('instanceColumns: refuses %s', (_label, ic, message) => {
     expect(() => buildCategoryRegistry(base({}, { instanceColumns: ic }))).toThrow(message)
@@ -303,6 +306,7 @@ describe('SYS-3728 — the loader refuses a malformed list declaration', () => {
     expect(() => buildCategoryRegistry(categoriesData as unknown as Raw)).not.toThrow()
     expect(categorySchemaOf(CBR).instanceColumns).toEqual({
       labelField: 'subjectName', roleField: 'subjectRole', roleOrder: ['principal', 'party'], sequenceField: 'section',
+      documentLabelField: 'reportOrderDate',
     })
     expect(categorySchemaOf(MA).instanceColumns).toBeUndefined()
   })
@@ -383,6 +387,18 @@ describe('SYS-3728 — a list field renders as rows, never as its JSON', () => {
   })
 })
 
+describe('SYS-3728 — a list column is never numeric, whatever its name says', () => {
+  it('through the override path with NO numericColumnNames (the name heuristic would say "cash" is numeric)', () => {
+    const t = buildFileFieldTablesFromInstances(
+      { g: [{ instanceKey: 'x', timePeriod: 'T1', mgmtCashAtBankItems: '[{"code":"1","term":"t","amount":5}]' }] },
+      undefined,
+      { g: { displayName: 'G', baseColumnNames: ['mgmtCashAtBankItems'], listItems: { mgmtCashAtBankItems: field(MA, 'mgmtCashAtBankItems').items! } } },
+    )['g']!.items[0]!
+    expect(t.isNumeric).toBe(false)
+    expect(t.formattedData).toEqual({ T1: '1 entry' })
+  })
+})
+
 describe('SYS-3728 — buildListCell is tolerant of what storage actually holds', () => {
   const items = [
     { name: 'code', displayName: 'Code', type: 'string' as const },
@@ -423,6 +439,27 @@ describe('SYS-3728 — buildListCell is tolerant of what storage actually holds'
     expect(c.rows[0]!.amount).toBe('MYR\u00a01,500.50')
   })
 
+  it.each([
+    ['a blank string', ' ', '-'],
+    ['an empty string', '', '-'],
+    ['a boolean', true, '-'],
+    ['NaN', Number.NaN, '-'],
+    ['Infinity', Number.POSITIVE_INFINITY, '-'],
+    ['a hex string', '0x10', '0x10'],
+    ['printed text', 'n/a', 'n/a'],
+    ['a printed amount with separators', '1,000.00', '1,000.00'],
+    ['an exponent string', '1e3', '1e3'],
+  ])('a number item never coerces %s into a number', (_label, raw, shown) => {
+    const c = buildListCell([{ amount: raw }], items)
+    expect(c.rows[0]!.amount).toBe(shown)
+    expect(c.rows[0]!.amount).not.toBe('0')
+  })
+
+  it('a number item formats a finite number, and a plain decimal string the way a parsed number would be', () => {
+    const c = buildListCell([{ amount: -1719587.11 }, { amount: '2500' }, { amount: '-12.5' }, { amount: 0 }], items)
+    expect(c.rows.map((r) => r.amount)).toEqual(['-1,719,587.11', '2,500', '-12.5', '0'])
+  })
+
   it('accepts an already-parsed array', () => {
     expect(buildListCell([{ code: 'A', amount: 1 }], items).rows).toEqual([{ code: 'A', amount: '1' }])
   })
@@ -458,6 +495,41 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
     expect(labels).toEqual(['Example Sdn Bhd (principal)', 'Person A (party)', 'T1 · pbi-2'])
   })
 
+  it('two reports on the same subject keep their identity: the report order date joins the label', () => {
+    const v = view()
+    for (const i of v.categories[CBR]!.instances) i.fields.reportOrderDate = { ...i.fields.section!, value: '2026-01-01 09:00:00' }
+    v.categories[CBR]!.instances.push(
+      inst(`experianReport:${h('c')}#ccris`, { section: 'ccris', subjectRole: 'principal', subjectName: 'Example Sdn Bhd', bureauScore: 1, reportOrderDate: '2026-06-01 09:00:00' }),
+    )
+    const score = buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items.find((i) => i.displayName === 'Bureau Score')!
+    expect(score.timePeriods).toEqual([
+      'Example Sdn Bhd (principal) · 2026-01-01 09:00:00', 'Person A (party) · 2026-01-01 09:00:00',
+      'Person B (party) · 2026-01-01 09:00:00', 'Example Sdn Bhd (principal) · 2026-06-01 09:00:00',
+    ])
+    expect(score.data['Example Sdn Bhd (principal) · 2026-06-01 09:00:00']).toBe(1)
+    expect(score.data['Example Sdn Bhd (principal) · 2026-01-01 09:00:00']).toBe(712)
+  })
+
+  it('with no order date, the report is named by its position', () => {
+    const v = view()
+    v.categories[CBR]!.instances.push(
+      inst(`experianReport:${h('c')}#ccris`, { section: 'ccris', subjectRole: 'principal', subjectName: 'Example Sdn Bhd', bureauScore: 1 }),
+    )
+    const labels = buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items[0]!.timePeriods
+    expect(labels).toEqual([
+      'Example Sdn Bhd (principal) · report 1', 'Person A (party) · report 1', 'Person B (party) · report 1',
+      'Example Sdn Bhd (principal) · report 2',
+    ])
+  })
+
+  it('one report: no report identity in the label', () => {
+    const v = view()
+    for (const i of v.categories[CBR]!.instances) i.fields.reportOrderDate = { ...i.fields.section!, value: '2026-01-01 09:00:00' }
+    expect(buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items[0]!.timePeriods).toEqual([
+      'Example Sdn Bhd (principal)', 'Person A (party)', 'Person B (party)',
+    ])
+  })
+
   it('two reports: each document keeps its principal first', () => {
     const v = view()
     v.categories[CBR]!.instances.unshift(
@@ -467,7 +539,10 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
     const labels = buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items[0]!.timePeriods
     // Documents keep the order the rows arrive in (the uploaded report, then
     // the one with no intake row); WITHIN each, the principal leads.
-    expect(labels).toEqual(['Example Sdn Bhd (principal)', 'Person A (party)', 'Person B (party)', 'Person D (principal)', 'Person C (party)'])
+    expect(labels).toEqual([
+      'Example Sdn Bhd (principal) · report 1', 'Person A (party) · report 1', 'Person B (party) · report 1',
+      'Person D (principal) · report 2', 'Person C (party) · report 2',
+    ])
   })
 
   // The real sections sort correctly by name alone ("ccris" / "iriss" before
@@ -491,6 +566,13 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
       { who: 'Ten', role: 'party', seq: 'pbi-10', n: 1 },
       { who: 'Two', role: 'party', seq: 'pbi-2', n: 2 },
     ])).toEqual(['Two (party)', 'Ten (party)'])
+  })
+
+  it('an undeclared role sorts after every declared one, and keeps its raw label', () => {
+    expect(subjects([
+      { who: 'X', role: 'observer', seq: 'a', n: 1 },
+      { who: 'P', role: 'party', seq: 'b', n: 2 },
+    ])).toEqual(['P (party)', 'X (observer)'])
   })
 
   it('periodised categories keep their period labels', () => {

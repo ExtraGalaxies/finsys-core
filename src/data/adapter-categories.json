@@ -2221,7 +2221,8 @@
           "principal",
           "party"
         ],
-        "sequenceField": "section"
+        "sequenceField": "section",
+        "documentLabelField": "reportOrderDate"
       },
       "fields": [
         {

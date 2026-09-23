@@ -368,10 +368,26 @@ function listText(v: unknown): string {
   return String(v)
 }
 
+/** A plain decimal, as a mapper that parsed a figure would write it — nothing `Number()` merely tolerates. */
+const PLAIN_DECIMAL = /^-?\d+(\.\d+)?$/
+
 function formatListItem(v: unknown, item: ListItemSpec, currency?: string): string {
   // A nested value in a declared column is shown as its JSON, never "[object Object]".
   if (typeof v === 'object' && v !== null) return JSON.stringify(v)
-  if (item.type === 'number') return formatValue(v, true, item.kind === 'money' ? currency : undefined)
+  if (item.type === 'number') {
+    // Only a finite number, or a string spelling one plainly, is formatted as
+    // a figure. `Number()` would turn " " into 0, true into 1 and "0x10" into
+    // 16 — a figure nobody printed. Blank, boolean and non-finite are ABSENT;
+    // any other text is shown as the text it is.
+    const money = item.kind === 'money' ? currency : undefined
+    if (typeof v === 'number') return Number.isFinite(v) ? formatValue(v, true, money) : '-'
+    if (typeof v === 'string') {
+      const t = v.trim()
+      if (t === '') return '-'
+      return PLAIN_DECIMAL.test(t) ? formatValue(Number(t), true, money) : v
+    }
+    return '-'
+  }
   return formatValue(v, false)
 }
 
@@ -733,11 +749,22 @@ function orderAndLabelInstances(
     )
     .map((x) => x.row)
 
+  // Two reports on one subject would otherwise read "Co (principal)" and
+  // "Co (principal) (2)" — which report is which is lost. Only when the
+  // columns span documents; a single report's labels stay bare.
+  const multiDocument = firstSeen.size > 1
+  const documentSuffix = (row: InstanceRow): string => {
+    if (!multiDocument) return ''
+    const named = spec.documentLabelField ? text(row[spec.documentLabelField]) : ''
+    return ` · ${named !== '' ? named : `report ${firstSeen.get(documentOf(row))! + 1}`}`
+  }
   const seenCounts = new Map<string, number>()
   const labels = ordered.map((row) => {
     const name = text(row[spec.labelField])
     const role = spec.roleField ? text(row[spec.roleField]) : ''
-    const raw = name === '' ? instanceColumnLabel(row) : role === '' ? name : `${name} (${role})`
+    const raw = name === ''
+      ? instanceColumnLabel(row)
+      : `${role === '' ? name : `${name} (${role})`}${documentSuffix(row)}`
     const occurrence = (seenCounts.get(raw) ?? 0) + 1
     seenCounts.set(raw, occurrence)
     return occurrence === 1 ? raw : `${raw} (${occurrence})`

@@ -45,6 +45,7 @@
  */
 
 import categoriesData from "./data/adapter-categories.json" with { type: "json" };
+import { JURISDICTION_CODES, type Jurisdiction } from "./jurisdiction.js";
 
 import type {
   AdapterCategoryId,
@@ -115,6 +116,10 @@ export interface ListItemSpec {
   readonly type: "string" | "number";
   /** `money` formats like any money cell; only on a `number` item. */
   readonly kind?: "money";
+  /** SYS-3728: effective maximum length — always present on a `string` item. */
+  readonly maxLength?: number;
+  /** SYS-3728: a full-match regex source, only where the writer provably normalizes the format. */
+  readonly pattern?: string;
 }
 
 /**
@@ -159,6 +164,30 @@ export interface CanonicalFieldSpec {
   readonly type: "number" | "boolean" | "string" | "list";
   /** SYS-3728: present exactly when `type` is `"list"`. */
   readonly items?: ReadonlyArray<ListItemSpec>;
+  /**
+   * SYS-3728: the longest value a writer may store, in UTF-16 code units.
+   * ALWAYS present on a built `string` field: the data file may raise it for a
+   * field that legitimately holds longer printed text, and every other string
+   * field gets `STRING_MAX_LENGTH_DEFAULT`. A field above that default is
+   * "long text" and may contain a newline or a tab; no other field may.
+   */
+  readonly maxLength?: number;
+  /**
+   * SYS-3728: a regex source every value must FULLY match, in every
+   * jurisdiction. Declared only where the writer provably normalizes the
+   * format (an ISO date the mapper already enforces) — never a guess at how a
+   * source prints something.
+   */
+  readonly pattern?: string;
+  /**
+   * SYS-3728: a full-match regex per jurisdiction, for a format that differs
+   * by country (a national id). Applied ONLY under the jurisdiction the caller
+   * names; an absent, unknown or pattern-less jurisdiction gets the
+   * jurisdiction-independent rules alone — never Malaysia's by default.
+   */
+  readonly jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>>;
+  /** SYS-3728: the most rows a list may hold. ALWAYS present on a built `list` field. */
+  readonly maxItems?: number;
   readonly unit?: string;
   readonly range?: readonly [number, number];
   readonly description: string;
@@ -234,7 +263,7 @@ export interface CanonicalFieldSpec {
    * ARPU runs about 200,000 — every non-MY row would have failed a
    * constraint the data contract asserted about all of them.
    */
-  readonly kind?: "enum" | "money";
+  readonly kind?: "enum" | "money" | "currency";
   /**
    * SYS-3164: the field's confidentiality class. The ONLY way to declare
    * one is to opt OUT.
@@ -335,7 +364,11 @@ interface RawCategoryField {
   description: string;
   fact?: string;
   legacyName?: string;
-  kind?: "enum" | "money";
+  kind?: "enum" | "money" | "currency";
+  maxLength?: unknown;
+  pattern?: unknown;
+  jurisdictionPatterns?: unknown;
+  maxItems?: unknown;
   confidentiality?: "non-sensitive";
 }
 
@@ -386,10 +419,72 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
   "list",
 ];
 
-/** SYS-3728: the name every list renders its unrecognized keys under. */
-export const LIST_OVERFLOW_COLUMN = "other";
+const LIST_ITEM_PROPERTIES = new Set(["name", "displayName", "type", "kind", "maxLength", "pattern"]);
 
-const LIST_ITEM_PROPERTIES = new Set(["name", "displayName", "type", "kind"]);
+/**
+ * SYS-3728: the effective maxLength of every string field and string list item
+ * that declares none. Measured, not guessed: across the 88,336 string values
+ * in finsim's canonical tables on 2026-09-23 the longest scalar was 109
+ * characters. A field that legitimately holds longer printed text declares its
+ * own `maxLength`.
+ */
+export const STRING_MAX_LENGTH_DEFAULT = 256;
+/** SYS-3728: the effective maxItems of every list that declares none. */
+export const LIST_MAX_ITEMS_DEFAULT = 500;
+/** The storage ceiling of a MySQL TEXT column, in characters of the narrowest encoding. */
+const STRING_MAX_LENGTH_CEILING = 65535;
+const LIST_MAX_ITEMS_CEILING = 10000;
+
+function compiles(source: string): boolean {
+  try {
+    new RegExp(source, "u");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** SYS-3728: `maxLength` / `pattern` / `jurisdictionPatterns` on a string field or item. */
+function validateStringConstraints(
+  at: string,
+  type: string,
+  c: { maxLength?: unknown; pattern?: unknown; jurisdictionPatterns?: unknown },
+): { maxLength?: number; pattern?: string; jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>> } {
+  if (c.maxLength !== undefined) {
+    if (type !== "string") throw new Error(`${at} declares maxLength, but only a string has a length (it is ${type})`);
+    if (!Number.isInteger(c.maxLength) || (c.maxLength as number) < 1 || (c.maxLength as number) > STRING_MAX_LENGTH_CEILING) {
+      throw new Error(`${at} has an invalid maxLength — expected an integer 1..${STRING_MAX_LENGTH_CEILING}`);
+    }
+  }
+  if (c.pattern !== undefined) {
+    if (type !== "string") throw new Error(`${at} declares a pattern, but only a string has one (it is ${type})`);
+    if (typeof c.pattern !== "string" || c.pattern.length === 0 || !compiles(c.pattern)) {
+      throw new Error(`${at} has a pattern that does not compile as a regex`);
+    }
+  }
+  let jurisdictionPatterns: Partial<Record<Jurisdiction, string>> | undefined;
+  if (c.jurisdictionPatterns !== undefined) {
+    if (type !== "string") throw new Error(`${at} declares jurisdictionPatterns, but only a string has one (it is ${type})`);
+    if (!c.jurisdictionPatterns || typeof c.jurisdictionPatterns !== "object" || Array.isArray(c.jurisdictionPatterns)) {
+      throw new Error(`${at} jurisdictionPatterns must be an object of jurisdiction → pattern`);
+    }
+    jurisdictionPatterns = {};
+    for (const [j, source] of Object.entries(c.jurisdictionPatterns as Record<string, unknown>)) {
+      if (!(JURISDICTION_CODES as readonly string[]).includes(j)) {
+        throw new Error(`${at} declares a pattern for jurisdiction "${j}", which the jurisdiction registry does not declare`);
+      }
+      if (typeof source !== "string" || source.length === 0 || !compiles(source)) {
+        throw new Error(`${at} has a pattern for "${j}" that does not compile as a regex`);
+      }
+      jurisdictionPatterns[j as Jurisdiction] = source;
+    }
+  }
+  return {
+    ...(type === "string" ? { maxLength: (c.maxLength as number | undefined) ?? STRING_MAX_LENGTH_DEFAULT } : {}),
+    ...(c.pattern !== undefined ? { pattern: c.pattern as string } : {}),
+    ...(jurisdictionPatterns !== undefined ? { jurisdictionPatterns: Object.freeze(jurisdictionPatterns) } : {}),
+  };
+}
 const INSTANCE_COLUMNS_PROPERTIES = new Set(["labelField", "roleField", "roleOrder", "sequenceField", "documentLabelField"]);
 
 /**
@@ -420,9 +515,6 @@ function validateListField(f: RawCategoryField, where: string): ReadonlyArray<Li
     for (const key of Object.keys(item)) {
       if (!LIST_ITEM_PROPERTIES.has(key)) throw new Error(`${it} has unknown property "${key}"`);
     }
-    if (item.name === LIST_OVERFLOW_COLUMN) {
-      throw new Error(`${it}: "${LIST_OVERFLOW_COLUMN}" is reserved for the column unrecognized keys render under`);
-    }
     if (seen.has(item.name)) throw new Error(`${at} declares duplicate item "${item.name}"`);
     seen.add(item.name);
     if (typeof item.displayName !== "string" || item.displayName.length === 0) {
@@ -437,12 +529,14 @@ function validateListField(f: RawCategoryField, where: string): ReadonlyArray<Li
         throw new Error(`${it} is kind "money" but type "${item.type}" — a monetary amount's primitive is a number`);
       }
     }
+    const constraints = validateStringConstraints(it, item.type, { maxLength: item.maxLength, pattern: item.pattern });
     items.push(
       Object.freeze({
         name: item.name,
         displayName: item.displayName,
         type: item.type,
         ...(item.kind !== undefined ? { kind: "money" as const } : {}),
+        ...constraints,
       }),
     );
   }
@@ -505,6 +599,7 @@ function validateInstanceColumns(
 const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> = [
   "enum",
   "money",
+  "currency",
 ];
 
 /**
@@ -659,6 +754,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       // agreement on them, not just on fact/kind/confidentiality.
       type: RawCategoryField["type"];
       unit: RawCategoryField["unit"];
+      constraints: string;
       confidentiality: "non-sensitive" | undefined;
       categories: AdapterCategory[];
     }
@@ -838,6 +934,15 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
               `shared-fact attestations must agree on type`,
           );
         }
+        const constraintsOf = (x: RawCategoryField): string =>
+          JSON.stringify([x.maxLength ?? null, x.pattern ?? null, x.jurisdictionPatterns ?? null]);
+        if (prior.constraints !== constraintsOf(f)) {
+          throw new Error(
+            `adapter category data: canonical field "${f.name}" declared with different length / pattern ` +
+              `constraints by ${prior.categories.join(" + ")} and ${cat.id} — shared-fact attestations must ` +
+              `agree on them, or one fact is valid from one source and invalid from another`,
+          );
+        }
         if (prior.unit !== f.unit) {
           const describeUnit = (u: string | undefined): string =>
             u === undefined ? "no unit" : `unit "${u}"`;
@@ -885,8 +990,17 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       // SYS-3728: checked before the kind/unit/range rules below so a list
       // carrying one fails with the list's own reason, not a generic one.
       let listItems: ReadonlyArray<ListItemSpec> | undefined;
+      let maxItems: number | undefined;
       if (f.type === "list") {
         listItems = validateListField(f, where);
+        if (f.maxItems !== undefined && (!Number.isInteger(f.maxItems) || (f.maxItems as number) < 1 || (f.maxItems as number) > LIST_MAX_ITEMS_CEILING)) {
+          throw new Error(`adapter category data: list "${f.name}" (${where}) has an invalid maxItems — expected an integer 1..${LIST_MAX_ITEMS_CEILING}`);
+        }
+        maxItems = (f.maxItems as number | undefined) ?? LIST_MAX_ITEMS_DEFAULT;
+      } else if (f.maxItems !== undefined) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) declares maxItems, but only a list has items (it is ${f.type})`,
+        );
       } else if (f.items !== undefined) {
         throw new Error(
           `adapter category data: field "${f.name}" (${where}) declares items, but only a list has items (it is ${f.type})`,
@@ -932,6 +1046,18 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
             );
           }
         }
+        if (f.kind === "currency") {
+          if (f.type !== "string") {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "currency" but type "${f.type}" — a currency is an ISO 4217 code, a string`,
+            );
+          }
+          if (f.pattern !== undefined || f.jurisdictionPatterns !== undefined || f.range !== undefined || f.unit !== undefined) {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "currency" and declares a pattern, range or unit — the allowed ISO 4217 set is its whole constraint`,
+            );
+          }
+        }
         if (f.kind === "money") {
           if (f.type !== "number") {
             throw new Error(
@@ -973,10 +1099,16 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         }
       }
 
+      const stringConstraints = validateStringConstraints(
+        `adapter category data: field "${f.name}" (${where})`,
+        f.type,
+        f,
+      );
       const spec: CanonicalFieldSpec = Object.freeze({
         name: asFieldName(f.name),
         type: f.type,
-        ...(listItems !== undefined ? { items: listItems } : {}),
+        ...(listItems !== undefined ? { items: listItems, maxItems } : {}),
+        ...stringConstraints,
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
@@ -1000,6 +1132,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           kind: f.kind,
           type: f.type,
           unit: f.unit,
+          constraints: JSON.stringify([f.maxLength ?? null, f.pattern ?? null, f.jurisdictionPatterns ?? null]),
           confidentiality: f.confidentiality,
           categories: [asCategoryId(cat.id)],
         });
@@ -1026,6 +1159,11 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       }
     }
 
+    if (fields.filter((x) => x.kind === "currency").length > 1) {
+      throw new Error(
+        `adapter category data: ${where} declares more than one currency field — which one denominates its money would be a guess`,
+      );
+    }
     const schema: CategorySchema = Object.freeze({
       id: asCategoryId(cat.id),
       displayName: cat.displayName,

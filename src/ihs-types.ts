@@ -3,6 +3,8 @@
  * Used by finsys-client and finhub-adonisjs to render application details.
  */
 
+import type { ViolationRule } from './canonical-validation.js'
+
 export enum IhsValueFormat {
   STRING = 'string',
   CURRENCY = 'currency',
@@ -168,6 +170,15 @@ export interface FileFieldTableItem {
    * `isNumeric` is always false for such an item.
    */
   list?: Record<string, IhsListCell>
+  /**
+   * SYS-3728: the columns whose stored value broke the canonical write
+   * contract (`validateFieldValue`), with the rules it broke — keyed like
+   * `data`. For each, `data` is null, `formattedData` is "(invalid value)",
+   * and a list's cell is the invalid marker: the stored content is never
+   * rendered. Present only on a table built with field specs (a category
+   * with no v1 lineage).
+   */
+  invalid?: Record<string, ViolationRule[]>
 }
 
 /** SYS-3728: one column of an `IhsListCell`. */
@@ -187,20 +198,18 @@ export interface IhsListColumn {
  *
  * `columns` are the field's declared items, in declared order, always all of
  * them (a column no row fills renders '-' throughout, so two cells of one field
- * share a shape). A trailing `other` column appears when any row carries a key
- * the items do not declare: those keys render there as `key: value; …`, never
- * dropped. A stored key matches an item by its exact name or by its kebab-case
- * spelling (`appointment-date` → `appointmentDate`); on a clash the exact key
- * wins and the other goes to `other`.
+ * share a shape). A stored key matches an item by its exact name or by its
+ * kebab-case spelling (`appointment-date` → `appointmentDate`).
  *
  * `rows` are formatted strings keyed by column name — money as money, numbers
- * grouped, an absent value `'-'`, a nested value as its JSON text. `rawRows`
- * is the parsed array exactly as stored.
+ * grouped, an absent value `'-'`. `rawRows` is the parsed array exactly as
+ * stored.
  *
- * `invalid` marks a stored value that is not a JSON array (malformed JSON, an
- * object, a scalar): the cell then has one `value` column and one row holding
- * the stored text, and `rawRows` is empty. It is flagged rather than thrown,
- * because one bad cell must not take down the whole detail page.
+ * `invalid` marks a stored value that breaks the canonical write contract
+ * (not a JSON array, a row that is not an object, an undeclared key, a value
+ * of the wrong type, length or characters): the cell then has one `value`
+ * column and one row reading "(invalid value)", and `rawRows` is empty. None
+ * of the stored content is carried.
  */
 export interface IhsListCell {
   kind: 'list'

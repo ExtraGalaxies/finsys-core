@@ -894,7 +894,8 @@
         {
           "name": "currency",
           "type": "string",
-          "description": "Reporting currency stated on the document."
+          "kind": "currency",
+          "description": "Reporting currency stated on the document, as an ISO 4217 code; normalized from the printed form by the writer. A printed form that also states a scale (RM'000) is not a currency code."
         },
         {
           "name": "year",
@@ -2228,6 +2229,7 @@
         {
           "name": "section",
           "type": "string",
+          "pattern": "ccris|iriss|pbi-[1-9]\\d*",
           "description": "Which subject entry of the report this instance is, as the reader sets it: `ccris` (a company the report was ordered on), `iriss` (an individual the report was ordered on), or `pbi-1`, `pbi-2`, … (each party with business interest, in printed order)."
         },
         {
@@ -2382,13 +2384,13 @@
             { "name": "registrationNo", "displayName": "Registration No.", "type": "string" },
             { "name": "incorporationDate", "displayName": "Incorporation Date", "type": "string" },
             { "name": "paidUpCapital", "displayName": "Paid-up Capital", "type": "string" },
-            { "name": "activity", "displayName": "Activity", "type": "string" },
+            { "name": "activity", "displayName": "Activity", "type": "string", "maxLength": 1024 },
             { "name": "position", "displayName": "Position", "type": "string" },
             { "name": "appointed", "displayName": "Appointed", "type": "string" },
             { "name": "businessExpiryDate", "displayName": "Business Expiry Date", "type": "string" },
             { "name": "shareholding", "displayName": "Shareholding", "type": "string" },
             { "name": "percentage", "displayName": "Percentage", "type": "string" },
-            { "name": "remark", "displayName": "Remark", "type": "string" },
+            { "name": "remark", "displayName": "Remark", "type": "string", "maxLength": 1024 },
             { "name": "lastUpdatedByExperian", "displayName": "Last Updated by Bureau", "type": "string" }
           ],
           "description": "JSON-encoded list of the companies the subject holds an interest or position in, one entry per printed row (name, registration number, incorporation date, paid-up capital, activity, position, appointment date, shareholding, percentage, remark)."
@@ -2534,7 +2536,7 @@
             { "name": "conduct12m", "displayName": "Conduct (12 months)", "type": "string" },
             { "name": "legalStatus", "displayName": "Legal Status", "type": "string" },
             { "name": "statusUpdated", "displayName": "Status Updated", "type": "string" },
-            { "name": "collateralDetail", "displayName": "Collateral Detail", "type": "string" }
+            { "name": "collateralDetail", "displayName": "Collateral Detail", "type": "string", "maxLength": 1024 }
           ],
           "description": "JSON-encoded list of the outstanding banking credit facilities, ONE ENTRY PER FACILITY: the lines the source prints for one account (its approval line, its collateral lines, its facility line) combined into a single row, with the limit, balance and instalment parsed as money and the twelve monthly conduct-of-account marks carried together as conduct12m. Rows stored before that regrouping (one entry per printed line) still render: their unrecognized keys show in the overflow column."
         },
@@ -2568,7 +2570,7 @@
             { "name": "legalSts", "displayName": "Legal Status", "type": "string" },
             { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string" },
             { "name": "propertyStatus", "displayName": "Property Status", "type": "string" },
-            { "name": "address", "displayName": "Collateral Address", "type": "string" },
+            { "name": "address", "displayName": "Collateral Address", "type": "string", "maxLength": 1024 },
             { "name": "districtCityTown", "displayName": "District / City / Town", "type": "string" },
             { "name": "postcode", "displayName": "Postcode", "type": "string" },
             { "name": "state", "displayName": "State", "type": "string" },
@@ -2606,7 +2608,7 @@
             { "name": "legalSts", "displayName": "Legal Status", "type": "string" },
             { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string" },
             { "name": "propertyStatus", "displayName": "Property Status", "type": "string" },
-            { "name": "address", "displayName": "Collateral Address", "type": "string" },
+            { "name": "address", "displayName": "Collateral Address", "type": "string", "maxLength": 1024 },
             { "name": "districtCityTown", "displayName": "District / City / Town", "type": "string" },
             { "name": "postcode", "displayName": "Postcode", "type": "string" },
             { "name": "state", "displayName": "State", "type": "string" },
@@ -2673,15 +2675,15 @@
           "type": "list",
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
-            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string" },
+            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
             { "name": "localNo", "displayName": "Local No.", "type": "string" },
             { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
-            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string" },
+            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
-            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string" },
+            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string", "maxLength": 1024 },
             { "name": "defendant", "displayName": "Defendant", "type": "string" },
-            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string" },
+            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string", "maxLength": 1024 },
             { "name": "solicitorTel", "displayName": "Solicitor Tel", "type": "string" },
             { "name": "solicitorFax", "displayName": "Solicitor Fax", "type": "string" },
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
@@ -2704,15 +2706,15 @@
           "type": "list",
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
-            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string" },
+            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
             { "name": "localNo", "displayName": "Local No.", "type": "string" },
             { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
-            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string" },
+            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
-            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string" },
+            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string", "maxLength": 1024 },
             { "name": "defendant", "displayName": "Defendant", "type": "string" },
-            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string" },
+            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string", "maxLength": 1024 },
             { "name": "solicitorTel", "displayName": "Solicitor Tel", "type": "string" },
             { "name": "solicitorFax", "displayName": "Solicitor Fax", "type": "string" },
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
@@ -2735,15 +2737,15 @@
           "type": "list",
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
-            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string" },
+            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
             { "name": "localNo", "displayName": "Local No.", "type": "string" },
             { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
-            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string" },
+            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
-            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string" },
+            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string", "maxLength": 1024 },
             { "name": "defendant", "displayName": "Defendant", "type": "string" },
-            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string" },
+            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string", "maxLength": 1024 },
             { "name": "solicitorTel", "displayName": "Solicitor Tel", "type": "string" },
             { "name": "solicitorFax", "displayName": "Solicitor Fax", "type": "string" },
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
@@ -2766,15 +2768,15 @@
           "type": "list",
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
-            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string" },
+            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
             { "name": "localNo", "displayName": "Local No.", "type": "string" },
             { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
-            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string" },
+            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
-            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string" },
+            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string", "maxLength": 1024 },
             { "name": "defendant", "displayName": "Defendant", "type": "string" },
-            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string" },
+            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string", "maxLength": 1024 },
             { "name": "solicitorTel", "displayName": "Solicitor Tel", "type": "string" },
             { "name": "solicitorFax", "displayName": "Solicitor Fax", "type": "string" },
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
@@ -2797,15 +2799,15 @@
           "type": "list",
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
-            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string" },
+            { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
             { "name": "localNo", "displayName": "Local No.", "type": "string" },
             { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
-            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string" },
+            { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
-            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string" },
+            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string", "maxLength": 1024 },
             { "name": "defendant", "displayName": "Defendant", "type": "string" },
-            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string" },
+            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string", "maxLength": 1024 },
             { "name": "solicitorTel", "displayName": "Solicitor Tel", "type": "string" },
             { "name": "solicitorFax", "displayName": "Solicitor Fax", "type": "string" },
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
@@ -2829,11 +2831,11 @@
           "items": [
             { "name": "status", "displayName": "Status", "type": "string" },
             { "name": "defendantName", "displayName": "Defendant Name", "type": "string" },
-            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string" },
+            { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string", "maxLength": 1024 },
             { "name": "newIcNo", "displayName": "New IC No.", "type": "string" },
             { "name": "icPpNo", "displayName": "IC / Passport No.", "type": "string" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
-            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string" },
+            { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string", "maxLength": 1024 },
             { "name": "solicitorTel", "displayName": "Solicitor Tel", "type": "string" },
             { "name": "solicitorFax", "displayName": "Solicitor Fax", "type": "string" },
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
@@ -2847,7 +2849,7 @@
             { "name": "adjudicationOrderDate", "displayName": "Adjudication Order Date", "type": "string" },
             { "name": "dischargeDateRef", "displayName": "Discharge Date Ref.", "type": "string" },
             { "name": "dischargeDate", "displayName": "Discharge Date", "type": "string" },
-            { "name": "creditors", "displayName": "Creditors", "type": "string" }
+            { "name": "creditors", "displayName": "Creditors", "type": "string", "maxLength": 1024 }
           ],
           "description": "JSON-encoded list of bankruptcy cases, one entry per case."
         },
@@ -2877,7 +2879,7 @@
             { "name": "solicitorsName", "displayName": "Solicitor", "type": "string" },
             { "name": "solicitorsContact", "displayName": "Solicitor Contact", "type": "string" },
             { "name": "guarantorOwner", "displayName": "Guarantor / Owner", "type": "string" },
-            { "name": "remark", "displayName": "Remark", "type": "string" }
+            { "name": "remark", "displayName": "Remark", "type": "string", "maxLength": 1024 }
           ],
           "description": "JSON-encoded list of trade / credit references lodged against the subject, one entry per reference (creditor, amount due, days overdue, debt type, status, …)."
         },
@@ -2913,7 +2915,7 @@
             { "name": "legalStatus", "displayName": "Legal Status", "type": "string" },
             { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string" },
             { "name": "propertyStatus", "displayName": "Property Status", "type": "string" },
-            { "name": "address", "displayName": "Collateral Address", "type": "string" },
+            { "name": "address", "displayName": "Collateral Address", "type": "string", "maxLength": 1024 },
             { "name": "districtCityTown", "displayName": "District / City / Town", "type": "string" },
             { "name": "postcode", "displayName": "Postcode", "type": "string" },
             { "name": "state", "displayName": "State", "type": "string" },
@@ -2980,26 +2982,31 @@
         {
           "name": "mgmtCurrency",
           "type": "string",
-          "description": "Currency as printed on the statement (e.g. RM, MYR). Null when the statement prints none."
+          "kind": "currency",
+          "description": "The statement's reporting currency as an ISO 4217 code; normalized from the printed form (RM, MYR, ...) by the writer, and absent when the statement prints none or prints a form that names no single currency."
         },
         {
           "name": "mgmtPeriodEnd",
           "type": "string",
+          "pattern": "\\d{4}-\\d{2}-\\d{2}",
           "description": "Reporting period end, normalized to ISO YYYY-MM-DD. Null when the statement prints only a year."
         },
         {
           "name": "mgmtPeriodStart",
           "type": "string",
+          "pattern": "\\d{4}-\\d{2}-\\d{2}",
           "description": "Profit-and-loss period start, normalized to ISO YYYY-MM-DD, when printed."
         },
         {
           "name": "mgmtPeriodYear",
           "type": "string",
+          "pattern": "\\d{4}",
           "description": "The year of the reporting period, as a four-digit year (e.g. 2025) — a label, like the EPF statement's statementYear, not a measure."
         },
         {
           "name": "mgmtStatementsRead",
           "type": "string",
+          "pattern": "BS|PL|BS,PL",
           "description": "Which statements this period was read from: BS (balance sheet), PL (profit and loss), or both."
         },
         {
@@ -3122,7 +3129,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under sales, revenue and turnover, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3132,7 +3140,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under cost of sales (purchases, opening and closing stock, direct labor, freight and other direct costs), for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3142,7 +3151,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under other operating and non-operating income, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3152,7 +3162,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under salaries, wages, statutory contributions and owners' or directors' remuneration, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3162,7 +3173,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under rental of premises and equipment, quit rent and assessment, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3172,7 +3184,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under utilities (electricity, water, gas, sewerage), for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3182,7 +3195,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under telephone, internet, hosting and subscriptions, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3192,7 +3206,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under motor-vehicle running costs, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3202,7 +3217,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under repairs, upkeep and maintenance, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3212,7 +3228,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under insurance premiums, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3222,7 +3239,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under accounting, audit, secretarial, tax, legal and consultancy fees, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3232,7 +3250,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under travel, accommodation, entertainment and meals, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3242,7 +3261,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under other staff costs (welfare, allowances, medical, training, recruitment, levy), for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3252,7 +3272,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under depreciation and amortization, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3262,7 +3283,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under every other expense account, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3272,7 +3294,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under trade debtors / trade receivables, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3282,7 +3305,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under other debtors and receivables, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3292,7 +3316,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under bank accounts and fixed deposits, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3302,7 +3327,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under cash in hand / petty cash, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3312,7 +3338,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under deposits paid and prepayments, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3322,7 +3349,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under stock, inventories and work in progress, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3332,7 +3360,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under land and buildings (cost, accumulated depreciation and net book value rows), for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3342,7 +3371,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under renovations and other improvements, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3352,7 +3382,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under furniture, fittings and office equipment, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3362,7 +3393,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under motor vehicles and other vehicles, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3372,7 +3404,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under plant, machinery, tools and other equipment, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3382,7 +3415,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under computers and IT hardware, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3392,7 +3426,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under software, systems and licenses capitalized as assets, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3402,7 +3437,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under trade creditors / accounts payable, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3412,7 +3448,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under other creditors and payables, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3422,7 +3459,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under accruals, accrued expenses and accrued wages, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3432,7 +3470,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under hire purchase and lease creditors, current and non-current, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3442,7 +3481,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under bank loans, term loans, overdrafts, SME financing and other alternative or peer-to-peer financing, current and non-current, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3452,7 +3492,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under share capital and owners' or partners' capital, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3462,7 +3503,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under retained earnings and accumulated profits or losses, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         },
@@ -3472,7 +3514,8 @@
           "items": [
             { "name": "code", "displayName": "Code", "type": "string" },
             { "name": "term", "displayName": "Term", "type": "string" },
-            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" }
+            { "name": "amount", "displayName": "Amount", "type": "number", "kind": "money" },
+            { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under owners' or partners' drawings and dividends, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         }

@@ -63,7 +63,73 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   the named fields exist, the label, sequence and document-label fields are
   strings and the role is an enum with a distinct `roleOrder`. `CategorySpec` gains the
   optional `listItems` and `instanceColumns` the view path fills from these.
-- `adapter-categories.json` `schemaVersion` 1.5.0 → 1.6.0.
+
+- **SYS-3728 — the canonical write contract: one validator for writers and
+  readers.** The list defect passed every check because its DECLARATION was
+  wrong — a JSON array is a valid string. Every declaration is now
+  enforceable, and **writers must enforce it before persisting**
+  (finsys-api at `persistExtraction`; log first, then enforce):
+  - `validateCanonicalFields(category, fields, opts)` and
+    `validateAdapterExtraction(category, extraction, opts)` →
+    `{ ok, violations: Violation[] }`; `validateFieldValue(spec, value, opts)`
+    for one value. A `Violation` is `{ field, rule, item?, key?, period?,
+    envelope? }` and **never contains a value**: an undeclared field or key is
+    reported as `(unknown)` / `(envelope)` / no key, since its name is
+    attacker-controlled text too.
+  - Rules: `unknown-field`, `type-mismatch` (a number or money field accepts
+    only a number — "RM 1,000", "₫1.000", "$5", "1,000 CR" are refused),
+    `non-finite-number`, `serialized-structure` (a string that parses as a
+    JSON array or object, in any non-list field or list item),
+    `control-characters` (C0 except tab/newline, CR, DEL, C1, bidi controls,
+    U+2028/2029; tab and newline only in long text), `malformed-text` (lone
+    surrogates), `blank-string` (absent is omitted, never ""), `max-length`,
+    `pattern-mismatch` (full match), `enum-not-member` /
+    `enum-labels-missing` (labels come from the manifest's `enumValues`;
+    `enumMembership: 'skip'` for a reader), `currency-not-allowed`,
+    `list-not-array`, `list-item-not-object`, `undeclared-item-key`,
+    `duplicate-item-key` (an item and its kebab-case twin both present),
+    `max-items`; envelope: `invalid-instance-key` (≤ 200, the column width;
+    `''` allowed for single cardinality), `invalid-observed-at` (ISO 8601
+    date-time), `invalid-confidence` (0..1 or null, declared fields only),
+    `invalid-period` / `duplicate-period` (position a unique positive integer;
+    start/end ISO dates). Envelope = `instanceKey`, `observedAt`,
+    `confidence`, `periods[].{position,start,end,confidence}`; category fields
+    = `values` and `periods[].values`; any other key is refused.
+  - `null` / `undefined` are absent and never a violation.
+  - `jurisdiction` selects `jurisdictionPatterns` STRICTLY: an absent,
+    unknown or lowercase code applies only jurisdiction-independent rules —
+    deliberately not `resolveJurisdiction`'s "absent means MY".
+- **Constraints in the registry** (loader-validated; `schemaVersion` 1.5.0 → 1.6.0, covering the list type too):
+  every `string` field and string list item has an effective `maxLength`
+  (`STRING_MAX_LENGTH_DEFAULT` 256 — finsim's 88,336 canonical string values
+  peak at 109 characters); 30 list items that hold wrapping printed text
+  declare 1024 (every address, `activity`, `remark`, `creditors`,
+  `collateralDetail`). Every list has an effective `maxItems`
+  (`LIST_MAX_ITEMS_DEFAULT` 500). Full-match `pattern`s only where the writer
+  provably normalizes the format: `section`, `mgmtPeriodEnd`,
+  `mgmtPeriodStart`, `mgmtPeriodYear`, `mgmtStatementsRead`.
+  `jurisdictionPatterns` (per jurisdiction) is supported and validated, but
+  no shipped field declares one: the producer passes bureau identifiers
+  through as printed, so no format is provable. Shared-fact attestations must
+  agree on these constraints.
+- **Kind `"currency"`** (ISO 4217 from `CURRENCY_CODES`: every jurisdiction
+  display currency plus USD, SGD, PHP, IDR), at most one per category, on
+  `management-account.mgmtCurrency` and `financial-statement.currency`.
+  `normalizeCurrency(printed)` maps the declared aliases (RM, RM., ₫, VNĐ, ฿,
+  ₱, S$, Rp, US$, and the codes) and refuses the rest; a bare `$` is
+  `ambiguous`, never guessed.
+- **Read side uses the same validator.** A table built for a category with no
+  v1 lineage checks every value first: a violating value is null in `data`,
+  "(invalid value)" (`INVALID_VALUE_TEXT`) in `formattedData`, named in the new
+  `FileFieldTableItem.invalid` (rules only), and never used as a column label.
+  `buildListCell(value, listSpec, currency?)` returns the invalid marker —
+  carrying none of the stored content — for any violating list; the "other"
+  overflow column is gone (an undeclared key is a violation). Money renders in
+  the document's own valid `kind: "currency"` value via Intl, never a
+  jurisdiction default and never a re-parsed symbol.
+- `management-account` line items gain `amountAsPrinted`: the mapper keeps a
+  figure it could not parse as printed text, and the clean-fixture run would
+  otherwise have rejected every such line.
 
 ### Consumer-visible
 
@@ -79,6 +145,12 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   `data` / `formattedData` / `confidence` / `provenance`, all follow. A consumer
   that looked a bureau column up by the old key must use `timePeriods` instead.
   `instanceRowsFromView` is unchanged: rows keep their wire order and period.
+- **Stored data that breaks the contract now renders as "(invalid value)"** in
+  the credit-bureau and management-account tables: outstanding credit stored in
+  the pre-regrouping one-row-per-line shape (undeclared keys), and a
+  `mgmtCurrency` stored as printed ("RM"). Both clear on re-extraction by a
+  writer that regroups facilities and calls `normalizeCurrency`. v1-lineage
+  tables are not re-checked on read; their outputs are byte-identical.
 - **A consumer switching on `CanonicalFieldSpec.type` sees `"list"`.** A
   host mapper that writes a table only when `type === "string"` writes nothing
   for these 51 fields until it also accepts `"list"`. A field picker listing

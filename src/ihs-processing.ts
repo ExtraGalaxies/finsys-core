@@ -32,11 +32,12 @@ import {
   assertAdapterCategory,
   categoryFieldsOf,
   categorySchemaOf,
-  LIST_OVERFLOW_COLUMN,
   type AdapterCategory,
+  type CanonicalFieldSpec,
   type CategoryInstanceColumns,
   type ListItemSpec,
 } from './adapter-categories.js'
+import { matchListRow, parseListValue, validateFieldValue, type ViolationRule } from './canonical-validation.js'
 import {
   v1Addresses,
   v1KeyForAddress,
@@ -351,129 +352,93 @@ function formatValue(value: unknown, numeric: boolean, currency?: string): strin
   return String(value)
 }
 
-// ── List cells (SYS-3728) ───────────────────────────────────────
+// ── List cells and the read-side guard (SYS-3728) ────────────────
 
-/** `appointment-date` → `appointmentDate`; `conduct-of-account-m01` → `conductOfAccountM01`. */
-function kebabToCamel(key: string): string {
-  return key.replace(/[-_]+([a-zA-Z0-9])/g, (_, c: string) => c.toUpperCase())
+/** What a cell that broke the canonical write contract shows instead of its value. */
+export const INVALID_VALUE_TEXT = '(invalid value)'
+
+function invalidListCell(): IhsListCell {
+  return {
+    kind: 'list',
+    columns: [{ name: 'value', label: 'Value', numeric: false, money: false }],
+    rows: [{ value: INVALID_VALUE_TEXT }],
+    rawRows: [],
+    invalid: true,
+  }
 }
-
-const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v)
-
-/** A value as text, for the overflow column: nothing is formatted, nothing is lost. */
-function listText(v: unknown): string {
-  if (v === null || v === undefined) return '-'
-  if (typeof v === 'object') return JSON.stringify(v)
-  return String(v)
-}
-
-/** A plain decimal, as a mapper that parsed a figure would write it — nothing `Number()` merely tolerates. */
-const PLAIN_DECIMAL = /^-?\d+(\.\d+)?$/
 
 function formatListItem(v: unknown, item: ListItemSpec, currency?: string): string {
-  // A nested value in a declared column is shown as its JSON, never "[object Object]".
-  if (typeof v === 'object' && v !== null) return JSON.stringify(v)
-  if (item.type === 'number') {
-    // Only a finite number, or a string spelling one plainly, is formatted as
-    // a figure. `Number()` would turn " " into 0, true into 1 and "0x10" into
-    // 16 — a figure nobody printed. Blank, boolean and non-finite are ABSENT;
-    // any other text is shown as the text it is.
-    const money = item.kind === 'money' ? currency : undefined
-    if (typeof v === 'number') return Number.isFinite(v) ? formatValue(v, true, money) : '-'
-    if (typeof v === 'string') {
-      const t = v.trim()
-      if (t === '') return '-'
-      return PLAIN_DECIMAL.test(t) ? formatValue(Number(t), true, money) : v
-    }
-    return '-'
-  }
-  return formatValue(v, false)
+  if (v === null || v === undefined) return '-'
+  if (item.type === 'number') return formatValue(v, true, item.kind === 'money' ? currency : undefined)
+  return String(v)
 }
 
 /**
  * SYS-3728: a stored list value as rows under its declared columns — the
- * `IhsListCell` contract (see its doc in ihs-types.ts for every rule).
+ * `IhsListCell` contract (see its doc in ihs-types.ts).
  *
- * `value` is what storage holds: a JSON string of an array of row objects, or
- * an already-parsed array. TOLERANT BY DESIGN — this renders a detail page, and
- * one malformed cell must not take the page down with it:
- *   - not a JSON array (malformed, an object, a scalar) → one `value` cell
- *     holding the stored text, flagged `invalid`;
- *   - a key no item declares → the `other` column, as `key: value`, never
- *     dropped;
- *   - a row that is not an object → the `other` column, whole.
+ * The value is checked against the SAME validator a writer enforces
+ * (`validateFieldValue`): any violation — not a JSON array, a row that is not
+ * an object, an undeclared key, a number item holding text, an over-long or
+ * control-character string — and the cell is the invalid marker, carrying
+ * NONE of the stored content. Only a value that passes is rendered.
  *
- * `currency` is the observation's denomination, applied to money items the
- * way it is applied to every other money cell; absent, money is a plain grouped
- * number (the honest "no denomination known" rendering, not a guessed one).
+ * `listSpec` is the list field's registry spec. `currency` is the
+ * observation's ISO 4217 code, used for money items; absent, money is a plain
+ * grouped number.
  */
-export function buildListCell(
-  value: unknown,
-  items: ReadonlyArray<ListItemSpec>,
-  currency?: string,
-): IhsListCell {
-  let parsed: unknown = value
-  if (typeof value === 'string') {
-    try {
-      parsed = JSON.parse(value)
-    } catch {
-      parsed = undefined
-    }
-  }
-  if (!Array.isArray(parsed)) {
-    return {
-      kind: 'list',
-      columns: [{ name: 'value', label: 'Value', numeric: false, money: false }],
-      rows: [{ value: typeof value === 'string' ? value : listText(value) }],
-      rawRows: [],
-      invalid: true,
-    }
-  }
-
-  const declared = new Set(items.map((i) => i.name))
-  let overflow = false
-  const rows = parsed.map((raw) => {
-    const matched = new Map<string, unknown>()
-    const other: string[] = []
-    if (isPlainObject(raw)) {
-      // Exact names first, so an exact key always beats a kebab-case twin.
-      for (const [k, v] of Object.entries(raw)) if (declared.has(k)) matched.set(k, v)
-      for (const [k, v] of Object.entries(raw)) {
-        if (declared.has(k)) continue
-        const camel = kebabToCamel(k)
-        if (camel !== k && declared.has(camel) && !matched.has(camel)) matched.set(camel, v)
-        else other.push(`${k}: ${listText(v)}`)
-      }
-    } else {
-      other.push(listText(raw))
-    }
-    if (other.length > 0) overflow = true
+export function buildListCell(value: unknown, listSpec: CanonicalFieldSpec, currency?: string): IhsListCell {
+  if (listSpec.type !== 'list' || !listSpec.items) return invalidListCell()
+  if (validateFieldValue(listSpec, value, { enumMembership: 'skip' }).length > 0) return invalidListCell()
+  const parsed = parseListValue(value)
+  if (!('rows' in parsed)) return invalidListCell()
+  const items = listSpec.items
+  const rows = parsed.rows.map((raw) => {
+    const { values } = matchListRow(raw as Record<string, unknown>, items)
     const row: Record<string, string> = {}
-    for (const item of items) row[item.name] = formatListItem(matched.get(item.name), item, currency)
-    return { row, other: other.join('; ') }
+    for (const item of items) row[item.name] = formatListItem(values.get(item.name), item, currency)
+    return row
   })
-
-  const columns = items.map((i) => ({
-    name: i.name,
-    label: i.displayName,
-    numeric: i.type === 'number',
-    money: i.kind === 'money',
-  }))
-  if (overflow) columns.push({ name: LIST_OVERFLOW_COLUMN, label: 'Other', numeric: false, money: false })
   return {
     kind: 'list',
-    columns,
-    rows: rows.map(({ row, other }) => (overflow ? { ...row, [LIST_OVERFLOW_COLUMN]: other } : row)),
-    rawRows: parsed,
+    columns: items.map((i) => ({ name: i.name, label: i.displayName, numeric: i.type === 'number', money: i.kind === 'money' })),
+    rows,
+    rawRows: parsed.rows,
   }
 }
 
 /** The short text `formattedData` carries for a list: a count, never the JSON. */
-function listSummary(cell: IhsListCell, value: unknown): string {
-  if (cell.invalid) return formatValue(value, false)
+function listSummary(cell: IhsListCell): string {
+  if (cell.invalid) return INVALID_VALUE_TEXT
   const n = cell.rows.length
   return `${n} ${n === 1 ? 'entry' : 'entries'}`
+}
+
+/**
+ * SYS-3728: the rows with every value that breaks the write contract removed,
+ * and a record of which (row, field) broke which rules. The removed value is
+ * never rendered, never used as a column label, and never reaches `data`.
+ */
+function guardInstanceRows(
+  rows: InstanceRow[],
+  fieldSpecs: Readonly<Record<string, CanonicalFieldSpec>>
+): { rows: InstanceRow[]; invalid: Array<Map<string, ViolationRule[]>> } {
+  const invalid: Array<Map<string, ViolationRule[]>> = []
+  const guarded = rows.map((row) => {
+    const bad = new Map<string, ViolationRule[]>()
+    const copy: InstanceRow = { ...row }
+    for (const [field, spec] of Object.entries(fieldSpecs)) {
+      if (!Object.prototype.hasOwnProperty.call(row, field)) continue
+      const violations = validateFieldValue(spec, row[field], { enumMembership: 'skip' })
+      if (violations.length > 0) {
+        bad.set(field, [...new Set(violations.map((v) => v.rule))])
+        copy[field] = null
+      }
+    }
+    invalid.push(bad)
+    return copy
+  })
+  return { rows: guarded, invalid }
 }
 
 function buildTableForGroup(
@@ -779,24 +744,33 @@ function buildInstanceTable(
   rowsAsGiven: InstanceRow[],
   fieldProvenance?: Record<string, IhsFieldProvenance>,
   numericColumns?: ReadonlySet<string>,
-  listItems?: Readonly<Record<string, ReadonlyArray<ListItemSpec>>>,
-  instanceColumns?: CategoryInstanceColumns
+  fieldSpecs?: Readonly<Record<string, CanonicalFieldSpec>>,
+  instanceColumns?: CategoryInstanceColumns,
+  currencyField?: string
 ): FileFieldTableData | null {
+  // SYS-3728: with field specs, every value is held to the write contract
+  // BEFORE anything reads it — labels, ordering, currency, cells.
+  const guard = fieldSpecs ? guardInstanceRows(rowsAsGiven, fieldSpecs) : null
+  const guardedRows = guard ? guard.rows : rowsAsGiven
+  const invalidOf = new Map<InstanceRow, Map<string, ViolationRule[]>>()
+  if (guard) guardedRows.forEach((r, i) => invalidOf.set(r, guard.invalid[i]!))
+
   const { rows: instanceRows, labels: instanceLabels } = instanceColumns
-    ? orderAndLabelInstances(rowsAsGiven, instanceColumns)
-    : { rows: rowsAsGiven, labels: instanceColumnLabels(rowsAsGiven) }
+    ? orderAndLabelInstances(guardedRows, instanceColumns)
+    : { rows: guardedRows, labels: instanceColumnLabels(guardedRows) }
   const columnGroups = groupByLabels(baseNames, instanceRows, instanceLabels)
 
   const tableItems: FileFieldTableItem[] = []
   for (const [baseName, labelMap] of Object.entries(columnGroups)) {
-    const hasAny = Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '')
+    const hasAny =
+      Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '') ||
+      instanceRows.some((r) => invalidOf.get(r)?.has(baseName))
     if (!hasAny) continue
 
+    const spec = fieldSpecs && Object.prototype.hasOwnProperty.call(fieldSpecs, baseName) ? fieldSpecs[baseName] : undefined
+    const isList = spec?.type === 'list'
     // SYS-3728: a list field is rows, never a number — whatever its name says.
-    const itemSpecs = listItems && Object.prototype.hasOwnProperty.call(listItems, baseName)
-      ? listItems[baseName]
-      : undefined
-    const numeric = itemSpecs
+    const numeric = isList
       ? false
       : numericColumns
         ? numericColumns.has(baseName)
@@ -806,6 +780,7 @@ function buildInstanceTable(
     const confidence: Record<string, number> = {}
     const provenance: Record<string, IhsFieldProvenance> = {}
     const list: Record<string, IhsListCell> = {}
+    const invalid: Record<string, ViolationRule[]> = {}
 
     for (const [i, row] of instanceRows.entries()) {
       const label = instanceLabels[i]
@@ -816,12 +791,22 @@ function buildInstanceTable(
       // SYS-3249: hoisted above the format call — the envelope carries
       // this value's currency.
       const prov = legacyKey ? fieldProvenance?.[legacyKey] : undefined
-      if (itemSpecs && value !== null && value !== undefined && value !== '') {
-        const cell = buildListCell(value, itemSpecs, prov?.currency)
+      // SYS-3728: the document's OWN currency field, when the category has one
+      // and its value passed the guard — an ISO code, never a printed symbol,
+      // never a jurisdiction default.
+      const own = currencyField ? row[currencyField] : undefined
+      const currency = typeof own === 'string' ? own : prov?.currency
+      const rules = invalidOf.get(row)?.get(baseName)
+      if (rules) {
+        invalid[label] = rules
+        formattedData[label] = INVALID_VALUE_TEXT
+        if (isList) list[label] = invalidListCell()
+      } else if (isList && value !== null && value !== undefined && value !== '') {
+        const cell = buildListCell(value, spec!, currency)
         list[label] = cell
-        formattedData[label] = listSummary(cell, value)
+        formattedData[label] = listSummary(cell)
       } else {
-        formattedData[label] = formatValue(value, numeric, prov?.currency)
+        formattedData[label] = formatValue(value, numeric, currency)
       }
       if (prov) {
         provenance[label] = prov
@@ -844,12 +829,15 @@ function buildInstanceTable(
       isNumeric: numeric,
       ...(Object.keys(confidence).length ? { confidence } : {}),
       ...(Object.keys(provenance).length ? { provenance } : {}),
-      ...(itemSpecs ? { list } : {}),
+      ...(isList ? { list } : {}),
+      ...(Object.keys(invalid).length ? { invalid } : {}),
     })
   }
 
-  const hasData = tableItems.some((item) =>
-    Object.values(item.data).some((v) => v !== null && v !== undefined && v !== '')
+  const hasData = tableItems.some(
+    (item) =>
+      Object.values(item.data).some((v) => v !== null && v !== undefined && v !== '') ||
+      item.invalid !== undefined
   )
   if (!tableItems.length || !hasData) return null
 
@@ -891,11 +879,20 @@ export interface CategorySpec {
    */
   noLegacyProvenance?: boolean
   /**
-   * SYS-3728: the item schema of each column that is a `list` field, keyed by
-   * column name. Such a column renders as `IhsListCell`s (`FileFieldTableItem.list`)
-   * with a short count in `formattedData`, and is never numeric.
+   * SYS-3728: the registry spec of each column, keyed by column name. With it,
+   * every value is checked against the canonical write contract before it is
+   * rendered: a value that breaks it shows `INVALID_VALUE_TEXT`, is null in
+   * `data`, and is named in `FileFieldTableItem.invalid`. A `list` column
+   * renders as `IhsListCell`s with a short count in `formattedData`, and is
+   * never numeric.
    */
-  listItems?: Record<string, ReadonlyArray<ListItemSpec>>
+  fieldSpecs?: Record<string, CanonicalFieldSpec>
+  /**
+   * SYS-3728: the column holding each instance's own ISO 4217 currency (the
+   * category's `kind: "currency"` field). Money cells of that instance render
+   * in it; absent or invalid, they render as plain numbers.
+   */
+  currencyField?: string
   /**
    * SYS-3728: label and order the columns by subject rather than by period —
    * the category's own `CategorySchema.instanceColumns`.
@@ -942,8 +939,9 @@ export function buildFileFieldTablesFromInstances(
       groupName, spec.baseColumnNames, spec.displayName, instanceRows,
       spec.noLegacyProvenance ? undefined : fieldProvenance,
       spec.numericColumnNames ? new Set(spec.numericColumnNames) : undefined,
-      spec.listItems,
-      spec.instanceColumns
+      spec.fieldSpecs,
+      spec.instanceColumns,
+      spec.currencyField
     )
     if (table) tables[groupName] = table
   }
@@ -2791,15 +2789,17 @@ export function buildFileFieldTablesFromView(
       const schema = categorySchemaOf(category)
       const fields = schema.fields
       // SYS-3728: a list field's columns come from its item schema.
-      const listItems = Object.fromEntries(
-        fields.flatMap((f) => (f.type === 'list' && f.items ? [[f.name, f.items]] : []))
-      )
+      // SYS-3728: every column's spec, so the table holds each value to the
+      // write contract; and the category's own currency field, if it has one.
+      const fieldSpecs = Object.fromEntries(fields.map((f) => [f.name as string, f]))
+      const currencyField = fields.find((f) => f.kind === 'currency')?.name
       lineageFree[group.documentGroup] = {
         displayName: group.label,
         baseColumnNames: fields.map((f) => f.name),
         numericColumnNames: fields.filter((f) => f.type === 'number').map((f) => f.name),
         noLegacyProvenance: true,
-        ...(Object.keys(listItems).length > 0 ? { listItems } : {}),
+        fieldSpecs,
+        ...(currencyField ? { currencyField } : {}),
         ...(schema.instanceColumns ? { instanceColumns: schema.instanceColumns } : {}),
       }
     }

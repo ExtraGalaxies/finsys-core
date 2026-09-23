@@ -285,7 +285,7 @@ describe('the lineage fallback — a category with no v1 lineage renders under i
     expect(cash.isNumeric).toBe(false)
     // SYS-3728: rows, not the JSON.
     expect(cash.formattedData).toEqual({ T1: '1 entry', T2: '-' })
-    expect(cash.list!['T1']!.rows).toEqual([{ code: '-', term: 'Current account', amount: '12,000' }])
+    expect(cash.list!['T1']!.rows).toEqual([{ code: '-', term: 'Current account', amount: '12,000', amountAsPrinted: '-' }])
     expect(ma.items.map((i) => i.displayName)).toEqual(['Company Name', 'Period End', 'Total Assets', 'Cash at Bank (Lines)'])
 
     const cbr = tables['credit_bureau_reports']!

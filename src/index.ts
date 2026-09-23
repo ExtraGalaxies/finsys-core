@@ -121,6 +121,7 @@ export {
   buildFileFieldTablesFromView,
   // SYS-3728: a stored list value as rows under its declared columns.
   buildListCell,
+  INVALID_VALUE_TEXT,
   // SYS-3334 F3 (round 2 review): the provenance synthesis hoisted out of
   // buildFileFieldTablesFromView — collision-aware, and usable on its own.
   fieldProvenanceFromView,
@@ -240,6 +241,31 @@ export type {
 
 export { AdapterError } from './adapter.js'
 
+// SYS-3728: the canonical write contract — one validator for writers and readers.
+export {
+  validateCanonicalFields,
+  validateFieldValue,
+  validateAdapterExtraction,
+  kebabToCamel,
+  STRING_MAX_LENGTH_DEFAULT,
+  LIST_MAX_ITEMS_DEFAULT,
+} from './canonical-validation.js'
+export type {
+  Violation,
+  ViolationRule,
+  ValidationOptions,
+  ValidationResult,
+  ValidatableExtraction,
+} from './canonical-validation.js'
+export {
+  CURRENCY_CODES,
+  CURRENCY_ALIASES,
+  AMBIGUOUS_CURRENCY_FORMS,
+  normalizeCurrency,
+  isAllowedCurrency,
+} from './currency.js'
+export type { CurrencyNormalization } from './currency.js'
+
 export type { AggregationOp, InstanceValue } from './adapter-aggregation.js'
 export { applyAggregation, ALL_AGGREGATION_OPS } from './adapter-aggregation.js'
 
@@ -274,7 +300,6 @@ export {
   isLegacyCategoryId,
   isFieldSensitive,
   isListField,
-  LIST_OVERFLOW_COLUMN,
   sensitiveFieldsOf,
   isAdapterCategory,
   assertAdapterCategory,

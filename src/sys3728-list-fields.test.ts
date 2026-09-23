@@ -129,15 +129,17 @@ const cell = (it: FileFieldTableItem, label: string): IhsListCell => {
 // ── A. The field model ─────────────────────────────────────────────────
 
 describe('SYS-3728 — list is a field type, with an item schema', () => {
-  it('management account: all 36 line-item categories are lists of code / term / amount (money)', () => {
+  it('management account: all 36 line-item categories are lists of code / term / amount (money) / amount as printed', () => {
     const lists = fields(MA).filter((f) => f.type === 'list')
     expect(lists).toHaveLength(36)
     expect(lists.every((f) => f.name.endsWith('Items'))).toBe(true)
     for (const f of lists) {
       expect(f.items, f.name).toEqual([
-        { name: 'code', displayName: 'Code', type: 'string' },
-        { name: 'term', displayName: 'Term', type: 'string' },
+        { name: 'code', displayName: 'Code', type: 'string', maxLength: 256 },
+        { name: 'term', displayName: 'Term', type: 'string', maxLength: 256 },
         { name: 'amount', displayName: 'Amount', type: 'number', kind: 'money' },
+        // The mapper keeps a figure it could not parse as its printed text.
+        { name: 'amountAsPrinted', displayName: 'Amount (as printed)', type: 'string', maxLength: 256 },
       ])
     }
     expect(fields(MA).filter((f) => f.type === 'string').map((f) => f.name)).not.toContainEqual(expect.stringMatching(/Items$/))
@@ -156,22 +158,22 @@ describe('SYS-3728 — list is a field type, with an item schema', () => {
 
   it('outstanding credit is one row per FACILITY, in the fixed shape (the one list NOT mirrored from the producer), with the three amounts as money', () => {
     expect(field(CBR, 'outstandingCreditFacilities').items).toEqual([
-      { name: 'accountNo', displayName: 'Account No.', type: 'string' },
-      { name: 'approvalDate', displayName: 'Approval Date', type: 'string' },
-      { name: 'capacity', displayName: 'Capacity', type: 'string' },
-      { name: 'lenderType', displayName: 'Lender Type', type: 'string' },
+      { name: 'accountNo', displayName: 'Account No.', type: 'string', maxLength: 256 },
+      { name: 'approvalDate', displayName: 'Approval Date', type: 'string', maxLength: 256 },
+      { name: 'capacity', displayName: 'Capacity', type: 'string', maxLength: 256 },
+      { name: 'lenderType', displayName: 'Lender Type', type: 'string', maxLength: 256 },
       { name: 'accountLimit', displayName: 'Limit', type: 'number', kind: 'money' },
-      { name: 'collateralTypes', displayName: 'Collateral', type: 'string' },
-      { name: 'status', displayName: 'Status', type: 'string' },
-      { name: 'facility', displayName: 'Facility', type: 'string' },
+      { name: 'collateralTypes', displayName: 'Collateral', type: 'string', maxLength: 256 },
+      { name: 'status', displayName: 'Status', type: 'string', maxLength: 256 },
+      { name: 'facility', displayName: 'Facility', type: 'string', maxLength: 256 },
       { name: 'balance', displayName: 'Balance', type: 'number', kind: 'money' },
-      { name: 'balanceUpdated', displayName: 'Balance Updated', type: 'string' },
+      { name: 'balanceUpdated', displayName: 'Balance Updated', type: 'string', maxLength: 256 },
       { name: 'instalment', displayName: 'Instalment', type: 'number', kind: 'money' },
-      { name: 'repaymentTerm', displayName: 'Repayment Term', type: 'string' },
-      { name: 'conduct12m', displayName: 'Conduct (12 months)', type: 'string' },
-      { name: 'legalStatus', displayName: 'Legal Status', type: 'string' },
-      { name: 'statusUpdated', displayName: 'Status Updated', type: 'string' },
-      { name: 'collateralDetail', displayName: 'Collateral Detail', type: 'string' },
+      { name: 'repaymentTerm', displayName: 'Repayment Term', type: 'string', maxLength: 256 },
+      { name: 'conduct12m', displayName: 'Conduct (12 months)', type: 'string', maxLength: 256 },
+      { name: 'legalStatus', displayName: 'Legal Status', type: 'string', maxLength: 256 },
+      { name: 'statusUpdated', displayName: 'Status Updated', type: 'string', maxLength: 256 },
+      { name: 'collateralDetail', displayName: 'Collateral Detail', type: 'string', maxLength: 1024 },
     ])
   })
 
@@ -266,7 +268,6 @@ describe('SYS-3728 — the loader refuses a malformed list declaration', () => {
     ['an unknown item kind', { items: [{ name: 'a', displayName: 'A', type: 'number', kind: 'enum' }] }, /item "a".*invalid kind/],
     ['an item with no display name', { items: [{ name: 'a', type: 'string' }] }, /item "a".*displayName/],
     ['an item with no name', { items: [{ displayName: 'A', type: 'string' }] }, /item.*non-empty name/],
-    ['an item named like the overflow column', { items: [{ name: 'other', displayName: 'Other', type: 'string' }] }, /"other" is reserved/],
     ['an unknown item property', { items: [{ name: 'a', displayName: 'A', type: 'string', unit: 'count' }] }, /item "a".*unknown property "unit"/],
     ['a kind on the list itself', { kind: 'money' }, /list.*kind/],
     ['a unit on the list itself', { unit: 'count' }, /list.*unit/],
@@ -324,10 +325,11 @@ describe('SYS-3728 — a list field renders as rows, never as its JSON', () => {
       { name: 'code', label: 'Code', numeric: false, money: false },
       { name: 'term', label: 'Term', numeric: false, money: false },
       { name: 'amount', label: 'Amount', numeric: true, money: true },
+      { name: 'amountAsPrinted', label: 'Amount (as printed)', numeric: false, money: false },
     ])
     expect(c.rows).toEqual([
-      { code: '1000-000', term: 'EXAMPLE TEXT 56', amount: '-1,719,587.11' },
-      { code: '1000-000', term: 'EXAMPLE TEXT 57', amount: '-8,806' },
+      { code: '1000-000', term: 'EXAMPLE TEXT 56', amount: '-1,719,587.11', amountAsPrinted: '-' },
+      { code: '1000-000', term: 'EXAMPLE TEXT 57', amount: '-8,806', amountAsPrinted: '-' },
     ])
     expect(c.rawRows).toEqual(JSON.parse(TRADE_RECEIVABLES_T1))
     expect(c.invalid).toBeUndefined()
@@ -346,13 +348,12 @@ describe('SYS-3728 — a list field renders as rows, never as its JSON', () => {
     }
   })
 
-  it('an unknown item key is kept in an "other" column, never dropped', () => {
+  it('a line whose figure did not parse shows its printed text in its own declared column', () => {
     const c = cell(item('management_accounts', 'Other Debtors (Lines)'), 'T1')
-    expect(c.columns.map((x) => x.name)).toEqual(['code', 'term', 'amount', 'other'])
-    expect(c.columns[3]).toEqual({ name: 'other', label: 'Other', numeric: false, money: false })
+    expect(c.columns.map((x) => x.name)).toEqual(['code', 'term', 'amount', 'amountAsPrinted'])
     expect(c.rows).toEqual([
-      { code: 'ABC-000', term: 'EXAMPLE TEXT 60', amount: '1,000', other: '' },
-      { code: '-', term: 'EXAMPLE TEXT 61', amount: '-', other: 'amountAsPrinted: n/a' },
+      { code: 'ABC-000', term: 'EXAMPLE TEXT 60', amount: '1,000', amountAsPrinted: '-' },
+      { code: '-', term: 'EXAMPLE TEXT 61', amount: '-', amountAsPrinted: 'n/a' },
     ])
   })
 
@@ -368,16 +369,14 @@ describe('SYS-3728 — a list field renders as rows, never as its JSON', () => {
     expect(c.rows[1]).toMatchObject({ accountNo: '2', approvalDate: '-', balance: '0', accountLimit: '50,000' })
   })
 
-  it('bureau outstanding credit, in the OLD flat shape already stored: renders, keys matched by camel-case, the rest in "other"', () => {
+  it('bureau outstanding credit, in the OLD flat shape already stored: its keys are undeclared, so the cell is the invalid marker, never the content', () => {
     const it0 = item('credit_bureau_reports', 'Outstanding Credit Facilities')
     const c = cell(it0, 'Person A (party)')
-    expect(it0.formattedData['Person A (party)']).toBe('3 entries')
-    expect(c.rows).toHaveLength(3)
-    expect(c.columns[c.columns.length - 1]!.name).toBe('other')
-    // `lender-type` IS an item name once camel-cased; `capacity` / `facility` are exact.
-    expect(c.rows[0]).toMatchObject({ capacity: 'EXAMPLE TEXT 13', lenderType: 'EXAMPLE TEXT 14', other: 'no: 1; date: 01/01/2025; inst-amt-rm: 1,000.00; col-type: EXAMPLE TEXT 15' })
-    expect(c.rows[1]).toEqual(expect.objectContaining({ other: 'col-type: EXAMPLE TEXT 16' }))
-    expect(c.rows[2]).toMatchObject({ facility: 'EXAMPLE TEXT 18', other: 'sts: EXAMPLE TEXT 17; total-outstanding-balance-rm: 1,000.00; conduct-of-account-m02: 0' })
+    expect(it0.formattedData['Person A (party)']).toBe('(invalid value)')
+    expect(it0.invalid).toEqual({ 'Person A (party)': ['undeclared-item-key'] })
+    expect(it0.data['Person A (party)']).toBeNull()
+    expect(c).toEqual({ kind: 'list', columns: [{ name: 'value', label: 'Value', numeric: false, money: false }], rows: [{ value: '(invalid value)' }], rawRows: [], invalid: true })
+    expect(JSON.stringify(it0)).not.toContain('EXAMPLE TEXT 13')
   })
 
   it('a kebab-case key already in storage lands in its camel-case column', () => {
@@ -392,76 +391,55 @@ describe('SYS-3728 — a list column is never numeric, whatever its name says', 
     const t = buildFileFieldTablesFromInstances(
       { g: [{ instanceKey: 'x', timePeriod: 'T1', mgmtCashAtBankItems: '[{"code":"1","term":"t","amount":5}]' }] },
       undefined,
-      { g: { displayName: 'G', baseColumnNames: ['mgmtCashAtBankItems'], listItems: { mgmtCashAtBankItems: field(MA, 'mgmtCashAtBankItems').items! } } },
+      { g: { displayName: 'G', baseColumnNames: ['mgmtCashAtBankItems'], fieldSpecs: { mgmtCashAtBankItems: field(MA, 'mgmtCashAtBankItems') } } },
     )['g']!.items[0]!
     expect(t.isNumeric).toBe(false)
     expect(t.formattedData).toEqual({ T1: '1 entry' })
   })
 })
 
-describe('SYS-3728 — buildListCell is tolerant of what storage actually holds', () => {
-  const items = [
-    { name: 'code', displayName: 'Code', type: 'string' as const },
-    { name: 'amount', displayName: 'Amount', type: 'number' as const, kind: 'money' as const },
-  ]
+describe('SYS-3728 — buildListCell holds the value to the write contract before rendering it', () => {
+  const MARKER = { kind: 'list', columns: [{ name: 'value', label: 'Value', numeric: false, money: false }], rows: [{ value: '(invalid value)' }], rawRows: [], invalid: true }
+  const lines = () => field(MA, 'mgmtTradeReceivablesItems')
+  const SECRET = 'S3CRET-9f2c'
 
   it.each([
-    ['invalid JSON', '[{"code":'],
-    ['a JSON object, not an array', '{"code":"1"}'],
+    ['invalid JSON', `[{"code":"${SECRET}`],
+    ['a JSON object, not an array', `{"code":"${SECRET}"}`],
     ['a JSON scalar', '42'],
-  ])('%s renders as ONE text cell, flagged invalid', (_label, raw) => {
-    const c = buildListCell(raw, items)
-    expect(c.invalid).toBe(true)
-    expect(c.columns).toEqual([{ name: 'value', label: 'Value', numeric: false, money: false }])
-    expect(c.rows).toEqual([{ value: raw }])
-    expect(c.rawRows).toEqual([])
+    ['a row that is not an object', `[{"code":"1"}, "${SECRET}"]`],
+    ['an undeclared key', `[{"code":"1","${SECRET}":"x"}]`],
+    ['a nested value in a declared column', `[{"code":{"a":"${SECRET}"}}]`],
+    ['a number column holding printed text', '[{"amount":"1,000.00"}]'],
+    ['a number column holding a hex string', '[{"amount":"0x10"}]'],
+    ['a number column holding a boolean', '[{"amount":true}]'],
+    ['a string column holding a control character', `[{"term":"${SECRET}\u0000"}]`],
+    ['a string column holding a JSON array', `[{"term":"[\\"${SECRET}\\"]"}]`],
+  ])('%s → the invalid marker, carrying none of the stored content', (_l, raw) => {
+    const c = buildListCell(raw, lines())
+    expect(c).toEqual(MARKER)
+    expect(JSON.stringify(c)).not.toContain(SECRET)
   })
 
-  it('an item that is not an object goes to "other" whole', () => {
-    const c = buildListCell('[{"code":"1","amount":5}, "stray", 7, null, [1,2]]', items)
-    expect(c.rows.map((r) => r.other)).toEqual(['', 'stray', '7', '-', '[1,2]'])
+  it('a non-finite number in an already-parsed array is the invalid marker too', () => {
+    expect(buildListCell([{ amount: Number.NaN }], lines())).toEqual(MARKER)
+    expect(buildListCell([{ amount: Number.POSITIVE_INFINITY }], lines())).toEqual(MARKER)
   })
 
-  it('a nested value in a declared column is shown as JSON text, not "[object Object]"', () => {
-    const c = buildListCell('[{"code":{"a":1},"amount":"1,000.00"}]', items)
-    expect(c.rows[0]).toEqual({ code: '{"a":1}', amount: '1,000.00' })
-  })
-
-  it('an exact key wins over a kebab-case twin of the same column; the twin is kept in "other"', () => {
-    const c = buildListCell('[{"code-x":"no","code":"A"}]', [{ name: 'codeX', displayName: 'X', type: 'string' }, { name: 'code', displayName: 'C', type: 'string' }])
-    expect(c.rows[0]).toEqual({ codeX: 'no', code: 'A' })
-    const d = buildListCell('[{"code-x":"kebab","codeX":"exact"}]', [{ name: 'codeX', displayName: 'X', type: 'string' }])
-    expect(d.rows[0]).toEqual({ codeX: 'exact', other: 'code-x: kebab' })
+  it('a spec that is not a list renders nothing but the marker', () => {
+    expect(buildListCell('[]', field(CBR, 'subjectName'))).toEqual(MARKER)
   })
 
   it('a money column carries the denomination when the cell has one', () => {
-    const c = buildListCell('[{"amount":1500.5}]', items, 'MYR')
-    expect(c.rows[0]!.amount).toBe('MYR\u00a01,500.50')
+    expect(buildListCell('[{"amount":1500.5}]', lines(), 'MYR').rows[0]!.amount).toBe('MYR\u00a01,500.50')
   })
 
-  it.each([
-    ['a blank string', ' ', '-'],
-    ['an empty string', '', '-'],
-    ['a boolean', true, '-'],
-    ['NaN', Number.NaN, '-'],
-    ['Infinity', Number.POSITIVE_INFINITY, '-'],
-    ['a hex string', '0x10', '0x10'],
-    ['printed text', 'n/a', 'n/a'],
-    ['a printed amount with separators', '1,000.00', '1,000.00'],
-    ['an exponent string', '1e3', '1e3'],
-  ])('a number item never coerces %s into a number', (_label, raw, shown) => {
-    const c = buildListCell([{ amount: raw }], items)
-    expect(c.rows[0]!.amount).toBe(shown)
-    expect(c.rows[0]!.amount).not.toBe('0')
-  })
-
-  it('a number item formats a finite number, and a plain decimal string the way a parsed number would be', () => {
-    const c = buildListCell([{ amount: -1719587.11 }, { amount: '2500' }, { amount: '-12.5' }, { amount: 0 }], items)
-    expect(c.rows.map((r) => r.amount)).toEqual(['-1,719,587.11', '2,500', '-12.5', '0'])
+  it('an absent value renders "-", never 0', () => {
+    expect(buildListCell([{ code: 'A', amount: null }], lines()).rows[0]).toEqual({ code: 'A', term: '-', amount: '-', amountAsPrinted: '-' })
   })
 
   it('accepts an already-parsed array', () => {
-    expect(buildListCell([{ code: 'A', amount: 1 }], items).rows).toEqual([{ code: 'A', amount: '1' }])
+    expect(buildListCell([{ code: 'A', amount: 1 }], lines()).rows).toEqual([{ code: 'A', term: '-', amount: '1', amountAsPrinted: '-' }])
   })
 })
 

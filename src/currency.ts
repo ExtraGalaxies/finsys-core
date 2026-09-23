@@ -49,6 +49,7 @@ export const CURRENCY_ALIASES: Readonly<Record<string, string>> = Object.freeze(
   RM: 'MYR',
   'RM.': 'MYR',
   MYR: 'MYR',
+  'RINGGIT MALAYSIA': 'MYR',
   '₫': 'VND',
   'VNĐ': 'VND',
   VND: 'VND',
@@ -132,22 +133,35 @@ export type CurrencyHeading =
   | { ok: true; code: string; scale: 1 | 1000 | 1000000 }
   | { ok: false; reason: 'not-a-string' | 'ambiguous' | 'unrecognized' }
 
+/** An apostrophe as statements print it: straight, curly, modifier letter, or a backtick. */
+const APOS = "['’‘ʼ`]"
+
 /**
  * The scale words a statement's currency heading may carry, after the
- * currency: "'000" (thousands — with a straight, curly or no apostrophe, or a
- * space) and "mil" / "million". Closed: anything else ("m", "k", "bn") is
+ * currency. Closed: anything else ("m" with no apostrophe, "k", "bn") is
  * refused, because a wrong scale is every figure wrong by a factor of a
  * thousand.
+ *
+ *   thousands  "'000" (any apostrophe, or a space, or none), "('000)",
+ *              "(000)", "thousand"
+ *   millions   "mil", "mil.", "million", "'m", "'000'000"
  */
 const HEADING_SCALES: ReadonlyArray<readonly [RegExp, 1000 | 1000000]> = [
-  [/^['’‘ʼ]?\s?000$/u, 1000],
-  [/^(?:mil|million)$/iu, 1000000],
+  [new RegExp(`^${APOS}?\\s?000$`, 'u'), 1000],
+  [new RegExp(`^\\(\\s?${APOS}?000\\s?\\)$`, 'u'), 1000],
+  [/^thousand$/iu, 1000],
+  [/^(?:mil\.?|million)$/iu, 1000000],
+  [new RegExp(`^${APOS}\\s?m$`, 'iu'), 1000000],
+  [new RegExp(`^${APOS}?000${APOS}000$`, 'u'), 1000000],
 ]
 
 /**
- * A statement's printed currency heading as `{ code, scale }` — "RM" → MYR ×1,
- * "RM'000", "RM '000", "RM’000", "RM 000", "(RM'000)" → MYR ×1000, "RM mil" /
- * "RM million" → MYR ×1,000,000; likewise for every form `normalizeCurrency`
+ * A statement's printed currency heading as `{ code, scale }` — "RM" and
+ * "Ringgit Malaysia" → MYR ×1; "RM'000", "RM '000", "RM’000", "RM`000",
+ * "RM 000", "(RM'000)", "RM('000)", "RM (000)", "RM thousand" → MYR ×1000;
+ * "RM mil", "RM Mil.", "RM million", "RM'm", "RM'000'000" → MYR ×1,000,000
+ * (SYS-3728 round 4: the headings real statements print); likewise for every
+ * form `normalizeCurrency`
  * knows. The currency form is matched by `normalizeCurrency` itself, so the
  * two can never disagree about what "RM" is. Anything not recognized is
  * refused, never guessed.

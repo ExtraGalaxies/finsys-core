@@ -328,6 +328,24 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
     "RM'000", "RM '000", "RM’000", "RM 000", "(RM'000)" is ×1000 and "RM mil" /
     "RM million" ×1,000,000, with the currency matched by `normalizeCurrency`.
     Any other scale word is refused.
+- **SYS-3728, fourth adversarial review** (`src/sys3728-round4.test.ts`):
+  - **A ratio carries at most `RATIO_MAX_DECIMALS` (6) decimals**, the
+    DECIMAL(12,6) storage scale of the bureau ratio columns — `excess-precision`,
+    never rounded (4e-7 was stored as 0; float noise such as
+    0.14300000000000002 as a value nobody printed). New export:
+    `RATIO_MAX_DECIMALS`.
+  - **`section` declares `maxLength: 20`**, the width of its varchar(20)
+    column: a `pbi-n` longer than that is refused as `max-length` instead of
+    failing in the database (where a failed write retried, and re-billed, the
+    extraction). Every other `credit-bureau-report` and `management-account`
+    string field was checked against its column: dates (10), the year (4),
+    `mgmtStatementsRead` (5 by pattern) and the two enums (by label) are already
+    bounded; the rest are TEXT.
+  - **Currency headings real statements print**: "RM'm", "RM Mil.",
+    "RM'000'000" are ×1,000,000; "RM('000)", "RM (000)", "RM thousand",
+    "RM`000" are ×1000; "Ringgit Malaysia" is MYR (a new `CURRENCY_ALIASES`
+    form, so it is also accepted wherever a printed currency is normalized).
+    Bare "m", "k", "bn" are still refused.
 
 ### Consumer-visible
 
@@ -364,6 +382,12 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   for nothing else. A credit-bureau principal with no name or no identifier is
   refused (`missing-identity`). A short value opening with a bracketed name is
   now accepted where it was refused.
+- **Fourth review — ratios.** Every `unit: "ratio"` field is now held to six
+  decimals, not only the bureau's two. The other fifteen are [0, 1] ratios an
+  adapter computes; one with more than six decimals is not refused but is now
+  LOGGED in finsys-api's log mode (their columns are DECIMAL(5,4), so such a
+  value was already being rounded in storage, silently). Not measured: those
+  columns cannot show what was sent.
 - **Stored data that breaks the contract now renders as "(invalid value)"** in
   the credit-bureau and management-account tables: outstanding credit stored in
   the pre-regrouping one-row-per-line shape (undeclared keys), and a

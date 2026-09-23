@@ -256,6 +256,7 @@ export {
   isPlaceholderText,
   isValidInstanceKey,
   NUMBER_MAX_MAGNITUDE,
+  RATIO_MAX_DECIMALS,
   LIST_TEXT_MAX_LENGTH,
   DATE_FLOOR,
   FUTURE_DATE_HORIZON_YEARS,

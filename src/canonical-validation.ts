@@ -477,6 +477,15 @@ function isInstant(value: string): boolean {
 /** The largest magnitude a non-integer quantity may carry: a quadrillion, past any real balance. */
 export const NUMBER_MAX_MAGNITUDE = 1e15
 
+/**
+ * SYS-3728 round 4: the most decimals a ratio (`unit: "ratio"`) may carry —
+ * the storage scale of a ratio column (DECIMAL(12,6)). More is refused
+ * (`excess-precision`), never rounded: 4e-7 would be stored as 0, and float
+ * noise (0.14300000000000002) would be stored as a value nobody printed. A
+ * writer derives a ratio by an exact decimal shift, not float division.
+ */
+export const RATIO_MAX_DECIMALS = 6
+
 interface NumberRules {
   unit?: string
   range?: readonly [number, number]
@@ -508,6 +517,8 @@ export function decimalsOf(n: number): number {
  *     MONEY_MAX_DECIMALS (2, the storage scale) — `excess-precision`, never
  *     rounded; the extraction-level rules hold it to its currency's own minor
  *     units as well (VND: none);
+ *   - a ratio (`unit: "ratio"`) carries at most RATIO_MAX_DECIMALS (6) —
+ *     `excess-precision`, never rounded;
  *   - a declared `range` is enforced, inclusive (a count stored in an INT
  *     column declares [0, 2147483647]).
  */
@@ -521,6 +532,8 @@ function numberViolation(value: unknown, rules: NumberRules = {}): ViolationRule
   } else if (Math.abs(value) > NUMBER_MAX_MAGNITUDE) {
     return 'unsafe-magnitude'
   } else if (rules.kind === 'money' && decimalsOf(value) > MONEY_MAX_DECIMALS) {
+    return 'excess-precision'
+  } else if (rules.unit === 'ratio' && decimalsOf(value) > RATIO_MAX_DECIMALS) {
     return 'excess-precision'
   }
   if (rules.range !== undefined && (value < rules.range[0] || value > rules.range[1])) return 'out-of-range'

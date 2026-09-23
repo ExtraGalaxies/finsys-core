@@ -65,6 +65,12 @@ replaced upload. Read **Consumer-visible** below._
   An emptied pointer column triggers no attestation, so nothing newer exists
   to compare against. Detecting it needs finsys-api to record the removal.
 
+  **Suspected, not observed on finsim:** two concurrent saves of one column
+  whose attestations commit in the opposite order to their writes would make
+  the older save's set look current. And a legacy statement pointer holding a
+  year=2 statement FIRST would place `legacy:T3` on the second upload by the
+  T1/T2-first, T3-second rule. Neither shape exists in the finsim database.
+
 ### Consumer-visible
 
 - A pre-Phase-4b year=1 statement (one upload, `legacy:T1` + `legacy:T2`)
@@ -74,7 +80,18 @@ replaced upload. Read **Consumer-visible** below._
 - A replaced upload is gone from `buildDocumentRowsFromView` and
   `resolveExtractionStatusFromView`, and `summary` counts fall with it. A
   replaced file's surviving extraction (if the producer did not purge it)
-  does not come back as an extraction-only document.
+  does not come back, either as an extraction-only document or on its
+  replacement:
+  - hashed rows are matched to the replaced file by content hash;
+  - `legacy:T{n}` rows carry no identity, so on a type that HAS a replaced
+    intake row, a legacy row observed before the save that made the current
+    set current is treated as the replaced file's and not attached. Before
+    this, a replaced pre-Phase-4b statement's `legacy:T1`/`T2` attached to a
+    replacement not yet extracted, which then read `extracted` — even with a
+    failed job — showing the old statement's figures. With no replaced row
+    the rule does not apply: a borrower PATCH re-attests every column, so an
+    intake row newer than its own legacy rows is ordinary. A legacy row with
+    no parseable `observedAt` is kept.
 - `flatRecordFromView`: a replaced upload's path is no longer in its v1
   pointer array. With one save per type (every row at one `observedAt`) the
   arrays are unchanged.

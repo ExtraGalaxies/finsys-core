@@ -1507,7 +1507,9 @@ export interface ViewDocument {
  * CURRENT ONLY (SYS-3721). Intake is append-only: a replaced upload keeps its
  * row as the audit record. It is not listed here — see `currentIntakeOfType`
  * for the signal — and its extraction, if any survived, is not resurrected as
- * an extraction-only document either.
+ * an extraction-only document, nor (for identity-less `legacy:T{n}` rows
+ * observed before the current save, on a type with a replaced row) attached
+ * to its replacement.
  *
  * LEGACY SLOTS (SYS-3720). A `legacy:T{n}` row carries a slot, not a
  * document identity; `legacyDocumentOrdinal` says which document a slot
@@ -1523,11 +1525,25 @@ export function documentsOfType(
   const extracted = category !== null ? (view.categories[category]?.instances ?? []) : []
   const byHash = new Map<string, CanonicalInstance[]>()
   const legacyByOrdinal = new Map<number, CanonicalInstance[]>()
+  const { current, superseded, currentSince } = currentIntakeOfType(intake, docType)
   for (const inst of extracted) {
     const h = documentHashOfKey(inst.instanceKey)
     if (h === null) {
       const n = legacyOrdinalOfKey(inst.instanceKey)
       if (n === null) continue // no identity and no slot: nothing to attribute it to
+      // A legacy row carries no identity, so on a type where a save REPLACED
+      // a file it could be the replaced file's. It is, when it was extracted
+      // before the save that made the current set current: it is claimed for
+      // the superseded document — not attached to a current one, not listed.
+      // Gated on a superseded row existing (`currentSince` is null
+      // otherwise): a borrower PATCH re-attests every column, so a current
+      // intake row is routinely newer than its own document's legacy rows,
+      // and without a replacement that says nothing. A row with no parseable
+      // time gives no evidence and is kept.
+      if (currentSince !== null && inst.observedAt !== undefined) {
+        const at = Date.parse(inst.observedAt)
+        if (!Number.isNaN(at) && at < currentSince) continue
+      }
       const ordinal = legacyDocumentOrdinal(docType, n)
       const list = legacyByOrdinal.get(ordinal)
       if (list) list.push(inst)
@@ -1540,7 +1556,6 @@ export function documentsOfType(
   }
   const out: ViewDocument[] = []
   const claimed = new Set<string>()
-  const { current, superseded } = currentIntakeOfType(intake, docType)
   for (const inst of current) {
     const path = stringOrNull(inst.fields.pathInDms?.value)
     const hash = path ? documentHashOfPath(path) : null
@@ -1634,22 +1649,27 @@ export function documentsOfType(
 function currentIntakeOfType(
   intake: ReadonlyArray<CanonicalInstance>,
   docType: string,
-): { current: CanonicalInstance[]; superseded: CanonicalInstance[] } {
+): CurrentIntake {
   return splitCurrentIntake(intake.filter((inst) => inst.fields.documentType?.value === docType))
 }
 
+interface CurrentIntake {
+  current: CanonicalInstance[]
+  superseded: CanonicalInstance[]
+  /** The instant (ms) of the save that made `current` current — non-null ONLY when `superseded` is non-empty. */
+  currentSince: number | null
+}
+
 /** `currentIntakeOfType`'s rule over intake instances already narrowed to one document type. */
-function splitCurrentIntake(
-  ofType: CanonicalInstance[],
-): { current: CanonicalInstance[]; superseded: CanonicalInstance[] } {
-  if (ofType.length <= 1) return { current: ofType, superseded: [] }
+function splitCurrentIntake(ofType: CanonicalInstance[]): CurrentIntake {
+  if (ofType.length <= 1) return { current: ofType, superseded: [], currentSince: null }
   const times = ofType.map((inst) => (inst.observedAt === undefined ? NaN : Date.parse(inst.observedAt)))
-  if (times.some((t) => Number.isNaN(t))) return { current: ofType, superseded: [] }
+  if (times.some((t) => Number.isNaN(t))) return { current: ofType, superseded: [], currentSince: null }
   const newest = Math.max(...times)
   const current: CanonicalInstance[] = []
   const superseded: CanonicalInstance[] = []
   ofType.forEach((inst, i) => (times[i] === newest ? current : superseded).push(inst))
-  return { current, superseded }
+  return { current, superseded, currentSince: superseded.length > 0 ? newest : null }
 }
 
 /**

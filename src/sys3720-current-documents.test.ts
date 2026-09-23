@@ -569,6 +569,57 @@ describe('SYS-3721 — v2 lists current documents only', () => {
     expect((one.record.bankStatements as unknown[]).length).toBe(3)
   })
 
+  // Review of ec4d7b6 (PROVEN by probe): a replaced pre-Phase-4b statement's
+  // legacy rows attached to its REPLACEMENT, so a replacement not yet
+  // extracted showed the old statement's figures as `extracted`.
+  const SAVE_0 = '2026-06-01T06:00:00.000Z' // the old statement's extraction, before either save below
+  it("a replaced statement's legacy rows do not attach to its replacement: pending stays pending, failed stays failed", () => {
+    run = 0
+    const v = view(
+      [intake('financialStatements', h('a'), SAVE_1), intake('financialStatements', h('b'), SAVE_2)],
+      {
+        'financial-statement': [
+          fs('legacy:T1', 1, { periodPosition: 1, legacySlot: 'T1', observedAt: SAVE_0 }),
+          fs('legacy:T2', 2, { periodPosition: 2, legacySlot: 'T2', observedAt: SAVE_0 }),
+        ],
+      },
+    )
+    const d = documentsOfType(v, v.categories['document-intake']!.instances, 'financialStatements')
+    expect(d.map((x) => [x.hash, x.origin, x.extraction.length])).toEqual([[h('b'), 'intake', 0]])
+    const failed = resolveExtractionStatusFromView(v, [
+      { fileType: 'financialStatements', status: ExtractionJobStatus.Failed, errorMessage: 'boom' },
+    ]).documents.filter((x) => x.fileType === 'financialStatements')
+    expect(failed.map((x) => [x.documentId, x.status])).toEqual([[h('b'), 'failed']])
+    const pending = resolveExtractionStatusFromView(v, []).documents.filter((x) => x.fileType === 'financialStatements')
+    expect(pending.map((x) => [x.documentId, x.status])).toEqual([[h('b'), 'uploaded']])
+  })
+
+  it('a PATCH that re-attests an UNREPLACED statement leaves its older legacy rows attached (no superseded row, no evidence)', () => {
+    // updateIhsThirdParty re-attests every pointer column on any PATCH, so the
+    // intake row is routinely newer than the legacy extraction. Without a
+    // superseded row of the type that says nothing about replacement.
+    run = 0
+    const v = view([intake('financialStatements', h('d'), SAVE_2)], {
+      'financial-statement': [
+        fs('legacy:T1', 1, { periodPosition: 1, legacySlot: 'T1', observedAt: SAVE_0 }),
+        fs('legacy:T2', 2, { periodPosition: 2, legacySlot: 'T2', observedAt: SAVE_0 }),
+      ],
+    })
+    const d = documentsOfType(v, v.categories['document-intake']!.instances, 'financialStatements')
+    expect(d.map((x) => [x.hash, x.extraction.map((e) => e.instanceKey)])).toEqual([[h('d'), ['legacy:T1', 'legacy:T2']]])
+  })
+
+  it('a legacy row extracted AFTER the current save still attaches, even when the type has a superseded row', () => {
+    run = 0
+    const later = '2026-06-01T07:00:00.000Z'
+    const v = view(
+      [intake('financialStatements', h('a'), SAVE_1), intake('financialStatements', h('b'), SAVE_2)],
+      { 'financial-statement': [fs('legacy:T1', 1, { periodPosition: 1, legacySlot: 'T1', observedAt: later })] },
+    )
+    const d = documentsOfType(v, v.categories['document-intake']!.instances, 'financialStatements')
+    expect(d.map((x) => [x.hash, x.extraction.map((e) => e.instanceKey)])).toEqual([[h('b'), ['legacy:T1']]])
+  })
+
   it('a tie at the newest instant is ONE save: every file in it is current, whatever the offset', () => {
     expect(docs('control: one save written in two UTC offsets is one instant', 'bankStatements').map((x) => x.hash)).toEqual([h('a'), h('b')])
   })

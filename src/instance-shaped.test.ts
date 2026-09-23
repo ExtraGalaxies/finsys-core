@@ -246,6 +246,9 @@ describe('F1 — a mapped-fanout address resolves through v1LegacyBaseNameOf ins
       ic_documents: [],
       epf_statements: [],
       payslip_statements: [],
+      // SYS-3705: no catalog columns at all, so nothing to lose an address.
+      credit_bureau_reports: [],
+      management_accounts: [],
     })
   })
 })
@@ -266,12 +269,16 @@ describe('extractionCategoryOf / documentCategoryIds — derived, not listed', (
       ic: 'person-identity',
       epfStatements: 'epf-statement',
       payslips: 'payslip',
+      // SYS-3705: through the catalog's extraction_category declaration —
+      // the map is silent for both (their columns never existed in v1).
+      experianReports: 'credit-bureau-report',
+      managementAccounts: 'management-account',
     })
   })
 
-  it('the document categories are those seven plus document-intake, and nothing else', () => {
+  it('the document categories are those nine plus document-intake, and nothing else', () => {
     expect([...documentCategoryIds()].sort()).toEqual(
-      ['company-profile', 'company-registration', 'document-intake', 'epf-statement', 'financial-statement', 'finxtract-bank-statement', 'payslip', 'person-identity'].sort(),
+      ['company-profile', 'company-registration', 'document-intake', 'epf-statement', 'financial-statement', 'finxtract-bank-statement', 'payslip', 'person-identity', 'credit-bureau-report', 'management-account'].sort(),
     )
   })
 })
@@ -446,6 +453,8 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
       ic: 9,
       epfStatements: 9,
       payslips: 15,
+      experianReports: 76,
+      managementAccounts: 61,
     })
     // The flat path's side, measured on a record with ONE file per type: the
     // wide table's slot width. Equal for six types. Financial statements: 13
@@ -458,8 +467,11 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
       epfStatements: '[{"path":"https://x/f"}]', payslips: '[{"path":"https://x/g"}]',
     }
     const flat = resolveExtractionStatus(oneOfEach)
+    // SYS-3705: the two lineage-free types have no wide columns, so the
+    // flat path's denominator for them is 0 — the flat path never sees them.
     expect(Object.fromEntries(flat.documents.map((d) => [d.fileType, d.totalColumns]))).toEqual({
       bankStatements: 8, financialStatements: 13, form9: 3, ssm: 16, ic: 9, epfStatements: 9, payslips: 15,
+      experianReports: 0, managementAccounts: 0,
     })
     const v = view({ 'document-intake': { cardinality: 'multi', instances: [] } })
     const r = resolveExtractionStatusFromView(v)

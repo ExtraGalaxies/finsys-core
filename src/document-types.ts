@@ -78,6 +78,14 @@ export interface DocumentTypeGroup {
   /** Reserved for a future borrower-client payload-routing consolidation. Taken from the group's first entry; not enforced consistent across entries (all groups agree today, but a future mixed-format group would silently inherit the first entry's value). */
   readonly wireFormat?: WireFormat
   /**
+   * SYS-3705: the adapter category this type's extracted values land in,
+   * when the catalog DECLARES it (`extraction_category` on the group's
+   * entries). Only a type with no v1 wide-table lineage needs to — for every
+   * other type `extractionCategoryOf` derives the answer from the migration
+   * map, and a declaration there must agree with that derivation.
+   */
+  readonly extractionCategory?: string
+  /**
    * The catalog's own `type: 'file'` entries belonging to this group, in
    * catalog order. Each entry may carry its own document_slot/
    * time_period_unit -- see TaggedFieldData and the module doc.
@@ -105,6 +113,13 @@ export interface TaggedFieldData extends FieldData {
    * languages are actually callable.
    */
   document_language_options?: readonly string[]
+  /**
+   * SYS-3705: the adapter category this document type EXTRACTS INTO, for a
+   * type whose columns were never in the v1 wide table (so the migration map
+   * cannot derive it). Every entry of a group that declares it must declare
+   * the same value.
+   */
+  extraction_category?: string
 }
 
 let cached: readonly DocumentTypeGroup[] | null = null
@@ -121,6 +136,7 @@ function buildDocumentTypeGroups(): readonly DocumentTypeGroup[] {
       documentGroup: string
       label: string
       wireFormat: WireFormat | undefined
+      extractionCategory: string | undefined
       fields: TaggedFieldData[]
     }
   >()
@@ -138,10 +154,21 @@ function buildDocumentTypeGroups(): readonly DocumentTypeGroup[] {
         documentGroup,
         label,
         wireFormat: f.wire_format,
+        extractionCategory: f.extraction_category,
         fields: [],
       })
     }
-    byDocumentType.get(documentType)!.fields.push(f)
+    const entry = byDocumentType.get(documentType)!
+    // SYS-3705: unlike wire_format (first entry wins, see DocumentTypeGroup),
+    // a disagreement here would route one type's extractions into two
+    // categories depending on catalog order, so it is refused outright.
+    if (f.extraction_category !== entry.extractionCategory) {
+      throw new Error(
+        `document type "${documentType}": catalog entry "${f.name}" declares extraction_category ` +
+          `"${String(f.extraction_category)}" but an earlier entry declared "${String(entry.extractionCategory)}"`,
+      )
+    }
+    entry.fields.push(f)
   }
 
   return order.map((documentType) => {
@@ -151,6 +178,7 @@ function buildDocumentTypeGroups(): readonly DocumentTypeGroup[] {
       documentGroup: entry.documentGroup,
       label: entry.label,
       wireFormat: entry.wireFormat,
+      ...(entry.extractionCategory !== undefined ? { extractionCategory: entry.extractionCategory } : {}),
       fields: entry.fields,
     }
   })

@@ -3,7 +3,7 @@ import { getDocumentTypeGroups, isDocumentType, assertDocumentType } from './doc
 
 describe('document-types', () => {
   describe('getDocumentTypeGroups', () => {
-    it('derives all 7 known document types from the catalog, in declaration order', () => {
+    it('derives all 9 known document types from the catalog, in declaration order', () => {
       const groups = getDocumentTypeGroups()
       expect(groups.map((g) => g.documentType)).toEqual([
         'bankStatements',
@@ -13,7 +13,28 @@ describe('document-types', () => {
         'ic',
         'epfStatements',
         'payslips',
+        // SYS-3705: the first two types with no v1 wide-table lineage.
+        'experianReports',
+        'managementAccounts',
       ])
+    })
+
+    it('SYS-3705: carries a declared extraction_category only where the catalog declares one', () => {
+      const byType = Object.fromEntries(getDocumentTypeGroups().map((g) => [g.documentType, g.extractionCategory]))
+      expect(byType).toEqual({
+        bankStatements: undefined,
+        financialStatements: undefined,
+        form9: undefined,
+        ssm: undefined,
+        ic: undefined,
+        epfStatements: undefined,
+        payslips: undefined,
+        experianReports: 'credit-bureau-report',
+        managementAccounts: 'management-account',
+      })
+      // Absent, not undefined-valued: a v1 group's object shape is unchanged.
+      const bank = getDocumentTypeGroups().find((g) => g.documentType === 'bankStatements')!
+      expect(Object.prototype.hasOwnProperty.call(bank, 'extractionCategory')).toBe(false)
     })
 
     it('groups every per-period bank statement entry under one documentType', () => {
@@ -45,6 +66,8 @@ describe('document-types', () => {
         ic: 'ic_documents',
         epfStatements: 'epf_statements',
         payslips: 'payslip_statements',
+        experianReports: 'credit_bureau_reports',
+        managementAccounts: 'management_accounts',
       })
     })
 
@@ -59,6 +82,8 @@ describe('document-types', () => {
         ic: 'Identification Card',
         epfStatements: 'EPF Statements',
         payslips: 'Payslip Statements',
+        experianReports: 'Credit Bureau Report',
+        managementAccounts: 'Management Accounts',
       })
     })
 
@@ -72,6 +97,8 @@ describe('document-types', () => {
       expect(byType.financialStatements).toBe('path_array')
       expect(byType.epfStatements).toBe('path_array')
       expect(byType.payslips).toBe('path_array')
+      expect(byType.experianReports).toBe('url_string')
+      expect(byType.managementAccounts).toBe('path_array')
     })
   })
 

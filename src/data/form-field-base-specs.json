@@ -7512,6 +7512,31 @@
       "wire_format": "path_array",
       "document_slot": 6,
       "time_period_unit": "month"
+    },
+    {
+      "name": "experian_report",
+      "displayName": "Credit Bureau Report",
+      "type": "file",
+      "ihs_column_names": [],
+      "category": "13",
+      "document_type": "experianReports",
+      "document_group": "credit_bureau_reports",
+      "document_group_label": "Credit Bureau Report",
+      "wire_format": "url_string",
+      "extraction_category": "credit-bureau-report"
+    },
+    {
+      "name": "management_account",
+      "displayName": "Management Account",
+      "type": "file",
+      "ihs_column_names": [],
+      "category": "13",
+      "document_type": "managementAccounts",
+      "document_group": "management_accounts",
+      "document_group_label": "Management Accounts",
+      "wire_format": "path_array",
+      "document_slot": 1,
+      "extraction_category": "management-account"
     }
   ]
 }

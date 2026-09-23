@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.4.0",
+  "schemaVersion": "1.5.0",
   "categories": [
     {
       "id": "telco-carrier",
@@ -2206,6 +2206,768 @@
           "name": "uploadedBy",
           "type": "string",
           "description": "Who uploaded the file — the acting principal, not the subject the document is about. The applicant, an agent acting for them, and a lender staging a document on their behalf are three different answers and only this field separates them. It is the one part of the stored file shape that had no home before: one upload route wrote it ad hoc into a single column's entries, so for every other document the answer was simply unrecoverable."
+        }
+      ]
+    },
+    {
+      "id": "credit-bureau-report",
+      "displayName": "Credit Bureau Report (Document Extraction)",
+      "description": "Fields extracted from an uploaded credit-bureau report by the host's extraction pipeline. Vendor-neutral: any bureau-report adapter produces this field set. ONE INSTANCE PER SUBJECT ENTRY, not per document — a report ordered on a company carries the company (section ccris) followed by one entry per party with business interest (pbi-1..n); a report ordered on an individual carries one entry (section iriss). A field the report does not print is absent. Figures the source prints as text (RM 300,000.00, 74.02%) are parsed by the adapter; tables are carried as JSON-encoded lists, the company-profile category's precedent for directors and shareholders. Subject identity here is a THIRD party's as often as the applicant's, so no field co-attests an applicant identity fact.",
+      "canonicalTable": "ihs_alt_data_credit_bureau_report",
+      "fields": [
+        {
+          "name": "section",
+          "type": "string",
+          "description": "Which subject entry of the report this instance is, as the reader sets it: `ccris` (a company the report was ordered on), `iriss` (an individual the report was ordered on), or `pbi-1`, `pbi-2`, … (each party with business interest, in printed order)."
+        },
+        {
+          "name": "subjectRole",
+          "type": "string",
+          "kind": "enum",
+          "description": "`principal` for the subject the report was ordered on (section ccris or iriss); `party` for a party with business interest (section pbi-n)."
+        },
+        {
+          "name": "reportBanner",
+          "type": "string",
+          "description": "The report-type banner line as printed, which names the layout (company report, individual report, or a party-with-business-interest entry)."
+        },
+        {
+          "name": "reportOrderId",
+          "type": "string",
+          "description": "The bureau's order id for the report, from the running page header."
+        },
+        {
+          "name": "reportOrderDate",
+          "type": "string",
+          "description": "The order date and time from the running page header, as printed."
+        },
+        {
+          "name": "subjectName",
+          "type": "string",
+          "description": "The subject's name in the bureau's databank record."
+        },
+        {
+          "name": "subjectProvidedName",
+          "type": "string",
+          "description": "The subject's name as the requester typed it when ordering the report."
+        },
+        {
+          "name": "subjectRegistrationNo",
+          "type": "string",
+          "description": "The company registration number in the databank record (company subjects)."
+        },
+        {
+          "name": "subjectProvidedRegistrationNo",
+          "type": "string",
+          "description": "The company registration number as provided by the requester (company subjects)."
+        },
+        {
+          "name": "subjectIcPassportNo",
+          "type": "string",
+          "description": "The old IC or passport number in the databank record (individual and party subjects)."
+        },
+        {
+          "name": "subjectNewIcNo",
+          "type": "string",
+          "description": "The new IC number in the databank record (individual and party subjects)."
+        },
+        {
+          "name": "subjectProvidedIcPassportNo",
+          "type": "string",
+          "description": "The old IC or passport number as provided by the requester."
+        },
+        {
+          "name": "subjectProvidedNewIcNo",
+          "type": "string",
+          "description": "The new IC number as provided by the requester."
+        },
+        {
+          "name": "subjectNationality",
+          "type": "string",
+          "description": "The nationality of an individual the report was ordered on."
+        },
+        {
+          "name": "subjectRelationship",
+          "type": "string",
+          "description": "A party's relationship to the principal subject (director, shareholder, …)."
+        },
+        {
+          "name": "bureauScore",
+          "type": "number",
+          "unit": "score",
+          "description": "The bureau's own credit score for the subject, parsed from the score the report prints (the i-SCORE on the first adapter's reports). Absent when the report prints no score (N/A)."
+        },
+        {
+          "name": "bankingApprovedApplications12m",
+          "type": "number",
+          "unit": "count",
+          "description": "Credit applications approved in the last 12 months, from the banking (CCRIS) summary."
+        },
+        {
+          "name": "bankingPendingApplicationsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Credit applications pending, from the banking summary."
+        },
+        {
+          "name": "bankingSpecialAttentionAccountsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Accounts under special attention, from the banking summary."
+        },
+        {
+          "name": "bankingLegalActionsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Banking facilities with legal action taken, from the banking summary."
+        },
+        {
+          "name": "bankingExistingFacilitiesCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Existing banking facilities, from the banking summary."
+        },
+        {
+          "name": "windingUpRecordsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Winding-up records in the bureau's own databank summary (company subjects)."
+        },
+        {
+          "name": "bankruptcyRecordsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Bankruptcy records in the bureau's own databank summary (individual and party subjects)."
+        },
+        {
+          "name": "legalSuitsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Legal suits in the bureau's own databank summary."
+        },
+        {
+          "name": "tradeCreditReferencesCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Trade / credit references in the bureau's own databank summary."
+        },
+        {
+          "name": "enquiries12m",
+          "type": "number",
+          "unit": "count",
+          "description": "Enquiries made on the subject in the last 12 months."
+        },
+        {
+          "name": "businessInterestsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Companies or businesses the subject holds an interest in."
+        },
+        {
+          "name": "shareholdingInterests",
+          "type": "string",
+          "description": "JSON-encoded list of the companies the subject holds an interest or position in, one entry per printed row (name, registration number, incorporation date, paid-up capital, activity, position, appointment date, shareholding, percentage, remark)."
+        },
+        {
+          "name": "corporationName",
+          "type": "string",
+          "description": "Company name (or business name, for a sole proprietorship) from the corporation-details section (company subjects)."
+        },
+        {
+          "name": "corporationIncorporationDate",
+          "type": "string",
+          "description": "Incorporation or registration date from the corporation-details section, as printed."
+        },
+        {
+          "name": "corporationPaidUpCapital",
+          "type": "number",
+          "kind": "money",
+          "description": "Total issued and paid-up capital from the corporation-details section."
+        },
+        {
+          "name": "corporationBusinessSector",
+          "type": "string",
+          "description": "Business sector from the corporation-details section, as printed."
+        },
+        {
+          "name": "directorsAndOfficers",
+          "type": "string",
+          "description": "JSON-encoded list of directors and officers from the corporation-details section, one entry per printed row (name, appointment date, designation)."
+        },
+        {
+          "name": "shareholdersAndMembers",
+          "type": "string",
+          "description": "JSON-encoded list of shareholders from the corporation-details section, one entry per printed row (name, shareholding, percentage), the closing total row excluded."
+        },
+        {
+          "name": "ccrisEntityName",
+          "type": "string",
+          "description": "The entity name of the banking-credit (CCRIS) record the report selected."
+        },
+        {
+          "name": "securedFacilitiesCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of secured banking facilities."
+        },
+        {
+          "name": "securedOutstandingBalance",
+          "type": "number",
+          "kind": "money",
+          "description": "Total outstanding balance across secured facilities."
+        },
+        {
+          "name": "securedOutstandingToLimitRatio",
+          "type": "number",
+          "unit": "ratio",
+          "description": "Secured outstanding balance as a fraction of the total secured limit (the printed percentage divided by 100; can exceed 1)."
+        },
+        {
+          "name": "securedMaxInstallmentsInArrears12m",
+          "type": "number",
+          "unit": "count",
+          "description": "Highest number of installments in arrears on any secured facility in the last 12 months."
+        },
+        {
+          "name": "unsecuredFacilitiesCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of unsecured banking facilities."
+        },
+        {
+          "name": "unsecuredOutstandingBalance",
+          "type": "number",
+          "kind": "money",
+          "description": "Total outstanding balance across unsecured facilities."
+        },
+        {
+          "name": "unsecuredOutstandingToLimitRatio",
+          "type": "number",
+          "unit": "ratio",
+          "description": "Unsecured outstanding balance as a fraction of the total unsecured limit (the printed percentage divided by 100; can exceed 1)."
+        },
+        {
+          "name": "unsecuredMaxInstallmentsInArrears12m",
+          "type": "number",
+          "unit": "count",
+          "description": "Highest number of installments in arrears on any unsecured facility in the last 12 months."
+        },
+        {
+          "name": "liabilitiesOutstanding",
+          "type": "number",
+          "kind": "money",
+          "description": "Total outstanding as borrower, from the liabilities summary."
+        },
+        {
+          "name": "liabilitiesTotalLimit",
+          "type": "number",
+          "kind": "money",
+          "description": "Total limit as borrower, from the liabilities summary."
+        },
+        {
+          "name": "liabilitiesFecLimit",
+          "type": "number",
+          "kind": "money",
+          "description": "Foreign-exchange-contract limit, from the liabilities summary."
+        },
+        {
+          "name": "liabilitiesLegalActionTaken",
+          "type": "string",
+          "description": "Legal-action-taken indicator or count from the liabilities summary, as printed (the source does not fix whether it is a flag or a number)."
+        },
+        {
+          "name": "liabilitiesSpecialAttention",
+          "type": "string",
+          "description": "Special-attention-account indicator or count from the liabilities summary, as printed (the source does not fix whether it is a flag or a number)."
+        },
+        {
+          "name": "outstandingCreditFacilities",
+          "type": "string",
+          "description": "JSON-encoded list of the outstanding banking credit facilities, one entry per printed line as the source returns them (an account row followed by its facility row, with any collateral attached), including the twelve monthly conduct-of-account marks."
+        },
+        {
+          "name": "creditApplications",
+          "type": "string",
+          "description": "JSON-encoded list of banking credit applications, one entry per printed line as the source returns them."
+        },
+        {
+          "name": "specialAttentionAccounts",
+          "type": "string",
+          "description": "JSON-encoded list of special-attention accounts, one entry per printed line as the source returns them."
+        },
+        {
+          "name": "outstandingCreditTotalBalance",
+          "type": "number",
+          "kind": "money",
+          "description": "Total outstanding balance printed under the outstanding-credit table."
+        },
+        {
+          "name": "outstandingCreditTotalLimit",
+          "type": "number",
+          "kind": "money",
+          "description": "Total limit printed under the outstanding-credit table."
+        },
+        {
+          "name": "creditApplicationsTotalLimit",
+          "type": "number",
+          "kind": "money",
+          "description": "Total limit printed under the credit-application table."
+        },
+        {
+          "name": "suitsAsDefendantCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of legal suits with the subject as defendant."
+        },
+        {
+          "name": "limitedDetailSuitsAsDefendantCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of other known suits, with limited details, with the subject as defendant."
+        },
+        {
+          "name": "suitsAsPlaintiffCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of legal suits with the subject as plaintiff."
+        },
+        {
+          "name": "windingUpAsDefendantCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of winding-up actions against the subject (company subjects)."
+        },
+        {
+          "name": "windingUpAsPetitionerCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of winding-up actions brought by the subject (company subjects)."
+        },
+        {
+          "name": "bankruptcyActionsCount",
+          "type": "number",
+          "unit": "count",
+          "description": "Number of bankruptcy actions (individual and party subjects)."
+        },
+        {
+          "name": "suitsAsDefendant",
+          "type": "string",
+          "description": "JSON-encoded list of legal suits with the subject as defendant, one entry per suit."
+        },
+        {
+          "name": "limitedDetailSuitsAsDefendant",
+          "type": "string",
+          "description": "JSON-encoded list of other known suits, with limited details, with the subject as defendant."
+        },
+        {
+          "name": "suitsAsPlaintiff",
+          "type": "string",
+          "description": "JSON-encoded list of legal suits with the subject as plaintiff, one entry per suit."
+        },
+        {
+          "name": "windingUpActionsAsDefendant",
+          "type": "string",
+          "description": "JSON-encoded list of winding-up actions against the subject, one entry per action."
+        },
+        {
+          "name": "windingUpActionsAsPetitioner",
+          "type": "string",
+          "description": "JSON-encoded list of winding-up actions brought by the subject, one entry per action."
+        },
+        {
+          "name": "bankruptcyActions",
+          "type": "string",
+          "description": "JSON-encoded list of bankruptcy cases, one entry per case."
+        },
+        {
+          "name": "bankruptcyActionCreditors",
+          "type": "string",
+          "description": "JSON-encoded list of the creditors named in the bankruptcy cases (name and IC / passport / registration number)."
+        },
+        {
+          "name": "tradeCreditReferences",
+          "type": "string",
+          "description": "JSON-encoded list of trade / credit references lodged against the subject, one entry per reference (creditor, amount due, days overdue, debt type, status, …)."
+        },
+        {
+          "name": "nonBankLenderFacilities",
+          "type": "string",
+          "description": "JSON-encoded list of non-bank lender credit facilities, one entry per printed line as the source returns them, including the twelve monthly conduct-of-account marks."
+        },
+        {
+          "name": "nonBankLenderTotalLimit",
+          "type": "number",
+          "kind": "money",
+          "description": "Total limit printed under the non-bank lender table."
+        },
+        {
+          "name": "nonBankLenderTotalOutstanding",
+          "type": "number",
+          "kind": "money",
+          "description": "Total outstanding balance printed under the non-bank lender table."
+        },
+        {
+          "name": "amlCftScreening",
+          "type": "string",
+          "kind": "enum",
+          "description": "AML / CFT list name-match verdict, as printed (MATCHED or NOT MATCHED)."
+        },
+        {
+          "name": "bafiaScreening",
+          "type": "string",
+          "kind": "enum",
+          "description": "BAFIA list name-match verdict, as printed."
+        },
+        {
+          "name": "msbaScreening",
+          "type": "string",
+          "kind": "enum",
+          "description": "MSBA list name-match verdict, as printed."
+        },
+        {
+          "name": "kdnScreening",
+          "type": "string",
+          "kind": "enum",
+          "description": "KDN list name-match verdict, as printed (individual and party subjects)."
+        },
+        {
+          "name": "unSanctionsScreening",
+          "type": "string",
+          "kind": "enum",
+          "description": "UN sanctions list name-match verdict, as printed (individual and party subjects)."
+        }
+      ]
+    },
+    {
+      "id": "management-account",
+      "displayName": "Management Account (Document Extraction)",
+      "description": "Fields extracted from an uploaded management account (an SME's balance sheet and profit and loss, as produced by a bookkeeper or accounting package) by the host's extraction pipeline. Periodized: one document carries up to three reporting periods, newest first, stored per (instance, period position) — position 1 is the latest period (T-1), 2 the one before it, 3 the one before that. Totals are numbers where the statement prints them (plus one host-computed revenue total, since the statement prints revenue only as lines); every line-item category is a JSON-encoded list of the account lines printed under it. Metric names carry the mgmt prefix because the bare accounting vocabulary (totalAssets, grossProfit, …) is already declared by the audited financial-statement category, and field names are global.",
+      "canonicalTable": "ihs_alt_data_management_account",
+      "fields": [
+        {
+          "name": "companyName",
+          "type": "string",
+          "fact": "companyName",
+          "description": "Business name as printed on the statement. Attestation of the shared companyName fact — the Form 9, SSM and financial-statement extraction categories attest the same fact from their own documents."
+        },
+        {
+          "name": "mgmtCurrency",
+          "type": "string",
+          "description": "Currency as printed on the statement (e.g. RM, MYR). Null when the statement prints none."
+        },
+        {
+          "name": "mgmtPeriodEnd",
+          "type": "string",
+          "description": "Reporting period end, normalized to ISO YYYY-MM-DD. Null when the statement prints only a year."
+        },
+        {
+          "name": "mgmtPeriodStart",
+          "type": "string",
+          "description": "Profit-and-loss period start, normalized to ISO YYYY-MM-DD, when printed."
+        },
+        {
+          "name": "mgmtPeriodYear",
+          "type": "string",
+          "description": "The year of the reporting period, as a four-digit year (e.g. 2025) — a label, like the EPF statement's statementYear, not a measure."
+        },
+        {
+          "name": "mgmtStatementsRead",
+          "type": "string",
+          "description": "Which statements this period was read from: BS (balance sheet), PL (profit and loss), or both."
+        },
+        {
+          "name": "mgmtPeriodSource",
+          "type": "string",
+          "kind": "enum",
+          "description": "`own` when the period's own statement was in the upload; `comparative` when its figures come from the comparative column of a newer statement."
+        },
+        {
+          "name": "mgmtRevenueTotal",
+          "type": "number",
+          "kind": "money",
+          "description": "Host-computed sum of the period's sales-revenue line items (mgmtSalesRevenueItems), each printed amount parsed. NOT printed on the document. Absent if any line fails to parse, so a partial sum is never presented as the total."
+        },
+        {
+          "name": "mgmtCostOfGoodsSold",
+          "type": "number",
+          "kind": "money",
+          "description": "Total cost of goods sold / cost of sales, where printed."
+        },
+        {
+          "name": "mgmtGrossProfit",
+          "type": "number",
+          "kind": "money",
+          "description": "Gross profit (negative for a loss), where printed."
+        },
+        {
+          "name": "mgmtTotalExpenses",
+          "type": "number",
+          "kind": "money",
+          "description": "Total operating / administrative expenses, where printed."
+        },
+        {
+          "name": "mgmtNetProfitBeforeTax",
+          "type": "number",
+          "kind": "money",
+          "description": "Net profit before taxation (negative for a loss), where printed."
+        },
+        {
+          "name": "mgmtTaxation",
+          "type": "number",
+          "kind": "money",
+          "description": "Tax expense for the period, where printed."
+        },
+        {
+          "name": "mgmtNetProfitAfterTax",
+          "type": "number",
+          "kind": "money",
+          "description": "Net profit after taxation (negative for a loss), where printed."
+        },
+        {
+          "name": "mgmtProfitLossForTheYear",
+          "type": "number",
+          "kind": "money",
+          "description": "Current-year profit (negative for a loss) as shown in the equity section, where printed."
+        },
+        {
+          "name": "mgmtPropertyPlantEquipment",
+          "type": "number",
+          "kind": "money",
+          "description": "The single property, plant and equipment net line, as printed in audited-style statements."
+        },
+        {
+          "name": "mgmtFixedAssetsNet",
+          "type": "number",
+          "kind": "money",
+          "description": "Total of the block the statement labels Fixed Assets (net book value), where printed."
+        },
+        {
+          "name": "mgmtTotalNonCurrentAssets",
+          "type": "number",
+          "kind": "money",
+          "description": "Total of the block the statement labels Non-current Assets, where printed. A statement may print this, the fixed-assets block, or both with different figures."
+        },
+        {
+          "name": "mgmtTotalCurrentAssets",
+          "type": "number",
+          "kind": "money",
+          "description": "Total current assets, where printed."
+        },
+        {
+          "name": "mgmtTotalAssets",
+          "type": "number",
+          "kind": "money",
+          "description": "Total assets, where printed."
+        },
+        {
+          "name": "mgmtTotalCurrentLiabilities",
+          "type": "number",
+          "kind": "money",
+          "description": "Total current liabilities, where printed."
+        },
+        {
+          "name": "mgmtTotalNonCurrentLiabilities",
+          "type": "number",
+          "kind": "money",
+          "description": "Total non-current / long-term liabilities, where printed."
+        },
+        {
+          "name": "mgmtTotalLiabilities",
+          "type": "number",
+          "kind": "money",
+          "description": "Total liabilities, where printed."
+        },
+        {
+          "name": "mgmtNetAssets",
+          "type": "number",
+          "kind": "money",
+          "description": "Net assets / net worth / total equity, where printed; a capital deficiency is negative."
+        },
+        {
+          "name": "mgmtWorkingCapital",
+          "type": "number",
+          "kind": "money",
+          "description": "Working capital / net current assets, where the statement prints it."
+        },
+        {
+          "name": "mgmtSalesRevenueItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under sales, revenue and turnover, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtCostOfGoodsSoldItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under cost of sales (purchases, opening and closing stock, direct labor, freight and other direct costs), for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtOtherIncomeItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under other operating and non-operating income, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtSalariesWagesItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under salaries, wages, statutory contributions and owners' or directors' remuneration, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtRentRatesItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under rental of premises and equipment, quit rent and assessment, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtUtilitiesItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under utilities (electricity, water, gas, sewerage), for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtTelephoneInternetItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under telephone, internet, hosting and subscriptions, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtMotorVehicleItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under motor-vehicle running costs, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtRepairsMaintenanceItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under repairs, upkeep and maintenance, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtInsuranceItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under insurance premiums, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtProfessionalFeesItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under accounting, audit, secretarial, tax, legal and consultancy fees, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtTravelEntertainmentItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under travel, accommodation, entertainment and meals, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtStaffCostsOtherItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under other staff costs (welfare, allowances, medical, training, recruitment, levy), for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtDepreciationItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under depreciation and amortization, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtOtherExpensesItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under every other expense account, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtTradeReceivablesItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under trade debtors / trade receivables, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtOtherDebtorsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under other debtors and receivables, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtCashAtBankItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under bank accounts and fixed deposits, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtPettyCashItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under cash in hand / petty cash, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtDepositsPrepaymentsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under deposits paid and prepayments, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtInventoryItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under stock, inventories and work in progress, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtLandBuildingItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under land and buildings (cost, accumulated depreciation and net book value rows), for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtRenovationsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under renovations and other improvements, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtFurnitureFittingsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under furniture, fittings and office equipment, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtVehiclesItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under motor vehicles and other vehicles, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtEquipmentToolsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under plant, machinery, tools and other equipment, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtComputerEquipmentItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under computers and IT hardware, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtSystemSoftwareItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under software, systems and licenses capitalized as assets, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtTradePayablesItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under trade creditors / accounts payable, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtOtherCreditorsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under other creditors and payables, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtAccrualsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under accruals, accrued expenses and accrued wages, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtHirePurchaseItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under hire purchase and lease creditors, current and non-current, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtLoansFinancingItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under bank loans, term loans, overdrafts, SME financing and other alternative or peer-to-peer financing, current and non-current, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtShareCapitalItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under share capital and owners' or partners' capital, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtRetainedEarningsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under retained earnings and accumulated profits or losses, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        },
+        {
+          "name": "mgmtDrawingsItems",
+          "type": "string",
+          "description": "JSON-encoded list of the account lines the statement prints under owners' or partners' drawings and dividends, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
         }
       ]
     }

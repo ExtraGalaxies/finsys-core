@@ -26,7 +26,7 @@ import type {
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
-import { allCategories, assertAdapterCategory, type AdapterCategory } from './adapter-categories.js'
+import { allCategories, assertAdapterCategory, categoryFieldsOf, categorySchemaOf, type AdapterCategory } from './adapter-categories.js'
 import {
   v1Addresses,
   v1KeyForAddress,
@@ -568,7 +568,8 @@ function buildInstanceTable(
   baseNames: string[],
   groupDisplayName: string,
   instanceRows: InstanceRow[],
-  fieldProvenance?: Record<string, IhsFieldProvenance>
+  fieldProvenance?: Record<string, IhsFieldProvenance>,
+  numericColumns?: ReadonlySet<string>
 ): FileFieldTableData | null {
   const columnGroups = groupColumnsByInstance(baseNames, instanceRows)
   const instanceLabels = instanceColumnLabels(instanceRows)
@@ -578,7 +579,9 @@ function buildInstanceTable(
     const hasAny = Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '')
     if (!hasAny) continue
 
-    const numeric = isNumericField(baseName) || isMonetaryField(baseName)
+    const numeric = numericColumns
+      ? numericColumns.has(baseName)
+      : isNumericField(baseName) || isMonetaryField(baseName)
     const data: Record<string, unknown> = {}
     const formattedData: Record<string, string> = {}
     const confidence: Record<string, number> = {}
@@ -646,6 +649,20 @@ function buildInstanceTable(
 export interface CategorySpec {
   displayName: string
   baseColumnNames: string[]
+  /**
+   * SYS-3705: which of `baseColumnNames` are numeric, when the caller KNOWS
+   * (from the registry's declared types). Absent, numeric-ness is inferred
+   * from the column name as it always was.
+   */
+  numericColumnNames?: string[]
+  /**
+   * SYS-3705: true when this category's column names are NOT v1 base names.
+   * The provenance map is keyed `${v1BaseName}${period}`, so a non-v1 column
+   * name plus a period can spell a DIFFERENT category's key (a management
+   * account's `companyName` in T1 reads `companyNameT1`, which is Form 9's)
+   * and borrow its confidence. Such a table gets no provenance at all.
+   */
+  noLegacyProvenance?: boolean
 }
 
 export function buildFileFieldTablesFromInstances(
@@ -684,7 +701,9 @@ export function buildFileFieldTablesFromInstances(
     if (!instanceRows?.length) continue
 
     const table = buildInstanceTable(
-      groupName, spec.baseColumnNames, spec.displayName, instanceRows, fieldProvenance
+      groupName, spec.baseColumnNames, spec.displayName, instanceRows,
+      spec.noLegacyProvenance ? undefined : fieldProvenance,
+      spec.numericColumnNames ? new Set(spec.numericColumnNames) : undefined
     )
     if (table) tables[groupName] = table
   }
@@ -723,6 +742,11 @@ const DOC_DISPLAY_NAMES: Record<string, string> = {
   photocopyRegistrationCard: 'Registration Card',
   bankStatementOrSavingPassbook: 'Bank Passbook',
   tnbBills: 'TNB Bills',
+  // SYS-3705: the first two document types with no v1 wide-table lineage —
+  // their extraction category is declared on the catalog entry
+  // (`extraction_category`), not derived from the migration map.
+  experianReports: 'Credit Bureau Report',
+  managementAccounts: 'Management Accounts',
 }
 
 /** Doc types finsys-api can run extraction on (→ re-extract / view-JSON eligible). */
@@ -737,6 +761,8 @@ const EXTRACTABLE_DOC_TYPES = new Set<string>([
   'ic',
   'ssm_registration_documents',
   'ic_documents',
+  'experianReports',
+  'managementAccounts',
 ])
 
 /** Doc types that accept a replacement upload (SYS-2229 — finsys-api ignores the rest). */
@@ -1239,14 +1265,14 @@ let documentCategoryIdsCache: Set<AdapterCategory> | null = null
 
 /**
  * The adapter categories that hold DOCUMENT data — every document type's
- * extraction category (via the migration map: the type's legacy T-slot columns
- * → the category they map into) plus `document-intake` (the pointers). Derived,
- * not listed. A type whose columns map into two categories throws. A type whose
- * columns map NOWHERE (the map is frozen at the v1 surface, so any document
- * type added after it) resolves to null and would NOT be excluded here — that
- * case is caught by the test that pins the seven types by name, not by this
- * function; adding a document type means deciding its extraction category
- * there.
+ * extraction category (`extractionCategoryOf`: via the migration map for a v1
+ * type, via the catalog's `extraction_category` declaration for one added
+ * after the map was frozen) plus `document-intake` (the pointers). Derived,
+ * not listed. A type whose columns map into two categories throws. A type the
+ * map is silent on AND that declares nothing resolves to null and would NOT
+ * be excluded here — that case is caught by the test that pins the document
+ * types by name, not by this function; adding a document type means
+ * declaring its extraction category on its catalog entry (SYS-3705).
  */
 export function documentCategoryIds(): ReadonlySet<AdapterCategory> {
   if (documentCategoryIdsCache) return documentCategoryIdsCache
@@ -1273,13 +1299,39 @@ const extractionCategoryCache = new Map<string, AdapterCategory | null>()
  * column can name two categories and still be right. The category a document
  * type EXTRACTS INTO is the one every one of its mapped columns names: for
  * Form 9 that is company-registration ({cp,cr} ∩ {cr} ∩ {cr}); for SSM it is
- * company-profile. Unmapped columns do not vote. Null when nothing is mapped.
- * Throws when the intersection is empty or has two members, because then
- * "the" extraction category does not exist and every caller would pick one
- * silently.
+ * company-profile. Unmapped columns do not vote. Throws when the intersection
+ * is empty or has two members, because then "the" extraction category does
+ * not exist and every caller would pick one silently.
+ *
+ * SYS-3705: when NO column votes — a type added after the map was frozen,
+ * whose columns never existed in the v1 wide table — the answer is the
+ * catalog's own `extraction_category` declaration on the type's `file`
+ * entries (`DocumentTypeGroup.extractionCategory`). Null only when the map is
+ * silent AND nothing is declared. A declaration on a type the map DOES speak
+ * for must agree with it, or this throws.
  */
 export function extractionCategoryOf(documentType: string): AdapterCategory | null {
   if (extractionCategoryCache.has(documentType)) return extractionCategoryCache.get(documentType)!
+  const group = getDocumentTypeGroups().find((g) => g.documentType === documentType)
+  const derived = v1DerivedCategoryOf(documentType)
+  // SYS-3705: the catalog's declaration, for a type the frozen map cannot
+  // speak for. Consulted only when the map is SILENT (no column voted), so
+  // every type with v1 lineage resolves exactly as it did; a declaration on
+  // such a type is a cross-check, never an override.
+  const declared = group?.extractionCategory
+  if (declared !== undefined && derived !== null && declared !== derived) {
+    throw new Error(
+      `extractionCategoryOf(${documentType}): the catalog declares extraction_category "${declared}" ` +
+        `but the migration map derives "${derived}"; one of them is wrong.`,
+    )
+  }
+  const result = derived ?? (declared !== undefined ? assertAdapterCategory(declared) : null)
+  extractionCategoryCache.set(documentType, result)
+  return result
+}
+
+/** The map's half of `extractionCategoryOf`: the intersection its doc comment describes, or null when no column voted. */
+function v1DerivedCategoryOf(documentType: string): AdapterCategory | null {
   const group = getDocumentTypeGroups().find((g) => g.documentType === documentType)
   const votes: Array<Set<string>> = []
   for (const field of group?.fields ?? []) {
@@ -1297,9 +1349,47 @@ export function extractionCategoryOf(documentType: string): AdapterCategory | nu
         `(${[...common].join(', ') || 'none'}); the migration map or the registry is inconsistent.`,
     )
   }
-  const result = common === null ? null : assertAdapterCategory([...common][0]!)
-  extractionCategoryCache.set(documentType, result)
-  return result
+  return common === null ? null : assertAdapterCategory([...common][0]!)
+}
+
+let canonicalNamedCache: ReadonlySet<AdapterCategory> | null = null
+
+/**
+ * SYS-3705: the document-extraction categories with NO v1 lineage — the ones
+ * a document type reaches only through its catalog `extraction_category`
+ * declaration, because none of its columns ever existed in the v1 wide table
+ * (the migration map is silent for it).
+ *
+ * These are the categories the instance-shaped renderers key by CANONICAL
+ * field name. Every other category keeps keying by its v1 legacy base name
+ * (`v1LegacyBaseNameOf`), which is what makes this change invisible to them:
+ * membership is decided per CATEGORY, never per field, so a v1-lineage
+ * category's canonical-only fields (`financial-statement`/`consolidated`)
+ * stay exactly as unrendered as they were.
+ *
+ * A declared category that turns out to HAVE lineage (any field with a
+ * legacy base name) throws: rendering some of its fields under v1 names and
+ * the rest under canonical ones would put two vocabularies into one table.
+ */
+export function canonicalNamedCategories(): ReadonlySet<AdapterCategory> {
+  if (canonicalNamedCache) return canonicalNamedCache
+  const out = new Set<AdapterCategory>()
+  for (const group of getDocumentTypeGroups()) {
+    if (group.extractionCategory === undefined) continue
+    if (v1DerivedCategoryOf(group.documentType) !== null) continue // a cross-check on a v1 type
+    const category = assertAdapterCategory(group.extractionCategory)
+    const withLineage = categoryFieldsOf(category).filter((f) => v1LegacyBaseNameOf(category, f) !== null)
+    if (withLineage.length > 0) {
+      throw new Error(
+        `canonicalNamedCategories: document type "${group.documentType}" declares "${category}" as its ` +
+          `extraction category, but ${withLineage.length} of that category's fields have v1 legacy names ` +
+          `(${withLineage.join(', ')}); a category with v1 lineage must be reached through the migration map.`,
+      )
+    }
+    out.add(category)
+  }
+  canonicalNamedCache = out
+  return out
 }
 
 // ── Instance-shaped document rows (SYS-3378) ─────────────────────────
@@ -1666,8 +1756,22 @@ function coordinateOf(instance: CanonicalInstance): number | null {
   return typeof p === 'number' && Number.isFinite(p) && p >= 1 ? p : null
 }
 
-function timePeriodOf(instance: CanonicalInstance, positions: Map<string, number>): string | null {
+function timePeriodOf(
+  instance: CanonicalInstance,
+  positions: Map<string, number>,
+  canonicalNamed = false,
+): string | null {
   if (instance.legacySlot && LEGACY_SLOT_SHAPE.test(instance.legacySlot)) return instance.legacySlot
+  // SYS-3705: a category with NO v1 lineage never had a v1 slot to withhold,
+  // so rule 1b's premise ("the producer stamps legacySlot on every row that
+  // has one") says nothing about it. Its period IS its coordinate: position
+  // n of the document's declared periods renders as T{n} — a management
+  // account's T-1/T-2/T-3 columns. A non-integer coordinate names no column
+  // and falls through to the v1 rule, which answers null.
+  if (canonicalNamed) {
+    const p = coordinateOf(instance)
+    if (p !== null && Number.isInteger(p)) return `T${p}`
+  }
   // RULE 1b (SYS-3517 F1). A `periodPosition` on the wire says the producer
   // stores this category by (instance, period) COORDINATE — and a coordinate
   // producer stamps `legacySlot` on every row that HAS a v1 slot. So on such
@@ -1713,10 +1817,12 @@ function timePeriodOf(instance: CanonicalInstance, positions: Map<string, number
 }
 
 /**
- * The one category with an obvious per-instance label field, per the
- * registry: `finxtract-bank-statement.issuingBankName` (legacy base name
+ * The categories with an obvious per-instance label field, keyed by the name
+ * the category's ROWS use (legacy base name for a v1 category, canonical for
+ * a lineage-free one — see `canonicalNamedCategories`). v1 has one:
+ * `finxtract-bank-statement.issuingBankName` (legacy base name
  * `bankName`) — different statements can be different banks. No other
- * document-extraction category has an analogous field: payslip's
+ * v1 document-extraction category has an analogous field: payslip's
  * `employerName` and financial-statement's `companyName` are constant
  * across one applicant's own documents, so they would not discriminate one
  * instance from another the way a bank name does. Checked against the
@@ -1724,6 +1830,12 @@ function timePeriodOf(instance: CanonicalInstance, positions: Map<string, number
  */
 const SOURCE_LABEL_LEGACY_NAME: Partial<Record<AdapterCategory, string>> = {
   'finxtract-bank-statement': 'bankName',
+  // SYS-3705: keyed by CANONICAL name, because this category's rows are (see
+  // `canonicalNamedCategories`). One credit-bureau report yields one instance
+  // per subject entry — `ccris` / `iriss` for the subject it was ordered on,
+  // `pbi-1..n` for each party — all at the same document position, so the
+  // section is the only thing that tells their columns apart.
+  'credit-bureau-report': 'section',
 }
 
 /** Numeric ordering for `InstanceRow.timePeriod` (SYS-3334 F5, round 2): `'T1'
@@ -1783,11 +1895,15 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
 
   const positions = instancePositions(view, category)
   const sourceLabelField = SOURCE_LABEL_LEGACY_NAME[category]
+  // SYS-3705: decided per category, once — see `canonicalNamedCategories`.
+  const canonicalFields = canonicalNamedCategories().has(category)
+    ? new Set<string>(categoryFieldsOf(category))
+    : null
 
   const pairs: InstanceRowPair[] = instances.map((instance, i) => {
     const row: InstanceRow = {
       instanceKey: instance.instanceKey,
-      timePeriod: timePeriodOf(instance, positions),
+      timePeriod: timePeriodOf(instance, positions, canonicalFields !== null),
       sourceLabel: null,
       // The period COORDINATE, when the wire carries one — v1's sidecar rows
       // carried `periodPosition` too (finsys-api's toInstanceRow includes it
@@ -1825,9 +1941,15 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
       row.timePeriod = instances.length === 1 ? 'T1' : `#${i + 1}`
     }
     for (const [field, envelope] of Object.entries(instance.fields)) {
-      const legacyBase = v1LegacyBaseNameOf(category, field)
-      if (legacyBase === null) continue
-      row[legacyBase] = envelope.value
+      // A v1-lineage category writes each field under its legacy base name
+      // and skips the rest, exactly as before SYS-3705. A lineage-free one
+      // writes under the canonical name — the only name it has — and skips
+      // anything its category does not declare, the same way.
+      const column = canonicalFields !== null
+        ? (canonicalFields.has(field) ? field : null)
+        : v1LegacyBaseNameOf(category, field)
+      if (column === null) continue
+      row[column] = envelope.value
     }
     // SYS-3334 F4 (round 2): the wire's OWN per-instance label (finsys-api's
     // provenance-on-the-wire fix) wins over the registry-derived one — it is
@@ -1867,6 +1989,13 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
  * wire's own per-instance label (`instance.sourceLabel`) when present, else
  * the registry-derived one for the one category with an obvious label field
  * (`SOURCE_LABEL_LEGACY_NAME`), else null.
+ *
+ * SYS-3705: for a category in `canonicalNamedCategories()` (no v1 lineage at
+ * all — reached only through a catalog `extraction_category` declaration)
+ * every field the category DECLARES becomes `row[canonicalName] = value`
+ * instead, anything else is skipped, and a `periodPosition` coordinate is the
+ * period (`T{n}`, see `timePeriodOf`). Everything below describes every other
+ * category, unchanged.
  *
  * Every field envelope becomes `row[legacyBaseName] = value`, via
  * `v1LegacyBaseNameOf`. A field with no legacy base name never had a wide
@@ -2192,6 +2321,18 @@ export function fieldProvenanceFromView(
  * (`extractionCategoryOf` returns null) contributes no table, same as an
  * absent category does today for `buildFileFieldTablesFromInstances`.
  *
+ * SYS-3705: a document type whose category has NO v1 lineage
+ * (`canonicalNamedCategories`) has no `ihs_column_names` to derive columns
+ * from, so its table is built through `buildFileFieldTablesFromInstances`'s
+ * `categoryOverrides` path instead: its columns are the category's registry
+ * fields in registry order, under their canonical names, numeric exactly
+ * where the registry declares `type: "number"`. Those tables carry NO
+ * provenance or confidence dots yet, in either direction: nothing is WRITTEN
+ * into the synthesized map below for them (it is keyed by v1 column name), and
+ * nothing is READ from it for them either (`CategorySpec.noLegacyProvenance`) —
+ * a canonical name plus a period can spell another category's v1 key
+ * (`companyNameT1` is Form 9's) and would borrow that document's confidence.
+ *
  * PROVENANCE, WITHOUT A V1 SIDECAR — now `fieldProvenanceFromView` (SYS-3334
  * F3, round 2). `buildInstanceTable` (inside `buildFileFieldTablesFromInstances`)
  * looks up per-cell provenance in a `fieldProvenance` map keyed by
@@ -2248,12 +2389,27 @@ export function buildFileFieldTablesFromView(
   fieldProvenance?: Record<string, IhsFieldProvenance>,
 ): Record<string, FileFieldTableData> {
   const instancesByCategory: Record<string, InstanceRow[]> = {}
+  const canonicalNamed = canonicalNamedCategories()
+  const lineageFree: Record<string, CategorySpec> = {}
 
   for (const group of getDocumentTypeGroups()) {
     const category = extractionCategoryOf(group.documentType)
     if (category === null) continue
 
     instancesByCategory[group.documentGroup] = instanceRowsFromView(view, category)
+    // SYS-3705: a lineage-free category has no `ihs_column_names` to derive
+    // its columns from, so its columns are its registry fields, in registry
+    // order, through the same override path invoice uses — and numeric means
+    // the registry SAYS number, not that the name happens to contain "cash".
+    if (canonicalNamed.has(category)) {
+      const fields = categorySchemaOf(category).fields
+      lineageFree[group.documentGroup] = {
+        displayName: group.label,
+        baseColumnNames: fields.map((f) => f.name),
+        numericColumnNames: fields.filter((f) => f.type === 'number').map((f) => f.name),
+        noLegacyProvenance: true,
+      }
+    }
   }
 
   const { provenance: synthesized } = fieldProvenanceFromView(view)
@@ -2261,6 +2417,7 @@ export function buildFileFieldTablesFromView(
   return buildFileFieldTablesFromInstances(
     instancesByCategory,
     Object.keys(provenance).length > 0 ? provenance : undefined,
+    Object.keys(lineageFree).length > 0 ? lineageFree : undefined,
   )
 }
 

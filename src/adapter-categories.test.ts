@@ -931,10 +931,14 @@ describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
     // SYS-3163: three documents attest a company's name, and now all three
     // share the fact. Before this, SSM's was a separate fact-less name, so a
     // Form 9 / SSM conflict could not be seen at all.
+    // SYS-3705: a management account is the applicant company's own
+    // statement, so it attests the same name — a fourth attestor, and a
+    // management-account / audited-statement disagreement is now visible.
     expect(categoriesAttestingFact("companyName")).toEqual([
       "financial-statement",
       "company-registration",
       "company-profile",
+      "management-account",
     ]);
     expect(categoriesAttestingFact("companyRegNo")).toEqual([
       "company-registration",
@@ -1301,7 +1305,11 @@ describe("monetary fields and the closed unit set", () => {
     // five flat columns collapse into it. See that assertion.
     // 149 since SYS-3570: financial-statement declares tangibleAssets, a
     // money-valued statement aggregate like its totalAssets neighbour.
-    expect(money.length).toBe(149);
+    // 178 since SYS-3705: credit-bureau-report declares 11 (paid-up capital
+    // and the printed balance / limit totals) and management-account 18 (its
+    // 17 printed totals plus the host-computed revenue total). Its line-item
+    // categories are JSON lists, not money.
+    expect(money.length).toBe(178);
     for (const { cat, f } of money) {
       expect(f.type, `${cat}.${f.name} type`).toBe("number");
       expect(f.unit, `${cat}.${f.name} unit`).toBeUndefined();

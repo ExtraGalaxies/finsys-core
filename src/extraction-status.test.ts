@@ -19,6 +19,8 @@ describe('resolveExtractionStatus', () => {
       'ic',
       'epfStatements',
       'payslips',
+      'experianReports',
+      'managementAccounts',
     ])
   })
 

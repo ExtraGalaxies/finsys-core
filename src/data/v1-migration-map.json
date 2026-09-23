@@ -2529,6 +2529,16 @@
       "disposition": "mapped",
       "via": "wide-column-feeder"
     },
+    "experianReports": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "experianReports"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
+    },
     "facilityAddress": {
       "disposition": "relocated",
       "surface": "GET /lender/applications/:ihsId",
@@ -2974,6 +2984,16 @@
       },
       "disposition": "mapped",
       "via": "legacy-name"
+    },
+    "managementAccounts": {
+      "address": {
+        "category": "document-intake",
+        "field": "pathInDms",
+        "instanceKeyPrefix": "managementAccounts"
+      },
+      "disposition": "mapped",
+      "note": "SHAPE CHANGE, not a rename. The v1 column held a JSON array of paths; document-intake keys one instance per file as <docType>#<sha256>, so this column becomes N instances.",
+      "via": "hand-authored"
     },
     "maritalStatus": {
       "address": {

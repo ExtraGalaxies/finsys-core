@@ -41,6 +41,7 @@ import {
   categoryFieldsOf,
   isAdapterCategory,
 } from './adapter-categories.js';
+import { getDocumentTypeGroups } from './document-types.js';
 import {
   V1_MIGRATION_MAP_VERSION,
   v1Addresses,
@@ -188,8 +189,10 @@ describe('v1 migration map', () => {
     // out of `vocabulary-gap` and into `mapped`, once financial-statement
     // declared the field their reason said they needed. `needs-decision` is
     // UNCHANGED at 11 — deliberately, because `currentAssetCash*` sits there
-    // and did not ride along (SYS-3574 owns that call).
-    expect(v1KeysByDisposition('mapped').length).toBe(671);
+    // and did not ride along (SYS-3574 owns that call). 673 since SYS-3705:
+    // two NEW keys (the experianReports / managementAccounts pointers), not
+    // moved ones — every other disposition's count is untouched.
+    expect(v1KeysByDisposition('mapped').length).toBe(673);
     expect(v1KeysByDisposition('needs-decision').length).toBe(11);
   });
 
@@ -309,5 +312,33 @@ describe('v1 migration map', () => {
     // Premise guard: if this ever reads zero the assertions above are vacuous.
     expect(withheld, 'no withheld keys — this test proves nothing').toBeGreaterThan(0)
   })
+
+  it('every document type core registers has a pointer disposition, so a new type cannot ship without one (SYS-3705)', () => {
+    // finsim's spec 131 found this from the outside: finsys-api began serving
+    // `experianReports` and `managementAccounts` in its v1 response and the map
+    // had no answer for either. The set is DERIVED from the doc-type registry,
+    // never listed here, so the next document type fails this test the day it
+    // is registered, not the day a harness samples a record that carries it.
+    const types = getDocumentTypeGroups().map((g) => g.documentType);
+    // Premise guard: an empty registry would pass vacuously.
+    expect(types.length, 'no document types registered — this test proves nothing').toBeGreaterThan(0);
+
+    const missing: string[] = [];
+    for (const docType of types) {
+      const e = v1MigrationEntry(docType);
+      const ok =
+        e !== null &&
+        e.disposition === 'mapped' &&
+        e.address?.category === 'document-intake' &&
+        e.address.field === 'pathInDms' &&
+        e.address.instanceKeyPrefix === docType &&
+        e.address.instanceKey === undefined;
+      if (!ok) missing.push(docType);
+    }
+    expect(
+      missing,
+      'document type(s) with no document-intake pointer disposition in the v1 migration map',
+    ).toEqual([]);
+  });
 
 });

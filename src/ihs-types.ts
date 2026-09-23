@@ -183,7 +183,7 @@ export interface FileFieldTableItem {
 
 /** SYS-3728: one column of an `IhsListCell`. */
 export interface IhsListColumn {
-  /** The item name from the field's `items`; `'other'` for the overflow column; `'value'` for an invalid cell. */
+  /** The item name from the field's `items`, or `'value'` for the one column of an invalid cell. */
   name: string
   /** Column heading: the item's `displayName`. */
   label: string
@@ -241,6 +241,13 @@ export interface InstanceRow {
   instanceKey: string
   sourceLabel?: string | null
   timePeriod?: string | null
+  /**
+   * SYS-3728: on a row of a constrained category (no v1 lineage), the fields
+   * whose stored value broke the canonical write contract, with the rules —
+   * each such field is null on the row. Absent when every value is valid. No
+   * category may declare a field of this name (tested).
+   */
+  invalidFields?: Record<string, ViolationRule[]>
   [metricKey: string]: unknown
 }
 

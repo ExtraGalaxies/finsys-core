@@ -2538,7 +2538,7 @@
             { "name": "statusUpdated", "displayName": "Status Updated", "type": "string" },
             { "name": "collateralDetail", "displayName": "Collateral Detail", "type": "string", "maxLength": 1024 }
           ],
-          "description": "JSON-encoded list of the outstanding banking credit facilities, ONE ENTRY PER FACILITY: the lines the source prints for one account (its approval line, its collateral lines, its facility line) combined into a single row, with the limit, balance and instalment parsed as money and the twelve monthly conduct-of-account marks carried together as conduct12m. Rows stored before that regrouping (one entry per printed line) still render: their unrecognized keys show in the overflow column."
+          "description": "JSON-encoded list of the outstanding banking credit facilities, ONE ENTRY PER FACILITY: the lines the source prints for one account (its approval line, its collateral lines, its facility line) combined into a single row, with the limit, balance and instalment parsed as money and the twelve monthly conduct-of-account marks carried together as conduct12m. Rows stored before that regrouping (one entry per printed line) carry undeclared keys, so they break the write contract and render as an invalid value until re-extracted."
         },
         {
           "name": "creditApplications",
@@ -2972,6 +2972,7 @@
       "displayName": "Management Account (Document Extraction)",
       "description": "Fields extracted from an uploaded management account (an SME's balance sheet and profit and loss, as produced by a bookkeeper or accounting package) by the host's extraction pipeline. Periodized: one document carries up to three reporting periods, newest first, stored per (instance, period position) — position 1 is the latest period (T-1), 2 the one before it, 3 the one before that. Totals are numbers where the statement prints them (plus one host-computed revenue total, since the statement prints revenue only as lines); every line-item category is a JSON-encoded list of the account lines printed under it. Metric names carry the mgmt prefix because the bare accounting vocabulary (totalAssets, grossProfit, …) is already declared by the audited financial-statement category, and field names are global.",
       "canonicalTable": "ihs_alt_data_management_account",
+      "maxPeriods": 3,
       "fields": [
         {
           "name": "companyName",
@@ -2988,19 +2989,20 @@
         {
           "name": "mgmtPeriodEnd",
           "type": "string",
-          "pattern": "\\d{4}-\\d{2}-\\d{2}",
+          "format": "date",
           "description": "Reporting period end, normalized to ISO YYYY-MM-DD. Null when the statement prints only a year."
         },
         {
           "name": "mgmtPeriodStart",
           "type": "string",
-          "pattern": "\\d{4}-\\d{2}-\\d{2}",
+          "format": "date",
+          "notAfter": "mgmtPeriodEnd",
           "description": "Profit-and-loss period start, normalized to ISO YYYY-MM-DD, when printed."
         },
         {
           "name": "mgmtPeriodYear",
           "type": "string",
-          "pattern": "\\d{4}",
+          "format": "year",
           "description": "The year of the reporting period, as a four-digit year (e.g. 2025) — a label, like the EPF statement's statementYear, not a measure."
         },
         {

@@ -188,6 +188,18 @@ export interface CanonicalFieldSpec {
   readonly jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>>;
   /** SYS-3728: the most rows a list may hold. ALWAYS present on a built `list` field. */
   readonly maxItems?: number;
+  /**
+   * SYS-3728: a calendar format the writer provably normalizes to — `"date"`
+   * (ISO YYYY-MM-DD, a real date, year 0001–9999) or `"year"` (YYYY, 0001–
+   * 9999). Checked by arithmetic, not by a pattern: a pattern proves the
+   * shape of 2026-02-30, not that the day exists.
+   */
+  readonly format?: "date" | "year";
+  /**
+   * SYS-3728: a `format: "date"` field of the same category this one may not
+   * follow — a period start is not after its end.
+   */
+  readonly notAfter?: string;
   readonly unit?: string;
   readonly range?: readonly [number, number];
   readonly description: string;
@@ -350,6 +362,11 @@ export interface CategorySchema {
   readonly legacyId?: string;
   /** SYS-3728: see `CategoryInstanceColumns`. Absent for every periodised category. */
   readonly instanceColumns?: CategoryInstanceColumns;
+  /**
+   * SYS-3728: the most reporting periods one instance carries — a period
+   * position above it is refused. Absent: positions are capped at 100.
+   */
+  readonly maxPeriods?: number;
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
 }
 
@@ -369,6 +386,8 @@ interface RawCategoryField {
   pattern?: unknown;
   jurisdictionPatterns?: unknown;
   maxItems?: unknown;
+  format?: unknown;
+  notAfter?: unknown;
   confidentiality?: "non-sensitive";
 }
 
@@ -379,6 +398,7 @@ interface RawCategory {
   description: string;
   canonicalTable: string;
   instanceColumns?: unknown;
+  maxPeriods?: unknown;
   fields: RawCategoryField[];
 }
 
@@ -1104,11 +1124,23 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         f.type,
         f,
       );
+      if (f.format !== undefined) {
+        const at = `adapter category data: field "${f.name}" (${where})`;
+        if (f.type !== "string") throw new Error(`${at} declares a format, but only a string has one (it is ${f.type})`);
+        if (f.format !== "date" && f.format !== "year") {
+          throw new Error(`${at} declares format "${String(f.format)}" — expected "date" or "year"`);
+        }
+        if (f.pattern !== undefined || f.jurisdictionPatterns !== undefined) {
+          throw new Error(`${at} declares a format AND a pattern — a format is its own, stricter pattern`);
+        }
+      }
       const spec: CanonicalFieldSpec = Object.freeze({
         name: asFieldName(f.name),
         type: f.type,
         ...(listItems !== undefined ? { items: listItems, maxItems } : {}),
         ...stringConstraints,
+        ...(f.format !== undefined ? { format: f.format as "date" | "year" } : {}),
+        ...(f.notAfter !== undefined ? { notAfter: f.notAfter as string } : {}),
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
@@ -1159,6 +1191,21 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       }
     }
 
+    for (const f of cat.fields) {
+      if (f.notAfter === undefined) continue;
+      const at = `adapter category data: field "${f.name}" (${where})`;
+      const other = cat.fields.find((x) => x.name === f.notAfter);
+      if (!other) throw new Error(`${at} declares notAfter "${String(f.notAfter)}", which this category does not declare`);
+      if (f.format !== "date" || other.format !== "date") {
+        throw new Error(`${at} declares notAfter, but both it and "${other.name}" must be format "date"`);
+      }
+    }
+    if (
+      cat.maxPeriods !== undefined &&
+      (!Number.isInteger(cat.maxPeriods) || (cat.maxPeriods as number) < 1 || (cat.maxPeriods as number) > 100)
+    ) {
+      throw new Error(`adapter category data: ${where} has an invalid maxPeriods — expected an integer 1..100`);
+    }
     if (fields.filter((x) => x.kind === "currency").length > 1) {
       throw new Error(
         `adapter category data: ${where} declares more than one currency field — which one denominates its money would be a guess`,
@@ -1173,6 +1220,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       ...(cat.instanceColumns !== undefined
         ? { instanceColumns: validateInstanceColumns(cat.instanceColumns, cat.fields, where) }
         : {}),
+      ...(cat.maxPeriods !== undefined ? { maxPeriods: cat.maxPeriods as number } : {}),
       fields: Object.freeze(fields) as ReadonlyArray<CanonicalFieldSpec>,
     });
     byId.set(cat.id, schema);

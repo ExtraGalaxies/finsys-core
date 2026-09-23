@@ -71,6 +71,14 @@ export type ViolationRule =
   | 'invalid-confidence'
   | 'invalid-period'
   | 'duplicate-period'
+  | 'invisible-characters'
+  | 'excessive-combining-marks'
+  | 'out-of-range'
+  | 'not-an-integer'
+  | 'unsafe-magnitude'
+  | 'invalid-date'
+  | 'date-order'
+  | 'not-plain-data'
 
 /**
  * One broken rule. `field` is the canonical field (or envelope key), or
@@ -118,17 +126,34 @@ export interface ValidationOptions {
 // ── Text rules ─────────────────────────────────────────────────────────
 
 /**
- * Control characters. Refused in EVERY string: C0 except tab and newline,
- * carriage return, DEL, C1, the bidi embeddings / overrides / isolates
- * (U+202A–202E, U+2066–2069: text that renders in a different order than it
- * is stored), and the line / paragraph separators. Tab and newline are allowed
- * only in LONG TEXT — a field or item whose maxLength exceeds the 256 default
- * (addresses and remarks that wrap). A carriage return is refused everywhere:
+ * Characters that are not text anyone printed. Refused in EVERY string:
+ *   - format characters (\p{Cf}): zero-width space / joiners, LRM / RLM / ALM,
+ *     soft hyphen, BOM, word joiner, invisible operators, bidi embeddings /
+ *     overrides / isolates, interlinear annotation, tag characters;
+ *   - private use (\p{Co}) and unassigned code points (\p{Cn}, which includes
+ *     every noncharacter: U+FFFE/FFFF, U+FDD0–FDEF);
+ *   - the fillers that Unicode classes as letters or symbols but render as
+ *     nothing: Hangul fillers U+115F, U+1160, U+3164, U+FFA0 and the braille
+ *     blank U+2800.
+ * ZWJ / ZWNJ are refused too, including inside a word: the data this guards is
+ * Malay, English, Chinese, Thai and Vietnamese, none of which needs them, and
+ * "a joiner is fine here" is exactly the judgement a denylist cannot make.
+ */
+const INVISIBLE = /[\p{Cf}\p{Co}\p{Cn}\u115f\u1160\u3164\uffa0\u2800]/u
+
+/**
+ * Control characters (\p{Cc}: C0, DEL, C1) and the line / paragraph
+ * separators. Tab and newline are allowed only in LONG TEXT (maxLength above
+ * the 256 default: addresses and remarks that wrap); a carriage return never —
  * a writer normalizes line endings to "\n".
  */
-const CONTROL_ANYWHERE = new RegExp('[\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u202a-\\u202e\\u2066-\\u2069\\u2028\\u2029]', 'u')
-const CONTROL_SHORT = new RegExp('[\\u0009\\u000a]')
-const LONE_SURROGATE = new RegExp('[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]')
+const CONTROL_ANYWHERE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u2028\u2029]/u
+const CONTROL_SHORT = /[\t\n]/
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/
+/** More than four combining marks on one base: never language, only rendering abuse ("zalgo"). */
+const COMBINING_OVERFLOW = /\p{M}{5,}/u
+/** A value is blank when nothing in it is a letter, number, punctuation or symbol. */
+const VISIBLE = /[\p{L}\p{N}\p{P}\p{S}]/u
 
 const patternCache = new Map<string, RegExp>()
 function fullMatch(source: string): RegExp {
@@ -140,34 +165,60 @@ function fullMatch(source: string): RegExp {
   return re
 }
 
-/** A string that is really a serialized array or object. */
-function isSerializedStructure(value: string): boolean {
-  const t = value.trim()
-  if (t[0] !== '[' && t[0] !== '{') return false
-  try {
-    // Text opening with "[" or "{" that parses is, by JSON's grammar, an array or object.
-    JSON.parse(t)
-    return true
-  } catch {
-    return false
-  }
+/**
+ * Structure is keyed on the LEADING VISIBLE CHARACTER, not on parseability —
+ * a parse test catches only the one serializer its author thought of, and
+ * misses Python's repr, JS literals, trailing commas and the truncated array
+ * that started all this.
+ *
+ *   - Any string whose first visible character is "{" is refused.
+ *   - A SHORT string (maxLength ≤ 256) whose first visible character is "[" is
+ *     refused.
+ *   - LONG TEXT may open with a bracketed tag ("[CANCELLED] …", "[REDACTED] …")
+ *     — and nothing that looks like a sequence: "[" is refused when what
+ *     follows (after spaces) is "[", "{", a quote, "]", or a number, or when
+ *     the bracket is never closed. So "[1] Case withdrawn" is refused as well;
+ *     a writer that needs it writes "(1) …" or "No. 1 …".
+ *
+ * Structure NOT at the start ("Name: [{…}]") is not detected; that belongs to
+ * the per-field format rules where a format is provable.
+ */
+const LONG_TEXT_SEQUENCE = /^\[\s*(?:[[{"'‘“\]]|[-+]?\d)/u
+function isSerializedStructure(value: string, longText: boolean): boolean {
+  const t = value.trimStart()
+  if (t[0] === '{') return true
+  if (t[0] !== '[') return false
+  if (!longText) return true
+  return LONG_TEXT_SEQUENCE.test(t) || !t.includes(']')
 }
 
 interface StringRules {
   maxLength?: number
   pattern?: string
   jurisdictionPatterns?: Readonly<Partial<Record<string, string>>>
+  format?: 'date' | 'year'
+}
+
+/** The text rules every string is held to — field, list item and instance key alike. */
+function textViolation(value: string, longText: boolean): ViolationRule | null {
+  if (LONE_SURROGATE.test(value)) return 'malformed-text'
+  if (INVISIBLE.test(value)) return 'invisible-characters'
+  if (CONTROL_ANYWHERE.test(value)) return 'control-characters'
+  if (!longText && CONTROL_SHORT.test(value)) return 'control-characters'
+  if (COMBINING_OVERFLOW.test(value)) return 'excessive-combining-marks'
+  if (!VISIBLE.test(value)) return 'blank-string'
+  return null
 }
 
 /** Every rule a string value is held to, in order; the first failure is the one reported. */
 function stringViolation(value: string, rules: StringRules, opts: ValidationOptions): ViolationRule | null {
-  if (value.trim() === '') return 'blank-string'
-  if (LONE_SURROGATE.test(value)) return 'malformed-text'
   const maxLength = rules.maxLength ?? STRING_MAX_LENGTH_DEFAULT
-  if (CONTROL_ANYWHERE.test(value)) return 'control-characters'
-  if (maxLength <= STRING_MAX_LENGTH_DEFAULT && CONTROL_SHORT.test(value)) return 'control-characters'
+  const longText = maxLength > STRING_MAX_LENGTH_DEFAULT
+  const text = textViolation(value, longText)
+  if (text) return text
   if (value.length > maxLength) return 'max-length'
-  if (isSerializedStructure(value)) return 'serialized-structure'
+  if (isSerializedStructure(value, longText)) return 'serialized-structure'
+  if (rules.format !== undefined && !isCalendarValue(value, rules.format)) return 'invalid-date'
   if (rules.pattern !== undefined && !fullMatch(rules.pattern).test(value)) return 'pattern-mismatch'
   const j = opts.jurisdiction
   if (isJurisdiction(j)) {
@@ -177,9 +228,73 @@ function stringViolation(value: string, rules: StringRules, opts: ValidationOpti
   return null
 }
 
-function numberViolation(value: unknown): ViolationRule | null {
+// ── Dates ─────────────────────────────────────────────────────────────
+
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
+const ISO_YEAR = /^\d{4}$/
+const ISO_DATE_TIME = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(Z|([+-])(\d{2}):(\d{2}))$/
+
+/** A real calendar date, year 0001–9999 — checked by arithmetic, not by Date's lenient parser. */
+function isCalendarDate(value: string): boolean {
+  const m = ISO_DATE.exec(value)
+  if (!m) return false
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  if (y < 1 || mo < 1 || mo > 12 || d < 1) return false
+  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mo - 1]!
+  return d <= days
+}
+
+function isCalendarValue(value: string, format: 'date' | 'year'): boolean {
+  if (format === 'year') return ISO_YEAR.test(value) && Number(value) >= 1
+  return isCalendarDate(value)
+}
+
+/** An ISO 8601 instant: a real date, hour 00–23, minute and second 00–59, offset within ±14:00. */
+function isInstant(value: string): boolean {
+  const m = ISO_DATE_TIME.exec(value)
+  if (!m) return false
+  if (!isCalendarDate(m[1]!)) return false
+  if (Number(m[2]) > 23 || Number(m[3]) > 59 || (m[4] !== undefined && Number(m[4]) > 59)) return false
+  if (m[6] !== undefined) {
+    const hours = Number(m[7])
+    const minutes = Number(m[8])
+    if (minutes > 59 || hours > 14 || (hours === 14 && minutes > 0)) return false
+  }
+  return true
+}
+
+// ── Numbers ───────────────────────────────────────────────────────────
+
+/** The largest magnitude a non-integer quantity may carry: a quadrillion, past any real balance. */
+export const NUMBER_MAX_MAGNITUDE = 1e15
+
+interface NumberRules {
+  unit?: string
+  range?: readonly [number, number]
+}
+
+/**
+ * A number's domain:
+ *   - a finite number, never text;
+ *   - `unit: "count"`, and `unit: "score"` WITHOUT a declared range, are
+ *     non-negative safe integers (a score with a range, like the 0..1
+ *     geolocation scores, is held to its range instead);
+ *   - every other number has magnitude at most NUMBER_MAX_MAGNITUDE;
+ *   - a declared `range` is enforced, inclusive.
+ */
+function numberViolation(value: unknown, rules: NumberRules = {}): ViolationRule | null {
   if (typeof value !== 'number') return 'type-mismatch'
-  return Number.isFinite(value) ? null : 'non-finite-number'
+  if (!Number.isFinite(value)) return 'non-finite-number'
+  const integral = rules.unit === 'count' || (rules.unit === 'score' && rules.range === undefined)
+  if (integral) {
+    if (!Number.isSafeInteger(value)) return 'not-an-integer'
+    if (value < 0) return 'out-of-range'
+  } else if (Math.abs(value) > NUMBER_MAX_MAGNITUDE) {
+    return 'unsafe-magnitude'
+  }
+  if (rules.range !== undefined && (value < rules.range[0] || value > rules.range[1])) return 'out-of-range'
+  return null
 }
 
 // ── Lists ─────────────────────────────────────────────────────────────
@@ -274,7 +389,7 @@ export function validateFieldValue(spec: CanonicalFieldSpec, value: unknown, opt
   const field = spec.name
   switch (spec.type) {
     case 'number': {
-      const rule = numberViolation(value)
+      const rule = numberViolation(value, spec)
       return rule ? [{ field, rule }] : []
     }
     case 'boolean':
@@ -305,13 +420,24 @@ function fieldsOf(category: AdapterCategory): Map<string, CanonicalFieldSpec> {
 function fieldViolations(specs: Map<string, CanonicalFieldSpec>, fields: unknown, opts: ValidationOptions): Violation[] {
   if (!isPlainObject(fields)) return [{ field: '(values)', envelope: true, rule: 'type-mismatch' }]
   const out: Violation[] = []
+  const valid = new Set<string>()
   for (const [name, value] of Object.entries(fields)) {
     const spec = specs.get(name)
     if (!spec) {
       out.push({ field: '(unknown)', rule: 'unknown-field' })
       continue
     }
-    out.push(...validateFieldValue(spec, value, opts))
+    const v = validateFieldValue(spec, value, opts)
+    out.push(...v)
+    if (v.length === 0 && value !== null && value !== undefined) valid.add(name)
+  }
+  // A start that follows its end: checked only between two VALID dates, so it
+  // never reports on a value already refused for itself.
+  for (const name of valid) {
+    const after = specs.get(name)?.notAfter
+    if (after !== undefined && valid.has(after) && String(fields[name]) > String(fields[after])) {
+      out.push({ field: name, rule: 'date-order' })
+    }
   }
   return out
 }
@@ -333,8 +459,21 @@ export function validateCanonicalFields(
 
 /** The storage column's width (instance_key VARCHAR(200)). */
 const INSTANCE_KEY_MAX_LENGTH = 200
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
-const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$/
+/** A period position past this is not a reporting period, whatever the category. */
+const PERIOD_POSITION_CEILING = 100
+
+/**
+ * An instance key: a string of at most 200 characters (the column), held to
+ * the same text rules as a short field (no invisible, control or malformed
+ * characters, no leading structure), with no leading or trailing whitespace.
+ * `''` is allowed — the single-cardinality convention (canonical-view.ts).
+ */
+export function isValidInstanceKey(key: unknown): key is string {
+  if (typeof key !== 'string') return false
+  if (key === '') return true
+  if (key.length > INSTANCE_KEY_MAX_LENGTH || key !== key.trim()) return false
+  return textViolation(key, false) === null && !isSerializedStructure(key, false)
+}
 const EXTRACTION_KEYS = new Set(['instanceKey', 'values', 'observedAt', 'confidence', 'periods'])
 const PERIOD_KEYS = new Set(['position', 'start', 'end', 'values', 'confidence'])
 
@@ -390,20 +529,12 @@ export function validateAdapterExtraction(
   }
 
   // The key may be '' — the single-cardinality convention (canonical-view.ts).
-  const key = extraction.instanceKey
-  if (
-    typeof key !== 'string' ||
-    key.length > INSTANCE_KEY_MAX_LENGTH ||
-    CONTROL_ANYWHERE.test(key) ||
-    CONTROL_SHORT.test(key) ||
-    LONE_SURROGATE.test(key) ||
-    isSerializedStructure(key)
-  ) {
+  if (!isValidInstanceKey(extraction.instanceKey)) {
     out.push({ field: 'instanceKey', envelope: true, rule: 'invalid-instance-key' })
   }
 
   const observed = extraction.observedAt
-  if (observed !== undefined && (typeof observed !== 'string' || !ISO_DATE_TIME.test(observed) || !Number.isFinite(Date.parse(observed)))) {
+  if (observed !== undefined && (typeof observed !== 'string' || !isInstant(observed))) {
     out.push({ field: 'observedAt', envelope: true, rule: 'invalid-observed-at' })
   }
 
@@ -416,6 +547,7 @@ export function validateAdapterExtraction(
       out.push({ field: 'periods', envelope: true, rule: 'invalid-period' })
     } else {
       const seen = new Set<number>()
+      const maxPeriods = categorySchemaOf(category).maxPeriods ?? PERIOD_POSITION_CEILING
       periods.forEach((p, period) => {
         if (!isPlainObject(p)) {
           out.push({ field: 'periods', period, envelope: true, rule: 'invalid-period' })
@@ -425,18 +557,23 @@ export function validateAdapterExtraction(
           if (!PERIOD_KEYS.has(k)) out.push({ field: '(envelope)', period, envelope: true, rule: 'unknown-field' })
         }
         const position = p.position
-        if (typeof position !== 'number' || !Number.isInteger(position) || position < 1) {
+        if (typeof position !== 'number' || !Number.isInteger(position) || position < 1 || position > maxPeriods) {
           out.push({ field: 'position', period, envelope: true, rule: 'invalid-period' })
         } else if (seen.has(position)) {
           out.push({ field: 'position', period, envelope: true, rule: 'duplicate-period' })
         } else {
           seen.add(position)
         }
+        let edgesValid = true
         for (const edge of ['start', 'end'] as const) {
           const d = p[edge]
-          if (d !== undefined && (typeof d !== 'string' || !ISO_DATE.test(d) || !Number.isFinite(Date.parse(d)))) {
+          if (d !== undefined && (typeof d !== 'string' || !isCalendarDate(d))) {
             out.push({ field: edge, period, envelope: true, rule: 'invalid-period' })
+            edgesValid = false
           }
+        }
+        if (edgesValid && typeof p.start === 'string' && typeof p.end === 'string' && p.start > p.end) {
+          out.push({ field: 'start', period, envelope: true, rule: 'date-order' })
         }
         for (const v of fieldViolations(specs, p.values, opts)) out.push({ ...v, period })
         out.push(...confidenceViolations(specs, p.confidence, period))
@@ -444,4 +581,93 @@ export function validateAdapterExtraction(
     }
   }
   return { ok: out.length === 0, violations: out }
+}
+
+// ── The snapshot: validate exactly what is stored ────────────────────
+
+/**
+ * THE WRITER CONTRACT, in full:
+ *
+ *   const r = prepareExtractionForWrite(category, extraction, opts)
+ *   if (!r.ok) → refuse (log r.violations; they carry no values)
+ *   else       → persist r.snapshot — THAT object, never `extraction`
+ *
+ * Why a snapshot. A validator that walks an in-memory value and then lets the
+ * caller serialize it is checking a different thing from the one stored: a
+ * `toJSON` (on a class, on an array, or planted on Object.prototype), a getter
+ * that answers differently the second time, a sparse array whose holes become
+ * nulls, a NaN that JSON silently writes as null — each passes the walk and
+ * stores something else. So the input is first proven to be PLAIN DATA, then
+ * round-tripped through JSON, and the round-tripped copy is what is validated
+ * and what is persisted.
+ *
+ * Plain data: null, booleans, finite numbers, strings; arrays that are dense,
+ * of `Array.prototype`, with no own properties but their indices and length;
+ * objects whose prototype is `Object.prototype` or null, with only enumerable
+ * string-keyed data properties (no getters / setters, no symbols); no `toJSON`
+ * reachable from any object or array (own or inherited); no cycles; depth at
+ * most 32. `undefined` in an object is dropped, as JSON drops it.
+ */
+const SNAPSHOT_MAX_DEPTH = 32
+
+function isPlainData(value: unknown, seen: Set<object>, depth: number): boolean {
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') return true
+  if (typeof value === 'number') return Number.isFinite(value)
+  if (typeof value !== 'object') return false // function, bigint, symbol, undefined
+  if (depth > SNAPSHOT_MAX_DEPTH || seen.has(value)) return false
+  if ('toJSON' in value) return false
+  seen.add(value)
+  try {
+    if (Array.isArray(value)) {
+      if (Object.getPrototypeOf(value) !== Array.prototype) return false
+      const keys = Reflect.ownKeys(value)
+      if (keys.length !== value.length + 1) return false // a hole, or an extra own property
+      for (let i = 0; i < value.length; i++) {
+        const d = Object.getOwnPropertyDescriptor(value, i)
+        if (!d || !('value' in d) || !isPlainData(d.value, seen, depth + 1)) return false
+      }
+      return true
+    }
+    const proto = Object.getPrototypeOf(value)
+    if (proto !== Object.prototype && proto !== null) return false
+    for (const key of Reflect.ownKeys(value)) {
+      if (typeof key !== 'string') return false
+      const d = Object.getOwnPropertyDescriptor(value, key)!
+      if (!('value' in d) || !d.enumerable) return false
+      if (d.value === undefined) continue
+      if (!isPlainData(d.value, seen, depth + 1)) return false
+    }
+    return true
+  } finally {
+    seen.delete(value)
+  }
+}
+
+export type SnapshotResult<T> = { ok: true; snapshot: T } | { ok: false; violations: Violation[] }
+
+/** The plain-data JSON round-trip of `input`, or `not-plain-data`. See the writer contract above. */
+export function normalizeForWrite<T>(input: T): SnapshotResult<T> {
+  if (!isPlainData(input, new Set(), 0)) {
+    return { ok: false, violations: [{ field: '(input)', envelope: true, rule: 'not-plain-data' }] }
+  }
+  return { ok: true, snapshot: JSON.parse(JSON.stringify(input)) as T }
+}
+
+export type PreparedExtraction<T> =
+  | { ok: true; snapshot: T; violations: [] }
+  | { ok: false; violations: Violation[] }
+
+/**
+ * Snapshot, then validate the snapshot. The ONE entry point a writer calls;
+ * persist `snapshot` only when `ok`.
+ */
+export function prepareExtractionForWrite<T extends ValidatableExtraction>(
+  category: AdapterCategory,
+  extraction: T,
+  opts: ValidationOptions = {},
+): PreparedExtraction<T> {
+  const snap = normalizeForWrite(extraction)
+  if (!snap.ok) return { ok: false, violations: snap.violations }
+  const r = validateAdapterExtraction(category, snap.snapshot, opts)
+  return r.ok ? { ok: true, snapshot: snap.snapshot, violations: [] } : { ok: false, violations: r.violations }
 }

@@ -470,7 +470,7 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
     const v = view()
     delete v.categories[CBR]!.instances[0]!.fields.subjectName
     const labels = buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items[0]!.timePeriods
-    expect(labels).toEqual(['Example Sdn Bhd (principal)', 'Person A (party)', 'T1 · pbi-2'])
+    expect(labels).toEqual(['Example Sdn Bhd (principal)', 'Person A (party)', 'T1 \u00b7 pbi-2'])
   })
 
   it('two reports on the same subject keep their identity: the report order date joins the label', () => {
@@ -481,11 +481,11 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
     )
     const score = buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items.find((i) => i.displayName === 'Bureau Score')!
     expect(score.timePeriods).toEqual([
-      'Example Sdn Bhd (principal) · 2026-01-01 09:00:00', 'Person A (party) · 2026-01-01 09:00:00',
-      'Person B (party) · 2026-01-01 09:00:00', 'Example Sdn Bhd (principal) · 2026-06-01 09:00:00',
+      'Example Sdn Bhd (principal) \u00b7 2026-01-01 09:00:00', 'Person A (party) \u00b7 2026-01-01 09:00:00',
+      'Person B (party) \u00b7 2026-01-01 09:00:00', 'Example Sdn Bhd (principal) \u00b7 2026-06-01 09:00:00',
     ])
-    expect(score.data['Example Sdn Bhd (principal) · 2026-06-01 09:00:00']).toBe(1)
-    expect(score.data['Example Sdn Bhd (principal) · 2026-01-01 09:00:00']).toBe(712)
+    expect(score.data['Example Sdn Bhd (principal) \u00b7 2026-06-01 09:00:00']).toBe(1)
+    expect(score.data['Example Sdn Bhd (principal) \u00b7 2026-01-01 09:00:00']).toBe(712)
   })
 
   it('with no order date, the report is named by its position', () => {
@@ -495,8 +495,8 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
     )
     const labels = buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items[0]!.timePeriods
     expect(labels).toEqual([
-      'Example Sdn Bhd (principal) · report 1', 'Person A (party) · report 1', 'Person B (party) · report 1',
-      'Example Sdn Bhd (principal) · report 2',
+      'Example Sdn Bhd (principal) \u00b7 report 1', 'Person A (party) \u00b7 report 1', 'Person B (party) \u00b7 report 1',
+      'Example Sdn Bhd (principal) \u00b7 report 2',
     ])
   })
 
@@ -518,8 +518,8 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
     // Documents keep the order the rows arrive in (the uploaded report, then
     // the one with no intake row); WITHIN each, the principal leads.
     expect(labels).toEqual([
-      'Example Sdn Bhd (principal) · report 1', 'Person A (party) · report 1', 'Person B (party) · report 1',
-      'Person D (principal) · report 2', 'Person C (party) · report 2',
+      'Example Sdn Bhd (principal) \u00b7 report 1', 'Person A (party) \u00b7 report 1', 'Person B (party) \u00b7 report 1',
+      'Person D (principal) \u00b7 report 2', 'Person C (party) \u00b7 report 2',
     ])
   })
 

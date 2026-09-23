@@ -37,7 +37,7 @@ import {
   type CategoryInstanceColumns,
   type ListItemSpec,
 } from './adapter-categories.js'
-import { matchListRow, parseListValue, validateFieldValue, type ViolationRule } from './canonical-validation.js'
+import { isValidInstanceKey, matchListRow, parseListValue, validateFieldValue, type ViolationRule } from './canonical-validation.js'
 import {
   v1Addresses,
   v1KeyForAddress,
@@ -424,8 +424,10 @@ function guardInstanceRows(
   fieldSpecs: Readonly<Record<string, CanonicalFieldSpec>>
 ): { rows: InstanceRow[]; invalid: Array<Map<string, ViolationRule[]>> } {
   const invalid: Array<Map<string, ViolationRule[]>> = []
-  const guarded = rows.map((row) => {
+  const guarded = rows.map((row, i) => {
     const bad = new Map<string, ViolationRule[]>()
+    // A row already guarded upstream (instanceRowsFromView) carries its flags.
+    for (const [field, rules] of Object.entries(row.invalidFields ?? {})) bad.set(field, rules)
     const copy: InstanceRow = { ...row }
     for (const [field, spec] of Object.entries(fieldSpecs)) {
       if (!Object.prototype.hasOwnProperty.call(row, field)) continue
@@ -435,10 +437,28 @@ function guardInstanceRows(
         copy[field] = null
       }
     }
+    // S3: the key and the wire's own label are rendered as column labels —
+    // an invalid one is replaced, never shown.
+    if (!isValidInstanceKey(row.instanceKey)) copy.instanceKey = `${INVALID_VALUE_TEXT} ${i + 1}`
+    if (row.sourceLabel != null && (typeof row.sourceLabel !== 'string' || !isValidInstanceKey(row.sourceLabel) || row.sourceLabel === '')) {
+      copy.sourceLabel = null
+    }
+    delete copy.invalidFields
     invalid.push(bad)
     return copy
   })
   return { rows: guarded, invalid }
+}
+
+/**
+ * SYS-3728: the field specs a category's read paths hold values to — the
+ * categories with no v1 lineage, whose values reach rows, tables and scoring
+ * under their canonical names. A v1-lineage category is not re-checked on
+ * read (its outputs are the byte-identity contract); its writers are.
+ */
+function readGuardSpecs(category: AdapterCategory): Record<string, CanonicalFieldSpec> | null {
+  if (!canonicalNamedCategories().has(category)) return null
+  return Object.fromEntries(categorySchemaOf(category).fields.map((f) => [f.name as string, f]))
 }
 
 function buildTableForGroup(
@@ -2397,7 +2417,25 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
  * above is accurate again rather than merely aspirational.
  */
 export function instanceRowsFromView(view: CanonicalView, category: AdapterCategory): InstanceRow[] {
-  return instanceRowPairsFromView(view, category).map((p) => p.row)
+  const rows = instanceRowPairsFromView(view, category).map((p) => p.row)
+  // SYS-3728: a constrained category's rows never carry a value that breaks
+  // the write contract — it is null, and named (rules only) in `invalidFields`.
+  // Scoring reads these rows.
+  const specs = readGuardSpecs(category)
+  if (!specs) return rows
+  return rows.map((row) => {
+    const bad: Record<string, ViolationRule[]> = {}
+    const copy: InstanceRow = { ...row }
+    for (const [field, spec] of Object.entries(specs)) {
+      if (!Object.prototype.hasOwnProperty.call(row, field)) continue
+      const violations = validateFieldValue(spec, row[field], { enumMembership: 'skip' })
+      if (violations.length > 0) {
+        bad[field] = [...new Set(violations.map((v) => v.rule))]
+        copy[field] = null
+      }
+    }
+    return Object.keys(bad).length > 0 ? { ...copy, invalidFields: bad } : copy
+  })
 }
 
 /**

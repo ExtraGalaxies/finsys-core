@@ -246,6 +246,10 @@ export {
   validateCanonicalFields,
   validateFieldValue,
   validateAdapterExtraction,
+  normalizeForWrite,
+  prepareExtractionForWrite,
+  isValidInstanceKey,
+  NUMBER_MAX_MAGNITUDE,
   kebabToCamel,
   STRING_MAX_LENGTH_DEFAULT,
   LIST_MAX_ITEMS_DEFAULT,
@@ -256,6 +260,8 @@ export type {
   ValidationOptions,
   ValidationResult,
   ValidatableExtraction,
+  SnapshotResult,
+  PreparedExtraction,
 } from './canonical-validation.js'
 export {
   CURRENCY_CODES,

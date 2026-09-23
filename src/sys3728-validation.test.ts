@@ -94,10 +94,12 @@ describe('SYS-3728 — every field has an enforceable declaration', () => {
 
   it('patterns are declared ONLY where the writer provably normalizes the format', () => {
     const withPattern = fields.filter(({ f }) => f.pattern !== undefined).map(({ c, f }) => `${c}.${f.name}`)
-    expect(withPattern).toEqual([
-      'credit-bureau-report.section', 'management-account.mgmtPeriodEnd', 'management-account.mgmtPeriodStart',
-      'management-account.mgmtPeriodYear', 'management-account.mgmtStatementsRead',
+    expect(withPattern).toEqual(['credit-bureau-report.section', 'management-account.mgmtStatementsRead'])
+    const withFormat = fields.filter(({ f }) => f.format !== undefined).map(({ c, f }) => `${c}.${f.name}=${f.format}`)
+    expect(withFormat).toEqual([
+      'management-account.mgmtPeriodEnd=date', 'management-account.mgmtPeriodStart=date', 'management-account.mgmtPeriodYear=year',
     ])
+    expect(spec(MA, 'mgmtPeriodStart').notAfter).toBe('mgmtPeriodEnd')
     // No identifier format is provable from the producer (bureau identifiers
     // are passed through as printed), so no jurisdiction pattern is shipped.
     expect(fields.filter(({ f }) => f.jurisdictionPatterns !== undefined)).toEqual([])
@@ -110,7 +112,8 @@ describe('SYS-3728 — every field has an enforceable declaration', () => {
   })
 
   it('no non-list field describes itself as JSON — except three known, pinned company-profile debts', () => {
-    const jsonish = /\bJSON[- ](encoded|string|list|array|object)/i
+    // Any wording that says the value is a structure: JSON (not a .json file name), serialized, encoded, array of, list of.
+    const jsonish = /(?<!\.)\bJSON\b|\bserialized\b|\bencoded (list|array|object)\b|\barray of\b|\b(a|the) list of\b/i
     const offenders = fields.filter(({ f }) => f.type !== 'list' && jsonish.test(f.description)).map(({ c, f }) => `${c}.${f.name}`)
     // These hold raw extraction nodes serialized as JSON; they violate
     // serialized-structure on every live row and need their own conversion.
@@ -231,13 +234,13 @@ describe('SYS-3728 — validateCanonicalFields: scalar rules', () => {
     noValues(r.violations)
   })
 
-  it('text that merely starts with a bracket is not structure', () => {
-    expect(check(CBR, { subjectName: '[Example] Sdn Bhd' }).ok).toBe(true)
+  it('a short field whose first visible character is a bracket is structure, parseable or not (see sys3728-hardening for long text)', () => {
+    expect(rules(check(CBR, { subjectName: '[Example] Sdn Bhd' }).violations)).toEqual(['serialized-structure'])
   })
 
   it.each([
     ['NUL', 'a\u0000b'], ['a newline in a short field', 'a\nb'], ['a tab in a short field', 'a\tb'], ['carriage return', 'a\rb'],
-    ['DEL', 'a\u007fb'], ['a C1 control', 'a\u0085b'], ['a bidi override', 'a‮b'], ['a bidi isolate', 'a⁦b'],
+    ['DEL', 'a\u007fb'], ['a C1 control', 'a\u0085b'], ['a line separator', 'a\u2028b'],
   ])('control-characters: %s', (_l, value) => {
     expect(rules(check(CBR, { subjectName: value }).violations)).toEqual(['control-characters'])
   })
@@ -262,9 +265,15 @@ describe('SYS-3728 — validateCanonicalFields: scalar rules', () => {
   })
 
   it.each([
-    ['mgmtPeriodEnd', '31/12/2025'], ['mgmtPeriodEnd', '2025-12-31T00:00:00Z'], ['mgmtPeriodYear', '25'], ['mgmtStatementsRead', 'PL,BS,XX'],
+    ['mgmtStatementsRead', 'PL,BS,XX'], ['mgmtStatementsRead', 'BS,PL '],
   ])('pattern-mismatch: %s = %j (a pattern is a FULL match)', (field, value) => {
     expect(rules(check(MA, { [field]: value }).violations)).toEqual(['pattern-mismatch'])
+  })
+
+  it.each([
+    ['mgmtPeriodEnd', '31/12/2025'], ['mgmtPeriodEnd', '2025-12-31T00:00:00Z'], ['mgmtPeriodYear', '25'],
+  ])('invalid-date: %s = %j (a format is a full, calendar-checked match)', (field, value) => {
+    expect(rules(check(MA, { [field]: value }).violations)).toEqual(['invalid-date'])
   })
 
   it('enum: a label outside the manifest set, a missing label set, and the explicit skip', () => {
@@ -524,9 +533,9 @@ describe('SYS-3728 — a table never renders a value that breaks the contract', 
   })
 
   it('a label field that breaks a rule is never used as a column label', () => {
-    const v = view([{ section: 'ccris', subjectRole: 'principal', subjectName: `${SECRET}‮`, bureauScore: 1 }])
+    const v = view([{ section: 'ccris', subjectRole: 'principal', subjectName: `${SECRET}\u202e`, bureauScore: 1 }])
     const labels = itemOf(v, 'credit_bureau_reports', 'Bureau Score').timePeriods
-    expect(labels).toEqual(['T1 · ccris'])
+    expect(labels).toEqual(['T1 \u00b7 ccris'])
     expect(JSON.stringify(tables(v))).not.toContain(SECRET)
   })
 
@@ -537,10 +546,10 @@ describe('SYS-3728 — a table never renders a value that breaks the contract', 
 
   it("money renders in the document's OWN valid currency code, via Intl", () => {
     const v = view([], { mgmtCurrency: 'MYR', mgmtTotalAssets: 950000, mgmtTradeReceivablesItems: JSON.stringify([MA_ROW]) })
-    expect(itemOf(v, 'management_accounts', 'Total Assets').formattedData).toEqual({ T1: 'MYR 950,000.00' })
-    expect(itemOf(v, 'management_accounts', 'Trade Receivables (Lines)').list!['T1']!.rows[0]!.amount).toBe('-MYR 1,719,587.11')
+    expect(itemOf(v, 'management_accounts', 'Total Assets').formattedData).toEqual({ T1: 'MYR\u00a0950,000.00' })
+    expect(itemOf(v, 'management_accounts', 'Trade Receivables (Lines)').list!['T1']!.rows[0]!.amount).toBe('-MYR\u00a01,719,587.11')
     const vnd = view([], { mgmtCurrency: 'VND', mgmtTotalAssets: 950000 })
-    expect(itemOf(vnd, 'management_accounts', 'Total Assets').formattedData).toEqual({ T1: 'VND 950,000' })
+    expect(itemOf(vnd, 'management_accounts', 'Total Assets').formattedData).toEqual({ T1: 'VND\u00a0950,000' })
   })
 
   it('a printed currency is invalid, and never re-parsed into a symbol: money stays a plain number', () => {

@@ -19,9 +19,9 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   (`ListItemSpec`). The stored value is unchanged — a JSON string of an array of
   row objects — so nothing is migrated. The loader enforces: a list declares
   items (non-empty, unique names, valid types, `money` only on a number, no
-  unknown property, none named `other`); a list declares no `kind`, `unit`,
+  unknown property); a list declares no `kind`, `unit`,
   `range` or `fact`, because it is never a scorable value; only a list declares
-  items. New exports: `isListField`, `LIST_OVERFLOW_COLUMN`, the generated
+  items. New exports: `isListField`, the generated
   `ListFieldName` union (`npm run gen:vocabulary` emits it), `ListItemSpec`.
 - **Converted to `list`: 51 fields.** All 36 `management-account`
   `mgmt*Items` (items `code`, `term`, `amount` as money) and 15
@@ -40,16 +40,12 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
 - **`FileFieldTableItem.list`** (`IhsListCell`, keyed like `data`): a list
   field's value as rows. `columns` are the declared items in order, each
   `{ name, label, numeric, money }`; `rows` are formatted strings (money like
-  any money cell, `-` for absent, a nested value as its JSON); `rawRows` is the
-  parsed array. A number / money item formats only a finite number or a string
-  spelling a plain decimal; blank, boolean and non-finite are absent (`-`),
-  never 0, and any other text (`0x10`, `1,000.00`, `n/a`) is shown as written,
-  never converted. Tolerant by design: a key no item declares is shown in a
-  trailing `other` column as `key: value; …`, never dropped; a stored key
-  matches an item by its exact name or its kebab-case spelling, the exact key
-  winning a clash; a value that is not a JSON array renders as one `value`
-  cell holding the stored text, flagged `invalid`, rather than throwing.
-  `buildListCell` is exported for any other surface that renders a list.
+  any money cell, `-` for absent); `rawRows` is the parsed array. A stored key
+  matches an item by its exact name or its kebab-case spelling. A value that
+  breaks the write contract (below) renders as the invalid marker — one
+  `value` cell reading "(invalid value)", flagged `invalid`, carrying none of
+  the stored content. `buildListCell(value, listSpec, currency?)` is exported
+  for any other surface that renders a list.
 - **`CategorySchema.instanceColumns`** (`CategoryInstanceColumns`): how a
   multi-instance category whose instances are not periods labels and orders its
   table columns. `credit-bureau-report` declares it: columns read
@@ -96,6 +92,51 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
     `confidence`, `periods[].{position,start,end,confidence}`; category fields
     = `values` and `periods[].values`; any other key is refused.
   - `null` / `undefined` are absent and never a violation.
+  - **Text rules** (every string: field, list item, instance key). Refused:
+    format characters `\p{Cf}` (ZWSP, ZWNJ/ZWJ, LRM/RLM/ALM, soft hyphen,
+    BOM, word joiner, invisible operators, bidi controls, interlinear
+    annotation, tag characters), private use `\p{Co}`, unassigned `\p{Cn}`
+    (all noncharacters), the invisible fillers U+115F/1160/3164/FFA0/2800
+    (`invisible-characters`); `\p{Cc}` and U+2028/2029, with tab / newline
+    only in long text (`control-characters`); lone surrogates
+    (`malformed-text`); more than four stacked combining marks
+    (`excessive-combining-marks`); a value with no letter, number,
+    punctuation or symbol (`blank-string`).
+  - **Structure is keyed on the leading visible character**, not on
+    parseability: a first visible `{` is always refused; a first `[` is
+    refused in a short field, and in long text unless it opens a bracketed tag
+    (`[CANCELLED] …`) — `[` followed by `[`, `{`, a quote, `]` or a number, or
+    never closed, is refused. This catches Python reprs, JS literals, trailing
+    commas and truncated arrays, which strict JSON parsing did not. Structure
+    NOT at the start is not detected.
+  - **Numbers**: `unit: "count"`, and `unit: "score"` with no declared range,
+    are non-negative safe integers (`not-an-integer`, `out-of-range`); every
+    other number has magnitude ≤ `NUMBER_MAX_MAGNITUDE` (1e15,
+    `unsafe-magnitude`); a declared `range` (35 fields) is now ENFORCED,
+    inclusive (`out-of-range`) — it was documentation only. `bureauScore`
+    declares no range: the producer states none, so it is held to a
+    non-negative integer.
+  - **Dates**: `format: "date"` / `"year"` replaces the date patterns and is
+    calendar-checked (`invalid-date`: no 2026-02-30, 9999-99-99, year 0000);
+    `notAfter` orders two date fields (`mgmtPeriodStart` ≤ `mgmtPeriodEnd`,
+    `date-order`), as do `periods[].start` ≤ `end`; `observedAt` must be a
+    real instant (no T24:00, seconds ≤ 59, offset within ±14:00); a period
+    position is ≤ the category's `maxPeriods` (management-account: 3), else ≤
+    100.
+  - **Instance key**: the short-text rules, no leading or trailing
+    whitespace, ≤ 200 (`isValidInstanceKey`, exported).
+  - **Validate what is stored.** `normalizeForWrite(input)` proves the input
+    is plain data — no `toJSON` anywhere (own, class or polluted
+    `Object.prototype`), no getters, no sparse or decorated arrays, no
+    non-plain prototypes, no symbols, bigints, functions, NaN / Infinity or
+    cycles (`not-plain-data`) — and returns its JSON round-trip.
+    `prepareExtractionForWrite(category, extraction, opts)` snapshots then
+    validates the SNAPSHOT. **Writer contract: call it, refuse on `!ok`, and
+    persist `snapshot` — never the original object.**
+  - **Not in scope, owned elsewhere:** spreadsheet formula injection (a value
+    opening with `=`, `+`, `-` or `@`) is an EXPORT encoding concern — a
+    CSV/XLSX writer must escape it; the canonical store holds printed text
+    such as "-1,000.00" legitimately.
   - `jurisdiction` selects `jurisdictionPatterns` STRICTLY: an absent,
     unknown or lowercase code applies only jurisdiction-independent rules —
     deliberately not `resolveJurisdiction`'s "absent means MY".
@@ -123,8 +164,14 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   "(invalid value)" (`INVALID_VALUE_TEXT`) in `formattedData`, named in the new
   `FileFieldTableItem.invalid` (rules only), and never used as a column label.
   `buildListCell(value, listSpec, currency?)` returns the invalid marker —
-  carrying none of the stored content — for any violating list; the "other"
-  overflow column is gone (an undeclared key is a violation). Money renders in
+  carrying none of the stored content — for any violating list (an
+  undeclared key is a violation). `instanceRowsFromView` (which scoring reads)
+  holds the same line for both constrained categories: a violating value is
+  null on the row and named in the new `InstanceRow.invalidFields` (rules
+  only); an invalid instance key or source label is never used as a column
+  label. `flatRecordFromView`, `fieldProvenanceFromView` and the detail panel
+  carry no value of either category (they are v1-map driven), so they need no
+  guard; v1-lineage categories are not re-checked on read. Money renders in
   the document's own valid `kind: "currency"` value via Intl, never a
   jurisdiction default and never a re-parsed symbol.
 - `management-account` line items gain `amountAsPrinted`: the mapper keeps a

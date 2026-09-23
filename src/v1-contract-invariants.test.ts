@@ -35,11 +35,12 @@ describe('v1 contract invariants — the map versus what the bridge actually ser
     // v1 held a JSON array in one wide column; v2 keys one instance per file.
     // The bridge used to return the FIRST instance's bare path, so N documents
     // became one string. Fixed for all 17 in 9.2.0 — this stops any one of them
-    // regressing, and covers the 14 the original report never observed.
+    // regressing, and covers the 14 the original report never observed. 19
+    // since SYS-3705 gave experianReports and managementAccounts their entries.
     const prefixKeys = v1MigrationKeys().filter(
       (k) => v1MigrationEntry(k)?.address?.instanceKeyPrefix !== undefined,
     )
-    expect(prefixKeys.length, 'premise: the map should declare 17 of these').toBe(17)
+    expect(prefixKeys.length, 'premise: the map should declare 19 of these').toBe(19)
 
     for (const key of prefixKeys) {
       const prefix = v1MigrationEntry(key)!.address!.instanceKeyPrefix!

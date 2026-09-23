@@ -11,7 +11,7 @@ Additive to every type: `DocumentTypeGroup.extractionCategory`,
 `TaggedFieldData.extraction_category`, `CategorySpec.numericColumnNames` and
 `CategorySpec.noLegacyProvenance` are all optional, and `AdapterCategoryId` / `CanonicalFieldNameLiteral` widen the
 way 9.1.0 widened them. Read **Consumer-visible** below before release — two
-list outputs grow by default._
+list outputs grow by default, and `flatRecordFromView` gains two keys._
 
 ### Added
 
@@ -47,6 +47,21 @@ list outputs grow by default._
 - **`CategorySpec.noLegacyProvenance`** — optional; when true, the table is
   built without the v1-keyed provenance map (see Consumer-visible).
 
+### Fixed
+
+- **SYS-3705 — the v1 migration map had no answer for the two new pointer
+  keys.** finsys-api serves `ihs.experianReports` (SYS-3675) and
+  `ihs.managementAccounts` (SYS-3703) in its v1 response, and finsim's spec 131
+  failed on `experianReports`: a consumer porting off v1 hit a key the map
+  could not place. Both now carry the entry every other document pointer
+  carries — `mapped` to `document-intake`/`pathInDms`, `instanceKeyPrefix` =
+  the document type, `via: hand-authored`. `build-v1-migration-map.py` lists
+  both in `DOC_POINTERS` and unions them into its key list, since the measured
+  corpus predates the columns; a rerun reproduces the map byte for byte.
+  A new test derives the document types from `getDocumentTypeGroups()` and
+  requires that entry for each, so the next document type fails core's own
+  suite the day it is registered rather than a harness later.
+
 ### Changed
 
 - **A category with no v1 lineage now renders.** Before, `extractionCategoryOf`
@@ -66,7 +81,9 @@ list outputs grow by default._
     flat-record values, for the v1 document types and categories only. Pinned
     by `sys3705-v1-lineage-golden.test.ts`, whose digests were taken on 9.3.0
     before the change, both on a representative fixture and with the new
-    categories populated beside it. Outputs are NOT identical WHOLE: the new
+    categories populated beside it. `flatRecordFromView` is hashed minus the two
+    new pointer keys (in `record` and in `unplaced`); the digests themselves
+    were not regenerated. Outputs are NOT identical WHOLE: the new
     types add rows of their own (below), and the status summaries change.
 
 ### Consumer-visible
@@ -87,8 +104,17 @@ list outputs grow by default._
 - `getDocumentTypeGroups()` returns 9 groups; `documentCategoryIds()` includes
   both new categories (so the detail panel excludes them, as it does every
   document category).
-- `flatRecordFromView` is unchanged and v1-map driven: the new categories never
-  appear in a v1 flat record, by design.
+- `flatRecordFromView` gains two keys. The new categories' EXTRACTED fields
+  still never appear in a v1 flat record, by design — they have no v1 key. But
+  the two new document POINTER keys are v1 keys now (see Fixed): with a
+  `document-intake` instance keyed `experianReports#…` / `managementAccounts#…`
+  they appear in `record` as `{ path, uploadedBy?, createdAt? }` arrays, the
+  same shape as every other pointer key (`form9`, a single URL in v1, comes
+  back the same way); with none, they land in `unplaced` with
+  `mapped: no instance with this key prefix`. So a record with neither
+  document carries two more `unplaced` entries than on 9.3.0.
+- `v1MigrationKeys()` has 774 keys (was 772); `v1KeysByDisposition('mapped')`
+  has 673 (was 671).
 - The new tables carry no confidence dots or provenance yet, in either
   direction. The synthesized provenance map is keyed by v1 column name + period,
   and a canonical name + period can spell another category's key

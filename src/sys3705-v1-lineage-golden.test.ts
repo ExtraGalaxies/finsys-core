@@ -44,7 +44,12 @@ import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
  * totals rise by 2 (NotUploaded) — those rows and the summaries are filtered
  * out of what is hashed here, and the change is disclosed in the CHANGELOG.
  * Likewise the documents table and the table map gain the new types' own
- * entries, which are filtered out.
+ * entries, which are filtered out. And `flatRecordFromView` gains the two new
+ * POINTER keys (`experianReports`, `managementAccounts` — v1 keys since the
+ * migration map gave them entries): in `record` when an intake row exists, in
+ * `unplaced` when none does. Exactly those two keys are dropped from both
+ * before hashing; this output was hashed whole until they existed, so the
+ * "v1 part" claim above only became true for it when the filter did.
  *
  * Do NOT update the snapshot to make this pass. A diff here means a
  * v1-lineage category now renders differently, which is the one thing
@@ -81,6 +86,18 @@ const GOLDEN_DIGESTS_AT_9_3_0: Record<string, string> = {
 
 const NEW_DOCUMENT_TYPES = ['experianReports', 'managementAccounts']
 const NEW_GROUPS = ['credit_bureau_reports', 'management_accounts']
+/**
+ * `flatRecordFromView` restricted to its v1 part: the record and `unplaced`
+ * minus the two new document types' pointer keys. Everything else — every
+ * other key, `ambiguous`, the instance sidecars — is hashed as it stands.
+ */
+function withoutNewPointerKeys(flat: ReturnType<typeof flatRecordFromView>): ReturnType<typeof flatRecordFromView> {
+  return {
+    ...flat,
+    record: Object.fromEntries(Object.entries(flat.record).filter(([k]) => !NEW_DOCUMENT_TYPES.includes(k))),
+    unplaced: flat.unplaced.filter((u) => !NEW_DOCUMENT_TYPES.includes(u.key)),
+  }
+}
 const keepV1Groups = <T,>(tables: Record<string, T>): Record<string, T> =>
   Object.fromEntries(Object.entries(tables).filter(([g]) => !NEW_GROUPS.includes(g)))
 
@@ -272,7 +289,10 @@ function everyOutput(v: CanonicalView = fixtureView()): Record<string, unknown> 
     // the v1 types are what must not move.
     resolveExtractionStatusFromView: keepV1Types(resolveExtractionStatusFromView(v, jobs).documents),
     processIhsDetailsFromView: processIhsDetailsFromView(v),
-    flatRecordFromView: flatRecordFromView(v),
+    // The new types' POINTER keys are v1 keys of their own (SYS-3705 gave them
+    // map entries), so they now appear in `record` or, with no intake row, in
+    // `unplaced`. They are new keys, not moved ones: drop exactly those two.
+    flatRecordFromView: withoutNewPointerKeys(flatRecordFromView(v)),
     // The v1 flat functions: the new catalog entries must not reach them.
     buildFileFieldTables: buildFileFieldTables(flat),
     processIhsDetails: processIhsDetails(flat),

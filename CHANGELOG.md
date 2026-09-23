@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 9.4.1
+## [9.4.1] - 2026-09-23
 
 _PATCH — no exported API changes. `documentsOfType`, and through it
 `buildDocumentRowsFromView` and `resolveExtractionStatusFromView`, list fewer

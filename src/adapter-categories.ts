@@ -392,7 +392,24 @@ export interface CategorySchema {
    * `format: "year"` (`year`).
    */
   readonly periodFields?: CategoryPeriodFields;
+  /**
+   * SYS-3728 round 3: fields an instance must carry — each group needs at
+   * least ONE of its fields present (in `values` or any period's), optionally
+   * only for instances whose `when` field holds a given value. A group marked
+   * `identity` is the instance's identity (a subject's name, its identifier)
+   * and is reported as `missing-identity`; any other as `missing-required`.
+   * Declared here rather than coded into the validator, so the next category
+   * with a required identity is a data edit.
+   */
+  readonly requiredAnyOf?: ReadonlyArray<CategoryRequirement>;
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
+}
+
+/** SYS-3728: see `CategorySchema.requiredAnyOf`. */
+export interface CategoryRequirement {
+  readonly anyOf: ReadonlyArray<string>;
+  readonly when?: { readonly field: string; readonly equals: string };
+  readonly identity?: true;
 }
 
 /** SYS-3728: see `CategorySchema.periodFields`. */
@@ -433,6 +450,7 @@ interface RawCategory {
   instanceColumns?: unknown;
   maxPeriods?: unknown;
   periodFields?: unknown;
+  requiredAnyOf?: unknown;
   fields: RawCategoryField[];
 }
 
@@ -591,6 +609,45 @@ function validatePeriodFields(raw: unknown, fields: ReadonlyArray<RawCategoryFie
   }
   if (Object.keys(out).length === 0) throw new Error(`${at} names no field`);
   return Object.freeze(out);
+}
+
+/** SYS-3728: validate a category's `requiredAnyOf` against its own fields. */
+function validateRequiredAnyOf(raw: unknown, fields: ReadonlyArray<RawCategoryField>, where: string): ReadonlyArray<CategoryRequirement> {
+  const at = `adapter category data: ${where} requiredAnyOf`;
+  if (!Array.isArray(raw) || raw.length === 0) throw new Error(`${at} must be a non-empty array of groups`);
+  return Object.freeze(
+    raw.map((g: unknown, i: number) => {
+      const group = (g ?? {}) as Record<string, unknown>;
+      const gat = `${at}[${i}]`;
+      for (const key of Object.keys(group)) {
+        if (key !== "anyOf" && key !== "when" && key !== "identity") throw new Error(`${gat} has unknown property "${key}"`);
+      }
+      const anyOf = group.anyOf;
+      if (!Array.isArray(anyOf) || anyOf.length === 0 || new Set(anyOf).size !== anyOf.length) {
+        throw new Error(`${gat}.anyOf must be a non-empty list of distinct field names`);
+      }
+      for (const name of anyOf) {
+        const f = fields.find((x) => x.name === name);
+        if (!f) throw new Error(`${gat}: "${String(name)}" is not a field this category declares`);
+        if (f.type === "list") throw new Error(`${gat}: "${f.name}" is a list — a table is never an instance's identity`);
+      }
+      let when: CategoryRequirement["when"];
+      if (group.when !== undefined) {
+        const w = (group.when ?? {}) as Record<string, unknown>;
+        const f = typeof w.field === "string" ? fields.find((x) => x.name === w.field) : undefined;
+        if (!f || f.type !== "string" || typeof w.equals !== "string" || w.equals.length === 0 || Object.keys(w).length !== 2) {
+          throw new Error(`${gat}.when must be { field: <a string field of this category>, equals: <a non-empty value> }`);
+        }
+        when = Object.freeze({ field: f.name, equals: w.equals });
+      }
+      if (group.identity !== undefined && group.identity !== true) throw new Error(`${gat}.identity is true or absent`);
+      return Object.freeze({
+        anyOf: Object.freeze([...(anyOf as string[])]),
+        ...(when !== undefined ? { when } : {}),
+        ...(group.identity === true ? { identity: true as const } : {}),
+      });
+    }),
+  );
 }
 
 const INSTANCE_COLUMNS_PROPERTIES = new Set(["labelField", "roleField", "roleOrder", "sequenceField", "documentLabelField"]);
@@ -1307,6 +1364,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         : {}),
       ...(cat.maxPeriods !== undefined ? { maxPeriods: cat.maxPeriods as number } : {}),
       ...(cat.periodFields !== undefined ? { periodFields: validatePeriodFields(cat.periodFields, cat.fields, where) } : {}),
+      ...(cat.requiredAnyOf !== undefined ? { requiredAnyOf: validateRequiredAnyOf(cat.requiredAnyOf, cat.fields, where) } : {}),
       fields: Object.freeze(fields) as ReadonlyArray<CanonicalFieldSpec>,
     });
     byId.set(cat.id, schema);

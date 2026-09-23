@@ -2225,6 +2225,30 @@
         "sequenceField": "section",
         "documentLabelField": "reportOrderDate"
       },
+      "requiredAnyOf": [
+        {
+          "anyOf": [
+            "subjectName"
+          ],
+          "when": {
+            "field": "subjectRole",
+            "equals": "principal"
+          },
+          "identity": true
+        },
+        {
+          "anyOf": [
+            "subjectNewIcNo",
+            "subjectIcPassportNo",
+            "subjectRegistrationNo"
+          ],
+          "when": {
+            "field": "subjectRole",
+            "equals": "principal"
+          },
+          "identity": true
+        }
+      ],
       "fields": [
         {
           "name": "section",
@@ -2327,66 +2351,110 @@
           "name": "bankingApprovedApplications12m",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Credit applications approved in the last 12 months, from the banking (CCRIS) summary."
         },
         {
           "name": "bankingPendingApplicationsCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Credit applications pending, from the banking summary."
         },
         {
           "name": "bankingSpecialAttentionAccountsCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Accounts under special attention, from the banking summary."
         },
         {
           "name": "bankingLegalActionsCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Banking facilities with legal action taken, from the banking summary."
         },
         {
           "name": "bankingExistingFacilitiesCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Existing banking facilities, from the banking summary."
         },
         {
           "name": "windingUpRecordsCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Winding-up records in the bureau's own databank summary (company subjects)."
         },
         {
           "name": "bankruptcyRecordsCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Bankruptcy records in the bureau's own databank summary (individual and party subjects)."
         },
         {
           "name": "legalSuitsCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Legal suits in the bureau's own databank summary."
         },
         {
           "name": "tradeCreditReferencesCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Trade / credit references in the bureau's own databank summary."
         },
         {
           "name": "enquiries12m",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Enquiries made on the subject in the last 12 months."
         },
         {
           "name": "businessInterestsCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Companies or businesses the subject holds an interest in."
         },
         {
@@ -2460,6 +2528,10 @@
           "name": "securedFacilitiesCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Number of secured banking facilities."
         },
         {
@@ -2482,12 +2554,20 @@
           "name": "securedMaxInstallmentsInArrears12m",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Highest number of installments in arrears on any secured facility in the last 12 months."
         },
         {
           "name": "unsecuredFacilitiesCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Number of unsecured banking facilities."
         },
         {
@@ -2510,6 +2590,10 @@
           "name": "unsecuredMaxInstallmentsInArrears12m",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Highest number of installments in arrears on any unsecured facility in the last 12 months."
         },
         {
@@ -2661,36 +2745,60 @@
           "name": "suitsAsDefendantCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Number of legal suits with the subject as defendant."
         },
         {
           "name": "limitedDetailSuitsAsDefendantCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Number of other known suits, with limited details, with the subject as defendant."
         },
         {
           "name": "suitsAsPlaintiffCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Number of legal suits with the subject as plaintiff."
         },
         {
           "name": "windingUpAsDefendantCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Number of winding-up actions against the subject (company subjects)."
         },
         {
           "name": "windingUpAsPetitionerCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Number of winding-up actions brought by the subject (company subjects)."
         },
         {
           "name": "bankruptcyActionsCount",
           "type": "number",
           "unit": "count",
+          "range": [
+            0,
+            2147483647
+          ],
           "description": "Number of bankruptcy actions (individual and party subjects)."
         },
         {

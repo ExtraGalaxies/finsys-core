@@ -52,10 +52,11 @@ import {
   type AdapterCategory,
   type CanonicalFieldSpec,
   type CategoryPeriodFields,
+  type CategoryRequirement,
   type ListItemSpec,
 } from './adapter-categories.js'
 import { isJurisdiction } from './jurisdiction.js'
-import { isAllowedCurrency } from './currency.js'
+import { isAllowedCurrency, minorUnitsOf, MONEY_MAX_DECIMALS } from './currency.js'
 
 export { STRING_MAX_LENGTH_DEFAULT, LIST_MAX_ITEMS_DEFAULT }
 
@@ -97,6 +98,21 @@ export type ViolationRule =
   | 'currency-mismatch'
   | 'currency-missing'
   | 'period-mismatch'
+  | 'excess-precision'
+  | 'empty-row'
+  | 'empty-instance'
+  | 'missing-identity'
+  | 'missing-required'
+  | 'malformed-list'
+  /**
+   * Reported by a WRITER, never by this validator: a value the source printed
+   * that the writer could not read as its declared type (an unparseable or
+   * foreign-currency amount, an impossible date, an identifier that fails its
+   * pattern, an unknown enum label). The writer omits the value and reports
+   * this, so the write is refused rather than the value silently lost. Named
+   * here so every writer reports it under one spelling.
+   */
+  | 'unreadable-printed-value'
 
 /**
  * One broken rule. `field` is the canonical field (or envelope key), or
@@ -225,16 +241,39 @@ export function isPlaceholderText(value: string): boolean {
   return PLACEHOLDER_WORDS.has(value.toLowerCase().replace(/[\s./\\_-]+/gu, ''))
 }
 
+/** A line break with the whitespace around it (CR, LF, CRLF, U+2028, U+2029). */
+const LINE_BREAK_RUN = /\s*[\r\n\u2028\u2029]\s*/gu
+const CR_OR_SEPARATOR = /\r\n?|[\u2028\u2029]/gu
+
+/**
+ * A value's line breaks as its field allows them. SHORT text (a name, an
+ * identifier) is one line: every line break, with the whitespace around it,
+ * becomes one space — "SYNTHETIC TRADING\nSDN BHD" is the name
+ * "SYNTHETIC TRADING SDN BHD" wrapped by the page, not two values. LONG text
+ * (an address, a remark) keeps its lines, each ending "\n": CRLF, CR and the
+ * Unicode line / paragraph separators become "\n".
+ */
+export function normalizeLineBreaks(value: string, longText: boolean): string {
+  return longText ? value.replace(CR_OR_SEPARATOR, '\n') : value.replace(LINE_BREAK_RUN, ' ')
+}
+
 /**
  * THE writer-side text rule: printed text as the validator will accept it,
- * or `undefined` when there is none. NFC; every non-ASCII space separator
- * mapped to U+0020; trimmed; and absent when what is left is blank or a
- * placeholder. It does not repair anything else — an invisible or control
- * character, or leading structure, is still the validator's to refuse.
+ * or `undefined` when there is none. NFC; line breaks as the field allows
+ * them (`normalizeLineBreaks` — short text by default; pass `longText` for a
+ * field or item whose maxLength exceeds the 256 default); every non-ASCII
+ * space separator mapped to U+0020; trimmed; and absent when what is left is
+ * blank or a placeholder. It does not repair anything else — an invisible or
+ * control character, or leading structure, is still the validator's to
+ * refuse.
+ *
+ * A placeholder is absent even where it could be a value: a subject named
+ * "NA" is read as "not available", because the report prints exactly that
+ * for a missing name, and storing it as a name would be the worse error.
  */
-export function normalizePrintedText(value: unknown): string | undefined {
+export function normalizePrintedText(value: unknown, opts: { longText?: boolean } = {}): string | undefined {
   if (typeof value !== 'string') return undefined
-  const text = value.normalize('NFC').replace(NON_ASCII_SPACE_ALL, ' ').trim()
+  const text = normalizeLineBreaks(value.normalize('NFC'), opts.longText === true).replace(NON_ASCII_SPACE_ALL, ' ').trim()
   if (text === '' || !VISIBLE.test(text) || isPlaceholderText(text)) return undefined
   return text
 }
@@ -261,14 +300,18 @@ function fullMatch(source: string): RegExp {
  * and small-form lookalikes (｛ ﹛ ❴ ⦃, ［ ⁅ ⟦).
  *
  *   - Any string whose first visible character opens an object is refused.
- *   - A SHORT string (maxLength ≤ 256) whose first visible character opens an
- *     array is refused.
- *   - LONG TEXT may open with a bracketed tag ("[CANCELLED] …", "[REDACTED] …")
- *     — and nothing that looks like a sequence: the bracket is refused when
- *     what follows (after spaces) is a bracket, a brace, a quote, a closing
- *     bracket, or a number, or when it is never closed. So "[1] Case
- *     withdrawn" is refused as well; a writer that needs it writes "(1) …" or
- *     "No. 1 …".
+ *   - A string may open with a bracketed tag or name ("[CANCELLED] …",
+ *     "[ACME] SDN BHD") — and nothing that looks like a sequence: the bracket
+ *     is refused when what follows (after spaces) is a bracket, a brace, a
+ *     quote, a closing bracket, or a number, or when it is never closed. So
+ *     "[1] Case withdrawn" is refused as well; a writer that needs it writes
+ *     "(1) …" or "No. 1 …".
+ *   - A SHORT string (maxLength ≤ 256) that opens with a bracket is refused,
+ *     further, when it parses as JSON or carries a JSON structural marker
+ *     anywhere (`":`, `{"`, `[{`, `":[` — fullwidth quotes and brackets
+ *     folded to ASCII first): a short field has no business holding either.
+ *     (Round 3 relaxed this from "every leading bracket": a company printed
+ *     "[ACME] SDN BHD" is a name, and refusing it refused a real value.)
  *   - A value that is a JSON STRING LITERAL ('"[{\"a\":1}]"') is decoded and
  *     held to the same rule: a double-encoded table is still a table.
  *
@@ -280,6 +323,25 @@ const OBJECT_OPENERS = '{\uff5b\ufe5b\u2774\u2983'
 const ARRAY_OPENERS = '[\uff3b\u2045\u27e6'
 const ARRAY_CLOSER = /[\]\uff3d\u2046\u27e7]/u
 const LONG_TEXT_SEQUENCE = /^.\s*(?:[[{"'‘“\]\uff3b\uff3d\uff5b\u2045\u27e6\uff02]|[-+]?\p{Nd})/u
+/** A JSON structural marker, anywhere in the text: a key's close-quote-colon, or an object opening inside a sequence. */
+const JSON_MARKER = /":|\{"|\[\{|\[\s*\{/u
+/** Fullwidth and small-form lookalikes of the JSON punctuation, folded to ASCII before `JSON_MARKER` is tried. */
+const FOLD_JSON_PUNCTUATION: Readonly<Record<string, string>> = {
+  '\uff02': '"', '\u201c': '"', '\u201d': '"', '\uff1a': ':', '\ufe55': ':',
+  '\uff5b': '{', '\ufe5b': '{', '\u2774': '{', '\u2983': '{',
+  '\uff3b': '[', '\u2045': '[', '\u27e6': '[',
+}
+const FOLDABLE = /[\uff02\u201c\u201d\uff1a\ufe55\uff5b\ufe5b\u2774\u2983\uff3b\u2045\u27e6]/gu
+function looksLikeJson(text: string): boolean {
+  const folded = text.replace(FOLDABLE, (c) => FOLD_JSON_PUNCTUATION[c] ?? c).replace(/[\p{Default_Ignorable_Code_Point}\p{Cf}]/gu, '')
+  if (JSON_MARKER.test(folded)) return true
+  try {
+    JSON.parse(folded)
+    return true
+  } catch {
+    return false
+  }
+}
 const STRING_LITERAL_DEPTH = 4
 /** Exported for its own tests (not from the package index): every caller runs the text rules first. */
 export function isSerializedStructure(value: string, longText: boolean, depth = 0): boolean {
@@ -288,8 +350,8 @@ export function isSerializedStructure(value: string, longText: boolean, depth = 
   if (first === undefined) return false
   if (OBJECT_OPENERS.includes(first)) return true
   if (ARRAY_OPENERS.includes(first)) {
-    if (!longText) return true
-    return LONG_TEXT_SEQUENCE.test(t) || !ARRAY_CLOSER.test(t.slice(1))
+    if (LONG_TEXT_SEQUENCE.test(t) || !ARRAY_CLOSER.test(t.slice(1))) return true
+    return !longText && looksLikeJson(t)
   }
   if ((first === '"' || first === '\uff02') && depth < STRING_LITERAL_DEPTH) {
     try {
@@ -418,6 +480,19 @@ export const NUMBER_MAX_MAGNITUDE = 1e15
 interface NumberRules {
   unit?: string
   range?: readonly [number, number]
+  kind?: string
+}
+
+/**
+ * The decimals a number carries, as JSON writes it (its shortest round-trip
+ * form — the text the storage driver sends). 1e-7 carries seven.
+ */
+export function decimalsOf(n: number): number {
+  const s = String(Math.abs(n))
+  const e = s.indexOf('e')
+  if (e < 0) return (s.split('.')[1] ?? '').length
+  const mantissa = (s.slice(0, e).split('.')[1] ?? '').length
+  return Math.max(0, mantissa - Number(s.slice(e + 1)))
 }
 
 /**
@@ -427,8 +502,14 @@ interface NumberRules {
  *     within the unit interval, are non-negative safe integers — a bureau
  *     score is whole points; a 0..1 score (the geolocation scores) is a
  *     fraction, held to its range;
- *   - every other number has magnitude at most NUMBER_MAX_MAGNITUDE;
- *   - a declared `range` is enforced, inclusive.
+ *   - every other number has magnitude at most NUMBER_MAX_MAGNITUDE (1e15,
+ *     inside DECIMAL(18,2)'s 9,999,999,999,999,999.99);
+ *   - money (`kind: "money"`, a field or a list item) carries at most
+ *     MONEY_MAX_DECIMALS (2, the storage scale) — `excess-precision`, never
+ *     rounded; the extraction-level rules hold it to its currency's own minor
+ *     units as well (VND: none);
+ *   - a declared `range` is enforced, inclusive (a count stored in an INT
+ *     column declares [0, 2147483647]).
  */
 function numberViolation(value: unknown, rules: NumberRules = {}): ViolationRule | null {
   if (typeof value !== 'number') return 'type-mismatch'
@@ -439,6 +520,8 @@ function numberViolation(value: unknown, rules: NumberRules = {}): ViolationRule
     if (value < 0) return 'out-of-range'
   } else if (Math.abs(value) > NUMBER_MAX_MAGNITUDE) {
     return 'unsafe-magnitude'
+  } else if (rules.kind === 'money' && decimalsOf(value) > MONEY_MAX_DECIMALS) {
+    return 'excess-precision'
   }
   if (rules.range !== undefined && (value < rules.range[0] || value > rules.range[1])) return 'out-of-range'
   return null
@@ -503,19 +586,47 @@ function jsonHasDuplicateKeys(text: string): boolean {
   return false
 }
 
+/**
+ * The deepest a list's JSON text may nest: the array (1), a row object (2),
+ * and room for a cell that is itself wrongly structured (3, 4) to be refused
+ * for what it is. Anything deeper is `malformed-list`, found by a linear scan
+ * BEFORE the text is parsed — so a hostile "[[[[…" costs one pass, never a
+ * recursive parse or a RangeError.
+ */
+export const LIST_MAX_DEPTH = 4
+
+/** Whether JSON-ish text opens more than `max` brackets / braces at once (outside strings). Never throws, never loops past the end. */
+function nestsDeeperThan(text: string, max: number): boolean {
+  let depth = 0
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i)
+    if (c === 34 /* " */) {
+      i++
+      while (i < text.length && text.charCodeAt(i) !== 34) i += text.charCodeAt(i) === 92 /* \ */ ? 2 : 1
+    } else if (c === 91 /* [ */ || c === 123 /* { */) {
+      if (++depth > max) return true
+    } else if (c === 93 /* ] */ || c === 125 /* } */) {
+      depth--
+    }
+  }
+  return false
+}
+
 export type ListParse =
   | { rows: unknown[] }
-  | { rule: 'type-mismatch' | 'list-not-array' | 'max-length' | 'duplicate-item-key' }
+  | { rule: 'type-mismatch' | 'list-not-array' | 'max-length' | 'duplicate-item-key' | 'malformed-list' }
 
 /**
  * A list value as its rows, or why it is not one. A list is an array, or a
  * JSON string of an array (the stored form) — at most LIST_TEXT_MAX_LENGTH
- * long, with no object declaring a key twice. Parsed strings are NFC.
+ * long, nested at most LIST_MAX_DEPTH deep, with no object declaring a key
+ * twice. Parsed strings are NFC.
  */
 export function parseListValue(value: unknown): ListParse {
   if (Array.isArray(value)) return { rows: value }
   if (typeof value !== 'string') return { rule: 'type-mismatch' }
   if (value.length > LIST_TEXT_MAX_LENGTH) return { rule: 'max-length' }
+  if (nestsDeeperThan(value, LIST_MAX_DEPTH)) return { rule: 'malformed-list' }
   let parsed: unknown
   try {
     // ASCII text with no \u escape can only hold ASCII strings, which are
@@ -582,6 +693,12 @@ function listViolations(spec: CanonicalFieldSpec, value: unknown, ctx: Context):
       out.push({ field, item, rule: 'list-item-not-object' })
       return
     }
+    // A row with nothing in it is not a printed row: a writer that emits one
+    // has lost whatever the row held, or invented a row the source never had.
+    if (!Object.values(row).some((v) => v !== null && v !== undefined)) {
+      out.push({ field, item, rule: 'empty-row' })
+      return
+    }
     const { values, undeclared, duplicated } = matchListRow(row, items)
     if (undeclared) out.push({ field, item, rule: 'undeclared-item-key' })
     for (const key of duplicated) out.push({ field, item, key, rule: 'duplicate-item-key' })
@@ -596,7 +713,7 @@ function listViolations(spec: CanonicalFieldSpec, value: unknown, ctx: Context):
 }
 
 function itemViolation(it: ListItemSpec, v: unknown, ctx: Context): ViolationRule | null {
-  if (it.type === 'number') return numberViolation(v)
+  if (it.type === 'number') return numberViolation(v, it)
   return typeof v === 'string' ? stringViolation(v, it, ctx) : 'type-mismatch'
 }
 
@@ -782,7 +899,11 @@ export function validateAdapterExtraction(
 ): ValidationResult {
   const snap = normalizeForWrite(extraction)
   if (!snap.ok) return { ok: false, violations: snap.violations }
-  const violations = extractionViolations(category, snap.snapshot, contextOf(opts))
+  // Judged as `prepareExtractionForWrite` would store it, so the check and
+  // the write can never disagree about one extraction.
+  const ctx = contextOf(opts)
+  normalizeSnapshot(category, snap.snapshot, ctx)
+  const violations = extractionViolations(category, snap.snapshot, ctx)
   return { ok: violations.length === 0, violations }
 }
 
@@ -854,6 +975,48 @@ function extractionViolations(category: AdapterCategory, extraction: unknown, ct
     }
   }
   out.push(...consistencyViolations(schema.fields, schema.periodFields, extraction, ctx))
+  out.push(...presenceViolations(schema.requiredAnyOf, extraction))
+  return out
+}
+
+/**
+ * What an instance must carry at all:
+ *   - `empty-instance`: an instance with no value anywhere — top-level or in
+ *     any period — and a period with no value of its own. Either is a row
+ *     that says nothing, which a reader cannot tell from one whose values
+ *     were lost.
+ *   - the category's `requiredAnyOf` groups: each needs one of its fields
+ *     present (top-level or in a period), for instances its `when` selects —
+ *     `missing-identity` for an identity group, else `missing-required`.
+ */
+function presenceViolations(
+  required: ReadonlyArray<CategoryRequirement> | undefined,
+  extraction: Record<string, unknown>,
+): Violation[] {
+  const out: Violation[] = []
+  const scopes: Record<string, unknown>[] = []
+  if (isPlainObject(extraction.values)) scopes.push(extraction.values)
+  const periods = Array.isArray(extraction.periods) ? extraction.periods : []
+  const presentIn = (values: Record<string, unknown>) => Object.keys(values).filter((k) => present(values[k]))
+  const seen = new Set<string>(scopes.length > 0 ? presentIn(scopes[0]!) : [])
+  periods.forEach((p, period) => {
+    const values = isPlainObject(p) && isPlainObject(p.values) ? p.values : undefined
+    if (!values) return
+    scopes.push(values)
+    const own = presentIn(values)
+    if (own.length === 0) out.push({ field: '(values)', period, envelope: true, rule: 'empty-instance' })
+    for (const k of own) seen.add(k)
+  })
+  if (seen.size === 0) return [{ field: '(values)', envelope: true, rule: 'empty-instance' }]
+  for (const group of required ?? []) {
+    if (group.when !== undefined) {
+      const when = group.when
+      if (!scopes.some((v) => v[when.field] === when.equals)) continue
+    }
+    if (!group.anyOf.some((f) => seen.has(f))) {
+      out.push({ field: group.anyOf[0]!, rule: group.identity ? 'missing-identity' : 'missing-required' })
+    }
+  }
   return out
 }
 
@@ -886,6 +1049,39 @@ function statesMoney(fields: ReadonlyArray<CanonicalFieldSpec>, values: Record<s
     }
   }
   return false
+}
+
+/** Every money value in one scope carrying more decimals than `minor` — only where `minor` is below the field rule's own bound. */
+function minorUnitViolations(
+  fields: ReadonlyArray<CanonicalFieldSpec>,
+  values: Record<string, unknown>,
+  minor: number,
+  period: number | undefined,
+  ctx: Context,
+): Violation[] {
+  if (minor >= MONEY_MAX_DECIMALS) return []
+  const at = period === undefined ? {} : { period }
+  const out: Violation[] = []
+  for (const f of fields) {
+    const v = values[f.name]
+    if (f.kind === 'money' && typeof v === 'number' && Number.isFinite(v) && decimalsOf(v) > minor) {
+      out.push({ field: f.name, ...at, rule: 'excess-precision' })
+    }
+    if (f.type !== 'list' || !present(v)) continue
+    const money = (f.items ?? []).filter((i) => i.kind === 'money')
+    if (money.length === 0) continue
+    const parsed = parseListCached(v, ctx)
+    if (!('rows' in parsed)) continue
+    parsed.rows.forEach((row, item) => {
+      if (!isPlainObject(row)) return
+      const { values: cells } = matchListRow(row, f.items!)
+      for (const m of money) {
+        const c = cells.get(m.name)
+        if (typeof c === 'number' && Number.isFinite(c) && decimalsOf(c) > minor) out.push({ field: f.name, item, key: m.name, ...at, rule: 'excess-precision' })
+      }
+    })
+  }
+  return out
 }
 
 /**
@@ -924,6 +1120,14 @@ function consistencyViolations(
       if (!topCurrency && !isAllowedCurrency(values[currency]) && statesMoney(fields, values, ctx)) {
         out.push({ field: currency, period, rule: 'currency-missing' })
       }
+    }
+    // Money within its own currency's minor units. The field rule already
+    // holds every amount to MONEY_MAX_DECIMALS; this adds the currencies with
+    // fewer (VND has none).
+    out.push(...minorUnitViolations(fields, top, minorUnitsOf(top[currency]), undefined, ctx))
+    for (const { period, values } of scoped) {
+      const own = isAllowedCurrency(values[currency]) ? values[currency] : top[currency]
+      out.push(...minorUnitViolations(fields, values, minorUnitsOf(own), period, ctx))
     }
   }
 
@@ -974,6 +1178,8 @@ function consistencyViolations(
  *
  * What the copy changes, and only this:
  *   - every string is NFC (canonically equivalent text, one spelling of it);
+ *   - line breaks as each field allows them (`normalizeLineBreaks`): a short
+ *     value's collapse to one space, a long value's become "\n";
  *   - a list stored as JSON text is RE-SERIALIZED from its parse
  *     (`prepareExtractionForWrite` only): the caller's spacing, escapes and key
  *     order are not what is stored, so no consumer can parse it differently.
@@ -1042,19 +1248,57 @@ function snapshotOf(value: unknown): SnapshotResult<unknown> {
   return normalizeForWrite(value)
 }
 
-/** Every JSON-text list in `values` re-serialized from its parse, when it parses cleanly; otherwise left for the validator to refuse. */
-function reserializeLists(fields: ReadonlyArray<CanonicalFieldSpec>, values: unknown, ctx: Context): void {
+const isLongText = (maxLength: number | undefined): boolean => (maxLength ?? STRING_MAX_LENGTH_DEFAULT) > STRING_MAX_LENGTH_DEFAULT
+
+/** One list row's string cells with their line breaks as their items allow (`normalizeLineBreaks`), in place. */
+function normalizeRowLineBreaks(row: unknown, items: ReadonlyMap<string, ListItemSpec>): void {
+  if (!isPlainObject(row)) return
+  for (const [k, v] of Object.entries(row)) {
+    if (typeof v !== 'string') continue
+    const it = items.get(k) ?? items.get(kebabToCamel(k))
+    if (it?.type === 'string') row[k] = normalizeLineBreaks(v, isLongText(it.maxLength))
+  }
+}
+
+/**
+ * The snapshot's values as they are stored, in place: every string field's
+ * and string list cell's line breaks as its spec allows (`normalizeLineBreaks`:
+ * a short value's become one space, a long value's "\n"), and every JSON-text
+ * list re-serialized from its parse. A list that does not parse cleanly is
+ * left for the validator to refuse.
+ */
+function normalizeSnapshotValues(fields: ReadonlyArray<CanonicalFieldSpec>, values: unknown, ctx: Context): void {
   if (!isPlainObject(values)) return
   for (const f of fields) {
-    if (f.type !== 'list' || typeof values[f.name] !== 'string') continue
-    const parsed = parseListCached(values[f.name], ctx)
+    const v = values[f.name]
+    if (f.type === 'string' && typeof v === 'string') {
+      values[f.name] = normalizeLineBreaks(v, isLongText(f.maxLength))
+      continue
+    }
+    if (f.type !== 'list') continue
+    const items = new Map((f.items ?? []).map((i) => [i.name, i] as const))
+    if (Array.isArray(v)) {
+      for (const row of v) normalizeRowLineBreaks(row, items)
+      continue
+    }
+    if (typeof v !== 'string') continue
+    const parsed = parseListCached(v, ctx)
     if (!('rows' in parsed)) continue
+    for (const row of parsed.rows) normalizeRowLineBreaks(row, items)
     const text = JSON.stringify(parsed.rows)
     values[f.name] = text
     // The re-serialization of a clean parse is the same rows, so the
     // validator reads them without parsing the text a second time.
     ctx.lists.set(text, parsed)
   }
+}
+
+/** `normalizeSnapshotValues` over an extraction's top-level and period values. */
+function normalizeSnapshot(category: AdapterCategory, snapshot: unknown, ctx: Context): void {
+  if (!isPlainObject(snapshot)) return
+  const fields = categorySchemaOf(category).fields
+  normalizeSnapshotValues(fields, snapshot.values, ctx)
+  if (Array.isArray(snapshot.periods)) for (const p of snapshot.periods) if (isPlainObject(p)) normalizeSnapshotValues(fields, p.values, ctx)
 }
 
 export type PreparedExtraction<T> =
@@ -1074,12 +1318,8 @@ export function prepareExtractionForWrite<T extends ValidatableExtraction>(
   const snap = normalizeForWrite(extraction)
   if (!snap.ok) return { ok: false, violations: snap.violations }
   const snapshot = snap.snapshot as T
-  const fields = categorySchemaOf(category).fields
   const ctx = contextOf(opts)
-  if (isPlainObject(snapshot)) {
-    reserializeLists(fields, snapshot.values, ctx)
-    if (Array.isArray(snapshot.periods)) for (const p of snapshot.periods) if (isPlainObject(p)) reserializeLists(fields, p.values, ctx)
-  }
+  normalizeSnapshot(category, snapshot, ctx)
   const violations = extractionViolations(category, snapshot, ctx)
   return violations.length === 0 ? { ok: true, snapshot, violations: [] } : { ok: false, violations }
 }

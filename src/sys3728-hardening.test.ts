@@ -35,7 +35,11 @@ describe('B1 — a serialized structure is refused however it is spelled', () =>
     ['a truncated array', '[{"name":"x"},{"name":"y"', 'serialized-structure'],
     ['a trailing comma', '[{"name":"x"},]', 'serialized-structure'],
     ['a JS object literal', '{name: "x"}', 'serialized-structure'],
-    ['a bare leading bracket in a short field', '[Example] Sdn Bhd', 'serialized-structure'],
+    // Round 3: a leading bracket in a short field is structure only when it
+    // parses as JSON, carries a JSON marker, or reads as a sequence.
+    ['a bracketed sequence in a short field', '[1] Example Sdn Bhd', 'serialized-structure'],
+    ['an unclosed leading bracket in a short field', '[Example Sdn Bhd', 'serialized-structure'],
+    ['a JSON marker after a leading bracket', '[Example] {"a":1}', 'serialized-structure'],
     ['an empty object', '{}', 'serialized-structure'],
   ])('short field: %s', (_l, value, rule) => {
     expect(cbr({ subjectName: value })).toEqual([rule])
@@ -266,25 +270,25 @@ describe('S2 — a date must exist, and a start may not follow its end', () => {
 
   it('a period start after its end is refused, on the fields and on periods[]', () => {
     expect(ma({ mgmtPeriodStart: '2025-12-31', mgmtPeriodEnd: '2025-01-01' })).toEqual(['date-order'])
-    const r = validateAdapterExtraction(MA, { instanceKey: 'm', values: {}, periods: [{ position: 1, start: '2025-12-31', end: '2025-01-01', values: {} }] })
+    const r = validateAdapterExtraction(MA, { instanceKey: 'm', values: {}, periods: [{ position: 1, start: '2025-12-31', end: '2025-01-01', values: { mgmtStatementsRead: 'BS' } }] })
     expect(rules(r.violations)).toEqual(['date-order'])
   })
 
   it.each([['2026-09-23T24:00:00Z'], ['2026-02-30T10:00:00Z'], ['2026-09-23T10:60:00Z'], ['2026-09-23T10:00:61Z'], ['2026-09-23T10:00:00+15:00']])(
     'observedAt %s is not an instant',
     (observedAt) => {
-      expect(rules(validateAdapterExtraction(CBR, { instanceKey: 'k', values: {}, observedAt }).violations)).toEqual(['invalid-observed-at'])
+      expect(rules(validateAdapterExtraction(CBR, { instanceKey: 'k', values: { section: 'pbi-1' }, observedAt }).violations)).toEqual(['invalid-observed-at'])
     },
   )
 
   it('a period position is at most the category\'s declared period count', () => {
     expect(categorySchemaOf(MA).maxPeriods).toBe(3)
-    const p = (position: number) => rules(validateAdapterExtraction(MA, { instanceKey: 'm', values: {}, periods: [{ position, values: {} }] }).violations)
+    const p = (position: number) => rules(validateAdapterExtraction(MA, { instanceKey: 'm', values: {}, periods: [{ position, values: { mgmtStatementsRead: 'BS' } }] }).violations)
     expect(p(3)).toEqual([])
     expect(p(4)).toEqual(['invalid-period'])
     // A category that declares no count still caps positions at a small number.
     const fs = 'financial-statement' as AdapterCategory
-    expect(rules(validateAdapterExtraction(fs, { instanceKey: 'f', values: {}, periods: [{ position: 101, values: {} }] }).violations)).toEqual(['invalid-period'])
+    expect(rules(validateAdapterExtraction(fs, { instanceKey: 'f', values: {}, periods: [{ position: 101, values: { currency: 'MYR' } }] }).violations)).toEqual(['invalid-period'])
   })
 
   it('the loader refuses a bad format or order declaration', () => {
@@ -302,7 +306,7 @@ describe('S2 — a date must exist, and a start may not follow its end', () => {
 // ── S3 / S4: the instance key ──────────────────────────────────────────
 
 describe('S3/S4 — the instance key is visible text, trimmed, and never rendered when it is not', () => {
-  const key = (instanceKey: unknown) => rules(validateAdapterExtraction(CBR, { instanceKey, values: {} }).violations)
+  const key = (instanceKey: unknown) => rules(validateAdapterExtraction(CBR, { instanceKey, values: { section: 'pbi-1' } }).violations)
 
   it.each([
     ['a tab', 'a\tb'], ['a newline', 'a\nb'], ['a lone surrogate', 'a\ud800b'], ['a ZWSP', 'a\u200bb'],
@@ -317,8 +321,8 @@ describe('S3/S4 — the instance key is visible text, trimmed, and never rendere
   })
 
   it('observedAt is checked as a calendar instant (pins the check the regex alone cannot make)', () => {
-    expect(rules(validateAdapterExtraction(CBR, { instanceKey: 'k', values: {}, observedAt: '2026-02-31T00:00:00Z' }).violations)).toEqual(['invalid-observed-at'])
-    expect(validateAdapterExtraction(CBR, { instanceKey: 'k', values: {}, observedAt: '2026-09-23T10:00:00.123+08:00' }).ok).toBe(true)
+    expect(rules(validateAdapterExtraction(CBR, { instanceKey: 'k', values: { section: 'pbi-1' }, observedAt: '2026-02-31T00:00:00Z' }).violations)).toEqual(['invalid-observed-at'])
+    expect(validateAdapterExtraction(CBR, { instanceKey: 'k', values: { section: 'pbi-1' }, observedAt: '2026-09-23T10:00:00.123+08:00' }).ok).toBe(true)
   })
 })
 

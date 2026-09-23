@@ -425,12 +425,12 @@ describe('finding 7 — enum membership is exact, instance keys are not paths', 
   })
 
   it.each(['experianReport:abc/def#ccris', 'a\\b', '..', 'experianReport:..#ccris'])('instance key %j is refused', (instanceKey) => {
-    expect(rules(validateAdapterExtraction(CBR, { instanceKey, values: {} }, { now: NOW }).violations)).toEqual(['invalid-instance-key'])
+    expect(rules(validateAdapterExtraction(CBR, { instanceKey, values: { section: 'pbi-1' } }, { now: NOW }).violations)).toEqual(['invalid-instance-key'])
   })
 
   it('the keys writers actually mint still pass', () => {
     for (const instanceKey of [`experianReport:${'a'.repeat(64)}#pbi-12`, 'managementAccount:file-17', 'legacy:T1', 'line-mobile-1', '']) {
-      expect(rules(validateAdapterExtraction(CBR, { instanceKey, values: {} }, { now: NOW }).violations), instanceKey).toEqual([])
+      expect(rules(validateAdapterExtraction(CBR, { instanceKey, values: { section: 'pbi-1' } }, { now: NOW }).violations), instanceKey).toEqual([])
     }
   })
 })

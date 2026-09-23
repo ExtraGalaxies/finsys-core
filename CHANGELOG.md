@@ -286,6 +286,48 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
 - `management-account` line items gain `amountAsPrinted`: the mapper keeps a
   figure it could not parse as printed text, and the clean-fixture run would
   otherwise have rejected every such line.
+- **SYS-3728, third adversarial review — stored equals validated, and nothing
+  is lost silently.** Every refusal below was accepted at a991654, and every
+  acceptance was refused there (`src/sys3728-round3.test.ts`):
+  - **`excess-precision`**: a money field or money list item carries at most
+    `MONEY_MAX_DECIMALS` (2, the DECIMAL(18,2) storage scale), and at most its
+    currency's ISO 4217 minor units (`CURRENCY_MINOR_UNITS`: VND 0, the rest 2;
+    an absent or unknown currency is held to 2). Refused, never rounded — the
+    column would otherwise round it silently. The 1e15 magnitude cap already
+    fits DECIMAL(18,2). New exports: `CURRENCY_MINOR_UNITS`,
+    `MONEY_MAX_DECIMALS`, `minorUnitsOf`, `decimalsOf`.
+  - **Counts fit their INT column**: the 21 `credit-bureau-report` count fields
+    declare `range: [0, 2147483647]`.
+  - **Line breaks** (`normalizeLineBreaks`, applied by `normalizePrintedText`
+    and by the write snapshot of `prepareExtractionForWrite` /
+    `validateAdapterExtraction`): in short text a line break and the
+    whitespace around it become one space ("SYNTHETIC TRADING\nSDN BHD" is one
+    name); in long text CRLF, CR, U+2028 and U+2029 become "\n". Readers
+    (`validateFieldValue`) still refuse a stored line break in short text.
+    `normalizePrintedText(value, { longText })` gains its option.
+  - **`empty-row`** (a list row with no non-null cell), **`empty-instance`** (an
+    extraction with no value anywhere, and a period with no value of its own).
+  - **`CategorySchema.requiredAnyOf`** (`CategoryRequirement`): groups of which
+    an instance must carry one field, optionally only `when` another field
+    holds a value; an `identity` group reports **`missing-identity`**, any other
+    `missing-required`. The loader checks every named field exists and is not a
+    list. `credit-bureau-report` declares it: the principal subject carries
+    `subjectName`, and one of `subjectNewIcNo`, `subjectIcPassportNo`,
+    `subjectRegistrationNo`. A party is not required to.
+  - **`malformed-list`**: list text nesting deeper than `LIST_MAX_DEPTH` (4),
+    found by a linear scan before any parse — no RangeError at any depth.
+  - **Structure detection relaxed for a bracketed name.** A short string may
+    open with "[ACME] SDN BHD"; a leading bracket is still refused when it
+    reads as a sequence or is unclosed (the long-text rule), or — in short text
+    — when the value parses as JSON or carries a JSON marker (`":`, `{"`,
+    `[{`) after folding fullwidth quotes and brackets.
+  - **`unreadable-printed-value`** joins `ViolationRule` for WRITERS to report a
+    printed value they could not read as its declared type; this validator
+    never emits it.
+  - **`parseCurrencyHeading(printed)`** → `{ code, scale }`: a statement heading
+    "RM'000", "RM '000", "RM’000", "RM 000", "(RM'000)" is ×1000 and "RM mil" /
+    "RM million" ×1,000,000, with the currency matched by `normalizeCurrency`.
+    Any other scale word is refused.
 
 ### Consumer-visible
 
@@ -311,6 +353,17 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   text rules (placeholders, non-ASCII spaces, untrimmed text,
   default-ignorables) — in finsys-api's log mode those are logged, not
   refused.
+- **Third review — what newly refuses, logs or renders invalid.** A reader
+  now renders "(invalid value)" for a stored list holding an empty row, a
+  money cell with more than two decimals, or text nested past four levels.
+  A writer is refused (credit-bureau-report, management-account) or logs
+  (every other category, in finsys-api's log mode) for an extraction with no
+  value at all — measured against finsim's canonical tables on 2026-09-24,
+  that newly logs for 370 of 4,144 `financial-statement` rows and 70 of 3,927
+  `finxtract-bank-statement` rows (rows holding only bookkeeping columns), and
+  for nothing else. A credit-bureau principal with no name or no identifier is
+  refused (`missing-identity`). A short value opening with a bracketed name is
+  now accepted where it was refused.
 - **Stored data that breaks the contract now renders as "(invalid value)"** in
   the credit-bureau and management-account tables: outstanding credit stored in
   the pre-regrouping one-row-per-line shape (undeclared keys), and a

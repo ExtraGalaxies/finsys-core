@@ -250,6 +250,9 @@ export {
   prepareExtractionForWrite,
   validateListItemValue,
   normalizePrintedText,
+  normalizeLineBreaks,
+  decimalsOf,
+  LIST_MAX_DEPTH,
   isPlaceholderText,
   isValidInstanceKey,
   NUMBER_MAX_MAGNITUDE,
@@ -275,8 +278,12 @@ export {
   AMBIGUOUS_CURRENCY_FORMS,
   normalizeCurrency,
   isAllowedCurrency,
+  CURRENCY_MINOR_UNITS,
+  MONEY_MAX_DECIMALS,
+  minorUnitsOf,
+  parseCurrencyHeading,
 } from './currency.js'
-export type { CurrencyNormalization } from './currency.js'
+export type { CurrencyNormalization, CurrencyHeading } from './currency.js'
 
 export type { AggregationOp, InstanceValue } from './adapter-aggregation.js'
 export { applyAggregation, ALL_AGGREGATION_OPS } from './adapter-aggregation.js'
@@ -288,6 +295,7 @@ export type {
   CategorySchema,
   CategoryInstanceColumns,
   CategoryPeriodFields,
+  CategoryRequirement,
   ListFieldName,
   ListItemSpec,
 } from './adapter-categories.js'

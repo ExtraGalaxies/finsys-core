@@ -92,3 +92,80 @@ export function normalizeCurrency(printed: unknown): CurrencyNormalization {
   if (code === undefined || !isAllowedCurrency(code)) return { ok: false, reason: 'unrecognized' }
   return { ok: true, code }
 }
+
+/**
+ * SYS-3728 round 3: the ISO 4217 minor units of every allowed currency — how
+ * many decimals an amount in it can carry. VND has none (ISO 4217 lists the
+ * dong with 0 minor units); every other allowed currency has two.
+ *
+ * A money value with more decimals than its currency's minor units is REFUSED
+ * (`excess-precision`), never rounded: rounding is a decision about money, and
+ * the storage column (DECIMAL(18,2)) would otherwise make it silently.
+ */
+export const CURRENCY_MINOR_UNITS: Readonly<Record<string, number>> = Object.freeze({
+  IDR: 2,
+  MYR: 2,
+  PHP: 2,
+  SGD: 2,
+  THB: 2,
+  USD: 2,
+  VND: 0,
+})
+
+/**
+ * The most decimals any money value may carry whatever its currency — the
+ * storage scale (DECIMAL(18,2)). Also the bound for an amount whose currency
+ * is absent or not allowed: that amount is refused on its own account
+ * (`currency-missing` / `currency-not-allowed`), and this keeps it from being
+ * rounded as well.
+ */
+export const MONEY_MAX_DECIMALS = 2
+
+/** The decimals an amount in `currency` may carry: its ISO 4217 minor units, else `MONEY_MAX_DECIMALS`. */
+export function minorUnitsOf(currency: unknown): number {
+  return typeof currency === 'string' && Object.prototype.hasOwnProperty.call(CURRENCY_MINOR_UNITS, currency)
+    ? CURRENCY_MINOR_UNITS[currency]!
+    : MONEY_MAX_DECIMALS
+}
+
+export type CurrencyHeading =
+  | { ok: true; code: string; scale: 1 | 1000 | 1000000 }
+  | { ok: false; reason: 'not-a-string' | 'ambiguous' | 'unrecognized' }
+
+/**
+ * The scale words a statement's currency heading may carry, after the
+ * currency: "'000" (thousands — with a straight, curly or no apostrophe, or a
+ * space) and "mil" / "million". Closed: anything else ("m", "k", "bn") is
+ * refused, because a wrong scale is every figure wrong by a factor of a
+ * thousand.
+ */
+const HEADING_SCALES: ReadonlyArray<readonly [RegExp, 1000 | 1000000]> = [
+  [/^['’‘ʼ]?\s?000$/u, 1000],
+  [/^(?:mil|million)$/iu, 1000000],
+]
+
+/**
+ * A statement's printed currency heading as `{ code, scale }` — "RM" → MYR ×1,
+ * "RM'000", "RM '000", "RM’000", "RM 000", "(RM'000)" → MYR ×1000, "RM mil" /
+ * "RM million" → MYR ×1,000,000; likewise for every form `normalizeCurrency`
+ * knows. The currency form is matched by `normalizeCurrency` itself, so the
+ * two can never disagree about what "RM" is. Anything not recognized is
+ * refused, never guessed.
+ */
+export function parseCurrencyHeading(printed: unknown): CurrencyHeading {
+  if (typeof printed !== 'string') return { ok: false, reason: 'not-a-string' }
+  let text = printed.trim().replace(/\s+/g, ' ')
+  const bracketed = /^\((.*)\)$/u.exec(text)
+  if (bracketed) text = bracketed[1]!.trim()
+  const plain = normalizeCurrency(text)
+  if (plain.ok) return { ok: true, code: plain.code, scale: 1 }
+  // The currency form is the longest leading run that normalizes; the rest must be a scale word.
+  for (let cut = text.length - 1; cut > 0; cut--) {
+    const head = normalizeCurrency(text.slice(0, cut))
+    if (!head.ok) continue
+    const rest = text.slice(cut).trim()
+    const scale = HEADING_SCALES.find(([re]) => re.test(rest))?.[1]
+    return scale === undefined ? { ok: false, reason: 'unrecognized' } : { ok: true, code: head.code, scale }
+  }
+  return plain
+}

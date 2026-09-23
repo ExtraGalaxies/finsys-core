@@ -286,8 +286,9 @@ describe('SYS-3728 — validateCanonicalFields: scalar rules', () => {
     noValues(r.violations)
   })
 
-  it('a short field whose first visible character is a bracket is structure, parseable or not (see sys3728-hardening for long text)', () => {
-    expect(rules(check(CBR, { subjectName: '[Example] Sdn Bhd' }).violations)).toEqual(['serialized-structure'])
+  it('round 3: a short field may open with a bracketed name; a parseable or marked one is still structure', () => {
+    expect(rules(check(CBR, { subjectName: '[Example] Sdn Bhd' }).violations)).toEqual([])
+    expect(rules(check(CBR, { subjectName: '[{"a":1}]' }).violations)).toEqual(['serialized-structure'])
   })
 
   it.each([
@@ -493,11 +494,11 @@ describe('SYS-3728 — validateAdapterExtraction: the envelope the writer passes
   })
 
   it('periods: position a positive integer, unique; start/end ISO dates; values validated with the period index', () => {
-    const p = (periods: unknown) => x({ instanceKey: 'm', values: {}, periods }, MA).violations
-    expect(rules(p([{ position: 0, values: {} }]))).toEqual(['invalid-period'])
-    expect(rules(p([{ position: 1.5, values: {} }]))).toEqual(['invalid-period'])
-    expect(rules(p([{ position: 1, values: {} }, { position: 1, values: {} }]))).toEqual(['duplicate-period'])
-    expect(rules(p([{ position: 1, end: '31/12/2025', values: {} }]))).toEqual(['invalid-period'])
+    const p = (periods: unknown) => x({ instanceKey: 'm', values: { companyName: 'Example Sdn Bhd' }, periods }, MA).violations
+    expect(rules(p([{ position: 0, values: { mgmtStatementsRead: 'BS' } }]))).toEqual(['invalid-period'])
+    expect(rules(p([{ position: 1.5, values: { mgmtStatementsRead: 'BS' } }]))).toEqual(['invalid-period'])
+    expect(rules(p([{ position: 1, values: { mgmtStatementsRead: 'BS' } }, { position: 1, values: { mgmtStatementsRead: 'BS' } }]))).toEqual(['duplicate-period'])
+    expect(rules(p([{ position: 1, end: '31/12/2025', values: { mgmtStatementsRead: 'BS' } }]))).toEqual(['invalid-period'])
     expect(rules(p('nope'))).toEqual(['invalid-period'])
     expect(p([{ position: 1, values: { mgmtTotalAssets: 'RM 1' } }])).toEqual([{ field: 'mgmtTotalAssets', period: 0, rule: 'type-mismatch' }])
   })

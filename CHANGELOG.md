@@ -4,6 +4,111 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 9.4.1
+
+_PATCH — no exported API changes. `documentsOfType`, and through it
+`buildDocumentRowsFromView` and `resolveExtractionStatusFromView`, list fewer
+documents on two shapes: a financial statement read from legacy slots, and a
+replaced upload. Read **Consumer-visible** below._
+
+### Fixed
+
+- **SYS-3720 — one financial statement listed as two.** `documentsOfType` read
+  a `legacy:T{n}` extraction row as "the n-th intake document", and a slot past
+  the intake count became a document of its own, with no id, path or time. For
+  financial statements a slot is a period, not a document (finsys-api
+  `financialStatementSpec.slotFor`: a year=1 statement fills T1 and T2, a
+  year=2 statement fills T3 only). Now:
+  - Financial statements: `legacy:T1` and `legacy:T2` belong to the first
+    statement, `legacy:T3` to the second — or to the only one, when the
+    subject has one upload (the lone year=2 statement).
+  - Bank, EPF and payslip keep the positional rule. There a slot IS one file's
+    declared slot (`legacy:T${month}`, `legacy:T${year}`, `legacy:T${period}`
+    in their finsys-api specs), so slot n is the n-th upload whenever uploads
+    are in slot order.
+  - When intake holds documents of the type, a legacy slot attaches to one of
+    them or to nothing; it never becomes a document. Its rows still render in
+    the field tables, unchanged: under their own slot (`legacySlot`, else the
+    one the key names) and, for a financial statement, with their period
+    coordinate — tested for a bank slot past the intake count and for the
+    one-upload `legacy:T1` + `T2` and `legacy:T3` statements.
+  - With no intake rows at all (a pre-writer subject), the documents the slots
+    describe are still listed as extraction-only — now one per statement,
+    not one per slot.
+
+### Changed
+
+- **SYS-3721 — v2 lists current documents only.** Intake is append-only, so a
+  replaced upload keeps its `document-intake` row, and v2 listed it beside its
+  replacement. Decided: the documents table and the extraction status show
+  only the files the application currently holds, matching v1. The replaced
+  row stays in the view as the audit record; it is just not listed, counted or
+  aligned to a job record. `flatRecordFromView` follows the same rule: its v1
+  pointer arrays (`bankStatements`, `financialStatements`, …) hold the current
+  files only, as finsys-api's own v1 response does. This also removes the stated shift where a
+  positional job record after a replacement landed one document later than
+  v1 put it.
+
+  The signal is the intake row's `observedAt`. finsys-api attests the whole
+  pointer column on every save that touches it and upserts each file,
+  overwriting `observedAt`, so every file still held carries the newest
+  save's time and a replaced file keeps an older one. Current = the rows of a
+  type at the newest `observedAt` of that type. Rows sharing that instant are
+  all current (one save attests them together); times are parsed, so one
+  instant in two offsets is one instant. If any row of the type has no
+  parseable `observedAt`, nothing of that type is hidden. Measured on the
+  finsim database: the rule agreed with the current pointer column on all
+  6,704 intake rows of the seven v1 document types. `uploadedAt` is not used:
+  no writer records it, and intake rows carry no slot to group by.
+
+  **Known residual:** a document removed WITHOUT a replacement stays listed.
+  An emptied pointer column triggers no attestation, so nothing newer exists
+  to compare against. Detecting it needs finsys-api to record the removal.
+
+  **Suspected, not observed on finsim:** two concurrent saves of one column
+  whose attestations commit in the opposite order to their writes would make
+  the older save's set look current. And a legacy statement pointer holding a
+  year=2 statement FIRST would place `legacy:T3` on the second upload by the
+  T1/T2-first, T3-second rule. Neither shape exists in the finsim database.
+
+### Consumer-visible
+
+- A pre-Phase-4b year=1 statement (one upload, `legacy:T1` + `legacy:T2`)
+  lists 1 statement, not 2. A lone year=2 statement (`legacy:T3` only) lists
+  1 statement, extracted — not the upload as uploaded-but-not-extracted plus
+  an unlinked extracted one. `summary.total` falls by one for each.
+- A replaced upload is gone from `buildDocumentRowsFromView` and
+  `resolveExtractionStatusFromView`, and `summary` counts fall with it. A
+  replaced file's surviving extraction (if the producer did not purge it)
+  does not come back, either as an extraction-only document or on its
+  replacement:
+  - hashed rows are matched to the replaced file by content hash;
+  - `legacy:T{n}` rows carry no identity, so on a type that HAS a replaced
+    intake row, a legacy row observed before the save that made the current
+    set current is treated as the replaced file's and not attached. Before
+    this, a replaced pre-Phase-4b statement's `legacy:T1`/`T2` attached to a
+    replacement not yet extracted, which then read `extracted` — even with a
+    failed job — showing the old statement's figures. With no replaced row
+    the rule does not apply: a borrower PATCH re-attests every column, so an
+    intake row newer than its own legacy rows is ordinary. A legacy row with
+    no parseable `observedAt` is kept.
+- `flatRecordFromView`: a replaced upload's path is no longer in its v1
+  pointer array. With one save per type (every row at one `observedAt`) the
+  arrays are unchanged.
+- Where a replaced bank / EPF / payslip file preceded current ones, those
+  files' position-derived periods (`timePeriodOf` rule 4) move up by one —
+  T1..T3 instead of T2..T4 — in `instanceRowsFromView`,
+  `buildFileFieldTablesFromView` and `flatRecordFromView`, which is where v1
+  put them. A replaced file's surviving extraction row has no list position,
+  so it gets no derived period.
+- Everything else is byte-identical, pinned by
+  `sys3720-current-documents.test.ts` (digests taken on 9.4.0 before the
+  change: 7 control fixtures unmoved, each affected fixture moves only the
+  outputs it names) and by `sys3705-v1-lineage-golden.test.ts`, where three
+  outputs moved: its fixture holds two slots past the intake count, and each
+  new digest equals the 9.4.0 output with exactly those two synthesized
+  documents removed.
+
 ## [9.4.0] - 2026-09-23
 
 _MINOR — two categories, two document types, and one optional catalog tag.

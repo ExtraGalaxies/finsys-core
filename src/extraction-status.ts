@@ -274,11 +274,12 @@ export function resolveExtractionStatus(
  *    `documentType`, UNIONED with the extraction category's instances (an
  *    extracted document was necessarily uploaded — this covers uploads that
  *    predate the intake writer). Measured against v1 on 189 sim subjects ×
- *    7 types: 1321 of 1323 agree; the two that do not are one pre-writer
+ *    7 types: 1321 of 1323 agree; the two that did not were one pre-writer
  *    upload (v2 now says uploaded, via the union) and one replaced file,
- *    where the append-only intake keeps the superseded write. That last one
- *    is a real semantic difference — attested writes vs current pointer —
- *    and it is stated here rather than papered over.
+ *    where the append-only intake keeps the superseded write. SYS-3721
+ *    settled the second: only CURRENT intake instances count (see
+ *    `documentsOfType` and its `currentIntakeOfType`), so a replaced file is
+ *    no longer counted, matching v1's current pointer.
  *
  * 2. PER-DOCUMENT STATUS is joined by identity, not by position. v1 aligned
  *    upload index i with T-slot column family i and job record i. v2 joins an
@@ -290,10 +291,10 @@ export function resolveExtractionStatus(
  *    Measured: 520 of 670 intake instances join; the 150 that do not are that
  *    case. Job records still carry only fileType and order, so they are
  *    aligned positionally — but ONLY to the intake-ordered prefix, never to an
- *    extraction-only document that was never in the pointer array. One shift
- *    remains and is stated: intake is append-only, so a REPLACED file keeps
- *    its superseded row, and a positional job after that point lands one
- *    document later than v1 would have put it. Measured 1 of 1323 documents.
+ *    extraction-only document that was never in the pointer array. The
+ *    prefix holds CURRENT documents only (SYS-3721), so a replaced file's
+ *    superseded row no longer pushes later jobs one document along, the shift
+ *    this paragraph used to state.
  *
  * 3. THE DENOMINATOR is the registry's field set for the extraction category
  *    — what the adapter DECLARES it produces — not the form spec's column

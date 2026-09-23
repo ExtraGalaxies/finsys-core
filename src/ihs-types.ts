@@ -158,6 +158,56 @@ export interface FileFieldTableItem {
    */
   confidence?: Record<string, number>
   provenance?: Record<string, IhsFieldProvenance>
+  /**
+   * SYS-3728: present only on an item whose field is a `list` (a table the
+   * source prints — a management account's line items, a bureau report's
+   * facilities). Keyed like `data`, with an entry only for a column that has a
+   * stored value. Additive: `data` still carries the stored value unchanged,
+   * and `formattedData` carries a short count ("22 entries") rather than the
+   * JSON, so a consumer that does not read `list` shows a count, not a wall.
+   * `isNumeric` is always false for such an item.
+   */
+  list?: Record<string, IhsListCell>
+}
+
+/** SYS-3728: one column of an `IhsListCell`. */
+export interface IhsListColumn {
+  /** The item name from the field's `items`; `'other'` for the overflow column; `'value'` for an invalid cell. */
+  name: string
+  /** Column heading: the item's `displayName`. */
+  label: string
+  /** The item is a number — right-align it. */
+  numeric: boolean
+  /** The item is money — its cells are formatted like every other money cell. */
+  money: boolean
+}
+
+/**
+ * SYS-3728: a list field's value in one table column, as rows.
+ *
+ * `columns` are the field's declared items, in declared order, always all of
+ * them (a column no row fills renders '-' throughout, so two cells of one field
+ * share a shape). A trailing `other` column appears when any row carries a key
+ * the items do not declare: those keys render there as `key: value; …`, never
+ * dropped. A stored key matches an item by its exact name or by its kebab-case
+ * spelling (`appointment-date` → `appointmentDate`); on a clash the exact key
+ * wins and the other goes to `other`.
+ *
+ * `rows` are formatted strings keyed by column name — money as money, numbers
+ * grouped, an absent value `'-'`, a nested value as its JSON text. `rawRows`
+ * is the parsed array exactly as stored.
+ *
+ * `invalid` marks a stored value that is not a JSON array (malformed JSON, an
+ * object, a scalar): the cell then has one `value` column and one row holding
+ * the stored text, and `rawRows` is empty. It is flagged rather than thrown,
+ * because one bad cell must not take down the whole detail page.
+ */
+export interface IhsListCell {
+  kind: 'list'
+  columns: IhsListColumn[]
+  rows: Array<Record<string, string>>
+  rawRows: unknown[]
+  invalid?: true
 }
 
 export interface FileFieldTableData {

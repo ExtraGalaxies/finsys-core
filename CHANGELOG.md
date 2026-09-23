@@ -4,14 +4,92 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [9.4.1] - 2026-09-23
+## [Unreleased] - 9.5.0
 
-_PATCH — no exported API changes. `documentsOfType`, and through it
-`buildDocumentRowsFromView` and `resolveExtractionStatusFromView`, list fewer
-documents on two shapes: a financial statement read from legacy slots, and a
-replaced upload. Read **Consumer-visible** below._
+_MINOR — a field type, `list`, and the table cell that renders it. Every type
+change is additive (a union widened, optional members added). 9.4.1 was cut but
+never published; its entries are folded in below and ship in this release. Read
+**Consumer-visible** before release: the credit-bureau and management-account
+tables change shape, and `CanonicalFieldSpec.type` gains a member._
 
-### Fixed
+### Added
+
+- **SYS-3728 — `type: "list"`.** A table the source prints is now a field type,
+  not a string described in prose. A list field declares `items`, its row's
+  columns: `{ name, displayName, type: "string" | "number", kind?: "money" }`
+  (`ListItemSpec`). The stored value is unchanged — a JSON string of an array of
+  row objects — so nothing is migrated. The loader enforces: a list declares
+  items (non-empty, unique names, valid types, `money` only on a number, no
+  unknown property, none named `other`); a list declares no `kind`, `unit`,
+  `range` or `fact`, because it is never a scorable value; only a list declares
+  items. New exports: `isListField`, `LIST_OVERFLOW_COLUMN`, the generated
+  `ListFieldName` union (`npm run gen:vocabulary` emits it), `ListItemSpec`.
+- **Converted to `list`: 51 fields.** All 36 `management-account`
+  `mgmt*Items` (items `code`, `term`, `amount` as money) and 15
+  `credit-bureau-report` tables. `outstandingCreditFacilities` has a FIXED
+  one-row-per-facility schema (16 items: `accountNo`, `approvalDate`,
+  `capacity`, `lenderType`, `accountLimit`, `collateralTypes`, `status`,
+  `facility`, `balance`, `balanceUpdated`, `instalment`, `repaymentTerm`,
+  `conduct12m`, `legalStatus`, `statusUpdated`, `collateralDetail`; the three
+  amounts as money), because the host regroups the printed lines into
+  facilities. **Every other bureau list's items mirror the columns the
+  extraction service declares for that table**, camel-cased 1:1
+  (`appointment-date` → `appointmentDate`, `limit-rm` → `limitRm`), all as
+  printed text: the host passes those rows through unparsed. One mirrored key
+  names the bureau (`lastUpdatedByExperian`); its label does not ("Last Updated
+  by Bureau").
+- **`FileFieldTableItem.list`** (`IhsListCell`, keyed like `data`): a list
+  field's value as rows. `columns` are the declared items in order, each
+  `{ name, label, numeric, money }`; `rows` are formatted strings (money like
+  any money cell, `-` for absent, a nested value as its JSON); `rawRows` is the
+  parsed array. Tolerant by design: a key no item declares is shown in a
+  trailing `other` column as `key: value; …`, never dropped; a stored key
+  matches an item by its exact name or its kebab-case spelling, the exact key
+  winning a clash; a value that is not a JSON array renders as one `value`
+  cell holding the stored text, flagged `invalid`, rather than throwing.
+  `buildListCell` is exported for any other surface that renders a list.
+- **`CategorySchema.instanceColumns`** (`CategoryInstanceColumns`): how a
+  multi-instance category whose instances are not periods labels and orders its
+  table columns. `credit-bureau-report` declares it: columns read
+  `<subjectName> (<subjectRole>)`, per document the principal first and then
+  parties in section order (compared naturally), two subjects of one name
+  disambiguated `(2)`, an unnamed subject falling back to the old label. The
+  loader checks the named fields exist, the label and sequence are strings and
+  the role is an enum with a distinct `roleOrder`. `CategorySpec` gains the
+  optional `listItems` and `instanceColumns` the view path fills from these.
+- `adapter-categories.json` `schemaVersion` 1.5.0 → 1.6.0.
+
+### Consumer-visible
+
+- **`formattedData` of a list cell is a count** ("22 entries", "1 entry"), not
+  the stored JSON — the backward-compatibility guarantee: a UI that does not yet
+  read `list` shows a count instead of a wall of JSON. `data` still carries the
+  stored value unchanged. `isNumeric` is false for every list item.
+- **The credit-bureau table's column keys change**, from `T1 · ccris` /
+  `T1 · pbi-1` to `Example Sdn Bhd (principal)` / `A Director (party)`, and
+  its column ORDER changes (principal first). `timePeriods`, and the keys of
+  `data` / `formattedData` / `confidence` / `provenance`, all follow. A consumer
+  that looked a bureau column up by the old key must use `timePeriods` instead.
+  `instanceRowsFromView` is unchanged: rows keep their wire order and period.
+- **A consumer switching on `CanonicalFieldSpec.type` sees `"list"`.** A
+  host mapper that writes a table only when `type === "string"` writes nothing
+  for these 51 fields until it also accepts `"list"`. A field picker listing
+  every registry field must exclude lists (`isListField`, or
+  `Exclude<CanonicalFieldName, ListFieldName>`).
+- **Byte identity, measured.** Full, unfiltered output digests were captured on
+  9.4.1 (c508ab1) before the change for four fixtures — the SYS-3705 v1 golden
+  view, the same view with the two new categories populated, the SYS-3705
+  bureau/management-account fixture, and a view built from synthetic extraction
+  output — over eight outputs each, plus the 105 SYS-3720 fixture digests. After
+  the change the only output that moves is `buildFileFieldTablesFromView`, and
+  within it only the `credit_bureau_reports` and `management_accounts` tables.
+  Every v1-lineage table is byte-identical, and so are `instanceRowsFromView`,
+  `fieldProvenanceFromView`, `documentsOfType`, `buildDocumentRowsFromView`,
+  `resolveExtractionStatusFromView`, `processIhsDetailsFromView` and
+  `flatRecordFromView` for every fixture. Inside the two moved tables, every
+  non-list item is identical apart from the bureau column relabel.
+
+### Fixed (from the unpublished 9.4.1)
 
 - **SYS-3720 — one financial statement listed as two.** `documentsOfType` read
   a `legacy:T{n}` extraction row as "the n-th intake document", and a slot past
@@ -36,7 +114,7 @@ replaced upload. Read **Consumer-visible** below._
     describe are still listed as extraction-only — now one per statement,
     not one per slot.
 
-### Changed
+### Changed (from the unpublished 9.4.1)
 
 - **SYS-3721 — v2 lists current documents only.** Intake is append-only, so a
   replaced upload keeps its `document-intake` row, and v2 listed it beside its
@@ -71,7 +149,7 @@ replaced upload. Read **Consumer-visible** below._
   year=2 statement FIRST would place `legacy:T3` on the second upload by the
   T1/T2-first, T3-second rule. Neither shape exists in the finsim database.
 
-### Consumer-visible
+### Consumer-visible (from the unpublished 9.4.1)
 
 - A pre-Phase-4b year=1 statement (one upload, `legacy:T1` + `legacy:T2`)
   lists 1 statement, not 2. A lone year=2 statement (`legacy:T3` only) lists

@@ -49,6 +49,7 @@ import categoriesData from "./data/adapter-categories.json" with { type: "json" 
 import type {
   AdapterCategoryId,
   CanonicalFieldNameLiteral,
+  ListFieldNameLiteral,
   RetiredFieldName,
 } from "./vocabulary.generated.js";
 
@@ -87,12 +88,68 @@ export type AdapterCategory = AdapterCategoryId;
 export type CanonicalFieldName = CanonicalFieldNameLiteral;
 
 /**
+ * SYS-3728: every canonical field declared `type: "list"`, generated from the
+ * registry. `Exclude<CanonicalFieldName, ListFieldName>` is the set a picker
+ * offering scorable values may draw from.
+ */
+export type ListFieldName = ListFieldNameLiteral;
+
+/**
  * Per-field metadata for a canonical field declared by a category.
  * Frozen at module load — the data file is authoritative.
  */
+/**
+ * SYS-3728: one column of a `list` field's rows.
+ *
+ * An item is NOT a canonical field. It has no fact, no confidentiality of its
+ * own (it inherits the list's), is never addressable by an eval model and never
+ * appears in a `produces` list. It exists so a renderer knows which columns a
+ * row has and how to format each — the thing prose in `description` could not
+ * tell it.
+ */
+export interface ListItemSpec {
+  /** The key the item carries in each stored row object. camelCase. */
+  readonly name: string;
+  /** Column heading. */
+  readonly displayName: string;
+  readonly type: "string" | "number";
+  /** `money` formats like any money cell; only on a `number` item. */
+  readonly kind?: "money";
+}
+
+/**
+ * SYS-3728: how the table columns of a multi-instance category WITHOUT a
+ * period are labeled and ordered.
+ *
+ * A credit-bureau report carries one instance per report subject. Those are
+ * not periods, so labeling them by the position fallback ("T1 · ccris") says
+ * something false. Declared here, rather than special-cased in the renderer,
+ * so the next category shaped like it is a data edit.
+ *
+ *   labelField    — a string field whose value names the instance.
+ *   roleField     — an enum field qualifying it, shown in brackets.
+ *   roleOrder     — the roles, in the order their columns come.
+ *   sequenceField — a string field ordering instances within one role,
+ *                   compared naturally ("pbi-2" before "pbi-10").
+ */
+export interface CategoryInstanceColumns {
+  readonly labelField: string;
+  readonly roleField?: string;
+  readonly roleOrder?: ReadonlyArray<string>;
+  readonly sequenceField?: string;
+}
+
 export interface CanonicalFieldSpec {
   readonly name: CanonicalFieldName;
-  readonly type: "number" | "boolean" | "string";
+  /**
+   * SYS-3728 added `"list"`: a table the source prints, stored as a JSON
+   * STRING of an array of row objects (no storage change from the prose-typed
+   * string it replaced), with its columns declared in `items`. A list is never
+   * a scorable quantity: it declares no kind, unit, range or fact.
+   */
+  readonly type: "number" | "boolean" | "string" | "list";
+  /** SYS-3728: present exactly when `type` is `"list"`. */
+  readonly items?: ReadonlyArray<ListItemSpec>;
   readonly unit?: string;
   readonly range?: readonly [number, number];
   readonly description: string;
@@ -253,6 +310,8 @@ export interface CategorySchema {
    * waits for the deprecation window to close.
    */
   readonly legacyId?: string;
+  /** SYS-3728: see `CategoryInstanceColumns`. Absent for every periodised category. */
+  readonly instanceColumns?: CategoryInstanceColumns;
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
 }
 
@@ -260,7 +319,8 @@ export interface CategorySchema {
 
 interface RawCategoryField {
   name: string;
-  type: "number" | "boolean" | "string";
+  type: "number" | "boolean" | "string" | "list";
+  items?: unknown;
   unit?: string;
   range?: [number, number];
   description: string;
@@ -276,6 +336,7 @@ interface RawCategory {
   displayName: string;
   description: string;
   canonicalTable: string;
+  instanceColumns?: unknown;
   fields: RawCategoryField[];
 }
 
@@ -313,7 +374,119 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
   "number",
   "boolean",
   "string",
+  "list",
 ];
+
+/** SYS-3728: the name every list renders its unrecognized keys under. */
+export const LIST_OVERFLOW_COLUMN = "other";
+
+const LIST_ITEM_PROPERTIES = new Set(["name", "displayName", "type", "kind"]);
+const INSTANCE_COLUMNS_PROPERTIES = new Set(["labelField", "roleField", "roleOrder", "sequenceField"]);
+
+/**
+ * SYS-3728: validate a list field's `items`, and refuse everything a list
+ * cannot mean. Returns the frozen item specs.
+ */
+function validateListField(f: RawCategoryField, where: string): ReadonlyArray<ListItemSpec> {
+  const at = `adapter category data: list "${f.name}" (${where})`;
+  for (const prop of ["kind", "unit", "range", "fact"] as const) {
+    if (f[prop] !== undefined) {
+      throw new Error(
+        `${at} declares a ${prop} — a list is a table of rows, not a quantity: it is never scorable, ` +
+          `so a kind, unit, range or fact on it can only be a misdeclaration`,
+      );
+    }
+  }
+  if (!Array.isArray(f.items) || f.items.length === 0) {
+    throw new Error(`${at} must declare items — the columns its rows carry`);
+  }
+  const seen = new Set<string>();
+  const items: ListItemSpec[] = [];
+  for (const rawItem of f.items as unknown[]) {
+    const item = (rawItem ?? {}) as Record<string, unknown>;
+    if (typeof item.name !== "string" || item.name.length === 0) {
+      throw new Error(`${at} has an item without a non-empty name`);
+    }
+    const it = `${at} item "${item.name}"`;
+    for (const key of Object.keys(item)) {
+      if (!LIST_ITEM_PROPERTIES.has(key)) throw new Error(`${it} has unknown property "${key}"`);
+    }
+    if (item.name === LIST_OVERFLOW_COLUMN) {
+      throw new Error(`${it}: "${LIST_OVERFLOW_COLUMN}" is reserved for the column unrecognized keys render under`);
+    }
+    if (seen.has(item.name)) throw new Error(`${at} declares duplicate item "${item.name}"`);
+    seen.add(item.name);
+    if (typeof item.displayName !== "string" || item.displayName.length === 0) {
+      throw new Error(`${it} needs a non-empty displayName`);
+    }
+    if (item.type !== "string" && item.type !== "number") {
+      throw new Error(`${it} has invalid type "${String(item.type)}" — an item is "string" or "number"`);
+    }
+    if (item.kind !== undefined) {
+      if (item.kind !== "money") throw new Error(`${it} has invalid kind "${String(item.kind)}"`);
+      if (item.type !== "number") {
+        throw new Error(`${it} is kind "money" but type "${item.type}" — a monetary amount's primitive is a number`);
+      }
+    }
+    items.push(
+      Object.freeze({
+        name: item.name,
+        displayName: item.displayName,
+        type: item.type,
+        ...(item.kind !== undefined ? { kind: "money" as const } : {}),
+      }),
+    );
+  }
+  return Object.freeze(items);
+}
+
+/** SYS-3728: validate a category's `instanceColumns` against its own fields. */
+function validateInstanceColumns(
+  raw: unknown,
+  fields: ReadonlyArray<RawCategoryField>,
+  where: string,
+): CategoryInstanceColumns {
+  const at = `adapter category data: ${where} instanceColumns`;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} must be an object`);
+  const ic = raw as Record<string, unknown>;
+  for (const key of Object.keys(ic)) {
+    if (!INSTANCE_COLUMNS_PROPERTIES.has(key)) throw new Error(`${at} has unknown property "${key}"`);
+  }
+  const fieldNamed = (prop: string, value: unknown): RawCategoryField => {
+    const found = typeof value === "string" ? fields.find((x) => x.name === value) : undefined;
+    if (!found) throw new Error(`${at}: ${prop} "${String(value)}" is not a field this category declares`);
+    return found;
+  };
+  const label = fieldNamed("labelField", ic.labelField);
+  if (label.type !== "string") {
+    throw new Error(`${at}: labelField "${label.name}" must be a string field (it is ${label.type})`);
+  }
+  if (ic.roleField !== undefined) {
+    const role = fieldNamed("roleField", ic.roleField);
+    if (role.kind !== "enum") throw new Error(`${at}: roleField "${role.name}" must be a kind "enum" field`);
+    const order = ic.roleOrder;
+    if (
+      !Array.isArray(order) ||
+      order.length === 0 ||
+      order.some((r) => typeof r !== "string" || r.length === 0) ||
+      new Set(order).size !== order.length
+    ) {
+      throw new Error(`${at}: a roleField needs a roleOrder — a non-empty list of distinct role labels`);
+    }
+  } else if (ic.roleOrder !== undefined) {
+    throw new Error(`${at}: roleOrder without a roleField orders nothing`);
+  }
+  if (ic.sequenceField !== undefined) {
+    const seq = fieldNamed("sequenceField", ic.sequenceField);
+    if (seq.type !== "string") throw new Error(`${at}: sequenceField "${seq.name}" must be a string field`);
+  }
+  return Object.freeze({
+    labelField: ic.labelField as string,
+    ...(ic.roleField !== undefined ? { roleField: ic.roleField as string } : {}),
+    ...(ic.roleOrder !== undefined ? { roleOrder: Object.freeze([...(ic.roleOrder as string[])]) } : {}),
+    ...(ic.sequenceField !== undefined ? { sequenceField: ic.sequenceField as string } : {}),
+  });
+}
 
 const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> = [
   "enum",
@@ -695,6 +868,16 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           `adapter category data: field "${f.name}" (${where}) has invalid type "${f.type}"`,
         );
       }
+      // SYS-3728: checked before the kind/unit/range rules below so a list
+      // carrying one fails with the list's own reason, not a generic one.
+      let listItems: ReadonlyArray<ListItemSpec> | undefined;
+      if (f.type === "list") {
+        listItems = validateListField(f, where);
+      } else if (f.items !== undefined) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) declares items, but only a list has items (it is ${f.type})`,
+        );
+      }
       // SYS-3249: `unit` is checked for EVERY field, kind or not. It was
       // free-form until now and read by nothing but the spec builder, so
       // an unusable value could sit in the contract indefinitely without
@@ -779,6 +962,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       const spec: CanonicalFieldSpec = Object.freeze({
         name: asFieldName(f.name),
         type: f.type,
+        ...(listItems !== undefined ? { items: listItems } : {}),
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
@@ -834,6 +1018,9 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       description: cat.description,
       canonicalTable: cat.canonicalTable,
       ...(cat.legacyId !== undefined ? { legacyId: cat.legacyId } : {}),
+      ...(cat.instanceColumns !== undefined
+        ? { instanceColumns: validateInstanceColumns(cat.instanceColumns, cat.fields, where) }
+        : {}),
       fields: Object.freeze(fields) as ReadonlyArray<CanonicalFieldSpec>,
     });
     byId.set(cat.id, schema);
@@ -936,6 +1123,18 @@ export function categorySchemaOf(id: AdapterCategory): CategorySchema {
  */
 export function categoryFieldsOf(id: AdapterCategory): ReadonlyArray<CanonicalFieldName> {
   return categorySchemaOf(id).fields.map((f) => f.name);
+}
+
+/**
+ * SYS-3728: is this a list field — a table of rows, never a scorable value?
+ *
+ * The one question every field picker and numeric/money classifier has to ask
+ * before treating a field as a quantity. A list's stored value is a JSON
+ * string; offered to an eval model as a string field it would be compared as
+ * text, which is never what anyone meant.
+ */
+export function isListField(spec: Pick<CanonicalFieldSpec, "type">): boolean {
+  return spec.type === "list";
 }
 
 /**

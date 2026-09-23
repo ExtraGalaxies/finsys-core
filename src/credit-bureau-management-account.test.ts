@@ -138,7 +138,7 @@ describe('credit-bureau-report (SYS-3705)', () => {
     for (const f of counts) expect(f.type, f.name).toBe('number')
   })
 
-  it('carries every list-shaped section as a JSON-string field (the SSM directors/shareholders precedent)', () => {
+  it('carries every list-shaped section as a list field, stored as a JSON string (SYS-3728 typed them; SYS-3705 declared them as prose-typed strings)', () => {
     const lists = [
       'shareholdingInterests', 'directorsAndOfficers', 'shareholdersAndMembers', 'outstandingCreditFacilities',
       'creditApplications', 'specialAttentionAccounts', 'suitsAsDefendant', 'limitedDetailSuitsAsDefendant',
@@ -146,7 +146,7 @@ describe('credit-bureau-report (SYS-3705)', () => {
       'bankruptcyActionCreditors', 'tradeCreditReferences', 'nonBankLenderFacilities',
     ]
     for (const name of lists) {
-      expect(field(CBR, name).type, name).toBe('string')
+      expect(field(CBR, name).type, name).toBe('list')
       expect(field(CBR, name).description, name).toMatch(/^JSON-encoded list/)
     }
   })
@@ -173,14 +173,14 @@ describe('management-account (SYS-3705)', () => {
     expect(unprefixed).toEqual([])
   })
 
-  it('types every printed total as money and every line-item category as a JSON-string list', () => {
+  it('types every printed total as money and every line-item category as a list (stored as a JSON string)', () => {
     const money = fields(MA).filter((f) => f.kind === 'money')
     const items = fields(MA).filter((f) => f.name.endsWith('Items'))
     expect(money).toHaveLength(18)
     expect(items).toHaveLength(36)
     for (const f of money) expect(f.type, f.name).toBe('number')
     for (const f of items) {
-      expect(f.type, f.name).toBe('string')
+      expect(f.type, f.name).toBe('list')
       expect(f.description, f.name).toMatch(/^JSON-encoded list/)
     }
     // Everything that is neither: the seven header fields saying what the period is.
@@ -280,15 +280,19 @@ describe('the lineage fallback — a category with no v1 lineage renders under i
     expect(assets.data).toEqual({ T1: 950000, T2: 800000 })
     expect(assets.formattedData).toEqual({ T1: '950,000', T2: '800,000' })
     expect(assets.isNumeric).toBe(true)
-    // "cash" is in the name, and the name heuristic would call it numeric; the registry says string.
+    // "cash" is in the name, and the name heuristic would call it numeric; the registry says list.
     const cash = ma.items.find((i) => i.displayName === 'Cash at Bank (Lines)')!
     expect(cash.isNumeric).toBe(false)
+    // SYS-3728: rows, not the JSON.
+    expect(cash.formattedData).toEqual({ T1: '1 entry', T2: '-' })
+    expect(cash.list!['T1']!.rows).toEqual([{ code: '-', term: 'Current account', amount: '12,000' }])
     expect(ma.items.map((i) => i.displayName)).toEqual(['Company Name', 'Period End', 'Total Assets', 'Cash at Bank (Lines)'])
 
     const cbr = tables['credit_bureau_reports']!
     const score = cbr.items.find((i) => i.displayName === 'Bureau Score')!
-    expect(score.timePeriods).toEqual(['T1 · pbi-1', 'T1 · ccris'])
-    expect(score.data).toEqual({ 'T1 · pbi-1': 690, 'T1 · ccris': 712 })
+    // SYS-3728: labeled by subject, principal first — was ['T1 · pbi-1', 'T1 · ccris'].
+    expect(score.timePeriods).toEqual(['Example Sdn Bhd (principal)', 'A Director (party)'])
+    expect(score.data).toEqual({ 'Example Sdn Bhd (principal)': 712, 'A Director (party)': 690 })
   })
 
   it('joins extractions to their uploads, so the documents table and extraction status see them', () => {

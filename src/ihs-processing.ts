@@ -23,10 +23,20 @@ import type {
   DocumentRow,
   DocumentFileMetadata,
   InstanceRow,
+  IhsListCell,
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
-import { allCategories, assertAdapterCategory, categoryFieldsOf, categorySchemaOf, type AdapterCategory } from './adapter-categories.js'
+import {
+  allCategories,
+  assertAdapterCategory,
+  categoryFieldsOf,
+  categorySchemaOf,
+  LIST_OVERFLOW_COLUMN,
+  type AdapterCategory,
+  type CategoryInstanceColumns,
+  type ListItemSpec,
+} from './adapter-categories.js'
 import {
   v1Addresses,
   v1KeyForAddress,
@@ -341,6 +351,115 @@ function formatValue(value: unknown, numeric: boolean, currency?: string): strin
   return String(value)
 }
 
+// ── List cells (SYS-3728) ───────────────────────────────────────
+
+/** `appointment-date` → `appointmentDate`; `conduct-of-account-m01` → `conductOfAccountM01`. */
+function kebabToCamel(key: string): string {
+  return key.replace(/[-_]+([a-zA-Z0-9])/g, (_, c: string) => c.toUpperCase())
+}
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** A value as text, for the overflow column: nothing is formatted, nothing is lost. */
+function listText(v: unknown): string {
+  if (v === null || v === undefined) return '-'
+  if (typeof v === 'object') return JSON.stringify(v)
+  return String(v)
+}
+
+function formatListItem(v: unknown, item: ListItemSpec, currency?: string): string {
+  // A nested value in a declared column is shown as its JSON, never "[object Object]".
+  if (typeof v === 'object' && v !== null) return JSON.stringify(v)
+  if (item.type === 'number') return formatValue(v, true, item.kind === 'money' ? currency : undefined)
+  return formatValue(v, false)
+}
+
+/**
+ * SYS-3728: a stored list value as rows under its declared columns — the
+ * `IhsListCell` contract (see its doc in ihs-types.ts for every rule).
+ *
+ * `value` is what storage holds: a JSON string of an array of row objects, or
+ * an already-parsed array. TOLERANT BY DESIGN — this renders a detail page, and
+ * one malformed cell must not take the page down with it:
+ *   - not a JSON array (malformed, an object, a scalar) → one `value` cell
+ *     holding the stored text, flagged `invalid`;
+ *   - a key no item declares → the `other` column, as `key: value`, never
+ *     dropped;
+ *   - a row that is not an object → the `other` column, whole.
+ *
+ * `currency` is the observation's denomination, applied to money items the
+ * way it is applied to every other money cell; absent, money is a plain grouped
+ * number (the honest "no denomination known" rendering, not a guessed one).
+ */
+export function buildListCell(
+  value: unknown,
+  items: ReadonlyArray<ListItemSpec>,
+  currency?: string,
+): IhsListCell {
+  let parsed: unknown = value
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value)
+    } catch {
+      parsed = undefined
+    }
+  }
+  if (!Array.isArray(parsed)) {
+    return {
+      kind: 'list',
+      columns: [{ name: 'value', label: 'Value', numeric: false, money: false }],
+      rows: [{ value: typeof value === 'string' ? value : listText(value) }],
+      rawRows: [],
+      invalid: true,
+    }
+  }
+
+  const declared = new Set(items.map((i) => i.name))
+  let overflow = false
+  const rows = parsed.map((raw) => {
+    const matched = new Map<string, unknown>()
+    const other: string[] = []
+    if (isPlainObject(raw)) {
+      // Exact names first, so an exact key always beats a kebab-case twin.
+      for (const [k, v] of Object.entries(raw)) if (declared.has(k)) matched.set(k, v)
+      for (const [k, v] of Object.entries(raw)) {
+        if (declared.has(k)) continue
+        const camel = kebabToCamel(k)
+        if (camel !== k && declared.has(camel) && !matched.has(camel)) matched.set(camel, v)
+        else other.push(`${k}: ${listText(v)}`)
+      }
+    } else {
+      other.push(listText(raw))
+    }
+    if (other.length > 0) overflow = true
+    const row: Record<string, string> = {}
+    for (const item of items) row[item.name] = formatListItem(matched.get(item.name), item, currency)
+    return { row, other: other.join('; ') }
+  })
+
+  const columns = items.map((i) => ({
+    name: i.name,
+    label: i.displayName,
+    numeric: i.type === 'number',
+    money: i.kind === 'money',
+  }))
+  if (overflow) columns.push({ name: LIST_OVERFLOW_COLUMN, label: 'Other', numeric: false, money: false })
+  return {
+    kind: 'list',
+    columns,
+    rows: rows.map(({ row, other }) => (overflow ? { ...row, [LIST_OVERFLOW_COLUMN]: other } : row)),
+    rawRows: parsed,
+  }
+}
+
+/** The short text `formattedData` carries for a list: a count, never the JSON. */
+function listSummary(cell: IhsListCell, value: unknown): string {
+  if (cell.invalid) return formatValue(value, false)
+  const n = cell.rows.length
+  return `${n} ${n === 1 ? 'entry' : 'entries'}`
+}
+
 function buildTableForGroup(
   groupName: string,
   fields: FieldData[],
@@ -530,12 +649,20 @@ export function groupColumnsByInstance(
   baseColumnNames: string[],
   instanceRows: InstanceRow[]
 ): Record<string, Record<string, unknown>> {
+  return groupByLabels(baseColumnNames, instanceRows, instanceRows?.length ? instanceColumnLabels(instanceRows) : [])
+}
+
+/** groupColumnsByInstance with the column labels supplied (SYS-3728). */
+function groupByLabels(
+  baseColumnNames: string[],
+  instanceRows: InstanceRow[],
+  labels: string[]
+): Record<string, Record<string, unknown>> {
   const groups: Record<string, Record<string, unknown>> = {}
   for (const baseName of baseColumnNames) {
     groups[baseName] = {}
   }
   if (!instanceRows?.length) return groups
-  const labels = instanceColumnLabels(instanceRows)
   instanceRows.forEach((row, i) => {
     const label = labels[i]
     for (const baseName of baseColumnNames) {
@@ -563,29 +690,95 @@ export function groupColumnsByInstance(
  * function exists for) simply render with no confidence, same limitation
  * buildFileFieldTables already has today for anything past T6.
  */
+/**
+ * SYS-3728: the column order and labels of a category that declares
+ * `instanceColumns` — instances that are SUBJECTS, not periods.
+ *
+ * Order: by document (an instance key's part before its last `#`, in order of
+ * first appearance), then by role in the declared `roleOrder` (an undeclared
+ * role after every declared one), then by the sequence field compared
+ * naturally, so pbi-2 precedes pbi-10. The sort is stable, so anything the
+ * keys do not separate keeps its wire order.
+ *
+ * Label: "<label field> (<role>)", or the bare label field with no role. An
+ * instance with no label value falls back to the ordinary period label, so no
+ * column is ever blank. Collisions are disambiguated exactly as
+ * `instanceColumnLabels` does — two subjects of one name are two columns.
+ */
+function orderAndLabelInstances(
+  rows: InstanceRow[],
+  spec: CategoryInstanceColumns
+): { rows: InstanceRow[]; labels: string[] } {
+  const documentOf = (row: InstanceRow): string => {
+    const at = row.instanceKey.lastIndexOf('#')
+    return at < 0 ? row.instanceKey : row.instanceKey.slice(0, at)
+  }
+  const firstSeen = new Map<string, number>()
+  for (const row of rows) if (!firstSeen.has(documentOf(row))) firstSeen.set(documentOf(row), firstSeen.size)
+  const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+  const roleRank = (row: InstanceRow): number => {
+    if (!spec.roleField || !spec.roleOrder) return 0
+    const at = spec.roleOrder.indexOf(text(row[spec.roleField]))
+    return at < 0 ? spec.roleOrder.length : at
+  }
+  const ordered = rows
+    .map((row, i) => ({ row, i }))
+    .sort((a, b) =>
+      firstSeen.get(documentOf(a.row))! - firstSeen.get(documentOf(b.row))! ||
+      roleRank(a.row) - roleRank(b.row) ||
+      (spec.sequenceField
+        ? text(a.row[spec.sequenceField]).localeCompare(text(b.row[spec.sequenceField]), 'en', { numeric: true })
+        : 0) ||
+      a.i - b.i
+    )
+    .map((x) => x.row)
+
+  const seenCounts = new Map<string, number>()
+  const labels = ordered.map((row) => {
+    const name = text(row[spec.labelField])
+    const role = spec.roleField ? text(row[spec.roleField]) : ''
+    const raw = name === '' ? instanceColumnLabel(row) : role === '' ? name : `${name} (${role})`
+    const occurrence = (seenCounts.get(raw) ?? 0) + 1
+    seenCounts.set(raw, occurrence)
+    return occurrence === 1 ? raw : `${raw} (${occurrence})`
+  })
+  return { rows: ordered, labels }
+}
+
 function buildInstanceTable(
   groupName: string,
   baseNames: string[],
   groupDisplayName: string,
-  instanceRows: InstanceRow[],
+  rowsAsGiven: InstanceRow[],
   fieldProvenance?: Record<string, IhsFieldProvenance>,
-  numericColumns?: ReadonlySet<string>
+  numericColumns?: ReadonlySet<string>,
+  listItems?: Readonly<Record<string, ReadonlyArray<ListItemSpec>>>,
+  instanceColumns?: CategoryInstanceColumns
 ): FileFieldTableData | null {
-  const columnGroups = groupColumnsByInstance(baseNames, instanceRows)
-  const instanceLabels = instanceColumnLabels(instanceRows)
+  const { rows: instanceRows, labels: instanceLabels } = instanceColumns
+    ? orderAndLabelInstances(rowsAsGiven, instanceColumns)
+    : { rows: rowsAsGiven, labels: instanceColumnLabels(rowsAsGiven) }
+  const columnGroups = groupByLabels(baseNames, instanceRows, instanceLabels)
 
-  const items: FileFieldTableItem[] = []
+  const tableItems: FileFieldTableItem[] = []
   for (const [baseName, labelMap] of Object.entries(columnGroups)) {
     const hasAny = Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '')
     if (!hasAny) continue
 
-    const numeric = numericColumns
-      ? numericColumns.has(baseName)
-      : isNumericField(baseName) || isMonetaryField(baseName)
+    // SYS-3728: a list field is rows, never a number — whatever its name says.
+    const itemSpecs = listItems && Object.prototype.hasOwnProperty.call(listItems, baseName)
+      ? listItems[baseName]
+      : undefined
+    const numeric = itemSpecs
+      ? false
+      : numericColumns
+        ? numericColumns.has(baseName)
+        : isNumericField(baseName) || isMonetaryField(baseName)
     const data: Record<string, unknown> = {}
     const formattedData: Record<string, string> = {}
     const confidence: Record<string, number> = {}
     const provenance: Record<string, IhsFieldProvenance> = {}
+    const list: Record<string, IhsListCell> = {}
 
     for (const [i, row] of instanceRows.entries()) {
       const label = instanceLabels[i]
@@ -596,7 +789,13 @@ function buildInstanceTable(
       // SYS-3249: hoisted above the format call — the envelope carries
       // this value's currency.
       const prov = legacyKey ? fieldProvenance?.[legacyKey] : undefined
-      formattedData[label] = formatValue(value, numeric, prov?.currency)
+      if (itemSpecs && value !== null && value !== undefined && value !== '') {
+        const cell = buildListCell(value, itemSpecs, prov?.currency)
+        list[label] = cell
+        formattedData[label] = listSummary(cell, value)
+      } else {
+        formattedData[label] = formatValue(value, numeric, prov?.currency)
+      }
       if (prov) {
         provenance[label] = prov
         if (
@@ -609,7 +808,7 @@ function buildInstanceTable(
       }
     }
 
-    items.push({
+    tableItems.push({
       displayName: getDisplayName(baseName),
       timePeriods: instanceLabels,
       data,
@@ -618,19 +817,20 @@ function buildInstanceTable(
       isNumeric: numeric,
       ...(Object.keys(confidence).length ? { confidence } : {}),
       ...(Object.keys(provenance).length ? { provenance } : {}),
+      ...(itemSpecs ? { list } : {}),
     })
   }
 
-  const hasData = items.some((item) =>
+  const hasData = tableItems.some((item) =>
     Object.values(item.data).some((v) => v !== null && v !== undefined && v !== '')
   )
-  if (!items.length || !hasData) return null
+  if (!tableItems.length || !hasData) return null
 
   return {
     name: groupName,
     displayName: groupDisplayName,
     type: FileFieldTableType.TIME_SERIES,
-    items,
+    items: tableItems,
     hasData,
   }
 }
@@ -663,6 +863,17 @@ export interface CategorySpec {
    * and borrow its confidence. Such a table gets no provenance at all.
    */
   noLegacyProvenance?: boolean
+  /**
+   * SYS-3728: the item schema of each column that is a `list` field, keyed by
+   * column name. Such a column renders as `IhsListCell`s (`FileFieldTableItem.list`)
+   * with a short count in `formattedData`, and is never numeric.
+   */
+  listItems?: Record<string, ReadonlyArray<ListItemSpec>>
+  /**
+   * SYS-3728: label and order the columns by subject rather than by period —
+   * the category's own `CategorySchema.instanceColumns`.
+   */
+  instanceColumns?: CategoryInstanceColumns
 }
 
 export function buildFileFieldTablesFromInstances(
@@ -703,7 +914,9 @@ export function buildFileFieldTablesFromInstances(
     const table = buildInstanceTable(
       groupName, spec.baseColumnNames, spec.displayName, instanceRows,
       spec.noLegacyProvenance ? undefined : fieldProvenance,
-      spec.numericColumnNames ? new Set(spec.numericColumnNames) : undefined
+      spec.numericColumnNames ? new Set(spec.numericColumnNames) : undefined,
+      spec.listItems,
+      spec.instanceColumns
     )
     if (table) tables[groupName] = table
   }
@@ -2548,12 +2761,19 @@ export function buildFileFieldTablesFromView(
     // order, through the same override path invoice uses — and numeric means
     // the registry SAYS number, not that the name happens to contain "cash".
     if (canonicalNamed.has(category)) {
-      const fields = categorySchemaOf(category).fields
+      const schema = categorySchemaOf(category)
+      const fields = schema.fields
+      // SYS-3728: a list field's columns come from its item schema.
+      const listItems = Object.fromEntries(
+        fields.flatMap((f) => (f.type === 'list' && f.items ? [[f.name, f.items]] : []))
+      )
       lineageFree[group.documentGroup] = {
         displayName: group.label,
         baseColumnNames: fields.map((f) => f.name),
         numericColumnNames: fields.filter((f) => f.type === 'number').map((f) => f.name),
         noLegacyProvenance: true,
+        ...(Object.keys(listItems).length > 0 ? { listItems } : {}),
+        ...(schema.instanceColumns ? { instanceColumns: schema.instanceColumns } : {}),
       }
     }
   }

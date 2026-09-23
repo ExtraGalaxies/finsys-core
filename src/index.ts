@@ -119,6 +119,8 @@ export {
   // and last flat file-field function to get one.
   instanceRowsFromView,
   buildFileFieldTablesFromView,
+  // SYS-3728: a stored list value as rows under its declared columns.
+  buildListCell,
   // SYS-3334 F3 (round 2 review): the provenance synthesis hoisted out of
   // buildFileFieldTablesFromView — collision-aware, and usable on its own.
   fieldProvenanceFromView,
@@ -192,6 +194,8 @@ export type {
   IhsDetailCategory,
   FileFieldTableData,
   FileFieldTableItem,
+  IhsListCell,
+  IhsListColumn,
   IhsFieldProvenance,
   // SYS-3334 F3 (round 2 review): IhsFieldProvenance + the overlay-replaced
   // value, for fieldProvenanceFromView's return shape.
@@ -244,6 +248,9 @@ export type {
   CanonicalFieldName,
   CanonicalFieldSpec,
   CategorySchema,
+  CategoryInstanceColumns,
+  ListFieldName,
+  ListItemSpec,
 } from './adapter-categories.js'
 
 // NB: `buildCategoryRegistry` + the `CategoryRegistry` shape are
@@ -266,6 +273,8 @@ export {
   resolveCanonicalCategoryId,
   isLegacyCategoryId,
   isFieldSensitive,
+  isListField,
+  LIST_OVERFLOW_COLUMN,
   sensitiveFieldsOf,
   isAdapterCategory,
   assertAdapterCategory,

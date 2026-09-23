@@ -92,17 +92,66 @@ describe('SYS-3728 — every field has an enforceable declaration', () => {
     ])
   })
 
-  it('patterns are declared ONLY where the writer provably normalizes the format', () => {
-    const withPattern = fields.filter(({ f }) => f.pattern !== undefined).map(({ c, f }) => `${c}.${f.name}`)
-    expect(withPattern).toEqual(['credit-bureau-report.section', 'management-account.mgmtStatementsRead'])
-    const withFormat = fields.filter(({ f }) => f.format !== undefined).map(({ c, f }) => `${c}.${f.name}=${f.format}`)
+  // SYS-3728 (second review): identifier fields now carry an ASCII identifier
+  // charset, and the two NEW-IC fields (plus the bankruptcy new-IC column) the
+  // Malaysian NRIC shape under MY. This REVERSES the earlier pin of "no
+  // jurisdiction pattern shipped": the operator's standard is that identifier
+  // slots accept nothing but identifiers. The mappers normalize to these forms
+  // and OMIT a value that cannot meet them, so a pattern here never refuses a
+  // whole report for one unreadable id.
+  const IDENT = '[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*'
+  const REG = `${IDENT}(?: \\(${IDENT}\\))?`
+  const NRIC = { MY: '\\d{6}-?\\d{2}-?\\d{4}' }
+
+  it('patterns are declared ONLY on identifiers and on values the writer computes', () => {
+    const withPattern = fields.filter(({ f }) => f.pattern !== undefined).map(({ c, f }) => `${c}.${f.name}=${f.pattern === IDENT ? 'IDENT' : f.pattern === REG ? 'REG' : f.pattern}`)
+    expect(withPattern).toEqual([
+      'credit-bureau-report.section=ccris|iriss|pbi-[1-9]\\d*',
+      'credit-bureau-report.reportOrderId=IDENT',
+      'credit-bureau-report.subjectRegistrationNo=REG',
+      'credit-bureau-report.subjectProvidedRegistrationNo=REG',
+      'credit-bureau-report.subjectIcPassportNo=IDENT',
+      'credit-bureau-report.subjectNewIcNo=IDENT',
+      'credit-bureau-report.subjectProvidedIcPassportNo=IDENT',
+      'credit-bureau-report.subjectProvidedNewIcNo=IDENT',
+      'management-account.mgmtStatementsRead=BS|PL|BS,PL',
+    ])
+    const itemPatterns = fields.flatMap(({ f }) => (f.items ?? []).filter((i) => i.pattern !== undefined).map((i) => `${f.name}.${i.name}=${i.pattern === IDENT ? 'IDENT' : i.pattern === REG ? 'REG' : i.pattern}`))
+    expect(itemPatterns.sort()).toEqual([
+      'bankruptcyActionCreditors.creditorsIcPpLocalNoRegNo=REG', 'bankruptcyActions.icPpNo=IDENT', 'bankruptcyActions.newIcNo=IDENT',
+      'limitedDetailSuitsAsDefendant.icPpNoNewIcNo=IDENT', 'limitedDetailSuitsAsDefendant.localNo=IDENT',
+      'shareholdingInterests.registrationNo=REG', 'suitsAsDefendant.icPpNoNewIcNo=IDENT', 'suitsAsDefendant.localNo=IDENT',
+      'suitsAsPlaintiff.icPpNoNewIcNo=IDENT', 'suitsAsPlaintiff.localNo=IDENT', 'tradeCreditReferences.subjectId=REG',
+      'windingUpActionsAsDefendant.icPpNoNewIcNo=IDENT', 'windingUpActionsAsDefendant.localNo=IDENT',
+      'windingUpActionsAsPetitioner.icPpNoNewIcNo=IDENT', 'windingUpActionsAsPetitioner.localNo=IDENT',
+    ])
+    const withFormat = fields.filter(({ f }) => f.format !== undefined).map(({ c, f }) => `${c}.${f.name}=${f.format}${f.mayBeFuture ? '+future' : ''}`)
     expect(withFormat).toEqual([
-      'management-account.mgmtPeriodEnd=date', 'management-account.mgmtPeriodStart=date', 'management-account.mgmtPeriodYear=year',
+      'credit-bureau-report.reportOrderDate=date', 'credit-bureau-report.corporationIncorporationDate=date',
+      'management-account.mgmtPeriodEnd=date+future', 'management-account.mgmtPeriodStart=date', 'management-account.mgmtPeriodYear=year+future',
     ])
     expect(spec(MA, 'mgmtPeriodStart').notAfter).toBe('mgmtPeriodEnd')
-    // No identifier format is provable from the producer (bureau identifiers
-    // are passed through as printed), so no jurisdiction pattern is shipped.
-    expect(fields.filter(({ f }) => f.jurisdictionPatterns !== undefined)).toEqual([])
+    expect(categorySchemaOf(MA).periodFields).toEqual({ start: 'mgmtPeriodStart', end: 'mgmtPeriodEnd', year: 'mgmtPeriodYear' })
+  })
+
+  it('the NRIC shape is shipped ONLY for fields that are Malaysian new-IC numbers by definition', () => {
+    const scalar = fields.filter(({ f }) => f.jurisdictionPatterns !== undefined).map(({ c, f }) => `${c}.${f.name}`)
+    expect(scalar).toEqual(['credit-bureau-report.subjectNewIcNo', 'credit-bureau-report.subjectProvidedNewIcNo'])
+    const items = fields.flatMap(({ f }) => (f.items ?? []).filter((i) => i.jurisdictionPatterns !== undefined).map((i) => `${f.name}.${i.name}`))
+    expect(items).toEqual(['bankruptcyActions.newIcNo'])
+    for (const name of ['subjectNewIcNo', 'subjectProvidedNewIcNo']) expect(spec(CBR, name).jurisdictionPatterns).toEqual(NRIC)
+    // A field that may hold a passport number, or a registration number of a
+    // party that may be foreign, a sole proprietorship or an LLP, is
+    // jurisdiction-free: charset only.
+    for (const name of ['subjectIcPassportNo', 'subjectProvidedIcPassportNo', 'subjectRegistrationNo', 'subjectProvidedRegistrationNo']) {
+      expect(spec(CBR, name).jurisdictionPatterns, name).toBeUndefined()
+    }
+  })
+
+  it('never Malaysia by default: with no proven jurisdiction only the charset applies', () => {
+    const v = (j: string | null | undefined) => rules(validateCanonicalFields(CBR, { subjectNewIcNo: '1234' }, { jurisdiction: j }).violations)
+    expect(v('MY')).toEqual(['pattern-mismatch'])
+    for (const j of [undefined, null, '', 'my', 'XX', 'VN']) expect(v(j), String(j)).toEqual([])
   })
 
   it('currency-bearing fields are kind "currency", one per category at most', () => {
@@ -220,14 +269,17 @@ describe('SYS-3728 — validateCanonicalFields: scalar rules', () => {
   })
 
   it.each([[Number.NaN], [Number.POSITIVE_INFINITY], [Number.NEGATIVE_INFINITY]])('non-finite-number: %s', (n) => {
-    expect(rules(check(CBR, { bureauScore: n }).violations)).toEqual(['non-finite-number'])
-    expect(rules(check(CBR, { securedOutstandingBalance: n }).violations)).toEqual(['non-finite-number'])
+    // One value: named for what it is.
+    expect(rules(validateFieldValue(spec(CBR, 'bureauScore'), n))).toEqual(['non-finite-number'])
+    expect(rules(validateFieldValue(spec(CBR, 'securedOutstandingBalance'), n))).toEqual(['non-finite-number'])
+    // Inside an object: JSON would store it as null, so the object is not plain data.
+    expect(rules(check(CBR, { bureauScore: n }).violations)).toEqual(['not-plain-data'])
   })
 
   it.each([
     ['a JSON array', `[{"x":"${SECRET}"}]`],
     ['an empty JSON array', '[]'],
-    ['a JSON object with leading space', `  {"x":"${SECRET}"}`],
+    ['a JSON object', `{"x":"${SECRET}"}`],
   ])('serialized-structure: %s in a string field', (_l, value) => {
     const r = check(CBR, { subjectName: value })
     expect(rules(r.violations)).toEqual(['serialized-structure'])
@@ -259,13 +311,13 @@ describe('SYS-3728 — validateCanonicalFields: scalar rules', () => {
   })
 
   it.each([
-    ['section', 'ccris '], ['section', 'pbi-0'], ['section', 'CCRIS'],
+    ['section', 'pbi-0'], ['section', 'CCRIS'],
   ])('pattern-mismatch: %s = %j', (field, value) => {
     expect(rules(check(CBR, { [field]: value }).violations)).toEqual(['pattern-mismatch'])
   })
 
   it.each([
-    ['mgmtStatementsRead', 'PL,BS,XX'], ['mgmtStatementsRead', 'BS,PL '],
+    ['mgmtStatementsRead', 'PL,BS,XX'], ['mgmtStatementsRead', 'BS,PL,'],
   ])('pattern-mismatch: %s = %j (a pattern is a FULL match)', (field, value) => {
     expect(rules(check(MA, { [field]: value }).violations)).toEqual(['pattern-mismatch'])
   })
@@ -286,8 +338,14 @@ describe('SYS-3728 — validateCanonicalFields: scalar rules', () => {
     expect(rules(validateCanonicalFields(CBR, { subjectRole: '[1]' }, { enumMembership: 'skip' }).violations)).toEqual(['serialized-structure'])
   })
 
-  it.each([['RM'], ['myr'], ['$'], ["RM'000"], ['EUR'], [' MYR']])('currency-not-allowed: %j is not a stored ISO code', (value) => {
+  it.each([['RM'], ['myr'], ["RM'000"], ['EUR']])('currency-not-allowed: %j is not a stored ISO code', (value) => {
     expect(rules(check(MA, { mgmtCurrency: value }).violations)).toEqual(['currency-not-allowed'])
+  })
+
+  it('a currency that is not even text of a code is refused before membership: "$" is a placeholder, " MYR" untrimmed', () => {
+    expect(rules(check(MA, { mgmtCurrency: '$' }).violations)).toEqual(['placeholder'])
+    expect(rules(check(MA, { mgmtCurrency: ' MYR' }).violations)).toEqual(['untrimmed'])
+    expect(rules(check(CBR, { section: 'ccris ' }).violations)).toEqual(['untrimmed'])
   })
 })
 
@@ -318,8 +376,8 @@ describe('SYS-3728 — validateCanonicalFields: list rules', () => {
   })
 
   it('a kebab-case key is its camelCase item; both spellings at once is duplicate-item-key', () => {
-    expect(check(CBR, { directorsAndOfficers: [{ name: 'A', 'appointment-date': '01/01/2020' }] }).ok).toBe(true)
-    expect(check(CBR, { directorsAndOfficers: [{ 'appointment-date': 'a', appointmentDate: 'b' }] }).violations).toEqual([
+    expect(check(CBR, { directorsAndOfficers: [{ name: 'A', 'appointment-date': '2020-01-01' }] }).ok).toBe(true)
+    expect(check(CBR, { directorsAndOfficers: [{ 'appointment-date': '2020-01-01', appointmentDate: '2020-02-01' }] }).violations).toEqual([
       { field: 'directorsAndOfficers', item: 0, key: 'appointmentDate', rule: 'duplicate-item-key' },
     ])
   })
@@ -328,7 +386,7 @@ describe('SYS-3728 — validateCanonicalFields: list rules', () => {
     const at = (row: Record<string, unknown>) => ma([row]).violations
     expect(at({ amount: '1,000' })).toEqual([{ field: 'mgmtTradeReceivablesItems', item: 0, key: 'amount', rule: 'type-mismatch' }])
     expect(at({ amount: 'RM 5' })[0]!.rule).toBe('type-mismatch')
-    expect(at({ amount: Number.NaN })[0]!.rule).toBe('non-finite-number')
+    expect(at({ amount: Number.NaN })[0]!.rule).toBe('not-plain-data')
     expect(at({ amount: true })[0]!.rule).toBe('type-mismatch')
     expect(at({ term: 'x'.repeat(257) })[0]!.rule).toBe('max-length')
     expect(at({ term: 'a\u0000' })[0]!.rule).toBe('control-characters')
@@ -408,8 +466,8 @@ describe('SYS-3728 — validateAdapterExtraction: the envelope the writer passes
   it('a clean extraction passes, periods included', () => {
     expect(x(ok)).toEqual({ ok: true, violations: [] })
     expect(x({ instanceKey: 'managementAccount:b', values: {}, observedAt: '2026-09-23T10:00:00.000Z', periods: [
-      { position: 1, end: '2025-12-31', values: { mgmtTotalAssets: 1 }, confidence: { mgmtTotalAssets: 0.9 } },
-      { position: 2, values: { mgmtTotalAssets: 2 } },
+      { position: 1, end: '2025-12-31', values: { mgmtCurrency: 'MYR', mgmtTotalAssets: 1 }, confidence: { mgmtTotalAssets: 0.9 } },
+      { position: 2, values: { mgmtCurrency: 'MYR', mgmtTotalAssets: 2 } },
     ] }, MA)).toEqual({ ok: true, violations: [] })
   })
 

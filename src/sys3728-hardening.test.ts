@@ -89,15 +89,19 @@ describe('B2 — invisible, format, private-use and unassigned characters are re
 
   it('blank means "no visible character", not merely whitespace', () => {
     expect(cbr({ subjectName: '\u00a0\u3000 \t' })).toEqual(['control-characters']) // tab in a short field
-    expect(cbr({ subjectName: '\u00a0\u3000 ' })).toEqual(['blank-string'])
-    expect(cbr({ subjectName: '-' })).toEqual([]) // punctuation is visible
-    // Not whitespace, and still nothing visible: a lone combining mark.
-    expect(cbr({ subjectName: '\u0301' })).toEqual(['blank-string'])
+    // Second review: a non-ASCII space is refused as itself, wherever it is.
+    expect(cbr({ subjectName: '\u00a0\u3000 ' })).toEqual(['non-ascii-space'])
+    expect(cbr({ subjectName: '   ' })).toEqual(['blank-string'])
+    // Punctuation is visible, but it is not a value (sys3728-airtight: placeholders).
+    expect(cbr({ subjectName: '-' })).toEqual(['placeholder'])
+    // A combining mark with no base: malformed text, not merely blank.
+    expect(cbr({ subjectName: '\u0301' })).toEqual(['malformed-text'])
   })
 
-  it('more than four stacked combining marks is refused; ordinary Thai and Vietnamese text is not', () => {
+  it('more than two stacked nonspacing marks is refused (second review tightened four to two); ordinary Thai and Vietnamese text is not', () => {
     expect(cbr({ subjectName: 'a\u0301\u0301\u0301\u0301\u0301' })).toEqual(['excessive-combining-marks'])
-    expect(cbr({ subjectName: 'a\u0301\u0301\u0301\u0301' })).toEqual([])
+    expect(cbr({ subjectName: 'x\u0301\u0301\u0301' })).toEqual(['excessive-combining-marks'])
+    expect(cbr({ subjectName: 'x\u0301\u0301' })).toEqual([])
     expect(cbr({ subjectName: 'บริษัท ตัวอย่าง จำกัด' })).toEqual([])
     expect(cbr({ subjectName: 'Công ty Ví dụ' })).toEqual([])
     expect(cbr({ subjectName: 'Cong\u0302\u0301 ty' })).toEqual([])

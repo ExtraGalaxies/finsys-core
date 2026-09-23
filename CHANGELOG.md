@@ -33,8 +33,9 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   amounts as money), because the host regroups the printed lines into
   facilities. **Every other bureau list's items mirror the columns the
   extraction service declares for that table**, camel-cased 1:1
-  (`appointment-date` → `appointmentDate`, `limit-rm` → `limitRm`), all as
-  printed text: the host passes those rows through unparsed. One mirrored key
+  (`appointment-date` → `appointmentDate`, `limit-rm` → `limitRm`). Amount
+  columns are parsed numbers (money) and date columns ISO dates — see the
+  second-review entry below; every other column is text. One mirrored key
   names the bureau (`lastUpdatedByExperian`); its label does not ("Last Updated
   by Bureau").
 - **`FileFieldTableItem.list`** (`IhsListCell`, keyed like `data`): a list
@@ -99,9 +100,10 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
     (all noncharacters), the invisible fillers U+115F/1160/3164/FFA0/2800
     (`invisible-characters`); `\p{Cc}` and U+2028/2029, with tab / newline
     only in long text (`control-characters`); lone surrogates
-    (`malformed-text`); more than four stacked combining marks
+    (`malformed-text`); stacked combining marks
     (`excessive-combining-marks`); a value with no letter, number,
-    punctuation or symbol (`blank-string`).
+    punctuation or symbol (`blank-string`). Tightened by the second review,
+    below.
   - **Structure is keyed on the leading visible character**, not on
     parseability: a first visible `{` is always refused; a first `[` is
     refused in a short field, and in long text unless it opens a bracketed tag
@@ -113,9 +115,8 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
     are non-negative safe integers (`not-an-integer`, `out-of-range`); every
     other number has magnitude ≤ `NUMBER_MAX_MAGNITUDE` (1e15,
     `unsafe-magnitude`); a declared `range` (35 fields) is now ENFORCED,
-    inclusive (`out-of-range`) — it was documentation only. `bureauScore`
-    declares no range: the producer states none, so it is held to a
-    non-negative integer.
+    inclusive (`out-of-range`) — it was documentation only. (`bureauScore`
+    gained a range in the second review, below.)
   - **Dates**: `format: "date"` / `"year"` replaces the date patterns and is
     calendar-checked (`invalid-date`: no 2026-02-30, 9999-99-99, year 0000);
     `notAfter` orders two date fields (`mgmtPeriodStart` ≤ `mgmtPeriodEnd`,
@@ -140,6 +141,114 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   - `jurisdiction` selects `jurisdictionPatterns` STRICTLY: an absent,
     unknown or lowercase code applies only jurisdiction-independent rules —
     deliberately not `resolveJurisdiction`'s "absent means MY".
+- **SYS-3728, second adversarial review — the contract made airtight.** The
+  operator's standard: this data is highly sensitive, a slot takes nothing but
+  what it declares, and jurisdiction and currency symbols are part of that.
+  Every input below was ACCEPTED at 000ab42 and is now refused
+  (`src/sys3728-airtight.test.ts`); a positive corpus of Malay, Chinese,
+  Indian, Vietnamese, Thai and Tamil names and Malaysian company names pins
+  that real subjects still pass. New rules: `placeholder`, `non-ascii-space`,
+  `untrimmed`, `implausible-date`, `currency-mismatch`, `currency-missing`,
+  `period-mismatch`.
+  - **Every exported validator judges a snapshot.** `validateCanonicalFields`,
+    `validateAdapterExtraction`, `validateFieldValue` and the new
+    `validateListItemValue` copy their input through `normalizeForWrite` first
+    (a getter or `toJSON` is `not-plain-data`), so a verdict always describes
+    plain data. They are CHECK-ONLY; `prepareExtractionForWrite` is the one
+    that returns the snapshot, and the only one a writer persists from.
+  - **The snapshot is NFC**, and a list stored as JSON text is stored as the
+    RE-SERIALIZATION of its parse, never the caller's text. Nothing else is
+    rewritten.
+  - **Text.** Refused in every string: every `Default_Ignorable_Code_Point`
+    (adds U+034F, all variation selectors U+FE00–FE0F and U+E0100–E01EF,
+    U+180B–180F, U+17B4/17B5) — `invisible-characters`; every space
+    separator but U+0020 (no-break, en/em/thin/hair, narrow no-break, medium
+    mathematical, ideographic, Ogham) — `non-ascii-space`; leading or trailing
+    whitespace — `untrimmed`; a leading combining mark — `malformed-text`;
+    MORE THAN TWO stacked nonspacing marks on one base (was four) —
+    `excessive-combining-marks`, counted after NFC.
+  - **Placeholders are not values** (`placeholder`, every string field and
+    item, every category): text with no letter and no number (`-`, `–`, `—`,
+    `.`, `*`, `?`), or, case-insensitively and ignoring spaces, dots,
+    slashes, hyphens, `na`, `nil`, `null`, `none`, `see attached`,
+    `not applicable`, `not available`. A writer OMITS them; a reader renders
+    absent as `-` already. `normalizePrintedText(value)` is the writer-side
+    rule (NFC, non-ASCII spaces → U+0020, trim, `undefined` for blank or a
+    placeholder); `isPlaceholderText` is exported.
+  - **Structure** is found after leading whitespace, marks and
+    default-ignorables; `{` / `[` include their fullwidth and small-form
+    lookalikes (｛ ﹛ ❴ ⦃, ［ ⁅ ⟦); a value that is a JSON string literal is
+    decoded (up to four levels) and held to the same rule.
+  - **Identifiers** (decision): an identifier field or column holds ASCII
+    letters and digits in runs joined by single `-` or `/`
+    (`[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*`) — no fullwidth or Arabic-Indic
+    digits, no spaces, no lookalike hyphens. Registration numbers also accept
+    the one print form the bureau uses, `NEW (OLD)`
+    (`201901012345 (1234567-A)`). On: `reportOrderId`, the six subject IC /
+    passport / registration fields, `shareholdingInterests.registrationNo`,
+    every litigation list's `localNo` and `icPpNoNewIcNo`,
+    `bankruptcyActions.newIcNo` / `icPpNo`,
+    `bankruptcyActionCreditors.creditorsIcPpLocalNoRegNo`,
+    `tradeCreditReferences.subjectId`. Case, account, reference and
+    solicitor numbers are references, not identities of a subject, and stay
+    free text.
+  - **Malaysian NRIC** (decision): `jurisdictionPatterns.MY`
+    `\d{6}-?\d{2}-?\d{4}` on `subjectNewIcNo`, `subjectProvidedNewIcNo` and
+    `bankruptcyActions.newIcNo` only — a "new IC number" is the MyKad number by
+    definition. NOT on the IC / passport fields (they hold passports) and NOT
+    on registration numbers: a party entry may be foreign, a sole
+    proprietorship (`JM0123456-X`) or an LLP (`LLP0012345-LGN`), so an SSM
+    company pattern would refuse real parties; those carry the charset only.
+    Never Malaysia by default: with no proven jurisdiction, only the charset
+    applies. List items may now declare `jurisdictionPatterns`. This reverses
+    the earlier pin of "no shipped jurisdiction pattern".
+  - **Money in list rows** (decision): every amount column is `type: "number"`,
+    `kind: "money"`, under the same 1e15 magnitude bound —
+    `shareholdingInterests.paidUpCapital`, `creditApplications` /
+    `specialAttentionAccounts` `.totalOutstandingBalanceRm` / `.limitRm`, every
+    litigation list's `amountClaimed`, `tradeCreditReferences.amountDue`,
+    `nonBankLenderFacilities.limitRm` / `.instalmentAmountRm` /
+    `.totalOutstandingBalanceRm` (15 columns; outstanding credit's three were
+    already money). A printed amount ("RM 5,000.00") in a number column is a
+    `type-mismatch`. `shareholding` and `percentage` stay text: a share count
+    and a percentage are not money, and their printed form is not yet
+    characterized.
+  - **Dates** (decision): `format: "date"` on `reportOrderDate` (the printed
+    time of day is not kept), `corporationIncorporationDate`, and 42 date
+    columns across the bureau lists; list items may now declare `format`. A
+    dated value is PLAUSIBLE: not before `DATE_FLOOR` (1900-01-01) and not
+    after the validator's clock — `ValidationOptions.now`, injectable, default
+    now — plus one day (UTC; the day is for time zones ahead of UTC). A field
+    or column that legitimately names a future date declares `mayBeFuture`
+    and is bounded at the clock plus `FUTURE_DATE_HORIZON_YEARS` (10): the
+    litigation `hearingDate`s, `shareholdingInterests.businessExpiryDate`,
+    `bankruptcyActions.hearingDate` / `dischargeDate`, `mgmtPeriodEnd`,
+    `mgmtPeriodYear`. Envelope `periods[].start/end` are bounded at the
+    horizon. `implausible-date`.
+  - **Bureau numbers** (decision): `bureauScore` declares `[0, 1000]` — wide
+    enough for every bureau scale in use (the first adapter's i-SCORE scale is
+    not documented in either repository; this range is not a claim about it)
+    — and stays an integer: a `score` is whole points unless its range lies
+    within the unit interval. The two outstanding-to-limit ratios declare
+    `[0, 100]`: never negative, may exceed 1 (utilization over the limit), and
+    capped at ten thousand percent.
+  - **Lists as text**: at most `LIST_TEXT_MAX_LENGTH` (1,000,000) characters,
+    checked before parsing (`max-length`); an object that declares a key twice
+    is `duplicate-item-key` — JSON.parse keeps the last silently, so two
+    readers could read two values. `parseListValue` reports both.
+  - **Extraction-level consistency** (`validateAdapterExtraction` /
+    `prepareExtractionForWrite` only): in a category with a `kind: "currency"`
+    field, every currency the extraction states is one currency
+    (`currency-mismatch`), and a scope that states money (a money field or a
+    money column holding a number) states a currency, its own or the top
+    level's (`currency-missing`). A category may declare `periodFields`
+    (`CategoryPeriodFields`: `start`, `end`, `year`; `management-account`
+    does): an envelope `periods[].start` / `.end` equal to the period's own
+    fields when both are given, and the year field the year of the end field
+    (`period-mismatch`).
+  - **Enum membership** requires the manifest's label set to be an ARRAY and
+    matches exactly (a string "set" answered `includes` by substring).
+  - **Instance keys** are not paths: no `/`, no `\`, no `..`; and already NFC.
 - **Constraints in the registry** (loader-validated; `schemaVersion` 1.5.0 → 1.6.0, covering the list type too):
   every `string` field and string list item has an effective `maxLength`
   (`STRING_MAX_LENGTH_DEFAULT` 256 — finsim's 88,336 canonical string values
@@ -149,10 +258,10 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   (`LIST_MAX_ITEMS_DEFAULT` 500). Full-match `pattern`s only where the writer
   provably normalizes the format: `section`, `mgmtPeriodEnd`,
   `mgmtPeriodStart`, `mgmtPeriodYear`, `mgmtStatementsRead`.
-  `jurisdictionPatterns` (per jurisdiction) is supported and validated, but
-  no shipped field declares one: the producer passes bureau identifiers
-  through as printed, so no format is provable. Shared-fact attestations must
-  agree on these constraints.
+  `jurisdictionPatterns` (per jurisdiction) is supported and validated.
+  (Identifier patterns, including the first shipped jurisdiction pattern,
+  arrived in the second review, below.) Shared-fact attestations must agree on
+  these constraints.
 - **Kind `"currency"`** (ISO 4217 from `CURRENCY_CODES`: every jurisdiction
   display currency plus USD, SGD, PHP, IDR), at most one per category, on
   `management-account.mgmtCurrency` and `financial-statement.currency`.
@@ -192,6 +301,16 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   `data` / `formattedData` / `confidence` / `provenance`, all follow. A consumer
   that looked a bureau column up by the old key must use `timePeriods` instead.
   `instanceRowsFromView` is unchanged: rows keep their wire order and period.
+- **Second review — what now reads as "(invalid value)" or is refused.** Stored
+  bureau rows whose `reportOrderDate` holds the printed date AND time, whose
+  date columns hold `DD/MM/YYYY`, or whose amount columns hold printed text
+  render those cells as "(invalid value)" until re-extracted by a writer that
+  converts them (finsys-api SYS-3728). A management account whose money has no
+  recognized currency is REFUSED at write (`currency-missing`) rather than
+  stored undenominated. Every other category is affected only by the global
+  text rules (placeholders, non-ASCII spaces, untrimmed text,
+  default-ignorables) — in finsys-api's log mode those are logged, not
+  refused.
 - **Stored data that breaks the contract now renders as "(invalid value)"** in
   the credit-bureau and management-account tables: outstanding credit stored in
   the pre-regrouping one-row-per-line shape (undeclared keys), and a

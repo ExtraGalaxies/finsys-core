@@ -22,7 +22,7 @@ Each field has:
 - **unit** — an INTRINSIC unit of measure, from a closed set: `ratio` (0..1), `months`, `days`, `hours`, `count`, `meters`, `deg`, `rating`, `score`. Validated at load — anything else is a hard error. Use the unit in your own conversion logic; FinSys assumes values come in already-converted.
 - **kind** — a semantic refinement of `type`. `enum` (one label from a closed set; must be `type: string`, no `range`) or `money` (a monetary amount; must be `type: number`, and declares NEITHER a `unit` NOR a `range`).
   A currency is **not** a unit and must never be declared as one. It is a property of the OBSERVATION, not of the field: one document can report several currencies, so no field-level currency can be right for more than one of them. The denomination travels with the value on its provenance envelope (`IhsFieldProvenance.currency`). Likewise a `range` on money is denominated by definition, so it can only be correct in one currency — `telcoArpuMyr [0, 10000]` is sane in ringgit and roughly twenty times too small in dong.
-- **Write contract (SYS-3728)** — every value a writer stores is checked by `validateAdapterExtraction` / `validateCanonicalFields`, and every table re-checks it before rendering. A `string` field has an effective **`maxLength`** (default 256; a field or list item holding longer printed text declares more, and only such long text may contain a newline or tab), may declare a full-match **`pattern`** (only where the writer provably normalizes the format) and **`jurisdictionPatterns`** (a pattern per jurisdiction, applied only under that jurisdiction — never defaulted to MY). A `list` has an effective **`maxItems`** (default 500). Kind **`currency`** is an ISO 4217 code from `CURRENCY_CODES`, normalized from the printed form with `normalizeCurrency` (a bare `$` is ambiguous and refused). No string may open with a structure (a first visible `{`, or `[` outside a long-text tag), hold an invisible, format, private-use, unassigned or control character, stack more than four combining marks, or be blank; a number or money value is a finite number, never text, a count is a non-negative integer, and a declared `range` is enforced. A `format` (`date` / `year`) is calendar-checked and `notAfter` orders two dates. Writers call `prepareExtractionForWrite` and persist the snapshot it returns. Spreadsheet formula injection is an export-encoding concern, not this contract's.
+- **Write contract (SYS-3728)** — every value a writer stores is checked by `validateAdapterExtraction` / `validateCanonicalFields`, and every table re-checks it before rendering. A `string` field has an effective **`maxLength`** (default 256; a field or list item holding longer printed text declares more, and only such long text may contain a newline or tab), may declare a full-match **`pattern`** (only where the writer provably normalizes the format) and **`jurisdictionPatterns`** (a pattern per jurisdiction, applied only under that jurisdiction — never defaulted to MY). A `list` has an effective **`maxItems`** (default 500). Kind **`currency`** is an ISO 4217 code from `CURRENCY_CODES`, normalized from the printed form with `normalizeCurrency` (a bare `$` is ambiguous and refused). No string may open with a structure (a first visible `{`, or `[` outside a long-text tag — after marks and invisibles, fullwidth lookalikes included, and inside a JSON string literal), hold a default-ignorable, format, private-use, unassigned or control character, hold a space other than U+0020, carry leading or trailing whitespace, open with a combining mark, stack more than two nonspacing marks, be blank, or be a **placeholder** (no letter and no number — `-`, `—`, `.` — or `N/A`, `nil`, `null`, `none`, `see attached`, …: a writer omits it). A number or money value is a finite number, never text, a count is a non-negative integer, and a declared `range` is enforced. A `format` (`date` / `year`) is calendar-checked AND plausible: not before 1900-01-01, not after the validator's clock (`now`, injectable) plus a day — or plus ten years for a field declaring `mayBeFuture` — and `notAfter` orders two dates. A list stored as JSON text is at most 1,000,000 characters with no object repeating a key. Across a whole extraction, a category with a `currency` field states one currency, and states one wherever it states money; `periodFields` holds a period's envelope dates and year to its own fields. Every exported validator judges a plain-data NFC snapshot; writers call `prepareExtractionForWrite` and persist the snapshot it returns (NFC, lists re-serialized). `normalizePrintedText` is the writer-side text rule. Spreadsheet formula injection is an export-encoding concern, not this contract's.
 - **range** — inclusive bounds, ENFORCED by the write contract since SYS-3728 (a value outside is refused as `out-of-range`); before that they were documentation only.
 
 If you need a field that isn't in any category here, talk to FinHero about adding it (or proposing a new category).
@@ -167,13 +167,15 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 **Document type**: `experianReports` — declared on its catalog entry (`extraction_category`), because the type has no v1 wide-table columns for the migration map to derive it from (SYS-3705). Rendered under canonical field names.
 
+**What each slot accepts (SYS-3728)**: identifier fields and columns (`reportOrderId`, the subject IC / passport / registration numbers, the litigation `localNo` / `icPpNoNewIcNo`, the bankruptcy `newIcNo` / `icPpNo`, `creditorsIcPpLocalNoRegNo`, `subjectId`, `shareholdingInterests.registrationNo`) hold ASCII letters and digits joined by single `-` or `/`; a registration number may also take the printed `NEW (OLD)` form. Under jurisdiction `MY` only, the three new-IC fields must be a 12-digit NRIC (`\d{6}-?\d{2}-?\d{4}`); IC/passport and registration fields stay jurisdiction-free, because they hold passports and foreign, sole-proprietorship and LLP numbers. Every amount column in every list is a number (`kind: "money"`), never printed text. Every date field and date column is ISO YYYY-MM-DD within the plausible range; hearing, expiry and discharge dates may lie up to ten years ahead.
+
 | Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
 | `section` | string |  |  | Which subject entry of the report this instance is, as the reader sets it: `ccris` (a company the report was ordered on), `iriss` (an individual the report was ordered on), or `pbi-1`, `pbi-2`, … (each party with business interest, in printed order). |
 | `subjectRole` | string | enum |  | `principal` for the subject the report was ordered on (section ccris or iriss); `party` for a party with business interest (section pbi-n). |
 | `reportBanner` | string |  |  | The report-type banner line as printed, which names the layout (company report, individual report, or a party-with-business-interest entry). |
 | `reportOrderId` | string |  |  | The bureau's order id for the report, from the running page header. |
-| `reportOrderDate` | string |  |  | The order date and time from the running page header, as printed. |
+| `reportOrderDate` | string | date |  | The order date from the running page header, as ISO YYYY-MM-DD (the printed time of day is not kept). |
 | `subjectName` | string |  |  | The subject's name in the bureau's databank record. |
 | `subjectProvidedName` | string |  |  | The subject's name as the requester typed it when ordering the report. |
 | `subjectRegistrationNo` | string |  |  | The company registration number in the databank record (company subjects). |
@@ -184,7 +186,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 | `subjectProvidedNewIcNo` | string |  |  | The new IC number as provided by the requester. |
 | `subjectNationality` | string |  |  | The nationality of an individual the report was ordered on. |
 | `subjectRelationship` | string |  |  | A party's relationship to the principal subject (director, shareholder, …). |
-| `bureauScore` | number | score |  | The bureau's own credit score for the subject, parsed from the score the report prints (the i-SCORE on the first adapter's reports). Absent when the report prints no score (N/A). |
+| `bureauScore` | number | score | 0–1000 | The bureau's own credit score for the subject, an integer (a range wide enough for every bureau scale in use, not a claim about the first bureau's). Absent when the report prints no score (N/A). |
 | `bankingApprovedApplications12m` | number | count |  | Credit applications approved in the last 12 months, from the banking (CCRIS) summary. |
 | `bankingPendingApplicationsCount` | number | count |  | Credit applications pending, from the banking summary. |
 | `bankingSpecialAttentionAccountsCount` | number | count |  | Accounts under special attention, from the banking summary. |
@@ -198,7 +200,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 | `businessInterestsCount` | number | count |  | Companies or businesses the subject holds an interest in. |
 | `shareholdingInterests` | list |  |  | JSON-encoded list of the companies the subject holds an interest or position in, one entry per printed row (name, registration number, incorporation date, paid-up capital, activity, position, appointment date, shareholding, percentage, remark). *Items:* `no`, `name`, `registrationNo`, `incorporationDate`, `paidUpCapital`, `activity`, `position`, `appointed`, `businessExpiryDate`, `shareholding`, `percentage`, `remark`, `lastUpdatedByExperian`. |
 | `corporationName` | string |  |  | Company name (or business name, for a sole proprietorship) from the corporation-details section (company subjects). |
-| `corporationIncorporationDate` | string |  |  | Incorporation or registration date from the corporation-details section, as printed. |
+| `corporationIncorporationDate` | string | date |  | Incorporation or registration date from the corporation-details section, as ISO YYYY-MM-DD. |
 | `corporationPaidUpCapital` | number | money |  | Total issued and paid-up capital from the corporation-details section. |
 | `corporationBusinessSector` | string |  |  | Business sector from the corporation-details section, as printed. |
 | `directorsAndOfficers` | list |  |  | JSON-encoded list of directors and officers from the corporation-details section, one entry per printed row (name, appointment date, designation). *Items:* `name`, `designation`, `appointmentDate`. |
@@ -206,11 +208,11 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 | `ccrisEntityName` | string |  |  | The entity name of the banking-credit (CCRIS) record the report selected. |
 | `securedFacilitiesCount` | number | count |  | Number of secured banking facilities. |
 | `securedOutstandingBalance` | number | money |  | Total outstanding balance across secured facilities. |
-| `securedOutstandingToLimitRatio` | number | ratio |  | Secured outstanding balance as a fraction of the total secured limit (the printed percentage divided by 100; can exceed 1). |
+| `securedOutstandingToLimitRatio` | number | ratio | 0–100 | Secured outstanding balance as a fraction of the total secured limit (the printed percentage divided by 100; can exceed 1). |
 | `securedMaxInstallmentsInArrears12m` | number | count |  | Highest number of installments in arrears on any secured facility in the last 12 months. |
 | `unsecuredFacilitiesCount` | number | count |  | Number of unsecured banking facilities. |
 | `unsecuredOutstandingBalance` | number | money |  | Total outstanding balance across unsecured facilities. |
-| `unsecuredOutstandingToLimitRatio` | number | ratio |  | Unsecured outstanding balance as a fraction of the total unsecured limit (the printed percentage divided by 100; can exceed 1). |
+| `unsecuredOutstandingToLimitRatio` | number | ratio | 0–100 | Unsecured outstanding balance as a fraction of the total unsecured limit (the printed percentage divided by 100; can exceed 1). |
 | `unsecuredMaxInstallmentsInArrears12m` | number | count |  | Highest number of installments in arrears on any unsecured facility in the last 12 months. |
 | `liabilitiesOutstanding` | number | money |  | Total outstanding as borrower, from the liabilities summary. |
 | `liabilitiesTotalLimit` | number | money |  | Total limit as borrower, from the liabilities summary. |
@@ -257,6 +259,8 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 **Canonical table**: `ihs_alt_data_management_account`
 
 **Document type**: `managementAccounts` — declared on its catalog entry (`extraction_category`), as for `credit-bureau-report` (SYS-3705). Rendered under canonical field names.
+
+**Consistency (SYS-3728)**: an extraction states ONE currency across its periods, and every period stating money states a currency (its own or the extraction's); `periodFields` (`start` = `mgmtPeriodStart`, `end` = `mgmtPeriodEnd`, `year` = `mgmtPeriodYear`) holds an envelope `periods[].start/end` to the period's own fields and the year to the year of the end. `mgmtPeriodEnd` and `mgmtPeriodYear` may lie up to ten years ahead (a financial year still running).
 
 | Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|

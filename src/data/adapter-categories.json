@@ -2246,12 +2246,14 @@
         {
           "name": "reportOrderId",
           "type": "string",
+          "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*",
           "description": "The bureau's order id for the report, from the running page header."
         },
         {
           "name": "reportOrderDate",
           "type": "string",
-          "description": "The order date and time from the running page header, as printed."
+          "format": "date",
+          "description": "The order date from the running page header, as ISO YYYY-MM-DD (the printed time of day is not kept)."
         },
         {
           "name": "subjectName",
@@ -2266,31 +2268,39 @@
         {
           "name": "subjectRegistrationNo",
           "type": "string",
+          "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*(?: \\([A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*\\))?",
           "description": "The company registration number in the databank record (company subjects)."
         },
         {
           "name": "subjectProvidedRegistrationNo",
           "type": "string",
+          "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*(?: \\([A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*\\))?",
           "description": "The company registration number as provided by the requester (company subjects)."
         },
         {
           "name": "subjectIcPassportNo",
           "type": "string",
+          "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*",
           "description": "The old IC or passport number in the databank record (individual and party subjects)."
         },
         {
           "name": "subjectNewIcNo",
           "type": "string",
+          "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*",
+          "jurisdictionPatterns": { "MY": "\\d{6}-?\\d{2}-?\\d{4}" },
           "description": "The new IC number in the databank record (individual and party subjects)."
         },
         {
           "name": "subjectProvidedIcPassportNo",
           "type": "string",
+          "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*",
           "description": "The old IC or passport number as provided by the requester."
         },
         {
           "name": "subjectProvidedNewIcNo",
           "type": "string",
+          "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*",
+          "jurisdictionPatterns": { "MY": "\\d{6}-?\\d{2}-?\\d{4}" },
           "description": "The new IC number as provided by the requester."
         },
         {
@@ -2307,7 +2317,11 @@
           "name": "bureauScore",
           "type": "number",
           "unit": "score",
-          "description": "The bureau's own credit score for the subject, parsed from the score the report prints (the i-SCORE on the first adapter's reports). Absent when the report prints no score (N/A)."
+          "range": [
+            0,
+            1000
+          ],
+          "description": "The bureau's own credit score for the subject, parsed from the score the report prints (the i-SCORE on the first adapter's reports), an integer within 0..1000 — a range wide enough for every bureau scale in use, not the first bureau's own. Absent when the report prints no score (N/A)."
         },
         {
           "name": "bankingApprovedApplications12m",
@@ -2381,17 +2395,17 @@
           "items": [
             { "name": "no", "displayName": "No.", "type": "string" },
             { "name": "name", "displayName": "Name", "type": "string" },
-            { "name": "registrationNo", "displayName": "Registration No.", "type": "string" },
-            { "name": "incorporationDate", "displayName": "Incorporation Date", "type": "string" },
-            { "name": "paidUpCapital", "displayName": "Paid-up Capital", "type": "string" },
+            { "name": "registrationNo", "displayName": "Registration No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*(?: \\([A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*\\))?" },
+            { "name": "incorporationDate", "displayName": "Incorporation Date", "type": "string", "format": "date" },
+            { "name": "paidUpCapital", "displayName": "Paid-up Capital", "type": "number", "kind": "money" },
             { "name": "activity", "displayName": "Activity", "type": "string", "maxLength": 1024 },
             { "name": "position", "displayName": "Position", "type": "string" },
-            { "name": "appointed", "displayName": "Appointed", "type": "string" },
-            { "name": "businessExpiryDate", "displayName": "Business Expiry Date", "type": "string" },
+            { "name": "appointed", "displayName": "Appointed", "type": "string", "format": "date" },
+            { "name": "businessExpiryDate", "displayName": "Business Expiry Date", "type": "string", "format": "date", "mayBeFuture": true },
             { "name": "shareholding", "displayName": "Shareholding", "type": "string" },
             { "name": "percentage", "displayName": "Percentage", "type": "string" },
             { "name": "remark", "displayName": "Remark", "type": "string", "maxLength": 1024 },
-            { "name": "lastUpdatedByExperian", "displayName": "Last Updated by Bureau", "type": "string" }
+            { "name": "lastUpdatedByExperian", "displayName": "Last Updated by Bureau", "type": "string", "format": "date" }
           ],
           "description": "JSON-encoded list of the companies the subject holds an interest or position in, one entry per printed row (name, registration number, incorporation date, paid-up capital, activity, position, appointment date, shareholding, percentage, remark)."
         },
@@ -2403,7 +2417,8 @@
         {
           "name": "corporationIncorporationDate",
           "type": "string",
-          "description": "Incorporation or registration date from the corporation-details section, as printed."
+          "format": "date",
+          "description": "Incorporation or registration date from the corporation-details section, as ISO YYYY-MM-DD."
         },
         {
           "name": "corporationPaidUpCapital",
@@ -2422,7 +2437,7 @@
           "items": [
             { "name": "name", "displayName": "Name", "type": "string" },
             { "name": "designation", "displayName": "Designation", "type": "string" },
-            { "name": "appointmentDate", "displayName": "Appointment Date", "type": "string" }
+            { "name": "appointmentDate", "displayName": "Appointment Date", "type": "string", "format": "date" }
           ],
           "description": "JSON-encoded list of directors and officers from the corporation-details section, one entry per printed row (name, appointment date, designation)."
         },
@@ -2457,7 +2472,11 @@
           "name": "securedOutstandingToLimitRatio",
           "type": "number",
           "unit": "ratio",
-          "description": "Secured outstanding balance as a fraction of the total secured limit (the printed percentage divided by 100; can exceed 1)."
+          "range": [
+            0,
+            100
+          ],
+          "description": "Secured outstanding balance as a fraction of the total secured limit (the printed percentage divided by 100; can exceed 1, never below 0, at most 100 — ten thousand percent)."
         },
         {
           "name": "securedMaxInstallmentsInArrears12m",
@@ -2481,7 +2500,11 @@
           "name": "unsecuredOutstandingToLimitRatio",
           "type": "number",
           "unit": "ratio",
-          "description": "Unsecured outstanding balance as a fraction of the total unsecured limit (the printed percentage divided by 100; can exceed 1)."
+          "range": [
+            0,
+            100
+          ],
+          "description": "Unsecured outstanding balance as a fraction of the total unsecured limit (the printed percentage divided by 100; can exceed 1, never below 0, at most 100 — ten thousand percent)."
         },
         {
           "name": "unsecuredMaxInstallmentsInArrears12m",
@@ -2522,7 +2545,7 @@
           "type": "list",
           "items": [
             { "name": "accountNo", "displayName": "Account No.", "type": "string" },
-            { "name": "approvalDate", "displayName": "Approval Date", "type": "string" },
+            { "name": "approvalDate", "displayName": "Approval Date", "type": "string", "format": "date" },
             { "name": "capacity", "displayName": "Capacity", "type": "string" },
             { "name": "lenderType", "displayName": "Lender Type", "type": "string" },
             { "name": "accountLimit", "displayName": "Limit", "type": "number", "kind": "money" },
@@ -2530,12 +2553,12 @@
             { "name": "status", "displayName": "Status", "type": "string" },
             { "name": "facility", "displayName": "Facility", "type": "string" },
             { "name": "balance", "displayName": "Balance", "type": "number", "kind": "money" },
-            { "name": "balanceUpdated", "displayName": "Balance Updated", "type": "string" },
+            { "name": "balanceUpdated", "displayName": "Balance Updated", "type": "string", "format": "date" },
             { "name": "instalment", "displayName": "Instalment", "type": "number", "kind": "money" },
             { "name": "repaymentTerm", "displayName": "Repayment Term", "type": "string" },
             { "name": "conduct12m", "displayName": "Conduct (12 months)", "type": "string" },
             { "name": "legalStatus", "displayName": "Legal Status", "type": "string" },
-            { "name": "statusUpdated", "displayName": "Status Updated", "type": "string" },
+            { "name": "statusUpdated", "displayName": "Status Updated", "type": "string", "format": "date" },
             { "name": "collateralDetail", "displayName": "Collateral Detail", "type": "string", "maxLength": 1024 }
           ],
           "description": "JSON-encoded list of the outstanding banking credit facilities, ONE ENTRY PER FACILITY: the lines the source prints for one account (its approval line, its collateral lines, its facility line) combined into a single row, with the limit, balance and instalment parsed as money and the twelve monthly conduct-of-account marks carried together as conduct12m. Rows stored before that regrouping (one entry per printed line) carry undeclared keys, so they break the write contract and render as an invalid value until re-extracted."
@@ -2545,14 +2568,14 @@
           "type": "list",
           "items": [
             { "name": "no", "displayName": "No.", "type": "string" },
-            { "name": "date", "displayName": "Date", "type": "string" },
+            { "name": "date", "displayName": "Date", "type": "string", "format": "date" },
             { "name": "sts", "displayName": "Status", "type": "string" },
             { "name": "capacity", "displayName": "Capacity", "type": "string" },
             { "name": "lenderType", "displayName": "Lender Type", "type": "string" },
             { "name": "facility", "displayName": "Facility", "type": "string" },
-            { "name": "totalOutstandingBalanceRm", "displayName": "Total Outstanding Balance", "type": "string" },
-            { "name": "dateBalanceUpdated", "displayName": "Date Balance Updated", "type": "string" },
-            { "name": "limitRm", "displayName": "Limit", "type": "string" },
+            { "name": "totalOutstandingBalanceRm", "displayName": "Total Outstanding Balance", "type": "number", "kind": "money" },
+            { "name": "dateBalanceUpdated", "displayName": "Date Balance Updated", "type": "string", "format": "date" },
+            { "name": "limitRm", "displayName": "Limit", "type": "number", "kind": "money" },
             { "name": "prinRepymtTerm", "displayName": "Principal Repayment Term", "type": "string" },
             { "name": "colType", "displayName": "Collateral Type", "type": "string" },
             { "name": "conductOfAccountM01", "displayName": "Conduct M01", "type": "string" },
@@ -2568,7 +2591,7 @@
             { "name": "conductOfAccountM11", "displayName": "Conduct M11", "type": "string" },
             { "name": "conductOfAccountM12", "displayName": "Conduct M12", "type": "string" },
             { "name": "legalSts", "displayName": "Legal Status", "type": "string" },
-            { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string" },
+            { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string", "format": "date" },
             { "name": "propertyStatus", "displayName": "Property Status", "type": "string" },
             { "name": "address", "displayName": "Collateral Address", "type": "string", "maxLength": 1024 },
             { "name": "districtCityTown", "displayName": "District / City / Town", "type": "string" },
@@ -2583,14 +2606,14 @@
           "type": "list",
           "items": [
             { "name": "no", "displayName": "No.", "type": "string" },
-            { "name": "date", "displayName": "Date", "type": "string" },
+            { "name": "date", "displayName": "Date", "type": "string", "format": "date" },
             { "name": "sts", "displayName": "Status", "type": "string" },
             { "name": "capacity", "displayName": "Capacity", "type": "string" },
             { "name": "lenderType", "displayName": "Lender Type", "type": "string" },
             { "name": "facility", "displayName": "Facility", "type": "string" },
-            { "name": "totalOutstandingBalanceRm", "displayName": "Total Outstanding Balance", "type": "string" },
-            { "name": "dateBalanceUpdated", "displayName": "Date Balance Updated", "type": "string" },
-            { "name": "limitRm", "displayName": "Limit", "type": "string" },
+            { "name": "totalOutstandingBalanceRm", "displayName": "Total Outstanding Balance", "type": "number", "kind": "money" },
+            { "name": "dateBalanceUpdated", "displayName": "Date Balance Updated", "type": "string", "format": "date" },
+            { "name": "limitRm", "displayName": "Limit", "type": "number", "kind": "money" },
             { "name": "prinRepymtTerm", "displayName": "Principal Repayment Term", "type": "string" },
             { "name": "colType", "displayName": "Collateral Type", "type": "string" },
             { "name": "conductOfAccountM01", "displayName": "Conduct M01", "type": "string" },
@@ -2606,7 +2629,7 @@
             { "name": "conductOfAccountM11", "displayName": "Conduct M11", "type": "string" },
             { "name": "conductOfAccountM12", "displayName": "Conduct M12", "type": "string" },
             { "name": "legalSts", "displayName": "Legal Status", "type": "string" },
-            { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string" },
+            { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string", "format": "date" },
             { "name": "propertyStatus", "displayName": "Property Status", "type": "string" },
             { "name": "address", "displayName": "Collateral Address", "type": "string", "maxLength": 1024 },
             { "name": "districtCityTown", "displayName": "District / City / Town", "type": "string" },
@@ -2676,8 +2699,8 @@
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
             { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
-            { "name": "localNo", "displayName": "Local No.", "type": "string" },
-            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
+            { "name": "localNo", "displayName": "Local No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
+            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
             { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
@@ -2689,14 +2712,14 @@
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
             { "name": "solicitorRef", "displayName": "Solicitor Ref.", "type": "string" },
             { "name": "solicitor", "displayName": "Solicitor", "type": "string" },
-            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "string" },
-            { "name": "suitDate", "displayName": "Suit Date", "type": "string" },
-            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string" },
+            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "number", "kind": "money" },
+            { "name": "suitDate", "displayName": "Suit Date", "type": "string", "format": "date" },
+            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string", "format": "date", "mayBeFuture": true },
             { "name": "caseStatus", "displayName": "Case Status", "type": "string" },
             { "name": "suitRef", "displayName": "Suit Ref.", "type": "string" },
             { "name": "windingUpOrderDateRef", "displayName": "Winding-up Order Date Ref.", "type": "string" },
-            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string" },
-            { "name": "petitionDate", "displayName": "Petition Date", "type": "string" },
+            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string", "format": "date" },
+            { "name": "petitionDate", "displayName": "Petition Date", "type": "string", "format": "date" },
             { "name": "petitionRef", "displayName": "Petition Ref.", "type": "string" }
           ],
           "description": "JSON-encoded list of legal suits with the subject as defendant, one entry per suit."
@@ -2707,8 +2730,8 @@
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
             { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
-            { "name": "localNo", "displayName": "Local No.", "type": "string" },
-            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
+            { "name": "localNo", "displayName": "Local No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
+            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
             { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
@@ -2720,14 +2743,14 @@
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
             { "name": "solicitorRef", "displayName": "Solicitor Ref.", "type": "string" },
             { "name": "solicitor", "displayName": "Solicitor", "type": "string" },
-            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "string" },
-            { "name": "suitDate", "displayName": "Suit Date", "type": "string" },
-            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string" },
+            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "number", "kind": "money" },
+            { "name": "suitDate", "displayName": "Suit Date", "type": "string", "format": "date" },
+            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string", "format": "date", "mayBeFuture": true },
             { "name": "caseStatus", "displayName": "Case Status", "type": "string" },
             { "name": "suitRef", "displayName": "Suit Ref.", "type": "string" },
             { "name": "windingUpOrderDateRef", "displayName": "Winding-up Order Date Ref.", "type": "string" },
-            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string" },
-            { "name": "petitionDate", "displayName": "Petition Date", "type": "string" },
+            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string", "format": "date" },
+            { "name": "petitionDate", "displayName": "Petition Date", "type": "string", "format": "date" },
             { "name": "petitionRef", "displayName": "Petition Ref.", "type": "string" }
           ],
           "description": "JSON-encoded list of other known suits, with limited details, with the subject as defendant."
@@ -2738,8 +2761,8 @@
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
             { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
-            { "name": "localNo", "displayName": "Local No.", "type": "string" },
-            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
+            { "name": "localNo", "displayName": "Local No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
+            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
             { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
@@ -2751,14 +2774,14 @@
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
             { "name": "solicitorRef", "displayName": "Solicitor Ref.", "type": "string" },
             { "name": "solicitor", "displayName": "Solicitor", "type": "string" },
-            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "string" },
-            { "name": "suitDate", "displayName": "Suit Date", "type": "string" },
-            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string" },
+            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "number", "kind": "money" },
+            { "name": "suitDate", "displayName": "Suit Date", "type": "string", "format": "date" },
+            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string", "format": "date", "mayBeFuture": true },
             { "name": "caseStatus", "displayName": "Case Status", "type": "string" },
             { "name": "suitRef", "displayName": "Suit Ref.", "type": "string" },
             { "name": "windingUpOrderDateRef", "displayName": "Winding-up Order Date Ref.", "type": "string" },
-            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string" },
-            { "name": "petitionDate", "displayName": "Petition Date", "type": "string" },
+            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string", "format": "date" },
+            { "name": "petitionDate", "displayName": "Petition Date", "type": "string", "format": "date" },
             { "name": "petitionRef", "displayName": "Petition Ref.", "type": "string" }
           ],
           "description": "JSON-encoded list of legal suits with the subject as plaintiff, one entry per suit."
@@ -2769,8 +2792,8 @@
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
             { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
-            { "name": "localNo", "displayName": "Local No.", "type": "string" },
-            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
+            { "name": "localNo", "displayName": "Local No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
+            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
             { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
@@ -2782,14 +2805,14 @@
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
             { "name": "solicitorRef", "displayName": "Solicitor Ref.", "type": "string" },
             { "name": "solicitor", "displayName": "Solicitor", "type": "string" },
-            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "string" },
-            { "name": "suitDate", "displayName": "Suit Date", "type": "string" },
-            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string" },
+            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "number", "kind": "money" },
+            { "name": "suitDate", "displayName": "Suit Date", "type": "string", "format": "date" },
+            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string", "format": "date", "mayBeFuture": true },
             { "name": "caseStatus", "displayName": "Case Status", "type": "string" },
             { "name": "suitRef", "displayName": "Suit Ref.", "type": "string" },
             { "name": "windingUpOrderDateRef", "displayName": "Winding-up Order Date Ref.", "type": "string" },
-            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string" },
-            { "name": "petitionDate", "displayName": "Petition Date", "type": "string" },
+            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string", "format": "date" },
+            { "name": "petitionDate", "displayName": "Petition Date", "type": "string", "format": "date" },
             { "name": "petitionRef", "displayName": "Petition Ref.", "type": "string" }
           ],
           "description": "JSON-encoded list of winding-up actions against the subject, one entry per action."
@@ -2800,8 +2823,8 @@
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
             { "name": "subjectAddress", "displayName": "Subject Address", "type": "string", "maxLength": 1024 },
-            { "name": "localNo", "displayName": "Local No.", "type": "string" },
-            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string" },
+            { "name": "localNo", "displayName": "Local No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
+            { "name": "icPpNoNewIcNo", "displayName": "IC / Passport No. / New IC No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
             { "name": "plaintiffAddress", "displayName": "Plaintiff Address", "type": "string", "maxLength": 1024 },
             { "name": "plaintiff", "displayName": "Plaintiff", "type": "string" },
@@ -2813,14 +2836,14 @@
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
             { "name": "solicitorRef", "displayName": "Solicitor Ref.", "type": "string" },
             { "name": "solicitor", "displayName": "Solicitor", "type": "string" },
-            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "string" },
-            { "name": "suitDate", "displayName": "Suit Date", "type": "string" },
-            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string" },
+            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "number", "kind": "money" },
+            { "name": "suitDate", "displayName": "Suit Date", "type": "string", "format": "date" },
+            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string", "format": "date", "mayBeFuture": true },
             { "name": "caseStatus", "displayName": "Case Status", "type": "string" },
             { "name": "suitRef", "displayName": "Suit Ref.", "type": "string" },
             { "name": "windingUpOrderDateRef", "displayName": "Winding-up Order Date Ref.", "type": "string" },
-            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string" },
-            { "name": "petitionDate", "displayName": "Petition Date", "type": "string" },
+            { "name": "windingUpOrderDate", "displayName": "Winding-up Order Date", "type": "string", "format": "date" },
+            { "name": "petitionDate", "displayName": "Petition Date", "type": "string", "format": "date" },
             { "name": "petitionRef", "displayName": "Petition Ref.", "type": "string" }
           ],
           "description": "JSON-encoded list of winding-up actions brought by the subject, one entry per action."
@@ -2832,8 +2855,8 @@
             { "name": "status", "displayName": "Status", "type": "string" },
             { "name": "defendantName", "displayName": "Defendant Name", "type": "string" },
             { "name": "defendantAddress", "displayName": "Defendant Address", "type": "string", "maxLength": 1024 },
-            { "name": "newIcNo", "displayName": "New IC No.", "type": "string" },
-            { "name": "icPpNo", "displayName": "IC / Passport No.", "type": "string" },
+            { "name": "newIcNo", "displayName": "New IC No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*", "jurisdictionPatterns": { "MY": "\\d{6}-?\\d{2}-?\\d{4}" } },
+            { "name": "icPpNo", "displayName": "IC / Passport No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*" },
             { "name": "caseNo", "displayName": "Case No.", "type": "string" },
             { "name": "solicitorAddress", "displayName": "Solicitor Address", "type": "string", "maxLength": 1024 },
             { "name": "solicitorTel", "displayName": "Solicitor Tel", "type": "string" },
@@ -2841,14 +2864,14 @@
             { "name": "solicitorEmail", "displayName": "Solicitor Email", "type": "string" },
             { "name": "solicitorRef", "displayName": "Solicitor Ref.", "type": "string" },
             { "name": "solicitor", "displayName": "Solicitor", "type": "string" },
-            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "string" },
-            { "name": "petitionDate", "displayName": "Petition Date", "type": "string" },
+            { "name": "amountClaimed", "displayName": "Amount Claimed", "type": "number", "kind": "money" },
+            { "name": "petitionDate", "displayName": "Petition Date", "type": "string", "format": "date" },
             { "name": "petitionRef", "displayName": "Petition Ref.", "type": "string" },
-            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string" },
+            { "name": "hearingDate", "displayName": "Hearing Date", "type": "string", "format": "date", "mayBeFuture": true },
             { "name": "adjudicationOrderDateRef", "displayName": "Adjudication Order Date Ref.", "type": "string" },
-            { "name": "adjudicationOrderDate", "displayName": "Adjudication Order Date", "type": "string" },
+            { "name": "adjudicationOrderDate", "displayName": "Adjudication Order Date", "type": "string", "format": "date" },
             { "name": "dischargeDateRef", "displayName": "Discharge Date Ref.", "type": "string" },
-            { "name": "dischargeDate", "displayName": "Discharge Date", "type": "string" },
+            { "name": "dischargeDate", "displayName": "Discharge Date", "type": "string", "format": "date", "mayBeFuture": true },
             { "name": "creditors", "displayName": "Creditors", "type": "string", "maxLength": 1024 }
           ],
           "description": "JSON-encoded list of bankruptcy cases, one entry per case."
@@ -2858,7 +2881,7 @@
           "type": "list",
           "items": [
             { "name": "creditorsName", "displayName": "Name", "type": "string" },
-            { "name": "creditorsIcPpLocalNoRegNo", "displayName": "IC / Passport / Local / Registration No.", "type": "string" }
+            { "name": "creditorsIcPpLocalNoRegNo", "displayName": "IC / Passport / Local / Registration No.", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*(?: \\([A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*\\))?" }
           ],
           "description": "JSON-encoded list of the creditors named in the bankruptcy cases (name and IC / passport / registration number)."
         },
@@ -2867,15 +2890,15 @@
           "type": "list",
           "items": [
             { "name": "subjectName", "displayName": "Subject Name", "type": "string" },
-            { "name": "subjectId", "displayName": "Subject ID", "type": "string" },
+            { "name": "subjectId", "displayName": "Subject ID", "type": "string", "pattern": "[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*(?: \\([A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*\\))?" },
             { "name": "creditorsName", "displayName": "Creditor", "type": "string" },
-            { "name": "amountDue", "displayName": "Amount Due", "type": "string" },
+            { "name": "amountDue", "displayName": "Amount Due", "type": "number", "kind": "money" },
             { "name": "creditorsContact", "displayName": "Creditor Contact", "type": "string" },
             { "name": "agingDays", "displayName": "Aging Days", "type": "string" },
             { "name": "refNo", "displayName": "Ref. No.", "type": "string" },
             { "name": "debtType", "displayName": "Debt Type", "type": "string" },
             { "name": "industry", "displayName": "Industry", "type": "string" },
-            { "name": "documentStatusDate", "displayName": "Document / Status Date", "type": "string" },
+            { "name": "documentStatusDate", "displayName": "Document / Status Date", "type": "string", "format": "date" },
             { "name": "solicitorsName", "displayName": "Solicitor", "type": "string" },
             { "name": "solicitorsContact", "displayName": "Solicitor Contact", "type": "string" },
             { "name": "guarantorOwner", "displayName": "Guarantor / Owner", "type": "string" },
@@ -2888,16 +2911,16 @@
           "type": "list",
           "items": [
             { "name": "no", "displayName": "No.", "type": "string" },
-            { "name": "aprvDate", "displayName": "Approval Date", "type": "string" },
+            { "name": "aprvDate", "displayName": "Approval Date", "type": "string", "format": "date" },
             { "name": "capacity", "displayName": "Capacity", "type": "string" },
             { "name": "accStatus", "displayName": "Account Status", "type": "string" },
             { "name": "lenderType", "displayName": "Lender Type", "type": "string" },
             { "name": "facility", "displayName": "Facility", "type": "string" },
-            { "name": "limitRm", "displayName": "Limit", "type": "string" },
-            { "name": "instalmentAmountRm", "displayName": "Instalment Amount", "type": "string" },
+            { "name": "limitRm", "displayName": "Limit", "type": "number", "kind": "money" },
+            { "name": "instalmentAmountRm", "displayName": "Instalment Amount", "type": "number", "kind": "money" },
             { "name": "instalmentTenorMth", "displayName": "Instalment Tenor (months)", "type": "string" },
-            { "name": "dateBalanceUpdated", "displayName": "Date Balance Updated", "type": "string" },
-            { "name": "totalOutstandingBalanceRm", "displayName": "Total Outstanding Balance", "type": "string" },
+            { "name": "dateBalanceUpdated", "displayName": "Date Balance Updated", "type": "string", "format": "date" },
+            { "name": "totalOutstandingBalanceRm", "displayName": "Total Outstanding Balance", "type": "number", "kind": "money" },
             { "name": "prinRepymtTerm", "displayName": "Principal Repayment Term", "type": "string" },
             { "name": "colType", "displayName": "Collateral Type", "type": "string" },
             { "name": "conductOfAccountM01", "displayName": "Conduct M01", "type": "string" },
@@ -2913,7 +2936,7 @@
             { "name": "conductOfAccountM11", "displayName": "Conduct M11", "type": "string" },
             { "name": "conductOfAccountM12", "displayName": "Conduct M12", "type": "string" },
             { "name": "legalStatus", "displayName": "Legal Status", "type": "string" },
-            { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string" },
+            { "name": "dateStatusUpdate", "displayName": "Date Status Updated", "type": "string", "format": "date" },
             { "name": "propertyStatus", "displayName": "Property Status", "type": "string" },
             { "name": "address", "displayName": "Collateral Address", "type": "string", "maxLength": 1024 },
             { "name": "districtCityTown", "displayName": "District / City / Town", "type": "string" },
@@ -2973,6 +2996,7 @@
       "description": "Fields extracted from an uploaded management account (an SME's balance sheet and profit and loss, as produced by a bookkeeper or accounting package) by the host's extraction pipeline. Periodized: one document carries up to three reporting periods, newest first, stored per (instance, period position) — position 1 is the latest period (T-1), 2 the one before it, 3 the one before that. Totals are numbers where the statement prints them (plus one host-computed revenue total, since the statement prints revenue only as lines); every line-item category is a JSON-encoded list of the account lines printed under it. Metric names carry the mgmt prefix because the bare accounting vocabulary (totalAssets, grossProfit, …) is already declared by the audited financial-statement category, and field names are global.",
       "canonicalTable": "ihs_alt_data_management_account",
       "maxPeriods": 3,
+      "periodFields": { "start": "mgmtPeriodStart", "end": "mgmtPeriodEnd", "year": "mgmtPeriodYear" },
       "fields": [
         {
           "name": "companyName",
@@ -2990,6 +3014,7 @@
           "name": "mgmtPeriodEnd",
           "type": "string",
           "format": "date",
+          "mayBeFuture": true,
           "description": "Reporting period end, normalized to ISO YYYY-MM-DD. Null when the statement prints only a year."
         },
         {
@@ -3003,6 +3028,7 @@
           "name": "mgmtPeriodYear",
           "type": "string",
           "format": "year",
+          "mayBeFuture": true,
           "description": "The year of the reporting period, as a four-digit year (e.g. 2025) — a label, like the EPF statement's statementYear, not a measure."
         },
         {

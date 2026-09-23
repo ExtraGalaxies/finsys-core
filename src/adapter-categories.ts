@@ -120,6 +120,12 @@ export interface ListItemSpec {
   readonly maxLength?: number;
   /** SYS-3728: a full-match regex source, only where the writer provably normalizes the format. */
   readonly pattern?: string;
+  /** SYS-3728: as on a field — a per-jurisdiction full-match regex (a national id column). */
+  readonly jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>>;
+  /** SYS-3728: as on a field — an ISO calendar format, bounded (see `CanonicalFieldSpec.format`). */
+  readonly format?: "date" | "year";
+  /** SYS-3728: as on a field — the date may lie in the future (see `CanonicalFieldSpec.mayBeFuture`). */
+  readonly mayBeFuture?: true;
 }
 
 /**
@@ -195,6 +201,16 @@ export interface CanonicalFieldSpec {
    * shape of 2026-02-30, not that the day exists.
    */
   readonly format?: "date" | "year";
+  /**
+   * SYS-3728: a dated value is PLAUSIBLE, not merely calendar-valid: never
+   * before 1900-01-01 and, by default, never after the validator's clock
+   * (today, UTC, plus one day for time zones). A field that legitimately
+   * names a future date — a hearing, a business registration's expiry, the
+   * end of a financial year still running — declares `mayBeFuture`, and is
+   * bounded at the clock plus `FUTURE_DATE_HORIZON_YEARS` instead. Only on a
+   * field with a `format`.
+   */
+  readonly mayBeFuture?: true;
   /**
    * SYS-3728: a `format: "date"` field of the same category this one may not
    * follow — a period start is not after its end.
@@ -367,7 +383,23 @@ export interface CategorySchema {
    * position above it is refused. Absent: positions are capped at 100.
    */
   readonly maxPeriods?: number;
+  /**
+   * SYS-3728: the fields that describe a reporting period's own extent, so a
+   * writer's extraction can be held consistent with itself: an envelope
+   * `periods[].start` / `.end` that disagrees with the period's `start` /
+   * `end` field, or a `year` field that is not the year of the `end` field,
+   * is refused. Each named field is `format: "date"` (`start`, `end`) or
+   * `format: "year"` (`year`).
+   */
+  readonly periodFields?: CategoryPeriodFields;
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
+}
+
+/** SYS-3728: see `CategorySchema.periodFields`. */
+export interface CategoryPeriodFields {
+  readonly start?: string;
+  readonly end?: string;
+  readonly year?: string;
 }
 
 // ── Raw data shape (as it appears in the JSON file) ──────────────────
@@ -387,6 +419,7 @@ interface RawCategoryField {
   jurisdictionPatterns?: unknown;
   maxItems?: unknown;
   format?: unknown;
+  mayBeFuture?: unknown;
   notAfter?: unknown;
   confidentiality?: "non-sensitive";
 }
@@ -399,6 +432,7 @@ interface RawCategory {
   canonicalTable: string;
   instanceColumns?: unknown;
   maxPeriods?: unknown;
+  periodFields?: unknown;
   fields: RawCategoryField[];
 }
 
@@ -439,7 +473,17 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
   "list",
 ];
 
-const LIST_ITEM_PROPERTIES = new Set(["name", "displayName", "type", "kind", "maxLength", "pattern"]);
+const LIST_ITEM_PROPERTIES = new Set([
+  "name",
+  "displayName",
+  "type",
+  "kind",
+  "maxLength",
+  "pattern",
+  "jurisdictionPatterns",
+  "format",
+  "mayBeFuture",
+]);
 
 /**
  * SYS-3728: the effective maxLength of every string field and string list item
@@ -505,6 +549,50 @@ function validateStringConstraints(
     ...(jurisdictionPatterns !== undefined ? { jurisdictionPatterns: Object.freeze(jurisdictionPatterns) } : {}),
   };
 }
+/** SYS-3728: `format` / `mayBeFuture` on a string field or item. */
+function validateFormat(
+  at: string,
+  type: string,
+  c: { format?: unknown; mayBeFuture?: unknown; pattern?: unknown; jurisdictionPatterns?: unknown },
+): { format?: "date" | "year"; mayBeFuture?: true } {
+  if (c.format !== undefined) {
+    if (type !== "string") throw new Error(`${at} declares a format, but only a string has one (it is ${type})`);
+    if (c.format !== "date" && c.format !== "year") {
+      throw new Error(`${at} declares format "${String(c.format)}" — expected "date" or "year"`);
+    }
+    if (c.pattern !== undefined || c.jurisdictionPatterns !== undefined) {
+      throw new Error(`${at} declares a format AND a pattern — a format is its own, stricter pattern`);
+    }
+  }
+  if (c.mayBeFuture !== undefined) {
+    if (c.mayBeFuture !== true) throw new Error(`${at} has mayBeFuture ${JSON.stringify(c.mayBeFuture)} — it is true or absent`);
+    if (c.format === undefined) throw new Error(`${at} declares mayBeFuture without a format — only a dated value has a future`);
+  }
+  return {
+    ...(c.format !== undefined ? { format: c.format as "date" | "year" } : {}),
+    ...(c.mayBeFuture === true ? { mayBeFuture: true as const } : {}),
+  };
+}
+
+const PERIOD_FIELDS_PROPERTIES: Readonly<Record<string, "date" | "year">> = { start: "date", end: "date", year: "year" };
+
+/** SYS-3728: validate a category's `periodFields` against its own fields. */
+function validatePeriodFields(raw: unknown, fields: ReadonlyArray<RawCategoryField>, where: string): CategoryPeriodFields {
+  const at = `adapter category data: ${where} periodFields`;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} must be an object`);
+  const out: Record<string, string> = {};
+  for (const [key, name] of Object.entries(raw as Record<string, unknown>)) {
+    const format = PERIOD_FIELDS_PROPERTIES[key];
+    if (format === undefined) throw new Error(`${at} has unknown property "${key}"`);
+    const field = typeof name === "string" ? fields.find((f) => f.name === name) : undefined;
+    if (!field) throw new Error(`${at}: ${key} "${String(name)}" is not a field this category declares`);
+    if (field.format !== format) throw new Error(`${at}: ${key} "${field.name}" must be format "${format}"`);
+    out[key] = field.name;
+  }
+  if (Object.keys(out).length === 0) throw new Error(`${at} names no field`);
+  return Object.freeze(out);
+}
+
 const INSTANCE_COLUMNS_PROPERTIES = new Set(["labelField", "roleField", "roleOrder", "sequenceField", "documentLabelField"]);
 
 /**
@@ -549,7 +637,12 @@ function validateListField(f: RawCategoryField, where: string): ReadonlyArray<Li
         throw new Error(`${it} is kind "money" but type "${item.type}" — a monetary amount's primitive is a number`);
       }
     }
-    const constraints = validateStringConstraints(it, item.type, { maxLength: item.maxLength, pattern: item.pattern });
+    const constraints = validateStringConstraints(it, item.type, {
+      maxLength: item.maxLength,
+      pattern: item.pattern,
+      jurisdictionPatterns: item.jurisdictionPatterns,
+    });
+    const format = validateFormat(it, item.type, item);
     items.push(
       Object.freeze({
         name: item.name,
@@ -557,6 +650,7 @@ function validateListField(f: RawCategoryField, where: string): ReadonlyArray<Li
         type: item.type,
         ...(item.kind !== undefined ? { kind: "money" as const } : {}),
         ...constraints,
+        ...format,
       }),
     );
   }
@@ -1124,22 +1218,13 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         f.type,
         f,
       );
-      if (f.format !== undefined) {
-        const at = `adapter category data: field "${f.name}" (${where})`;
-        if (f.type !== "string") throw new Error(`${at} declares a format, but only a string has one (it is ${f.type})`);
-        if (f.format !== "date" && f.format !== "year") {
-          throw new Error(`${at} declares format "${String(f.format)}" — expected "date" or "year"`);
-        }
-        if (f.pattern !== undefined || f.jurisdictionPatterns !== undefined) {
-          throw new Error(`${at} declares a format AND a pattern — a format is its own, stricter pattern`);
-        }
-      }
+      const format = validateFormat(`adapter category data: field "${f.name}" (${where})`, f.type, f);
       const spec: CanonicalFieldSpec = Object.freeze({
         name: asFieldName(f.name),
         type: f.type,
         ...(listItems !== undefined ? { items: listItems, maxItems } : {}),
         ...stringConstraints,
-        ...(f.format !== undefined ? { format: f.format as "date" | "year" } : {}),
+        ...format,
         ...(f.notAfter !== undefined ? { notAfter: f.notAfter as string } : {}),
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
@@ -1221,6 +1306,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         ? { instanceColumns: validateInstanceColumns(cat.instanceColumns, cat.fields, where) }
         : {}),
       ...(cat.maxPeriods !== undefined ? { maxPeriods: cat.maxPeriods as number } : {}),
+      ...(cat.periodFields !== undefined ? { periodFields: validatePeriodFields(cat.periodFields, cat.fields, where) } : {}),
       fields: Object.freeze(fields) as ReadonlyArray<CanonicalFieldSpec>,
     });
     byId.set(cat.id, schema);

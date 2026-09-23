@@ -52,7 +52,7 @@ const TRADE_RECEIVABLES_T1 = JSON.stringify([
 // A line whose figure did not parse keeps its printed text and has no amount.
 const OTHER_DEBTORS_T1 = JSON.stringify([
   { code: 'ABC-000', term: 'EXAMPLE TEXT 60', amount: 1000 },
-  { term: 'EXAMPLE TEXT 61', amountAsPrinted: 'n/a' },
+  { term: 'EXAMPLE TEXT 61', amountAsPrinted: 'illegible' },
 ])
 
 // The shape finsys-api stores for outstanding credit TODAY: one row per printed
@@ -67,8 +67,8 @@ const OLD_FLAT_FACILITIES = JSON.stringify([
 // The shape finsys-api is moving outstanding credit TO: one row per facility.
 const FACILITY_ROWS = JSON.stringify([
   {
-    accountNo: '1', approvalDate: '01/01/2025', capacity: 'OWN', lenderType: 'COMMERCIAL BANK', accountLimit: 250000,
-    collateralTypes: 'PROPERTY', status: 'O', facility: 'TERM LOAN', balance: 123456.7, balanceUpdated: '01/06/2026',
+    accountNo: '1', approvalDate: '2025-01-01', capacity: 'OWN', lenderType: 'COMMERCIAL BANK', accountLimit: 250000,
+    collateralTypes: 'PROPERTY', status: 'O', facility: 'TERM LOAN', balance: 123456.7, balanceUpdated: '2026-06-01',
     instalment: 2500, repaymentTerm: 'MONTHLY', conduct12m: '0 0 0 0 0 0 0 0 0 0 0 0',
   },
   { accountNo: '2', facility: 'OVERDRAFT', accountLimit: 50000, balance: 0 },
@@ -95,7 +95,7 @@ function view(): CanonicalView {
           inst(`experianReport:${h('a')}#ccris`, {
             section: 'ccris', subjectRole: 'principal', subjectName: 'Example Sdn Bhd', bureauScore: 712,
             outstandingCreditFacilities: FACILITY_ROWS,
-            directorsAndOfficers: JSON.stringify([{ name: 'Person A', designation: 'DIRECTOR', 'appointment-date': '01/01/2020' }]),
+            directorsAndOfficers: JSON.stringify([{ name: 'Person A', designation: 'DIRECTOR', 'appointment-date': '2020-01-01' }]),
           }),
         ],
       },
@@ -159,7 +159,7 @@ describe('SYS-3728 — list is a field type, with an item schema', () => {
   it('outstanding credit is one row per FACILITY, in the fixed shape (the one list NOT mirrored from the producer), with the three amounts as money', () => {
     expect(field(CBR, 'outstandingCreditFacilities').items).toEqual([
       { name: 'accountNo', displayName: 'Account No.', type: 'string', maxLength: 256 },
-      { name: 'approvalDate', displayName: 'Approval Date', type: 'string', maxLength: 256 },
+      { name: 'approvalDate', displayName: 'Approval Date', type: 'string', maxLength: 256, format: 'date' },
       { name: 'capacity', displayName: 'Capacity', type: 'string', maxLength: 256 },
       { name: 'lenderType', displayName: 'Lender Type', type: 'string', maxLength: 256 },
       { name: 'accountLimit', displayName: 'Limit', type: 'number', kind: 'money' },
@@ -167,17 +167,17 @@ describe('SYS-3728 — list is a field type, with an item schema', () => {
       { name: 'status', displayName: 'Status', type: 'string', maxLength: 256 },
       { name: 'facility', displayName: 'Facility', type: 'string', maxLength: 256 },
       { name: 'balance', displayName: 'Balance', type: 'number', kind: 'money' },
-      { name: 'balanceUpdated', displayName: 'Balance Updated', type: 'string', maxLength: 256 },
+      { name: 'balanceUpdated', displayName: 'Balance Updated', type: 'string', maxLength: 256, format: 'date' },
       { name: 'instalment', displayName: 'Instalment', type: 'number', kind: 'money' },
       { name: 'repaymentTerm', displayName: 'Repayment Term', type: 'string', maxLength: 256 },
       { name: 'conduct12m', displayName: 'Conduct (12 months)', type: 'string', maxLength: 256 },
       { name: 'legalStatus', displayName: 'Legal Status', type: 'string', maxLength: 256 },
-      { name: 'statusUpdated', displayName: 'Status Updated', type: 'string', maxLength: 256 },
+      { name: 'statusUpdated', displayName: 'Status Updated', type: 'string', maxLength: 256, format: 'date' },
       { name: 'collateralDetail', displayName: 'Collateral Detail', type: 'string', maxLength: 1024 },
     ])
   })
 
-  it('every other bureau list mirrors the columns the producer declares, camel-cased 1:1, all as printed text', () => {
+  it('every other bureau list mirrors the columns the producer declares, camel-cased 1:1', () => {
     const conduct = Array.from({ length: 12 }, (_, i) => `conductOfAccountM${String(i + 1).padStart(2, '0')}`)
     const collateral = ['propertyStatus', 'address', 'districtCityTown', 'postcode', 'state', 'country']
     expect(itemNames(CBR, 'directorsAndOfficers')).toEqual(['name', 'designation', 'appointmentDate'])
@@ -204,10 +204,19 @@ describe('SYS-3728 — list is a field type, with an item schema', () => {
     expect(itemNames(CBR, 'bankruptcyActions')[0]).toBe('status')
     expect(itemNames(CBR, 'bankruptcyActionCreditors')).toEqual(['creditorsName', 'creditorsIcPpLocalNoRegNo'])
     expect(itemNames(CBR, 'tradeCreditReferences')).toHaveLength(14)
-    // The mapper writes printed text, never a parsed number, into every mirrored list.
-    for (const f of fields(CBR).filter((x) => x.type === 'list' && x.name !== 'outstandingCreditFacilities')) {
-      expect((f.items ?? []).every((i) => i.type === 'string' && i.kind === undefined), f.name).toBe(true)
-    }
+    // Second review: an amount column is a parsed number (money), never printed text; every
+    // other column is text, dates ISO (sys3728-airtight pins which).
+    const moneyCols = fields(CBR).filter((x) => x.type === 'list' && x.name !== 'outstandingCreditFacilities')
+      .flatMap((f) => (f.items ?? []).filter((i) => i.type === 'number').map((i) => `${f.name}.${i.name}:${i.kind}`))
+    expect(moneyCols.sort()).toEqual([
+      'bankruptcyActions.amountClaimed:money', 'creditApplications.limitRm:money', 'creditApplications.totalOutstandingBalanceRm:money',
+      'limitedDetailSuitsAsDefendant.amountClaimed:money', 'nonBankLenderFacilities.instalmentAmountRm:money',
+      'nonBankLenderFacilities.limitRm:money', 'nonBankLenderFacilities.totalOutstandingBalanceRm:money',
+      'shareholdingInterests.paidUpCapital:money', 'specialAttentionAccounts.limitRm:money',
+      'specialAttentionAccounts.totalOutstandingBalanceRm:money', 'suitsAsDefendant.amountClaimed:money',
+      'suitsAsPlaintiff.amountClaimed:money', 'tradeCreditReferences.amountDue:money',
+      'windingUpActionsAsDefendant.amountClaimed:money', 'windingUpActionsAsPetitioner.amountClaimed:money',
+    ])
     // A vendor-specific KEY is mirrored as the producer writes it; its LABEL stays vendor-neutral.
     const updated = field(CBR, 'shareholdingInterests').items!.find((i) => i.name === 'lastUpdatedByExperian')!
     expect(updated.displayName).toBe('Last Updated by Bureau')
@@ -353,7 +362,7 @@ describe('SYS-3728 — a list field renders as rows, never as its JSON', () => {
     expect(c.columns.map((x) => x.name)).toEqual(['code', 'term', 'amount', 'amountAsPrinted'])
     expect(c.rows).toEqual([
       { code: 'ABC-000', term: 'EXAMPLE TEXT 60', amount: '1,000', amountAsPrinted: '-' },
-      { code: '-', term: 'EXAMPLE TEXT 61', amount: '-', amountAsPrinted: 'n/a' },
+      { code: '-', term: 'EXAMPLE TEXT 61', amount: '-', amountAsPrinted: 'illegible' },
     ])
   })
 
@@ -381,7 +390,7 @@ describe('SYS-3728 — a list field renders as rows, never as its JSON', () => {
 
   it('a kebab-case key already in storage lands in its camel-case column', () => {
     const c = cell(item('credit_bureau_reports', 'Directors and Officers'), 'Example Sdn Bhd (principal)')
-    expect(c.rows).toEqual([{ name: 'Person A', designation: 'DIRECTOR', appointmentDate: '01/01/2020' }])
+    expect(c.rows).toEqual([{ name: 'Person A', designation: 'DIRECTOR', appointmentDate: '2020-01-01' }])
     expect(c.columns.map((x) => x.name)).not.toContain('other')
   })
 })
@@ -475,17 +484,17 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
 
   it('two reports on the same subject keep their identity: the report order date joins the label', () => {
     const v = view()
-    for (const i of v.categories[CBR]!.instances) i.fields.reportOrderDate = { ...i.fields.section!, value: '2026-01-01 09:00:00' }
+    for (const i of v.categories[CBR]!.instances) i.fields.reportOrderDate = { ...i.fields.section!, value: '2026-01-01' }
     v.categories[CBR]!.instances.push(
-      inst(`experianReport:${h('c')}#ccris`, { section: 'ccris', subjectRole: 'principal', subjectName: 'Example Sdn Bhd', bureauScore: 1, reportOrderDate: '2026-06-01 09:00:00' }),
+      inst(`experianReport:${h('c')}#ccris`, { section: 'ccris', subjectRole: 'principal', subjectName: 'Example Sdn Bhd', bureauScore: 1, reportOrderDate: '2026-06-01' }),
     )
     const score = buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items.find((i) => i.displayName === 'Bureau Score')!
     expect(score.timePeriods).toEqual([
-      'Example Sdn Bhd (principal) \u00b7 2026-01-01 09:00:00', 'Person A (party) \u00b7 2026-01-01 09:00:00',
-      'Person B (party) \u00b7 2026-01-01 09:00:00', 'Example Sdn Bhd (principal) \u00b7 2026-06-01 09:00:00',
+      'Example Sdn Bhd (principal) \u00b7 2026-01-01', 'Person A (party) \u00b7 2026-01-01',
+      'Person B (party) \u00b7 2026-01-01', 'Example Sdn Bhd (principal) \u00b7 2026-06-01',
     ])
-    expect(score.data['Example Sdn Bhd (principal) \u00b7 2026-06-01 09:00:00']).toBe(1)
-    expect(score.data['Example Sdn Bhd (principal) \u00b7 2026-01-01 09:00:00']).toBe(712)
+    expect(score.data['Example Sdn Bhd (principal) \u00b7 2026-06-01']).toBe(1)
+    expect(score.data['Example Sdn Bhd (principal) \u00b7 2026-01-01']).toBe(712)
   })
 
   it('with no order date, the report is named by its position', () => {
@@ -502,7 +511,7 @@ describe('SYS-3728 — a bureau report is labeled by subject, not by a period it
 
   it('one report: no report identity in the label', () => {
     const v = view()
-    for (const i of v.categories[CBR]!.instances) i.fields.reportOrderDate = { ...i.fields.section!, value: '2026-01-01 09:00:00' }
+    for (const i of v.categories[CBR]!.instances) i.fields.reportOrderDate = { ...i.fields.section!, value: '2026-01-01' }
     expect(buildFileFieldTablesFromView(v)['credit_bureau_reports']!.items[0]!.timePeriods).toEqual([
       'Example Sdn Bhd (principal)', 'Person A (party)', 'Person B (party)',
     ])

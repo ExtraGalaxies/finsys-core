@@ -32,7 +32,17 @@
  *
  * ABSENT IS NOT INVALID. `null` and `undefined` are skipped: a field the source
  * did not print is omitted. A BLANK string is a violation — absent is written
- * as absent, never as "".
+ * as absent, never as "" — and so is a PLACEHOLDER ("-", "N/A", "nil", "see
+ * attached"): a reader renders absent as "-" already, so a stored "-" says
+ * nothing a missing value does not, and a stored "N/A" is text pretending to
+ * be a value.
+ *
+ * EVERY EXPORTED VALIDATOR JUDGES A SNAPSHOT. Each one first proves its input
+ * is plain data and copies it (`normalizeForWrite`), then judges the copy: a
+ * getter, a `toJSON` or a sparse array cannot make the verdict describe
+ * something other than what JSON would store. Only `prepareExtractionForWrite`
+ * RETURNS that copy, so it is the only one a writer may persist from — the
+ * others are check-only.
  */
 
 import {
@@ -41,6 +51,7 @@ import {
   LIST_MAX_ITEMS_DEFAULT,
   type AdapterCategory,
   type CanonicalFieldSpec,
+  type CategoryPeriodFields,
   type ListItemSpec,
 } from './adapter-categories.js'
 import { isJurisdiction } from './jurisdiction.js'
@@ -79,6 +90,13 @@ export type ViolationRule =
   | 'invalid-date'
   | 'date-order'
   | 'not-plain-data'
+  | 'placeholder'
+  | 'non-ascii-space'
+  | 'untrimmed'
+  | 'implausible-date'
+  | 'currency-mismatch'
+  | 'currency-missing'
+  | 'period-mismatch'
 
 /**
  * One broken rule. `field` is the canonical field (or envelope key), or
@@ -121,25 +139,43 @@ export interface ValidationOptions {
    * checked (a reader that holds no manifest); every string rule still is.
    */
   enumMembership?: 'require' | 'skip'
+  /**
+   * The clock a date's plausibility is measured against (default: now). A
+   * date may not be after this day plus one (UTC — the extra day is the time
+   * zones ahead of it), or, for a `mayBeFuture` field, after this day plus
+   * `FUTURE_DATE_HORIZON_YEARS`. Injectable so a test freezes it rather than
+   * inheriting whatever day the suite runs on.
+   */
+  now?: Date
+}
+
+/** The options, with the clock resolved once per call into the two date ceilings. */
+interface Context extends ValidationOptions {
+  pastCeiling: string
+  futureCeiling: string
+  /** Each JSON-text list parsed once per call, however many rules read it. */
+  lists: Map<string, ListParse>
 }
 
 // ── Text rules ─────────────────────────────────────────────────────────
 
 /**
  * Characters that are not text anyone printed. Refused in EVERY string:
- *   - format characters (\p{Cf}): zero-width space / joiners, LRM / RLM / ALM,
- *     soft hyphen, BOM, word joiner, invisible operators, bidi embeddings /
- *     overrides / isolates, interlinear annotation, tag characters;
- *   - private use (\p{Co}) and unassigned code points (\p{Cn}, which includes
- *     every noncharacter: U+FFFE/FFFF, U+FDD0–FDEF);
- *   - the fillers that Unicode classes as letters or symbols but render as
- *     nothing: Hangul fillers U+115F, U+1160, U+3164, U+FFA0 and the braille
- *     blank U+2800.
+ *   - every Default_Ignorable_Code_Point: zero-width space / joiners, LRM /
+ *     RLM / ALM, soft hyphen, BOM, word joiner, invisible operators, bidi
+ *     controls, the combining grapheme joiner U+034F, every variation selector
+ *     (U+FE00–FE0F, U+E0100–E01EF), the Mongolian free variation selectors,
+ *     the Khmer inherent vowels U+17B4/17B5, the Hangul fillers (U+115F,
+ *     U+1160, U+3164, U+FFA0), tag characters;
+ *   - every other format character (\p{Cf}), private use (\p{Co}) and
+ *     unassigned code point (\p{Cn}, which includes every noncharacter:
+ *     U+FFFE/FFFF, U+FDD0–FDEF);
+ *   - the braille blank U+2800, a symbol that renders as nothing.
  * ZWJ / ZWNJ are refused too, including inside a word: the data this guards is
  * Malay, English, Chinese, Thai and Vietnamese, none of which needs them, and
  * "a joiner is fine here" is exactly the judgement a denylist cannot make.
  */
-const INVISIBLE = /[\p{Cf}\p{Co}\p{Cn}\u115f\u1160\u3164\uffa0\u2800]/u
+const INVISIBLE = /[\p{Default_Ignorable_Code_Point}\p{Cf}\p{Co}\p{Cn}\u2800]/u
 
 /**
  * Control characters (\p{Cc}: C0, DEL, C1) and the line / paragraph
@@ -150,10 +186,58 @@ const INVISIBLE = /[\p{Cf}\p{Co}\p{Cn}\u115f\u1160\u3164\uffa0\u2800]/u
 const CONTROL_ANYWHERE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u2028\u2029]/u
 const CONTROL_SHORT = /[\t\n]/
 const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/
-/** More than four combining marks on one base: never language, only rendering abuse ("zalgo"). */
-const COMBINING_OVERFLOW = /\p{M}{5,}/u
+/**
+ * Every space separator but U+0020: no-break, en / em / thin / hair, narrow
+ * no-break, medium mathematical, ideographic, Ogham. Each looks like a space
+ * and compares unequal to one, so "ALI BIN ABU" and "ALI\u00a0BIN ABU" would
+ * be two subjects. A writer maps them to U+0020 (`normalizePrintedText`).
+ */
+const NON_ASCII_SPACE = /(?! )\p{Zs}/u
+const NON_ASCII_SPACE_ALL = /(?! )\p{Zs}/gu
+/** Stored text is trimmed: leading or trailing whitespace is a second spelling of the same value. */
+const UNTRIMMED = /^\s|\s$/u
+/** A combining mark with no base to combine with is not text. */
+const LEADING_MARK = /^\p{M}/u
+/**
+ * More than two stacked NONSPACING marks on one base: never language, only
+ * rendering abuse ("zalgo"). Counted after NFC, which composes Vietnamese to
+ * precomposed letters; Thai (vowel + tone) and Tamil / Indic (spacing vowel
+ * signs are \p{Mc} and not counted) stay within two.
+ */
+const COMBINING_OVERFLOW = /[\p{Mn}\p{Me}]{3,}/u
 /** A value is blank when nothing in it is a letter, number, punctuation or symbol. */
 const VISIBLE = /[\p{L}\p{N}\p{P}\p{S}]/u
+const LETTER_OR_NUMBER = /[\p{L}\p{N}]/u
+/**
+ * Words that stand in for a value the source did not give, compared
+ * case-insensitively with spaces, dots, slashes, hyphens and underscores
+ * removed ("N/A", "n.a.", "N A" are all "na"). Closed on purpose: adding a
+ * word here refuses every value that spells it, in every category.
+ */
+const PLACEHOLDER_WORDS: ReadonlySet<string> = new Set(['na', 'nil', 'null', 'none', 'seeattached', 'notapplicable', 'notavailable'])
+
+/**
+ * A placeholder: text with no letter and no number in it ("-", "–", "—", ".",
+ * "*", "?"), or one of `PLACEHOLDER_WORDS`. Not a value — a writer omits it.
+ */
+export function isPlaceholderText(value: string): boolean {
+  if (!LETTER_OR_NUMBER.test(value)) return true
+  return PLACEHOLDER_WORDS.has(value.toLowerCase().replace(/[\s./\\_-]+/gu, ''))
+}
+
+/**
+ * THE writer-side text rule: printed text as the validator will accept it,
+ * or `undefined` when there is none. NFC; every non-ASCII space separator
+ * mapped to U+0020; trimmed; and absent when what is left is blank or a
+ * placeholder. It does not repair anything else — an invisible or control
+ * character, or leading structure, is still the validator's to refuse.
+ */
+export function normalizePrintedText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const text = value.normalize('NFC').replace(NON_ASCII_SPACE_ALL, ' ').trim()
+  if (text === '' || !VISIBLE.test(text) || isPlaceholderText(text)) return undefined
+  return text
+}
 
 const patternCache = new Map<string, RegExp>()
 function fullMatch(source: string): RegExp {
@@ -171,25 +255,51 @@ function fullMatch(source: string): RegExp {
  * misses Python's repr, JS literals, trailing commas and the truncated array
  * that started all this.
  *
- *   - Any string whose first visible character is "{" is refused.
- *   - A SHORT string (maxLength ≤ 256) whose first visible character is "[" is
- *     refused.
+ * "Leading visible" means after whitespace, combining marks and
+ * default-ignorable / format characters (each refused on its own as well, but
+ * this rule does not depend on that), and "{" / "[" include their fullwidth
+ * and small-form lookalikes (｛ ﹛ ❴ ⦃, ［ ⁅ ⟦).
+ *
+ *   - Any string whose first visible character opens an object is refused.
+ *   - A SHORT string (maxLength ≤ 256) whose first visible character opens an
+ *     array is refused.
  *   - LONG TEXT may open with a bracketed tag ("[CANCELLED] …", "[REDACTED] …")
- *     — and nothing that looks like a sequence: "[" is refused when what
- *     follows (after spaces) is "[", "{", a quote, "]", or a number, or when
- *     the bracket is never closed. So "[1] Case withdrawn" is refused as well;
- *     a writer that needs it writes "(1) …" or "No. 1 …".
+ *     — and nothing that looks like a sequence: the bracket is refused when
+ *     what follows (after spaces) is a bracket, a brace, a quote, a closing
+ *     bracket, or a number, or when it is never closed. So "[1] Case
+ *     withdrawn" is refused as well; a writer that needs it writes "(1) …" or
+ *     "No. 1 …".
+ *   - A value that is a JSON STRING LITERAL ('"[{\"a\":1}]"') is decoded and
+ *     held to the same rule: a double-encoded table is still a table.
  *
  * Structure NOT at the start ("Name: [{…}]") is not detected; that belongs to
  * the per-field format rules where a format is provable.
  */
-const LONG_TEXT_SEQUENCE = /^\[\s*(?:[[{"'‘“\]]|[-+]?\d)/u
-function isSerializedStructure(value: string, longText: boolean): boolean {
-  const t = value.trimStart()
-  if (t[0] === '{') return true
-  if (t[0] !== '[') return false
-  if (!longText) return true
-  return LONG_TEXT_SEQUENCE.test(t) || !t.includes(']')
+const LEADING_NOISE = /^[\s\p{M}\p{Default_Ignorable_Code_Point}\p{Cf}]+/u
+const OBJECT_OPENERS = '{\uff5b\ufe5b\u2774\u2983'
+const ARRAY_OPENERS = '[\uff3b\u2045\u27e6'
+const ARRAY_CLOSER = /[\]\uff3d\u2046\u27e7]/u
+const LONG_TEXT_SEQUENCE = /^.\s*(?:[[{"'‘“\]\uff3b\uff3d\uff5b\u2045\u27e6\uff02]|[-+]?\p{Nd})/u
+const STRING_LITERAL_DEPTH = 4
+/** Exported for its own tests (not from the package index): every caller runs the text rules first. */
+export function isSerializedStructure(value: string, longText: boolean, depth = 0): boolean {
+  const t = value.replace(LEADING_NOISE, '')
+  const first = t[0]
+  if (first === undefined) return false
+  if (OBJECT_OPENERS.includes(first)) return true
+  if (ARRAY_OPENERS.includes(first)) {
+    if (!longText) return true
+    return LONG_TEXT_SEQUENCE.test(t) || !ARRAY_CLOSER.test(t.slice(1))
+  }
+  if ((first === '"' || first === '\uff02') && depth < STRING_LITERAL_DEPTH) {
+    try {
+      const inner: unknown = JSON.parse(first === '"' ? t.trimEnd() : `"${t.slice(1, -1)}"`)
+      if (typeof inner === 'string') return isSerializedStructure(inner, longText, depth + 1)
+    } catch {
+      // Not a JSON string literal: a value that merely opens with a quote.
+    }
+  }
+  return false
 }
 
 interface StringRules {
@@ -197,6 +307,7 @@ interface StringRules {
   pattern?: string
   jurisdictionPatterns?: Readonly<Partial<Record<string, string>>>
   format?: 'date' | 'year'
+  mayBeFuture?: true
 }
 
 /** The text rules every string is held to — field, list item and instance key alike. */
@@ -205,22 +316,29 @@ function textViolation(value: string, longText: boolean): ViolationRule | null {
   if (INVISIBLE.test(value)) return 'invisible-characters'
   if (CONTROL_ANYWHERE.test(value)) return 'control-characters'
   if (!longText && CONTROL_SHORT.test(value)) return 'control-characters'
-  if (COMBINING_OVERFLOW.test(value)) return 'excessive-combining-marks'
+  if (LEADING_MARK.test(value)) return 'malformed-text'
+  if (NON_ASCII_SPACE.test(value)) return 'non-ascii-space'
   if (!VISIBLE.test(value)) return 'blank-string'
+  if (UNTRIMMED.test(value)) return 'untrimmed'
+  if (COMBINING_OVERFLOW.test(value)) return 'excessive-combining-marks'
   return null
 }
 
 /** Every rule a string value is held to, in order; the first failure is the one reported. */
-function stringViolation(value: string, rules: StringRules, opts: ValidationOptions): ViolationRule | null {
+function stringViolation(value: string, rules: StringRules, ctx: Context): ViolationRule | null {
   const maxLength = rules.maxLength ?? STRING_MAX_LENGTH_DEFAULT
   const longText = maxLength > STRING_MAX_LENGTH_DEFAULT
   const text = textViolation(value, longText)
   if (text) return text
   if (value.length > maxLength) return 'max-length'
   if (isSerializedStructure(value, longText)) return 'serialized-structure'
-  if (rules.format !== undefined && !isCalendarValue(value, rules.format)) return 'invalid-date'
+  if (isPlaceholderText(value)) return 'placeholder'
+  if (rules.format !== undefined) {
+    if (!isCalendarValue(value, rules.format)) return 'invalid-date'
+    if (!isPlausibleDate(value, rules.format, rules.mayBeFuture ? ctx.futureCeiling : ctx.pastCeiling)) return 'implausible-date'
+  }
   if (rules.pattern !== undefined && !fullMatch(rules.pattern).test(value)) return 'pattern-mismatch'
-  const j = opts.jurisdiction
+  const j = ctx.jurisdiction
   if (isJurisdiction(j)) {
     const source = rules.jurisdictionPatterns?.[j]
     if (source !== undefined && !fullMatch(source).test(value)) return 'pattern-mismatch'
@@ -250,6 +368,34 @@ function isCalendarValue(value: string, format: 'date' | 'year'): boolean {
   return isCalendarDate(value)
 }
 
+/** No dated value in a credit record is older than this. */
+export const DATE_FLOOR = '1900-01-01'
+/** How far ahead a `mayBeFuture` date may lie: a hearing, an expiry, a financial year still running. */
+export const FUTURE_DATE_HORIZON_YEARS = 10
+
+/**
+ * The latest plausible day, as ISO YYYY-MM-DD: the clock's UTC day plus one
+ * (past-only), or plus `FUTURE_DATE_HORIZON_YEARS` (mayBeFuture). An invalid
+ * clock yields a ceiling below every date — fail closed, never open.
+ */
+function dateCeiling(now: Date, future: boolean): string {
+  const t = now.getTime()
+  if (!Number.isFinite(t)) return '0000-00-00'
+  const d = new Date(Date.UTC(now.getUTCFullYear() + (future ? FUTURE_DATE_HORIZON_YEARS : 0), now.getUTCMonth(), now.getUTCDate() + (future ? 0 : 1)))
+  return d.toISOString().slice(0, 10)
+}
+
+/** A calendar-valid date or year, within [DATE_FLOOR, ceiling]. ISO text compares in date order. */
+function isPlausibleDate(value: string, format: 'date' | 'year', ceiling: string): boolean {
+  if (format === 'year') return value >= DATE_FLOOR.slice(0, 4) && value <= ceiling.slice(0, 4)
+  return value >= DATE_FLOOR && value <= ceiling
+}
+
+function contextOf(opts: ValidationOptions): Context {
+  const now = opts.now ?? new Date()
+  return { ...opts, pastCeiling: dateCeiling(now, false), futureCeiling: dateCeiling(now, true), lists: new Map() }
+}
+
 /** An ISO 8601 instant: a real date, hour 00–23, minute and second 00–59, offset within ±14:00. */
 function isInstant(value: string): boolean {
   const m = ISO_DATE_TIME.exec(value)
@@ -277,16 +423,17 @@ interface NumberRules {
 /**
  * A number's domain:
  *   - a finite number, never text;
- *   - `unit: "count"`, and `unit: "score"` WITHOUT a declared range, are
- *     non-negative safe integers (a score with a range, like the 0..1
- *     geolocation scores, is held to its range instead);
+ *   - `unit: "count"`, and `unit: "score"` unless its declared range lies
+ *     within the unit interval, are non-negative safe integers — a bureau
+ *     score is whole points; a 0..1 score (the geolocation scores) is a
+ *     fraction, held to its range;
  *   - every other number has magnitude at most NUMBER_MAX_MAGNITUDE;
  *   - a declared `range` is enforced, inclusive.
  */
 function numberViolation(value: unknown, rules: NumberRules = {}): ViolationRule | null {
   if (typeof value !== 'number') return 'type-mismatch'
   if (!Number.isFinite(value)) return 'non-finite-number'
-  const integral = rules.unit === 'count' || (rules.unit === 'score' && rules.range === undefined)
+  const integral = rules.unit === 'count' || (rules.unit === 'score' && !(rules.range !== undefined && rules.range[1] <= 1))
   if (integral) {
     if (!Number.isSafeInteger(value)) return 'not-an-integer'
     if (value < 0) return 'out-of-range'
@@ -308,18 +455,92 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
 /**
- * A list value as its rows, or why it is not one. A list is an array, or a
- * JSON string of an array (the stored form).
+ * The longest JSON text a list may be stored as: 1,000,000 UTF-16 code units.
+ * Checked BEFORE the text is parsed, so an oversized value costs a length
+ * read, not a parse. A 500-row facility table is ~300 KB; a list that needs
+ * more is not a list any report prints.
  */
-export function parseListValue(value: unknown): { rows: unknown[] } | { rule: 'type-mismatch' | 'list-not-array' } {
+export const LIST_TEXT_MAX_LENGTH = 1_000_000
+
+/** JSON.parse reviver: every string in the parsed value is stored NFC. */
+const nfcReviver = (_key: string, v: unknown): unknown => (typeof v === 'string' ? v.normalize('NFC') : v)
+
+/**
+ * Whether valid JSON text declares one key twice in one object. JSON.parse
+ * keeps the last silently, so `{"name":"x","name":"A"}` is one value to this
+ * parser and possibly the other to the next one. Called only on text that has
+ * already parsed.
+ */
+function jsonHasDuplicateKeys(text: string): boolean {
+  const stack: Array<Set<string> | null> = [] // null: an array
+  let expectKey = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (c === '"') {
+      let j = i + 1
+      while (text[j] !== '"') j += text[j] === '\\' ? 2 : 1
+      const top = stack[stack.length - 1]
+      if (expectKey && top) {
+        const key = JSON.parse(text.slice(i, j + 1)) as string
+        if (top.has(key)) return true
+        top.add(key)
+        expectKey = false
+      }
+      i = j
+    } else if (c === '{') {
+      stack.push(new Set())
+      expectKey = true
+    } else if (c === '[') {
+      stack.push(null)
+      expectKey = false
+    } else if (c === '}' || c === ']') {
+      stack.pop()
+      expectKey = false
+    } else if (c === ',') {
+      expectKey = stack[stack.length - 1] != null
+    }
+  }
+  return false
+}
+
+export type ListParse =
+  | { rows: unknown[] }
+  | { rule: 'type-mismatch' | 'list-not-array' | 'max-length' | 'duplicate-item-key' }
+
+/**
+ * A list value as its rows, or why it is not one. A list is an array, or a
+ * JSON string of an array (the stored form) — at most LIST_TEXT_MAX_LENGTH
+ * long, with no object declaring a key twice. Parsed strings are NFC.
+ */
+export function parseListValue(value: unknown): ListParse {
   if (Array.isArray(value)) return { rows: value }
   if (typeof value !== 'string') return { rule: 'type-mismatch' }
+  if (value.length > LIST_TEXT_MAX_LENGTH) return { rule: 'max-length' }
+  let parsed: unknown
   try {
-    const parsed: unknown = JSON.parse(value)
-    return Array.isArray(parsed) ? { rows: parsed } : { rule: 'list-not-array' }
+    // ASCII text with no \u escape can only hold ASCII strings, which are
+    // already NFC: the reviver (a call per node) is spent only where it can
+    // change something.
+    parsed = MAY_NEED_NFC.test(value) ? JSON.parse(value, nfcReviver) : JSON.parse(value)
   } catch {
     return { rule: 'list-not-array' }
   }
+  if (!Array.isArray(parsed)) return { rule: 'list-not-array' }
+  if (jsonHasDuplicateKeys(value)) return { rule: 'duplicate-item-key' }
+  return { rows: parsed }
+}
+
+const MAY_NEED_NFC = /[^\u0000-\u007f]|\\u/
+
+/** `parseListValue`, once per distinct text per validation call. */
+function parseListCached(value: unknown, ctx: Context): ListParse {
+  if (typeof value !== 'string') return parseListValue(value)
+  let parsed = ctx.lists.get(value)
+  if (!parsed) {
+    parsed = parseListValue(value)
+    ctx.lists.set(value, parsed)
+  }
+  return parsed
 }
 
 /**
@@ -349,9 +570,9 @@ export function matchListRow(
   return { values, undeclared, duplicated }
 }
 
-function listViolations(spec: CanonicalFieldSpec, value: unknown, opts: ValidationOptions): Violation[] {
+function listViolations(spec: CanonicalFieldSpec, value: unknown, ctx: Context): Violation[] {
   const field = spec.name
-  const parsed = parseListValue(value)
+  const parsed = parseListCached(value, ctx)
   if ('rule' in parsed) return [{ field, rule: parsed.rule }]
   const out: Violation[] = []
   if (parsed.rows.length > (spec.maxItems ?? LIST_MAX_ITEMS_DEFAULT)) out.push({ field, rule: 'max-items' })
@@ -367,15 +588,29 @@ function listViolations(spec: CanonicalFieldSpec, value: unknown, opts: Validati
     for (const it of items) {
       const v = values.get(it.name)
       if (v === null || v === undefined) continue
-      const rule = it.type === 'number'
-        ? numberViolation(v)
-        : typeof v === 'string'
-          ? stringViolation(v, it, opts)
-          : 'type-mismatch'
+      const rule = itemViolation(it, v, ctx)
       if (rule) out.push({ field, item, key: it.name, rule })
     }
   })
   return out
+}
+
+function itemViolation(it: ListItemSpec, v: unknown, ctx: Context): ViolationRule | null {
+  if (it.type === 'number') return numberViolation(v)
+  return typeof v === 'string' ? stringViolation(v, it, ctx) : 'type-mismatch'
+}
+
+/**
+ * The first rule one list-row value breaks under its item spec, or null —
+ * judged on its snapshot, like every exported validator. For a writer that
+ * must decide per cell whether a printed value is storable (a mapper that
+ * omits an identifier it cannot store rather than refuse the whole document).
+ */
+export function validateListItemValue(it: ListItemSpec, value: unknown, opts: ValidationOptions = {}): ViolationRule | null {
+  if (value === null || value === undefined) return null
+  const snap = snapshotOf(value)
+  if (!snap.ok) return 'not-plain-data'
+  return itemViolation(it, snap.snapshot, contextOf(opts))
 }
 
 // ── Fields ────────────────────────────────────────────────────────────
@@ -386,6 +621,14 @@ function listViolations(spec: CanonicalFieldSpec, value: unknown, opts: Validati
  */
 export function validateFieldValue(spec: CanonicalFieldSpec, value: unknown, opts: ValidationOptions = {}): Violation[] {
   if (value === null || value === undefined) return []
+  if (typeof value === 'number' && !Number.isFinite(value)) return [{ field: spec.name, rule: 'non-finite-number' }]
+  const snap = snapshotOf(value)
+  if (!snap.ok) return [{ field: spec.name, rule: 'not-plain-data' }]
+  return fieldValueViolations(spec, snap.snapshot, contextOf(opts))
+}
+
+function fieldValueViolations(spec: CanonicalFieldSpec, value: unknown, ctx: Context): Violation[] {
+  if (value === null || value === undefined) return []
   const field = spec.name
   switch (spec.type) {
     case 'number': {
@@ -395,15 +638,17 @@ export function validateFieldValue(spec: CanonicalFieldSpec, value: unknown, opt
     case 'boolean':
       return typeof value === 'boolean' ? [] : [{ field, rule: 'type-mismatch' }]
     case 'list':
-      return listViolations(spec, value, opts)
+      return listViolations(spec, value, ctx)
     case 'string': {
       if (typeof value !== 'string') return [{ field, rule: 'type-mismatch' }]
-      const rule = stringViolation(value, spec, opts)
+      const rule = stringViolation(value, spec, ctx)
       if (rule) return [{ field, rule }]
       if (spec.kind === 'currency' && !isAllowedCurrency(value)) return [{ field, rule: 'currency-not-allowed' }]
-      if (spec.kind === 'enum' && opts.enumMembership !== 'skip') {
-        const labels = opts.enumValues?.[field]
-        if (!labels) return [{ field, rule: 'enum-labels-missing' }]
+      if (spec.kind === 'enum' && ctx.enumMembership !== 'skip') {
+        // An ARRAY of labels, matched exactly: a string "label set" would
+        // answer `includes` by substring.
+        const labels: unknown = ctx.enumValues?.[field]
+        if (!Array.isArray(labels)) return [{ field, rule: 'enum-labels-missing' }]
         if (!labels.includes(value)) return [{ field, rule: 'enum-not-member' }]
       }
       return []
@@ -417,7 +662,7 @@ function fieldsOf(category: AdapterCategory): Map<string, CanonicalFieldSpec> {
   return new Map(categorySchemaOf(category).fields.map((f) => [f.name as string, f]))
 }
 
-function fieldViolations(specs: Map<string, CanonicalFieldSpec>, fields: unknown, opts: ValidationOptions): Violation[] {
+function fieldViolations(specs: Map<string, CanonicalFieldSpec>, fields: unknown, ctx: Context): Violation[] {
   if (!isPlainObject(fields)) return [{ field: '(values)', envelope: true, rule: 'type-mismatch' }]
   const out: Violation[] = []
   const valid = new Set<string>()
@@ -427,7 +672,7 @@ function fieldViolations(specs: Map<string, CanonicalFieldSpec>, fields: unknown
       out.push({ field: '(unknown)', rule: 'unknown-field' })
       continue
     }
-    const v = validateFieldValue(spec, value, opts)
+    const v = fieldValueViolations(spec, value, ctx)
     out.push(...v)
     if (v.length === 0 && value !== null && value !== undefined) valid.add(name)
   }
@@ -443,15 +688,21 @@ function fieldViolations(specs: Map<string, CanonicalFieldSpec>, fields: unknown
 }
 
 /**
- * Validate a category's field values — the contract a writer enforces before
- * persisting. `ok` is true exactly when there are no violations.
+ * CHECK-ONLY: a category's field values against their specs, judged on a
+ * plain-data snapshot. `ok` is true exactly when there are no violations. The
+ * extraction-level rules (currency and period consistency) need the whole
+ * extraction and live in `validateAdapterExtraction`. A writer does not
+ * persist from this — it calls `prepareExtractionForWrite` and persists the
+ * snapshot that returns.
  */
 export function validateCanonicalFields(
   category: AdapterCategory,
   fields: Record<string, unknown>,
   opts: ValidationOptions = {},
 ): ValidationResult {
-  const violations = fieldViolations(fieldsOf(category), fields, opts)
+  const snap = normalizeForWrite(fields)
+  if (!snap.ok) return { ok: false, violations: snap.violations }
+  const violations = fieldViolations(fieldsOf(category), snap.snapshot, contextOf(opts))
   return { ok: violations.length === 0, violations }
 }
 
@@ -465,14 +716,19 @@ const PERIOD_POSITION_CEILING = 100
 /**
  * An instance key: a string of at most 200 characters (the column), held to
  * the same text rules as a short field (no invisible, control or malformed
- * characters, no leading structure), with no leading or trailing whitespace.
+ * characters, no leading structure), with no leading or trailing whitespace,
+ * already NFC, and not a path — no "/", no "\\", no "..". Every key a writer
+ * mints (`experianReport:<sha256>#<section>`, `managementAccount:<id>`,
+ * `legacy:T1`, `line-mobile-1`) is none of those.
  * `''` is allowed — the single-cardinality convention (canonical-view.ts).
  */
 export function isValidInstanceKey(key: unknown): key is string {
   if (typeof key !== 'string') return false
   if (key === '') return true
   if (key.length > INSTANCE_KEY_MAX_LENGTH || key !== key.trim()) return false
-  return textViolation(key, false) === null && !isSerializedStructure(key, false)
+  // Not a path: no separator and no parent segment, whatever consumes the key.
+  if (/[/\\]/.test(key) || key.includes('..')) return false
+  return key === key.normalize('NFC') && textViolation(key, false) === null && !isSerializedStructure(key, false)
 }
 const EXTRACTION_KEYS = new Set(['instanceKey', 'values', 'observedAt', 'confidence', 'periods'])
 const PERIOD_KEYS = new Set(['position', 'start', 'end', 'values', 'confidence'])
@@ -514,15 +770,28 @@ export interface ValidatableExtraction {
   periods?: unknown
 }
 
+/**
+ * CHECK-ONLY: the whole extraction — envelope, fields and the extraction-level
+ * consistency rules — judged on its plain-data snapshot. A writer persists
+ * from `prepareExtractionForWrite`, never from this.
+ */
 export function validateAdapterExtraction(
   category: AdapterCategory,
   extraction: ValidatableExtraction,
   opts: ValidationOptions = {},
 ): ValidationResult {
+  const snap = normalizeForWrite(extraction)
+  if (!snap.ok) return { ok: false, violations: snap.violations }
+  const violations = extractionViolations(category, snap.snapshot, contextOf(opts))
+  return { ok: violations.length === 0, violations }
+}
+
+function extractionViolations(category: AdapterCategory, extraction: unknown, ctx: Context): Violation[] {
+  const schema = categorySchemaOf(category)
   const specs = fieldsOf(category)
   const out: Violation[] = []
   if (!isPlainObject(extraction)) {
-    return { ok: false, violations: [{ field: '(envelope)', envelope: true, rule: 'type-mismatch' }] }
+    return [{ field: '(envelope)', envelope: true, rule: 'type-mismatch' }]
   }
   for (const k of Object.keys(extraction)) {
     if (!EXTRACTION_KEYS.has(k)) out.push({ field: '(envelope)', envelope: true, rule: 'unknown-field' })
@@ -538,7 +807,7 @@ export function validateAdapterExtraction(
     out.push({ field: 'observedAt', envelope: true, rule: 'invalid-observed-at' })
   }
 
-  out.push(...fieldViolations(specs, extraction.values, opts))
+  out.push(...fieldViolations(specs, extraction.values, ctx))
   out.push(...confidenceViolations(specs, extraction.confidence))
 
   const periods = extraction.periods
@@ -547,7 +816,7 @@ export function validateAdapterExtraction(
       out.push({ field: 'periods', envelope: true, rule: 'invalid-period' })
     } else {
       const seen = new Set<number>()
-      const maxPeriods = categorySchemaOf(category).maxPeriods ?? PERIOD_POSITION_CEILING
+      const maxPeriods = schema.maxPeriods ?? PERIOD_POSITION_CEILING
       periods.forEach((p, period) => {
         if (!isPlainObject(p)) {
           out.push({ field: 'periods', period, envelope: true, rule: 'invalid-period' })
@@ -567,20 +836,122 @@ export function validateAdapterExtraction(
         let edgesValid = true
         for (const edge of ['start', 'end'] as const) {
           const d = p[edge]
-          if (d !== undefined && (typeof d !== 'string' || !isCalendarDate(d))) {
+          if (d === undefined) continue
+          if (typeof d !== 'string' || !isCalendarDate(d)) {
             out.push({ field: edge, period, envelope: true, rule: 'invalid-period' })
+            edgesValid = false
+          } else if (!isPlausibleDate(d, 'date', ctx.futureCeiling)) {
+            out.push({ field: edge, period, envelope: true, rule: 'implausible-date' })
             edgesValid = false
           }
         }
         if (edgesValid && typeof p.start === 'string' && typeof p.end === 'string' && p.start > p.end) {
           out.push({ field: 'start', period, envelope: true, rule: 'date-order' })
         }
-        for (const v of fieldViolations(specs, p.values, opts)) out.push({ ...v, period })
+        for (const v of fieldViolations(specs, p.values, ctx)) out.push({ ...v, period })
         out.push(...confidenceViolations(specs, p.confidence, period))
       })
     }
   }
-  return { ok: out.length === 0, violations: out }
+  out.push(...consistencyViolations(schema.fields, schema.periodFields, extraction, ctx))
+  return out
+}
+
+// ── Extraction-level consistency ─────────────────────────────────────
+
+const isIsoDate = (v: unknown): v is string => typeof v === 'string' && isCalendarDate(v)
+const present = (v: unknown): boolean => v !== null && v !== undefined
+
+/**
+ * Whether a scope (one `values` object) states an amount of money: a money
+ * field, or a money column of any list row, holding a NUMBER. A value refused
+ * for itself (a printed "RM 1") is reported once, as what it is, not again as
+ * money without a currency.
+ */
+function statesMoney(fields: ReadonlyArray<CanonicalFieldSpec>, values: Record<string, unknown>, ctx: Context): boolean {
+  for (const f of fields) {
+    const v = values[f.name]
+    if (!present(v)) continue
+    if (f.kind === 'money' && typeof v === 'number') return true
+    if (f.type === 'list') {
+      const money = (f.items ?? []).filter((i) => i.kind === 'money').map((i) => i.name)
+      if (money.length === 0) continue
+      const parsed = parseListCached(v, ctx)
+      if (!('rows' in parsed)) continue
+      for (const row of parsed.rows) {
+        if (!isPlainObject(row)) continue
+        const { values: cells } = matchListRow(row, f.items!)
+        if (money.some((m) => typeof cells.get(m) === 'number')) return true
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * The rules no single field can state, because they compare fields:
+ *
+ *   - CURRENCY (a category with a `kind: "currency"` field): every currency the
+ *     extraction states — top-level `values` and each period's — is one
+ *     currency (`currency-mismatch`); and a scope that states money states a
+ *     currency, its own or the top level's (`currency-missing`). An amount
+ *     with no denomination is a number, not money.
+ *   - PERIOD EXTENT (a category declaring `periodFields`): an envelope
+ *     `periods[].start` / `.end` equals the period's own start / end field
+ *     when both are given, and a year field is the year of the end field
+ *     (`period-mismatch`). Compared only between well-formed values, so a
+ *     value refused for itself is not reported twice.
+ */
+function consistencyViolations(
+  fields: ReadonlyArray<CanonicalFieldSpec>,
+  periodFields: CategoryPeriodFields | undefined,
+  extraction: Record<string, unknown>,
+  ctx: Context,
+): Violation[] {
+  const out: Violation[] = []
+  const top = isPlainObject(extraction.values) ? extraction.values : {}
+  const periods = Array.isArray(extraction.periods) ? extraction.periods : []
+  const scoped = periods.map((p, period) => ({ period, p: isPlainObject(p) ? p : {} }))
+    .map(({ period, p }) => ({ period, p, values: isPlainObject(p.values) ? p.values : {} }))
+
+  const currency = fields.find((f) => f.kind === 'currency')?.name
+  if (currency !== undefined) {
+    const stated = [top[currency], ...scoped.map((s) => s.values[currency])].filter(isAllowedCurrency)
+    if (new Set(stated).size > 1) out.push({ field: currency, rule: 'currency-mismatch' })
+    const topCurrency = isAllowedCurrency(top[currency])
+    if (!topCurrency && statesMoney(fields, top, ctx)) out.push({ field: currency, rule: 'currency-missing' })
+    for (const { period, values } of scoped) {
+      if (!topCurrency && !isAllowedCurrency(values[currency]) && statesMoney(fields, values, ctx)) {
+        out.push({ field: currency, period, rule: 'currency-missing' })
+      }
+    }
+  }
+
+  if (periodFields !== undefined) {
+    const yearOf = (values: Record<string, unknown>, period?: number) => {
+      const { year, end } = periodFields
+      if (year === undefined || end === undefined) return
+      const y = values[year]
+      const e = values[end]
+      if (typeof y === 'string' && ISO_YEAR.test(y) && isIsoDate(e) && e.slice(0, 4) !== y) {
+        out.push({ field: year, ...(period === undefined ? {} : { period }), rule: 'period-mismatch' })
+      }
+    }
+    yearOf(top)
+    for (const { period, p, values } of scoped) {
+      for (const edge of ['start', 'end'] as const) {
+        const name = periodFields[edge]
+        if (name === undefined) continue
+        const envelope = p[edge]
+        const own = values[name] ?? top[name]
+        if (isIsoDate(envelope) && isIsoDate(own) && envelope !== own) {
+          out.push({ field: edge, period, envelope: true, rule: 'period-mismatch' })
+        }
+      }
+      yearOf(values, period)
+    }
+  }
+  return out
 }
 
 // ── The snapshot: validate exactly what is stored ────────────────────
@@ -600,6 +971,15 @@ export function validateAdapterExtraction(
  * stores something else. So the input is first proven to be PLAIN DATA, then
  * round-tripped through JSON, and the round-tripped copy is what is validated
  * and what is persisted.
+ *
+ * What the copy changes, and only this:
+ *   - every string is NFC (canonically equivalent text, one spelling of it);
+ *   - a list stored as JSON text is RE-SERIALIZED from its parse
+ *     (`prepareExtractionForWrite` only): the caller's spacing, escapes and key
+ *     order are not what is stored, so no consumer can parse it differently.
+ * Nothing else is repaired: a non-ASCII space, untrimmed text or a
+ * placeholder is refused, not rewritten — `normalizePrintedText` is the
+ * writer's tool for those, applied where the text is read from its source.
  *
  * Plain data: null, booleans, finite numbers, strings; arrays that are dense,
  * of `Array.prototype`, with no own properties but their indices and length;
@@ -645,12 +1025,36 @@ function isPlainData(value: unknown, seen: Set<object>, depth: number): boolean 
 
 export type SnapshotResult<T> = { ok: true; snapshot: T } | { ok: false; violations: Violation[] }
 
-/** The plain-data JSON round-trip of `input`, or `not-plain-data`. See the writer contract above. */
+/** The plain-data, NFC JSON round-trip of `input`, or `not-plain-data`. See the writer contract above. */
 export function normalizeForWrite<T>(input: T): SnapshotResult<T> {
   if (!isPlainData(input, new Set(), 0)) {
     return { ok: false, violations: [{ field: '(input)', envelope: true, rule: 'not-plain-data' }] }
   }
-  return { ok: true, snapshot: JSON.parse(JSON.stringify(input)) as T }
+  return { ok: true, snapshot: JSON.parse(JSON.stringify(input), nfcReviver) as T }
+}
+
+/** `normalizeForWrite` for one value, without a JSON round-trip for a primitive. */
+function snapshotOf(value: unknown): SnapshotResult<unknown> {
+  if (typeof value === 'string') return { ok: true, snapshot: value.normalize('NFC') }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return isPlainData(value, new Set(), 0) ? { ok: true, snapshot: value } : { ok: false, violations: [] }
+  }
+  return normalizeForWrite(value)
+}
+
+/** Every JSON-text list in `values` re-serialized from its parse, when it parses cleanly; otherwise left for the validator to refuse. */
+function reserializeLists(fields: ReadonlyArray<CanonicalFieldSpec>, values: unknown, ctx: Context): void {
+  if (!isPlainObject(values)) return
+  for (const f of fields) {
+    if (f.type !== 'list' || typeof values[f.name] !== 'string') continue
+    const parsed = parseListCached(values[f.name], ctx)
+    if (!('rows' in parsed)) continue
+    const text = JSON.stringify(parsed.rows)
+    values[f.name] = text
+    // The re-serialization of a clean parse is the same rows, so the
+    // validator reads them without parsing the text a second time.
+    ctx.lists.set(text, parsed)
+  }
 }
 
 export type PreparedExtraction<T> =
@@ -658,8 +1062,9 @@ export type PreparedExtraction<T> =
   | { ok: false; violations: Violation[] }
 
 /**
- * Snapshot, then validate the snapshot. The ONE entry point a writer calls;
- * persist `snapshot` only when `ok`.
+ * Snapshot, then validate the snapshot. The ONE entry point a writer calls,
+ * and the only validator that returns what it judged: persist `snapshot`
+ * only when `ok`.
  */
 export function prepareExtractionForWrite<T extends ValidatableExtraction>(
   category: AdapterCategory,
@@ -668,6 +1073,13 @@ export function prepareExtractionForWrite<T extends ValidatableExtraction>(
 ): PreparedExtraction<T> {
   const snap = normalizeForWrite(extraction)
   if (!snap.ok) return { ok: false, violations: snap.violations }
-  const r = validateAdapterExtraction(category, snap.snapshot, opts)
-  return r.ok ? { ok: true, snapshot: snap.snapshot, violations: [] } : { ok: false, violations: r.violations }
+  const snapshot = snap.snapshot as T
+  const fields = categorySchemaOf(category).fields
+  const ctx = contextOf(opts)
+  if (isPlainObject(snapshot)) {
+    reserializeLists(fields, snapshot.values, ctx)
+    if (Array.isArray(snapshot.periods)) for (const p of snapshot.periods) if (isPlainObject(p)) reserializeLists(fields, p.values, ctx)
+  }
+  const violations = extractionViolations(category, snapshot, ctx)
+  return violations.length === 0 ? { ok: true, snapshot, violations: [] } : { ok: false, violations }
 }

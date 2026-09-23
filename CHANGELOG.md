@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 9.4.0
+## [9.4.0] - 2026-09-23
 
 _MINOR — two categories, two document types, and one optional catalog tag.
 Additive to every type: `DocumentTypeGroup.extractionCategory`,

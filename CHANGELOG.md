@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 9.6.0
+## [9.6.0] - 2026-09-24
 
 _MINOR — one field, one field attribute, one violation rule. Additive: rows
 written before it carry no source, and that stays valid._

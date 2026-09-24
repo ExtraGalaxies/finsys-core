@@ -266,6 +266,7 @@ export {
   kebabToCamel,
   STRING_MAX_LENGTH_DEFAULT,
   LIST_MAX_ITEMS_DEFAULT,
+  CURRENCY_SOURCE_INFERRED,
 } from './canonical-validation.js'
 export type {
   Violation,

@@ -183,8 +183,9 @@ describe('management-account (SYS-3705)', () => {
       expect(f.type, f.name).toBe('list')
       expect(f.description, f.name).toMatch(/^JSON-encoded list/)
     }
-    // Everything that is neither: the seven header fields saying what the period is.
-    expect(fields(MA).length - money.length - items.length).toBe(7)
+    // Everything that is neither: the eight header fields saying what the
+    // period is (SYS-3728 added mgmtCurrencySource, 9.6.0).
+    expect(fields(MA).length - money.length - items.length).toBe(8)
   })
 
   it('carries a host-computed revenue total, declared as NOT printed, because the statement prints revenue only as lines', () => {
@@ -306,7 +307,8 @@ describe('the lineage fallback — a category with no v1 lineage renders under i
     const status = resolveExtractionStatusFromView(v).documents.filter((d) => ['experianReports', 'managementAccounts'].includes(d.fileType))
     expect(status.map((d) => [d.fileType, d.status, d.totalColumns])).toEqual([
       ['experianReports', DocExtractionStatus.Extracted, 76],
-      ['managementAccounts', DocExtractionStatus.Extracted, 61],
+      // 62 since 9.6.0 (SYS-3728 mgmtCurrencySource).
+      ['managementAccounts', DocExtractionStatus.Extracted, 62],
     ])
 
     const rows = buildDocumentRowsFromView(v).filter((r) => ['experianReports', 'managementAccounts'].includes(r.docType))

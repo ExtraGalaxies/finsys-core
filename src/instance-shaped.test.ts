@@ -455,7 +455,8 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
       epfStatements: 9,
       payslips: 15,
       experianReports: 76,
-      managementAccounts: 61,
+      // 62 since 9.6.0 (SYS-3728 declared mgmtCurrencySource).
+      managementAccounts: 62,
     })
     // The flat path's side, measured on a record with ONE file per type: the
     // wide table's slot width. Equal for six types. Financial statements: 13

@@ -196,9 +196,12 @@ export interface IhsListColumn {
 /**
  * SYS-3728: a list field's value in one table column, as rows.
  *
- * `columns` are the field's declared items, in declared order, always all of
- * them (a column no row fills renders '-' throughout, so two cells of one field
- * share a shape). A stored key matches an item by its exact name or by its
+ * `columns` are the field's declared items, in declared order, that at least
+ * one row fills: a declared column no row fills is left out (SYS-3728, first
+ * live render — "Amount (as printed)" showed a dash on every management-account
+ * line; it appears only on a list with an unreadable line). Two cells of one
+ * field may therefore differ in shape. `rows` still carry every declared key.
+ * A stored key matches an item by its exact name or by its
  * kebab-case spelling (`appointment-date` → `appointmentDate`).
  *
  * `rows` are formatted strings keyed by column name — money as money, numbers
@@ -225,6 +228,21 @@ export interface FileFieldTableData {
   type: FileFieldTableType
   items: FileFieldTableItem[]
   hasData: boolean
+  /**
+   * SYS-3728: for a category that declares `periodFields` (a management
+   * account), each column's period as stored — keyed like `data`, `year` and
+   * `end` (ISO date) or null when the instance has none or it broke the write
+   * contract. A consumer heads the column with `periodHeadingLabel`, printing
+   * the end in its own date style, and keeps the column key ("T1") as the
+   * heading when that returns null. Absent on every other table.
+   */
+  periodHeadings?: Record<string, IhsPeriodHeading>
+}
+
+/** SYS-3728: one period column's own year and end — see `FileFieldTableData.periodHeadings`. */
+export interface IhsPeriodHeading {
+  year: string | null
+  end: string | null
 }
 
 /**

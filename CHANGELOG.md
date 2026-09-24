@@ -346,6 +346,40 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
     "RM`000" are ×1000; "Ringgit Malaysia" is MYR (a new `CURRENCY_ALIASES`
     form, so it is also accepted wherever a printed currency is normalized).
     Bare "m", "k", "bn" are still refused.
+- **SYS-3728, first live render** (FinSys Client and FinHub over a synthetic
+  report and management account; `src/sys3728-render-round5.test.ts`):
+  - **A ratio reads as a percentage.** A `unit: "ratio"` cell's
+    `formattedData` is the stored fraction as a percentage, at most two
+    decimals (0.7402 → "74.02%", 1.5 → "150%"); `data` keeps the fraction.
+    New export `formatRatio(value)`. Only table cells built with field specs
+    change (the two bureau ratios today); the other fourteen ratio fields are
+    alt-data categories that no file-field table renders.
+  - **`valueLabels`** (new optional `CanonicalFieldSpec` member): display words
+    for codes a category itself defines, keyed by the stored value.
+    Presentation only — not a membership rule; a value with no entry prints as
+    stored. Declared on `mgmtPeriodSource` ("own" → "Own statement",
+    "comparative" → "Comparative") and `mgmtStatementsRead` ("BS,PL" →
+    "Balance sheet, Profit & loss"). The loader refuses it on a non-string
+    field, empty, or with a blank or untrimmed label. Printed bureau text
+    ("NOT MATCHED", "OWN") declares none and stays as printed.
+  - **`outstandingCreditFacilities.accountNo` is labelled "No."** — the
+    report's row number, not an account number. The key is unchanged (renaming
+    it would move every stored facility row and three repositories' fixtures).
+  - **A declared list column no row fills is not a column.** `IhsListCell.columns`
+    lists only the items at least one row fills, in declared order ("Amount
+    (as printed)" appears only on a list with an unreadable line). `rows` still
+    carry every declared key.
+  - **The subject heading fields are not rows.** A category's
+    `instanceColumns.roleField` and `sequenceField` (the bureau's
+    `subjectRole` and `section`) still order and label the columns but are no
+    longer table items: "Report Section: ccris" and "Subject Role: principal"
+    repeated the column heading in internal codes. The values stay in the view.
+  - **Period headings.** `FileFieldTableData.periodHeadings` (new, optional,
+    `IhsPeriodHeading`): for a category declaring `periodFields`, each
+    column's `year` and `end` as stored (null when absent or invalid). New
+    export `periodHeadingLabel(heading, formatDate)` → "FY2025 · to
+    <end in the caller's date style>", "FY2025", "to <end>", or null (keep the
+    column key).
 
 ### Consumer-visible
 
@@ -411,6 +445,13 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
   `resolveExtractionStatusFromView`, `processIhsDetailsFromView` and
   `flatRecordFromView` for every fixture. Inside the two moved tables, every
   non-list item is identical apart from the bureau column relabel.
+- **First live render.** In the credit-bureau table the "Report Section" and
+  "Subject Role" items are gone and the two ratios read "74.02%"; in the
+  management-account table "Period Source" and "Statements Read" read as
+  words. A list cell's `columns` can now be shorter than the field's `items`,
+  and two cells of one field can differ in shape — a consumer must lay a cell
+  out from its own `columns`, never from the spec. `data` is unchanged
+  everywhere.
 
 ## [9.4.1] - 2026-09-23
 

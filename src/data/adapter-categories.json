@@ -2629,7 +2629,7 @@
           "name": "outstandingCreditFacilities",
           "type": "list",
           "items": [
-            { "name": "accountNo", "displayName": "Account No.", "type": "string" },
+            { "name": "accountNo", "displayName": "No.", "type": "string" },
             { "name": "approvalDate", "displayName": "Approval Date", "type": "string", "format": "date" },
             { "name": "capacity", "displayName": "Capacity", "type": "string" },
             { "name": "lenderType", "displayName": "Lender Type", "type": "string" },
@@ -3144,12 +3144,14 @@
           "name": "mgmtStatementsRead",
           "type": "string",
           "pattern": "BS|PL|BS,PL",
+          "valueLabels": { "BS": "Balance sheet", "PL": "Profit & loss", "BS,PL": "Balance sheet, Profit & loss" },
           "description": "Which statements this period was read from: BS (balance sheet), PL (profit and loss), or both."
         },
         {
           "name": "mgmtPeriodSource",
           "type": "string",
           "kind": "enum",
+          "valueLabels": { "own": "Own statement", "comparative": "Comparative" },
           "description": "`own` when the period's own statement was in the upload; `comparative` when its figures come from the comparative column of a newer statement."
         },
         {

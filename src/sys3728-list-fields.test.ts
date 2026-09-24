@@ -158,7 +158,7 @@ describe('SYS-3728 — list is a field type, with an item schema', () => {
 
   it('outstanding credit is one row per FACILITY, in the fixed shape (the one list NOT mirrored from the producer), with the three amounts as money', () => {
     expect(field(CBR, 'outstandingCreditFacilities').items).toEqual([
-      { name: 'accountNo', displayName: 'Account No.', type: 'string', maxLength: 256 },
+      { name: 'accountNo', displayName: 'No.', type: 'string', maxLength: 256 },
       { name: 'approvalDate', displayName: 'Approval Date', type: 'string', maxLength: 256, format: 'date' },
       { name: 'capacity', displayName: 'Capacity', type: 'string', maxLength: 256 },
       { name: 'lenderType', displayName: 'Lender Type', type: 'string', maxLength: 256 },
@@ -334,7 +334,7 @@ describe('SYS-3728 — a list field renders as rows, never as its JSON', () => {
       { name: 'code', label: 'Code', numeric: false, money: false },
       { name: 'term', label: 'Term', numeric: false, money: false },
       { name: 'amount', label: 'Amount', numeric: true, money: true },
-      { name: 'amountAsPrinted', label: 'Amount (as printed)', numeric: false, money: false },
+      // No line needed its printed text, so that column is not shown (first live render).
     ])
     expect(c.rows).toEqual([
       { code: '1000-000', term: 'EXAMPLE TEXT 56', amount: '-1,719,587.11', amountAsPrinted: '-' },
@@ -370,7 +370,8 @@ describe('SYS-3728 — a list field renders as rows, never as its JSON', () => {
     const c = cell(item('credit_bureau_reports', 'Outstanding Credit Facilities'), 'Example Sdn Bhd (principal)')
     expect(c.columns.map((x) => x.name)).toEqual([
       'accountNo', 'approvalDate', 'capacity', 'lenderType', 'accountLimit', 'collateralTypes', 'status', 'facility',
-      'balance', 'balanceUpdated', 'instalment', 'repaymentTerm', 'conduct12m', 'legalStatus', 'statusUpdated', 'collateralDetail',
+      'balance', 'balanceUpdated', 'instalment', 'repaymentTerm', 'conduct12m',
+      // legalStatus, statusUpdated, collateralDetail: declared, filled by no facility here, not shown.
     ])
     expect(c.columns.filter((x) => x.money).map((x) => x.name)).toEqual(['accountLimit', 'balance', 'instalment'])
     expect(c.rows).toHaveLength(2)

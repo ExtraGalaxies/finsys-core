@@ -24,6 +24,7 @@ import type {
   DocumentFileMetadata,
   InstanceRow,
   IhsListCell,
+  IhsPeriodHeading,
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
@@ -35,6 +36,7 @@ import {
   type AdapterCategory,
   type CanonicalFieldSpec,
   type CategoryInstanceColumns,
+  type CategoryPeriodFields,
   type ListItemSpec,
 } from './adapter-categories.js'
 import { isValidInstanceKey, matchListRow, parseListValue, validateFieldValue, type ViolationRule } from './canonical-validation.js'
@@ -352,6 +354,46 @@ function formatValue(value: unknown, numeric: boolean, currency?: string): strin
   return String(value)
 }
 
+/**
+ * `maximumFractionDigits: 2` on the percentage, built once (see
+ * `currencyFormatters` for why formatters are cached).
+ */
+const RATIO_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 2 })
+
+/**
+ * SYS-3728: a `unit: "ratio"` value as the percentage a document prints.
+ *
+ * The registry stores a ratio as a FRACTION (the bureau's printed "74.02%" is
+ * stored 0.7402; see `securedOutstandingToLimitRatio`), so printing the stored
+ * number read "0.74" beside a report that says 74.02%. Multiplied by 100, at
+ * most two decimals, trailing zeros dropped: 0.7402 → "74.02%", 1.5 → "150%".
+ * Absent is `-`, like every other cell; a non-number is printed as it is.
+ */
+export function formatRatio(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '-'
+  const num = typeof value === 'number' ? value : Number(value)
+  if (typeof value === 'boolean' || !Number.isFinite(num)) return String(value)
+  return RATIO_FORMAT.format(num)
+}
+
+/**
+ * SYS-3728: a period column's heading — "FY2025 · to 31 Dec 2025" — from the
+ * table's `periodHeadings` entry. `formatDate` prints the ISO end date in the
+ * calling app's own style. Year only: "FY2025"; end only: "to <end>"; neither
+ * (or no entry): null, and the caller keeps the column key ("T1").
+ */
+export function periodHeadingLabel(
+  heading: IhsPeriodHeading | undefined,
+  formatDate: (isoDate: string) => string
+): string | null {
+  const year = heading?.year ?? null
+  const end = heading?.end ?? null
+  if (year && end) return `FY${year} · to ${formatDate(end)}`
+  if (year) return `FY${year}`
+  if (end) return `to ${formatDate(end)}`
+  return null
+}
+
 // ── List cells and the read-side guard (SYS-3728) ────────────────
 
 /** What a cell that broke the canonical write contract shows instead of its value. */
@@ -393,15 +435,24 @@ export function buildListCell(value: unknown, listSpec: CanonicalFieldSpec, curr
   const parsed = parseListValue(value)
   if (!('rows' in parsed)) return invalidListCell()
   const items = listSpec.items
+  // SYS-3728 (first live render): a declared column no row fills is not a
+  // column — "Amount (as printed)" read "-" on every line that parsed.
+  const filled = new Set<string>()
   const rows = parsed.rows.map((raw) => {
     const { values } = matchListRow(raw as Record<string, unknown>, items)
     const row: Record<string, string> = {}
-    for (const item of items) row[item.name] = formatListItem(values.get(item.name), item, currency)
+    for (const item of items) {
+      const v = values.get(item.name)
+      if (v !== null && v !== undefined) filled.add(item.name)
+      row[item.name] = formatListItem(v, item, currency)
+    }
     return row
   })
   return {
     kind: 'list',
-    columns: items.map((i) => ({ name: i.name, label: i.displayName, numeric: i.type === 'number', money: i.kind === 'money' })),
+    columns: items
+      .filter((i) => filled.has(i.name))
+      .map((i) => ({ name: i.name, label: i.displayName, numeric: i.type === 'number', money: i.kind === 'money' })),
     rows,
     rawRows: parsed.rows,
   }
@@ -766,7 +817,8 @@ function buildInstanceTable(
   numericColumns?: ReadonlySet<string>,
   fieldSpecs?: Readonly<Record<string, CanonicalFieldSpec>>,
   instanceColumns?: CategoryInstanceColumns,
-  currencyField?: string
+  currencyField?: string,
+  periodFields?: CategoryPeriodFields
 ): FileFieldTableData | null {
   // SYS-3728: with field specs, every value is held to the write contract
   // BEFORE anything reads it — labels, ordering, currency, cells.
@@ -779,9 +831,17 @@ function buildInstanceTable(
     ? orderAndLabelInstances(guardedRows, instanceColumns)
     : { rows: guardedRows, labels: instanceColumnLabels(guardedRows) }
   const columnGroups = groupByLabels(baseNames, instanceRows, instanceLabels)
+  // SYS-3728 (first live render): the fields a subject column is ordered and
+  // headed by are not rows — "Report Section: ccris" and "Subject Role:
+  // principal" repeated what "Example Sdn Bhd (principal)" already says, in
+  // internal codes. They still order and label the columns (above).
+  const headingFields = new Set(
+    instanceColumns ? [instanceColumns.roleField, instanceColumns.sequenceField].filter((f): f is string => !!f) : []
+  )
 
   const tableItems: FileFieldTableItem[] = []
   for (const [baseName, labelMap] of Object.entries(columnGroups)) {
+    if (headingFields.has(baseName)) continue
     const hasAny =
       Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '') ||
       instanceRows.some((r) => invalidOf.get(r)?.has(baseName))
@@ -825,6 +885,12 @@ function buildInstanceTable(
         const cell = buildListCell(value, spec!, currency)
         list[label] = cell
         formattedData[label] = listSummary(cell)
+      } else if (spec?.unit === 'ratio' && numeric) {
+        // SYS-3728: stored as a fraction, printed as the percentage.
+        formattedData[label] = formatRatio(value)
+      } else if (spec?.valueLabels && typeof value === 'string' && Object.prototype.hasOwnProperty.call(spec.valueLabels, value)) {
+        // SYS-3728: a code the category defines, in words; `data` keeps the code.
+        formattedData[label] = spec.valueLabels[value]!
       } else {
         formattedData[label] = formatValue(value, numeric, currency)
       }
@@ -861,12 +927,27 @@ function buildInstanceTable(
   )
   if (!tableItems.length || !hasData) return null
 
+  // SYS-3728: each period column's own year and end, for its heading. Read
+  // from the guarded rows, so a value that broke the contract is null here.
+  let periodHeadings: Record<string, IhsPeriodHeading> | undefined
+  if (periodFields && (periodFields.year || periodFields.end)) {
+    const str = (row: InstanceRow, f: string | undefined): string | null => {
+      const v = f ? row[f] : undefined
+      return typeof v === 'string' && v !== '' ? v : null
+    }
+    periodHeadings = {}
+    instanceRows.forEach((row, i) => {
+      periodHeadings![instanceLabels[i]!] = { year: str(row, periodFields.year), end: str(row, periodFields.end) }
+    })
+  }
+
   return {
     name: groupName,
     displayName: groupDisplayName,
     type: FileFieldTableType.TIME_SERIES,
     items: tableItems,
     hasData,
+    ...(periodHeadings ? { periodHeadings } : {}),
   }
 }
 
@@ -918,6 +999,11 @@ export interface CategorySpec {
    * the category's own `CategorySchema.instanceColumns`.
    */
   instanceColumns?: CategoryInstanceColumns
+  /**
+   * SYS-3728: the category's own `CategorySchema.periodFields`. With a `year`
+   * or `end`, the table carries `periodHeadings`.
+   */
+  periodFields?: CategoryPeriodFields
 }
 
 export function buildFileFieldTablesFromInstances(
@@ -961,7 +1047,8 @@ export function buildFileFieldTablesFromInstances(
       spec.numericColumnNames ? new Set(spec.numericColumnNames) : undefined,
       spec.fieldSpecs,
       spec.instanceColumns,
-      spec.currencyField
+      spec.currencyField,
+      spec.periodFields
     )
     if (table) tables[groupName] = table
   }
@@ -2839,6 +2926,7 @@ export function buildFileFieldTablesFromView(
         fieldSpecs,
         ...(currencyField ? { currencyField } : {}),
         ...(schema.instanceColumns ? { instanceColumns: schema.instanceColumns } : {}),
+        ...(schema.periodFields ? { periodFields: schema.periodFields } : {}),
       }
     }
   }

@@ -121,6 +121,8 @@ export {
   buildFileFieldTablesFromView,
   // SYS-3728: a stored list value as rows under its declared columns.
   buildListCell,
+  formatRatio,
+  periodHeadingLabel,
   INVALID_VALUE_TEXT,
   // SYS-3334 F3 (round 2 review): the provenance synthesis hoisted out of
   // buildFileFieldTablesFromView — collision-aware, and usable on its own.
@@ -197,6 +199,7 @@ export type {
   FileFieldTableItem,
   IhsListCell,
   IhsListColumn,
+  IhsPeriodHeading,
   IhsFieldProvenance,
   // SYS-3334 F3 (round 2 review): IhsFieldProvenance + the overlay-replaced
   // value, for fieldProvenanceFromView's return shape.

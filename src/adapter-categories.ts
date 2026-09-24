@@ -216,6 +216,18 @@ export interface CanonicalFieldSpec {
    * follow — a period start is not after its end.
    */
   readonly notAfter?: string;
+  /**
+   * SYS-3728: display words for codes the CATEGORY itself defines (a
+   * management account's `mgmtPeriodSource` "own" / "comparative", its
+   * `mgmtStatementsRead` "BS,PL"), keyed by the stored value. Presentation
+   * only: the table builder prints the label in `formattedData` and leaves
+   * `data` as stored; a value with no entry prints as stored. It is NOT a
+   * membership rule and says nothing about which values are valid (that is a
+   * `pattern`, or an adapter manifest's `enumValues`). Never declared on a
+   * field whose values are printed source text — a bureau's "NOT MATCHED"
+   * stays as printed.
+   */
+  readonly valueLabels?: Readonly<Record<string, string>>;
   readonly unit?: string;
   readonly range?: readonly [number, number];
   readonly description: string;
@@ -438,6 +450,7 @@ interface RawCategoryField {
   format?: unknown;
   mayBeFuture?: unknown;
   notAfter?: unknown;
+  valueLabels?: unknown;
   confidentiality?: "non-sensitive";
 }
 
@@ -567,6 +580,23 @@ function validateStringConstraints(
     ...(jurisdictionPatterns !== undefined ? { jurisdictionPatterns: Object.freeze(jurisdictionPatterns) } : {}),
   };
 }
+/** SYS-3728: `valueLabels` — a string field's stored value → its display words. */
+function validateValueLabels(at: string, type: string, raw: unknown): Readonly<Record<string, string>> | undefined {
+  if (raw === undefined) return undefined;
+  if (type !== "string") throw new Error(`${at} declares valueLabels, but only a string field has coded values (it is ${type})`);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || Object.keys(raw).length === 0) {
+    throw new Error(`${at} valueLabels must be a non-empty object of stored value → label`);
+  }
+  const out: Record<string, string> = {};
+  for (const [value, label] of Object.entries(raw as Record<string, unknown>)) {
+    if (value.length === 0 || typeof label !== "string" || label.trim().length === 0 || label !== label.trim()) {
+      throw new Error(`${at} valueLabels maps "${value}" to an invalid label — a non-empty, trimmed string`);
+    }
+    out[value] = label;
+  }
+  return Object.freeze(out);
+}
+
 /** SYS-3728: `format` / `mayBeFuture` on a string field or item. */
 function validateFormat(
   at: string,
@@ -1276,6 +1306,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         f,
       );
       const format = validateFormat(`adapter category data: field "${f.name}" (${where})`, f.type, f);
+      const valueLabels = validateValueLabels(`adapter category data: field "${f.name}" (${where})`, f.type, f.valueLabels);
       const spec: CanonicalFieldSpec = Object.freeze({
         name: asFieldName(f.name),
         type: f.type,
@@ -1283,6 +1314,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         ...stringConstraints,
         ...format,
         ...(f.notAfter !== undefined ? { notAfter: f.notAfter as string } : {}),
+        ...(valueLabels !== undefined ? { valueLabels } : {}),
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,

@@ -3125,7 +3125,7 @@
           "kind": "enum",
           "currencySource": true,
           "valueLabels": { "printed": "Printed on the statement", "inferred": "Inferred (MYR, Malaysian application; not printed)" },
-          "description": "Where mgmtCurrency came from. `printed` when the statement prints it (a heading, a footer, or a currency prefix on its figures); `inferred` when it prints no currency anywhere and the application is Malaysian, so the writer stored MYR — shown so a reviewer knows the currency was not on the page. Absent on rows written before this field existed."
+          "description": "Where mgmtCurrency came from. `printed` when the statement prints it, as FinXtract returns it: in its currency heading, or as a currency prefix on its figures; `inferred` when it prints no currency anywhere and the application is Malaysian, so the writer stored MYR — shown so a reviewer knows the currency was not on the page. Absent on rows written before this field existed."
         },
         {
           "name": "mgmtPeriodEnd",

@@ -241,12 +241,33 @@ const JOBS: ExtractionJobRecord[] = [
   { fileType: 'financialStatements', status: ExtractionJobStatus.Succeeded },
 ]
 
+/**
+ * Fields a category gained after the 9.4.0 capture, per document type. Each one
+ * raises that type's `totalColumns` (the registry denominator) in EVERY
+ * fixture — a declared change, not a shape move — so the status output is
+ * digested as 9.4.0's registry would have counted it, and every other byte of
+ * it is still pinned.
+ */
+const FIELDS_ADDED_SINCE_9_4_0: Record<string, string[]> = {
+  // 9.6.0, SYS-3728: where the statement's currency came from.
+  managementAccounts: ['mgmtCurrencySource'],
+}
+function statusAsAt940(r: ReturnType<typeof resolveExtractionStatusFromView>): unknown {
+  return {
+    ...r,
+    documents: r.documents.map((d) => {
+      const added = FIELDS_ADDED_SINCE_9_4_0[d.fileType]
+      return added ? { ...d, totalColumns: d.totalColumns - added.length } : d
+    }),
+  }
+}
+
 function outputs(v: CanonicalView): Record<string, unknown> {
   const intakeRows = v.categories['document-intake']!.instances
   return {
     documentsOfType: ['bankStatements', 'financialStatements'].map((t) => documentsOfType(v, intakeRows, t)),
     buildDocumentRowsFromView: buildDocumentRowsFromView(v),
-    resolveExtractionStatusFromView: resolveExtractionStatusFromView(v, JOBS),
+    resolveExtractionStatusFromView: statusAsAt940(resolveExtractionStatusFromView(v, JOBS)),
     instanceRowsFromView: ['financial-statement', 'finxtract-bank-statement'].map((c) => instanceRowsFromView(v, assertAdapterCategory(c))),
     buildFileFieldTablesFromView: buildFileFieldTablesFromView(v),
     fieldProvenanceFromView: fieldProvenanceFromView(v),

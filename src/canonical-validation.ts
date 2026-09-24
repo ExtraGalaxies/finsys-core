@@ -55,10 +55,17 @@ import {
   type CategoryRequirement,
   type ListItemSpec,
 } from './adapter-categories.js'
-import { isJurisdiction } from './jurisdiction.js'
+import { isJurisdiction, JURISDICTION_DISPLAY_CURRENCY } from './jurisdiction.js'
 import { isAllowedCurrency, minorUnitsOf, MONEY_MAX_DECIMALS } from './currency.js'
 
 export { STRING_MAX_LENGTH_DEFAULT, LIST_MAX_ITEMS_DEFAULT }
+
+/**
+ * SYS-3728: the `currencySource` value meaning the currency was NOT printed —
+ * the writer took the application jurisdiction's own. The only value the
+ * consistency rule treats specially; any other label is a printed source.
+ */
+export const CURRENCY_SOURCE_INFERRED = 'inferred'
 
 export type ViolationRule =
   | 'unknown-field'
@@ -97,6 +104,7 @@ export type ViolationRule =
   | 'implausible-date'
   | 'currency-mismatch'
   | 'currency-missing'
+  | 'currency-source-mismatch'
   | 'period-mismatch'
   | 'excess-precision'
   | 'empty-row'
@@ -1105,6 +1113,11 @@ function minorUnitViolations(
  *     currency (`currency-mismatch`); and a scope that states money states a
  *     currency, its own or the top level's (`currency-missing`). An amount
  *     with no denomination is a number, not money.
+ *   - CURRENCY SOURCE (a field declaring `currencySource`): a source describes
+ *     a currency stated in its scope, its own or the top level's; and
+ *     `"inferred"` is only ever the application jurisdiction's own currency,
+ *     under a STRICTLY matched jurisdiction — an unproven one infers nothing
+ *     (`currency-source-mismatch`, naming the source field, never a value).
  *   - PERIOD EXTENT (a category declaring `periodFields`): an envelope
  *     `periods[].start` / `.end` equals the period's own start / end field
  *     when both are given, and a year field is the year of the end field
@@ -1132,6 +1145,25 @@ function consistencyViolations(
     for (const { period, values } of scoped) {
       if (!topCurrency && !isAllowedCurrency(values[currency]) && statesMoney(fields, values, ctx)) {
         out.push({ field: currency, period, rule: 'currency-missing' })
+      }
+    }
+    const source = fields.find((f) => f.currencySource)?.name
+    if (source !== undefined) {
+      const judge = (values: Record<string, unknown>, inherited: Record<string, unknown>, period?: number) => {
+        const s = values[source] ?? inherited[source]
+        if (typeof s !== 'string') return
+        const c = isAllowedCurrency(values[currency]) ? values[currency] : inherited[currency]
+        const j = ctx.jurisdiction
+        const described = isAllowedCurrency(c)
+        const inferable = isJurisdiction(j) && JURISDICTION_DISPLAY_CURRENCY[j] === c
+        if (!described || (s === CURRENCY_SOURCE_INFERRED && !inferable)) {
+          out.push({ field: source, ...(period === undefined ? {} : { period }), rule: 'currency-source-mismatch' })
+        }
+      }
+      judge(top, {})
+      // A period that states neither is judged once, at the top level.
+      for (const { period, values } of scoped) {
+        if (values[source] !== undefined || values[currency] !== undefined) judge(values, top, period)
       }
     }
     // Money within its own currency's minor units. The field rule already

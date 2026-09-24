@@ -4,6 +4,47 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.6.0] - 2026-09-24
+
+_MINOR — one field, one field attribute, one violation rule. Additive: rows
+written before it carry no source, and that stays valid._
+
+### Added
+
+- **SYS-3728 — `management-account.mgmtCurrencySource`** (string, kind
+  `enum`), declared immediately after `mgmtCurrency` so every generic table
+  renders it beside Currency. Values `printed` / `inferred`, with `valueLabels`
+  "Printed on the statement" / "Inferred (MYR, Malaysian application; not
+  printed)". Membership comes from the writing adapter manifest's
+  `enumValues`, as for every enum. Why: about a third of Malaysian management
+  accounts print no currency; on a Malaysian application the writer now stores
+  MYR for them instead of refusing, and records that it inferred it so a
+  reviewer can see the currency was not on the page.
+- **Field attribute `currencySource: true`** — marks the enum that records
+  where the category's `kind: "currency"` field came from. The loader refuses
+  it on anything but a string enum, in a category with no currency field, and
+  more than once per category. `CanonicalFieldSpec.currencySource` is optional.
+- **Violation rule `currency-source-mismatch`** (extraction-level, value-free:
+  names the source field and the period). A source must describe a currency
+  stated in its scope (its own or the top level's), and `inferred` must be the
+  STRICTLY matched jurisdiction's display currency (`JURISDICTION_DISPLAY_CURRENCY`)
+  — so an application with no, or an unproven, jurisdiction infers nothing.
+  A currency with no source is allowed (legacy rows, writers that do not
+  record one).
+- Export `CURRENCY_SOURCE_INFERRED` (`"inferred"`).
+
+### Consumer-visible
+
+- `ViolationRule` gains `'currency-source-mismatch'`; an exhaustive switch over
+  it needs a case.
+- The management-account table gains a "Currency Source" row after "Currency".
+- Extraction status: a management account's `totalColumns` (the registry
+  denominator) is 62, was 61. A row written before a host records the source
+  counts one column fewer populated than a new one with the same figures.
+- A host writing this field adds a nullable column
+  (`ihs_alt_data_management_account.mgmt_currency_source`) and the two labels
+  to its manifest's `enumValues`.
+
 ## [9.5.0] - 2026-09-24
 
 _MINOR — a field type, `list`, and the table cell that renders it. Every type

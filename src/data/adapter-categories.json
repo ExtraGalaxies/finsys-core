@@ -3117,7 +3117,15 @@
           "name": "mgmtCurrency",
           "type": "string",
           "kind": "currency",
-          "description": "The statement's reporting currency as an ISO 4217 code; normalized from the printed form (RM, MYR, ...) by the writer, and absent when the statement prints none or prints a form that names no single currency."
+          "description": "The statement's reporting currency as an ISO 4217 code; normalized from the printed form (RM, MYR, ...) by the writer. Absent when the statement prints a form that names no single currency, and when it prints none on an application whose jurisdiction the writer may not infer from (see mgmtCurrencySource)."
+        },
+        {
+          "name": "mgmtCurrencySource",
+          "type": "string",
+          "kind": "enum",
+          "currencySource": true,
+          "valueLabels": { "printed": "Printed on the statement", "inferred": "Inferred (MYR, Malaysian application; not printed)" },
+          "description": "Where mgmtCurrency came from. `printed` when the statement prints it, as FinXtract returns it: in its currency heading, or as a currency prefix on its figures; `inferred` when it prints no currency anywhere and the application is Malaysian, so the writer stored MYR — shown so a reviewer knows the currency was not on the page. Absent on rows written before this field existed."
         },
         {
           "name": "mgmtPeriodEnd",

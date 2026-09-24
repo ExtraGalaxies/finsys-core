@@ -247,6 +247,7 @@
   "kdnScreening": "KDN Screening",
   "unSanctionsScreening": "UN Sanctions Screening",
   "mgmtCurrency": "Currency",
+  "mgmtCurrencySource": "Currency Source",
   "mgmtPeriodEnd": "Period End",
   "mgmtPeriodStart": "Period Start",
   "mgmtPeriodYear": "Period Year",

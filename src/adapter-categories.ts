@@ -228,6 +228,17 @@ export interface CanonicalFieldSpec {
    * stays as printed.
    */
   readonly valueLabels?: Readonly<Record<string, string>>;
+  /**
+   * SYS-3728: this enum records WHERE the category's `kind: "currency"` field
+   * came from — `"printed"` (on the statement) or `"inferred"` (not printed;
+   * the writer took the application jurisdiction's own currency). The
+   * extraction-level rule (`currency-source-mismatch`): a source describes a
+   * currency present in its scope, and `"inferred"` is only ever the strictly
+   * matched jurisdiction's display currency. A currency with no source is
+   * allowed (rows written before the field, writers that do not record it).
+   * At most one per category, and only beside a currency field.
+   */
+  readonly currencySource?: true;
   readonly unit?: string;
   readonly range?: readonly [number, number];
   readonly description: string;
@@ -451,6 +462,7 @@ interface RawCategoryField {
   mayBeFuture?: unknown;
   notAfter?: unknown;
   valueLabels?: unknown;
+  currencySource?: unknown;
   confidentiality?: "non-sensitive";
 }
 
@@ -1315,6 +1327,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         ...format,
         ...(f.notAfter !== undefined ? { notAfter: f.notAfter as string } : {}),
         ...(valueLabels !== undefined ? { valueLabels } : {}),
+        ...(f.currencySource !== undefined ? { currencySource: true as const } : {}),
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
@@ -1373,6 +1386,18 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       if (f.format !== "date" || other.format !== "date") {
         throw new Error(`${at} declares notAfter, but both it and "${other.name}" must be format "date"`);
       }
+    }
+    for (const f of cat.fields) {
+      if (f.currencySource === undefined) continue;
+      const at = `adapter category data: field "${f.name}" (${where})`;
+      if (f.currencySource !== true) throw new Error(`${at} has an invalid currencySource — expected true`);
+      if (f.type !== "string" || f.kind !== "enum") throw new Error(`${at} declares currencySource, but only a string enum records one`);
+      if (!cat.fields.some((x) => x.kind === "currency")) {
+        throw new Error(`${at} declares currencySource, but ${where} has no currency field for it to describe`);
+      }
+    }
+    if (cat.fields.filter((x) => x.currencySource !== undefined).length > 1) {
+      throw new Error(`adapter category data: ${where} declares more than one currencySource field`);
     }
     if (
       cat.maxPeriods !== undefined &&

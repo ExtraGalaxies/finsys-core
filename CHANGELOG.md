@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 9.5.0
+## [9.5.0] - 2026-09-24
 
 _MINOR — a field type, `list`, and the table cell that renders it. Every type
 change is additive (a union widened, optional members added). Read
@@ -356,6 +356,8 @@ tables change shape, and `CanonicalFieldSpec.type` gains a member._
     alt-data categories that no file-field table renders.
   - **`valueLabels`** (new optional `CanonicalFieldSpec` member): display words
     for codes a category itself defines, keyed by the stored value.
+    A deliberate, reviewed exception (2026-09-24): which values are allowed is
+    still set by the adapter manifest's `enumValues`; `valueLabels` only names them.
     Presentation only — not a membership rule; a value with no entry prints as
     stored. Declared on `mgmtPeriodSource` ("own" → "Own statement",
     "comparative" → "Comparative") and `mgmtStatementsRead` ("BS,PL" →

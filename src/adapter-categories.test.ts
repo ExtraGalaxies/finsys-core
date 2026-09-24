@@ -59,7 +59,9 @@ describe("Adapter category catalogue", () => {
       expect(cat.fields.length).toBeGreaterThan(0);
       for (const f of cat.fields) {
         expect(f.name).toMatch(/\S/);
-        expect(["number", "boolean", "string"]).toContain(f.type);
+        expect(["number", "boolean", "string", "list"]).toContain(f.type);
+        // SYS-3728: items exactly when the field is a list.
+        expect(f.items !== undefined, f.name).toBe(f.type === "list");
         expect(f.description).toMatch(/\S/);
       }
     }

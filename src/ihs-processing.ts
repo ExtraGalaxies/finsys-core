@@ -23,10 +23,23 @@ import type {
   DocumentRow,
   DocumentFileMetadata,
   InstanceRow,
+  IhsListCell,
+  IhsPeriodHeading,
 } from './ihs-types.js'
 import { getBaseFieldSpecs, getBaseCategories, getBaseFieldSpecMap } from './catalogs.js'
 import { getDocumentTypeGroups } from './document-types.js'
-import { allCategories, assertAdapterCategory, categoryFieldsOf, categorySchemaOf, type AdapterCategory } from './adapter-categories.js'
+import {
+  allCategories,
+  assertAdapterCategory,
+  categoryFieldsOf,
+  categorySchemaOf,
+  type AdapterCategory,
+  type CanonicalFieldSpec,
+  type CategoryInstanceColumns,
+  type CategoryPeriodFields,
+  type ListItemSpec,
+} from './adapter-categories.js'
+import { isValidInstanceKey, matchListRow, parseListValue, validateFieldValue, type ViolationRule } from './canonical-validation.js'
 import {
   v1Addresses,
   v1KeyForAddress,
@@ -341,6 +354,164 @@ function formatValue(value: unknown, numeric: boolean, currency?: string): strin
   return String(value)
 }
 
+/**
+ * `maximumFractionDigits: 2` on the percentage, built once (see
+ * `currencyFormatters` for why formatters are cached).
+ */
+const RATIO_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 2 })
+
+/**
+ * SYS-3728: a `unit: "ratio"` value as the percentage a document prints.
+ *
+ * The registry stores a ratio as a FRACTION (the bureau's printed "74.02%" is
+ * stored 0.7402; see `securedOutstandingToLimitRatio`), so printing the stored
+ * number read "0.74" beside a report that says 74.02%. Multiplied by 100, at
+ * most two decimals, trailing zeros dropped: 0.7402 → "74.02%", 1.5 → "150%".
+ * Absent is `-`, like every other cell; a non-number is printed as it is.
+ */
+export function formatRatio(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '-'
+  const num = typeof value === 'number' ? value : Number(value)
+  if (typeof value === 'boolean' || !Number.isFinite(num)) return String(value)
+  return RATIO_FORMAT.format(num)
+}
+
+/**
+ * SYS-3728: a period column's heading — "FY2025 · to 31 Dec 2025" — from the
+ * table's `periodHeadings` entry. `formatDate` prints the ISO end date in the
+ * calling app's own style. Year only: "FY2025"; end only: "to <end>"; neither
+ * (or no entry): null, and the caller keeps the column key ("T1").
+ */
+export function periodHeadingLabel(
+  heading: IhsPeriodHeading | undefined,
+  formatDate: (isoDate: string) => string
+): string | null {
+  const year = heading?.year ?? null
+  const end = heading?.end ?? null
+  if (year && end) return `FY${year} · to ${formatDate(end)}`
+  if (year) return `FY${year}`
+  if (end) return `to ${formatDate(end)}`
+  return null
+}
+
+// ── List cells and the read-side guard (SYS-3728) ────────────────
+
+/** What a cell that broke the canonical write contract shows instead of its value. */
+export const INVALID_VALUE_TEXT = '(invalid value)'
+
+function invalidListCell(): IhsListCell {
+  return {
+    kind: 'list',
+    columns: [{ name: 'value', label: 'Value', numeric: false, money: false }],
+    rows: [{ value: INVALID_VALUE_TEXT }],
+    rawRows: [],
+    invalid: true,
+  }
+}
+
+function formatListItem(v: unknown, item: ListItemSpec, currency?: string): string {
+  if (v === null || v === undefined) return '-'
+  if (item.type === 'number') return formatValue(v, true, item.kind === 'money' ? currency : undefined)
+  return String(v)
+}
+
+/**
+ * SYS-3728: a stored list value as rows under its declared columns — the
+ * `IhsListCell` contract (see its doc in ihs-types.ts).
+ *
+ * The value is checked against the SAME validator a writer enforces
+ * (`validateFieldValue`): any violation — not a JSON array, a row that is not
+ * an object, an undeclared key, a number item holding text, an over-long or
+ * control-character string — and the cell is the invalid marker, carrying
+ * NONE of the stored content. Only a value that passes is rendered.
+ *
+ * `listSpec` is the list field's registry spec. `currency` is the
+ * observation's ISO 4217 code, used for money items; absent, money is a plain
+ * grouped number.
+ */
+export function buildListCell(value: unknown, listSpec: CanonicalFieldSpec, currency?: string): IhsListCell {
+  if (listSpec.type !== 'list' || !listSpec.items) return invalidListCell()
+  if (validateFieldValue(listSpec, value, { enumMembership: 'skip' }).length > 0) return invalidListCell()
+  const parsed = parseListValue(value)
+  if (!('rows' in parsed)) return invalidListCell()
+  const items = listSpec.items
+  // SYS-3728 (first live render): a declared column no row fills is not a
+  // column — "Amount (as printed)" read "-" on every line that parsed.
+  const filled = new Set<string>()
+  const rows = parsed.rows.map((raw) => {
+    const { values } = matchListRow(raw as Record<string, unknown>, items)
+    const row: Record<string, string> = {}
+    for (const item of items) {
+      const v = values.get(item.name)
+      if (v !== null && v !== undefined) filled.add(item.name)
+      row[item.name] = formatListItem(v, item, currency)
+    }
+    return row
+  })
+  return {
+    kind: 'list',
+    columns: items
+      .filter((i) => filled.has(i.name))
+      .map((i) => ({ name: i.name, label: i.displayName, numeric: i.type === 'number', money: i.kind === 'money' })),
+    rows,
+    rawRows: parsed.rows,
+  }
+}
+
+/** The short text `formattedData` carries for a list: a count, never the JSON. */
+function listSummary(cell: IhsListCell): string {
+  if (cell.invalid) return INVALID_VALUE_TEXT
+  const n = cell.rows.length
+  return `${n} ${n === 1 ? 'entry' : 'entries'}`
+}
+
+/**
+ * SYS-3728: the rows with every value that breaks the write contract removed,
+ * and a record of which (row, field) broke which rules. The removed value is
+ * never rendered, never used as a column label, and never reaches `data`.
+ */
+function guardInstanceRows(
+  rows: InstanceRow[],
+  fieldSpecs: Readonly<Record<string, CanonicalFieldSpec>>
+): { rows: InstanceRow[]; invalid: Array<Map<string, ViolationRule[]>> } {
+  const invalid: Array<Map<string, ViolationRule[]>> = []
+  const guarded = rows.map((row, i) => {
+    const bad = new Map<string, ViolationRule[]>()
+    // A row already guarded upstream (instanceRowsFromView) carries its flags.
+    for (const [field, rules] of Object.entries(row.invalidFields ?? {})) bad.set(field, rules)
+    const copy: InstanceRow = { ...row }
+    for (const [field, spec] of Object.entries(fieldSpecs)) {
+      if (!Object.prototype.hasOwnProperty.call(row, field)) continue
+      const violations = validateFieldValue(spec, row[field], { enumMembership: 'skip' })
+      if (violations.length > 0) {
+        bad.set(field, [...new Set(violations.map((v) => v.rule))])
+        copy[field] = null
+      }
+    }
+    // S3: the key and the wire's own label are rendered as column labels —
+    // an invalid one is replaced, never shown.
+    if (!isValidInstanceKey(row.instanceKey)) copy.instanceKey = `${INVALID_VALUE_TEXT} ${i + 1}`
+    if (row.sourceLabel != null && (typeof row.sourceLabel !== 'string' || !isValidInstanceKey(row.sourceLabel) || row.sourceLabel === '')) {
+      copy.sourceLabel = null
+    }
+    delete copy.invalidFields
+    invalid.push(bad)
+    return copy
+  })
+  return { rows: guarded, invalid }
+}
+
+/**
+ * SYS-3728: the field specs a category's read paths hold values to — the
+ * categories with no v1 lineage, whose values reach rows, tables and scoring
+ * under their canonical names. A v1-lineage category is not re-checked on
+ * read (its outputs are the byte-identity contract); its writers are.
+ */
+function readGuardSpecs(category: AdapterCategory): Record<string, CanonicalFieldSpec> | null {
+  if (!canonicalNamedCategories().has(category)) return null
+  return Object.fromEntries(categorySchemaOf(category).fields.map((f) => [f.name as string, f]))
+}
+
 function buildTableForGroup(
   groupName: string,
   fields: FieldData[],
@@ -530,12 +701,20 @@ export function groupColumnsByInstance(
   baseColumnNames: string[],
   instanceRows: InstanceRow[]
 ): Record<string, Record<string, unknown>> {
+  return groupByLabels(baseColumnNames, instanceRows, instanceRows?.length ? instanceColumnLabels(instanceRows) : [])
+}
+
+/** groupColumnsByInstance with the column labels supplied (SYS-3728). */
+function groupByLabels(
+  baseColumnNames: string[],
+  instanceRows: InstanceRow[],
+  labels: string[]
+): Record<string, Record<string, unknown>> {
   const groups: Record<string, Record<string, unknown>> = {}
   for (const baseName of baseColumnNames) {
     groups[baseName] = {}
   }
   if (!instanceRows?.length) return groups
-  const labels = instanceColumnLabels(instanceRows)
   instanceRows.forEach((row, i) => {
     const label = labels[i]
     for (const baseName of baseColumnNames) {
@@ -563,29 +742,125 @@ export function groupColumnsByInstance(
  * function exists for) simply render with no confidence, same limitation
  * buildFileFieldTables already has today for anything past T6.
  */
+/**
+ * SYS-3728: the column order and labels of a category that declares
+ * `instanceColumns` — instances that are SUBJECTS, not periods.
+ *
+ * Order: by document (an instance key's part before its last `#`, in order of
+ * first appearance), then by role in the declared `roleOrder` (an undeclared
+ * role after every declared one), then by the sequence field compared
+ * naturally, so pbi-2 precedes pbi-10. The sort is stable, so anything the
+ * keys do not separate keeps its wire order.
+ *
+ * Label: "<label field> (<role>)", or the bare label field with no role. An
+ * instance with no label value falls back to the ordinary period label, so no
+ * column is ever blank. Collisions are disambiguated exactly as
+ * `instanceColumnLabels` does — two subjects of one name are two columns.
+ */
+function orderAndLabelInstances(
+  rows: InstanceRow[],
+  spec: CategoryInstanceColumns
+): { rows: InstanceRow[]; labels: string[] } {
+  const documentOf = (row: InstanceRow): string => {
+    const at = row.instanceKey.lastIndexOf('#')
+    return at < 0 ? row.instanceKey : row.instanceKey.slice(0, at)
+  }
+  const firstSeen = new Map<string, number>()
+  for (const row of rows) if (!firstSeen.has(documentOf(row))) firstSeen.set(documentOf(row), firstSeen.size)
+  const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+  const roleRank = (row: InstanceRow): number => {
+    if (!spec.roleField || !spec.roleOrder) return 0
+    const at = spec.roleOrder.indexOf(text(row[spec.roleField]))
+    return at < 0 ? spec.roleOrder.length : at
+  }
+  const ordered = rows
+    .map((row, i) => ({ row, i }))
+    .sort((a, b) =>
+      firstSeen.get(documentOf(a.row))! - firstSeen.get(documentOf(b.row))! ||
+      roleRank(a.row) - roleRank(b.row) ||
+      (spec.sequenceField
+        ? text(a.row[spec.sequenceField]).localeCompare(text(b.row[spec.sequenceField]), 'en', { numeric: true })
+        : 0) ||
+      a.i - b.i
+    )
+    .map((x) => x.row)
+
+  // Two reports on one subject would otherwise read "Co (principal)" and
+  // "Co (principal) (2)" — which report is which is lost. Only when the
+  // columns span documents; a single report's labels stay bare.
+  const multiDocument = firstSeen.size > 1
+  const documentSuffix = (row: InstanceRow): string => {
+    if (!multiDocument) return ''
+    const named = spec.documentLabelField ? text(row[spec.documentLabelField]) : ''
+    return ` · ${named !== '' ? named : `report ${firstSeen.get(documentOf(row))! + 1}`}`
+  }
+  const seenCounts = new Map<string, number>()
+  const labels = ordered.map((row) => {
+    const name = text(row[spec.labelField])
+    const role = spec.roleField ? text(row[spec.roleField]) : ''
+    const raw = name === ''
+      ? instanceColumnLabel(row)
+      : `${role === '' ? name : `${name} (${role})`}${documentSuffix(row)}`
+    const occurrence = (seenCounts.get(raw) ?? 0) + 1
+    seenCounts.set(raw, occurrence)
+    return occurrence === 1 ? raw : `${raw} (${occurrence})`
+  })
+  return { rows: ordered, labels }
+}
+
 function buildInstanceTable(
   groupName: string,
   baseNames: string[],
   groupDisplayName: string,
-  instanceRows: InstanceRow[],
+  rowsAsGiven: InstanceRow[],
   fieldProvenance?: Record<string, IhsFieldProvenance>,
-  numericColumns?: ReadonlySet<string>
+  numericColumns?: ReadonlySet<string>,
+  fieldSpecs?: Readonly<Record<string, CanonicalFieldSpec>>,
+  instanceColumns?: CategoryInstanceColumns,
+  currencyField?: string,
+  periodFields?: CategoryPeriodFields
 ): FileFieldTableData | null {
-  const columnGroups = groupColumnsByInstance(baseNames, instanceRows)
-  const instanceLabels = instanceColumnLabels(instanceRows)
+  // SYS-3728: with field specs, every value is held to the write contract
+  // BEFORE anything reads it — labels, ordering, currency, cells.
+  const guard = fieldSpecs ? guardInstanceRows(rowsAsGiven, fieldSpecs) : null
+  const guardedRows = guard ? guard.rows : rowsAsGiven
+  const invalidOf = new Map<InstanceRow, Map<string, ViolationRule[]>>()
+  if (guard) guardedRows.forEach((r, i) => invalidOf.set(r, guard.invalid[i]!))
 
-  const items: FileFieldTableItem[] = []
+  const { rows: instanceRows, labels: instanceLabels } = instanceColumns
+    ? orderAndLabelInstances(guardedRows, instanceColumns)
+    : { rows: guardedRows, labels: instanceColumnLabels(guardedRows) }
+  const columnGroups = groupByLabels(baseNames, instanceRows, instanceLabels)
+  // SYS-3728 (first live render): the fields a subject column is ordered and
+  // headed by are not rows — "Report Section: ccris" and "Subject Role:
+  // principal" repeated what "Example Sdn Bhd (principal)" already says, in
+  // internal codes. They still order and label the columns (above).
+  const headingFields = new Set(
+    instanceColumns ? [instanceColumns.roleField, instanceColumns.sequenceField].filter((f): f is string => !!f) : []
+  )
+
+  const tableItems: FileFieldTableItem[] = []
   for (const [baseName, labelMap] of Object.entries(columnGroups)) {
-    const hasAny = Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '')
+    if (headingFields.has(baseName)) continue
+    const hasAny =
+      Object.values(labelMap).some((v) => v !== null && v !== undefined && v !== '') ||
+      instanceRows.some((r) => invalidOf.get(r)?.has(baseName))
     if (!hasAny) continue
 
-    const numeric = numericColumns
-      ? numericColumns.has(baseName)
-      : isNumericField(baseName) || isMonetaryField(baseName)
+    const spec = fieldSpecs && Object.prototype.hasOwnProperty.call(fieldSpecs, baseName) ? fieldSpecs[baseName] : undefined
+    const isList = spec?.type === 'list'
+    // SYS-3728: a list field is rows, never a number — whatever its name says.
+    const numeric = isList
+      ? false
+      : numericColumns
+        ? numericColumns.has(baseName)
+        : isNumericField(baseName) || isMonetaryField(baseName)
     const data: Record<string, unknown> = {}
     const formattedData: Record<string, string> = {}
     const confidence: Record<string, number> = {}
     const provenance: Record<string, IhsFieldProvenance> = {}
+    const list: Record<string, IhsListCell> = {}
+    const invalid: Record<string, ViolationRule[]> = {}
 
     for (const [i, row] of instanceRows.entries()) {
       const label = instanceLabels[i]
@@ -596,7 +871,29 @@ function buildInstanceTable(
       // SYS-3249: hoisted above the format call — the envelope carries
       // this value's currency.
       const prov = legacyKey ? fieldProvenance?.[legacyKey] : undefined
-      formattedData[label] = formatValue(value, numeric, prov?.currency)
+      // SYS-3728: the document's OWN currency field, when the category has one
+      // and its value passed the guard — an ISO code, never a printed symbol,
+      // never a jurisdiction default.
+      const own = currencyField ? row[currencyField] : undefined
+      const currency = typeof own === 'string' ? own : prov?.currency
+      const rules = invalidOf.get(row)?.get(baseName)
+      if (rules) {
+        invalid[label] = rules
+        formattedData[label] = INVALID_VALUE_TEXT
+        if (isList) list[label] = invalidListCell()
+      } else if (isList && value !== null && value !== undefined && value !== '') {
+        const cell = buildListCell(value, spec!, currency)
+        list[label] = cell
+        formattedData[label] = listSummary(cell)
+      } else if (spec?.unit === 'ratio' && numeric) {
+        // SYS-3728: stored as a fraction, printed as the percentage.
+        formattedData[label] = formatRatio(value)
+      } else if (spec?.valueLabels && typeof value === 'string' && Object.prototype.hasOwnProperty.call(spec.valueLabels, value)) {
+        // SYS-3728: a code the category defines, in words; `data` keeps the code.
+        formattedData[label] = spec.valueLabels[value]!
+      } else {
+        formattedData[label] = formatValue(value, numeric, currency)
+      }
       if (prov) {
         provenance[label] = prov
         if (
@@ -609,7 +906,7 @@ function buildInstanceTable(
       }
     }
 
-    items.push({
+    tableItems.push({
       displayName: getDisplayName(baseName),
       timePeriods: instanceLabels,
       data,
@@ -618,20 +915,39 @@ function buildInstanceTable(
       isNumeric: numeric,
       ...(Object.keys(confidence).length ? { confidence } : {}),
       ...(Object.keys(provenance).length ? { provenance } : {}),
+      ...(isList ? { list } : {}),
+      ...(Object.keys(invalid).length ? { invalid } : {}),
     })
   }
 
-  const hasData = items.some((item) =>
-    Object.values(item.data).some((v) => v !== null && v !== undefined && v !== '')
+  const hasData = tableItems.some(
+    (item) =>
+      Object.values(item.data).some((v) => v !== null && v !== undefined && v !== '') ||
+      item.invalid !== undefined
   )
-  if (!items.length || !hasData) return null
+  if (!tableItems.length || !hasData) return null
+
+  // SYS-3728: each period column's own year and end, for its heading. Read
+  // from the guarded rows, so a value that broke the contract is null here.
+  let periodHeadings: Record<string, IhsPeriodHeading> | undefined
+  if (periodFields && (periodFields.year || periodFields.end)) {
+    const str = (row: InstanceRow, f: string | undefined): string | null => {
+      const v = f ? row[f] : undefined
+      return typeof v === 'string' && v !== '' ? v : null
+    }
+    periodHeadings = {}
+    instanceRows.forEach((row, i) => {
+      periodHeadings![instanceLabels[i]!] = { year: str(row, periodFields.year), end: str(row, periodFields.end) }
+    })
+  }
 
   return {
     name: groupName,
     displayName: groupDisplayName,
     type: FileFieldTableType.TIME_SERIES,
-    items,
+    items: tableItems,
     hasData,
+    ...(periodHeadings ? { periodHeadings } : {}),
   }
 }
 
@@ -663,6 +979,31 @@ export interface CategorySpec {
    * and borrow its confidence. Such a table gets no provenance at all.
    */
   noLegacyProvenance?: boolean
+  /**
+   * SYS-3728: the registry spec of each column, keyed by column name. With it,
+   * every value is checked against the canonical write contract before it is
+   * rendered: a value that breaks it shows `INVALID_VALUE_TEXT`, is null in
+   * `data`, and is named in `FileFieldTableItem.invalid`. A `list` column
+   * renders as `IhsListCell`s with a short count in `formattedData`, and is
+   * never numeric.
+   */
+  fieldSpecs?: Record<string, CanonicalFieldSpec>
+  /**
+   * SYS-3728: the column holding each instance's own ISO 4217 currency (the
+   * category's `kind: "currency"` field). Money cells of that instance render
+   * in it; absent or invalid, they render as plain numbers.
+   */
+  currencyField?: string
+  /**
+   * SYS-3728: label and order the columns by subject rather than by period —
+   * the category's own `CategorySchema.instanceColumns`.
+   */
+  instanceColumns?: CategoryInstanceColumns
+  /**
+   * SYS-3728: the category's own `CategorySchema.periodFields`. With a `year`
+   * or `end`, the table carries `periodHeadings`.
+   */
+  periodFields?: CategoryPeriodFields
 }
 
 export function buildFileFieldTablesFromInstances(
@@ -703,7 +1044,11 @@ export function buildFileFieldTablesFromInstances(
     const table = buildInstanceTable(
       groupName, spec.baseColumnNames, spec.displayName, instanceRows,
       spec.noLegacyProvenance ? undefined : fieldProvenance,
-      spec.numericColumnNames ? new Set(spec.numericColumnNames) : undefined
+      spec.numericColumnNames ? new Set(spec.numericColumnNames) : undefined,
+      spec.fieldSpecs,
+      spec.instanceColumns,
+      spec.currencyField,
+      spec.periodFields
     )
     if (table) tables[groupName] = table
   }
@@ -2159,7 +2504,25 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
  * above is accurate again rather than merely aspirational.
  */
 export function instanceRowsFromView(view: CanonicalView, category: AdapterCategory): InstanceRow[] {
-  return instanceRowPairsFromView(view, category).map((p) => p.row)
+  const rows = instanceRowPairsFromView(view, category).map((p) => p.row)
+  // SYS-3728: a constrained category's rows never carry a value that breaks
+  // the write contract — it is null, and named (rules only) in `invalidFields`.
+  // Scoring reads these rows.
+  const specs = readGuardSpecs(category)
+  if (!specs) return rows
+  return rows.map((row) => {
+    const bad: Record<string, ViolationRule[]> = {}
+    const copy: InstanceRow = { ...row }
+    for (const [field, spec] of Object.entries(specs)) {
+      if (!Object.prototype.hasOwnProperty.call(row, field)) continue
+      const violations = validateFieldValue(spec, row[field], { enumMembership: 'skip' })
+      if (violations.length > 0) {
+        bad[field] = [...new Set(violations.map((v) => v.rule))]
+        copy[field] = null
+      }
+    }
+    return Object.keys(bad).length > 0 ? { ...copy, invalidFields: bad } : copy
+  })
 }
 
 /**
@@ -2548,12 +2911,22 @@ export function buildFileFieldTablesFromView(
     // order, through the same override path invoice uses — and numeric means
     // the registry SAYS number, not that the name happens to contain "cash".
     if (canonicalNamed.has(category)) {
-      const fields = categorySchemaOf(category).fields
+      const schema = categorySchemaOf(category)
+      const fields = schema.fields
+      // SYS-3728: a list field's columns come from its item schema.
+      // SYS-3728: every column's spec, so the table holds each value to the
+      // write contract; and the category's own currency field, if it has one.
+      const fieldSpecs = Object.fromEntries(fields.map((f) => [f.name as string, f]))
+      const currencyField = fields.find((f) => f.kind === 'currency')?.name
       lineageFree[group.documentGroup] = {
         displayName: group.label,
         baseColumnNames: fields.map((f) => f.name),
         numericColumnNames: fields.filter((f) => f.type === 'number').map((f) => f.name),
         noLegacyProvenance: true,
+        fieldSpecs,
+        ...(currencyField ? { currencyField } : {}),
+        ...(schema.instanceColumns ? { instanceColumns: schema.instanceColumns } : {}),
+        ...(schema.periodFields ? { periodFields: schema.periodFields } : {}),
       }
     }
   }

@@ -3,6 +3,8 @@
  * Used by finsys-client and finhub-adonisjs to render application details.
  */
 
+import type { ViolationRule } from './canonical-validation.js'
+
 export enum IhsValueFormat {
   STRING = 'string',
   CURRENCY = 'currency',
@@ -158,6 +160,66 @@ export interface FileFieldTableItem {
    */
   confidence?: Record<string, number>
   provenance?: Record<string, IhsFieldProvenance>
+  /**
+   * SYS-3728: present only on an item whose field is a `list` (a table the
+   * source prints — a management account's line items, a bureau report's
+   * facilities). Keyed like `data`, with an entry only for a column that has a
+   * stored value. Additive: `data` still carries the stored value unchanged,
+   * and `formattedData` carries a short count ("22 entries") rather than the
+   * JSON, so a consumer that does not read `list` shows a count, not a wall.
+   * `isNumeric` is always false for such an item.
+   */
+  list?: Record<string, IhsListCell>
+  /**
+   * SYS-3728: the columns whose stored value broke the canonical write
+   * contract (`validateFieldValue`), with the rules it broke — keyed like
+   * `data`. For each, `data` is null, `formattedData` is "(invalid value)",
+   * and a list's cell is the invalid marker: the stored content is never
+   * rendered. Present only on a table built with field specs (a category
+   * with no v1 lineage).
+   */
+  invalid?: Record<string, ViolationRule[]>
+}
+
+/** SYS-3728: one column of an `IhsListCell`. */
+export interface IhsListColumn {
+  /** The item name from the field's `items`, or `'value'` for the one column of an invalid cell. */
+  name: string
+  /** Column heading: the item's `displayName`. */
+  label: string
+  /** The item is a number — right-align it. */
+  numeric: boolean
+  /** The item is money — its cells are formatted like every other money cell. */
+  money: boolean
+}
+
+/**
+ * SYS-3728: a list field's value in one table column, as rows.
+ *
+ * `columns` are the field's declared items, in declared order, that at least
+ * one row fills: a declared column no row fills is left out (SYS-3728, first
+ * live render — "Amount (as printed)" showed a dash on every management-account
+ * line; it appears only on a list with an unreadable line). Two cells of one
+ * field may therefore differ in shape. `rows` still carry every declared key.
+ * A stored key matches an item by its exact name or by its
+ * kebab-case spelling (`appointment-date` → `appointmentDate`).
+ *
+ * `rows` are formatted strings keyed by column name — money as money, numbers
+ * grouped, an absent value `'-'`. `rawRows` is the parsed array exactly as
+ * stored.
+ *
+ * `invalid` marks a stored value that breaks the canonical write contract
+ * (not a JSON array, a row that is not an object, an undeclared key, a value
+ * of the wrong type, length or characters): the cell then has one `value`
+ * column and one row reading "(invalid value)", and `rawRows` is empty. None
+ * of the stored content is carried.
+ */
+export interface IhsListCell {
+  kind: 'list'
+  columns: IhsListColumn[]
+  rows: Array<Record<string, string>>
+  rawRows: unknown[]
+  invalid?: true
 }
 
 export interface FileFieldTableData {
@@ -166,6 +228,21 @@ export interface FileFieldTableData {
   type: FileFieldTableType
   items: FileFieldTableItem[]
   hasData: boolean
+  /**
+   * SYS-3728: for a category that declares `periodFields` (a management
+   * account), each column's period as stored — keyed like `data`, `year` and
+   * `end` (ISO date) or null when the instance has none or it broke the write
+   * contract. A consumer heads the column with `periodHeadingLabel`, printing
+   * the end in its own date style, and keeps the column key ("T1") as the
+   * heading when that returns null. Absent on every other table.
+   */
+  periodHeadings?: Record<string, IhsPeriodHeading>
+}
+
+/** SYS-3728: one period column's own year and end — see `FileFieldTableData.periodHeadings`. */
+export interface IhsPeriodHeading {
+  year: string | null
+  end: string | null
 }
 
 /**
@@ -182,6 +259,13 @@ export interface InstanceRow {
   instanceKey: string
   sourceLabel?: string | null
   timePeriod?: string | null
+  /**
+   * SYS-3728: on a row of a constrained category (no v1 lineage), the fields
+   * whose stored value broke the canonical write contract, with the rules —
+   * each such field is null on the row. Absent when every value is valid. No
+   * category may declare a field of this name (tested).
+   */
+  invalidFields?: Record<string, ViolationRule[]>
   [metricKey: string]: unknown
 }
 

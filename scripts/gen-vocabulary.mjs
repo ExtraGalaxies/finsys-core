@@ -37,6 +37,13 @@ function build() {
 
   const categoryIds = uniqSorted(categories.map((c) => c.id));
   const canonical = uniqSorted(categories.flatMap((c) => c.fields.map((f) => f.name)));
+  // SYS-3728: every field declared `type: "list"` — a table of rows. A
+  // consumer building a field picker or a numeric classifier types its filter
+  // against this union, so a list offered as a scorable value is a compile
+  // error rather than a runtime string comparison against JSON.
+  const lists = uniqSorted(
+    categories.flatMap((c) => c.fields.filter((f) => f.type === "list").map((f) => f.name))
+  );
   const retired = uniqSorted(
     categories.flatMap((c) => c.fields.map((f) => f.legacyName).filter(Boolean))
   );
@@ -67,7 +74,7 @@ function build() {
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * ${categoryIds.length} categories · ${canonical.length} canonical fields · ${retired.length} retired names
+ * ${categoryIds.length} categories · ${canonical.length} canonical fields (${lists.length} lists) · ${retired.length} retired names
  */
 
 /** Every category id the registry declares. */
@@ -75,6 +82,12 @@ export type AdapterCategoryId =${union(categoryIds)};
 
 /** Every canonical field name any category declares. */
 export type CanonicalFieldNameLiteral =${union(canonical)};
+
+/**
+ * Every canonical field declared \`type: "list"\` (SYS-3728): a table of rows,
+ * stored as a JSON string, never a scorable value.
+ */
+export type ListFieldNameLiteral =${union(lists)};
 
 /**
  * Every retired name that still resolves through the compatibility layer.

@@ -119,6 +119,11 @@ export {
   // and last flat file-field function to get one.
   instanceRowsFromView,
   buildFileFieldTablesFromView,
+  // SYS-3728: a stored list value as rows under its declared columns.
+  buildListCell,
+  formatRatio,
+  periodHeadingLabel,
+  INVALID_VALUE_TEXT,
   // SYS-3334 F3 (round 2 review): the provenance synthesis hoisted out of
   // buildFileFieldTablesFromView — collision-aware, and usable on its own.
   fieldProvenanceFromView,
@@ -192,6 +197,9 @@ export type {
   IhsDetailCategory,
   FileFieldTableData,
   FileFieldTableItem,
+  IhsListCell,
+  IhsListColumn,
+  IhsPeriodHeading,
   IhsFieldProvenance,
   // SYS-3334 F3 (round 2 review): IhsFieldProvenance + the overlay-replaced
   // value, for fieldProvenanceFromView's return shape.
@@ -236,6 +244,51 @@ export type {
 
 export { AdapterError } from './adapter.js'
 
+// SYS-3728: the canonical write contract — one validator for writers and readers.
+export {
+  validateCanonicalFields,
+  validateFieldValue,
+  validateAdapterExtraction,
+  normalizeForWrite,
+  prepareExtractionForWrite,
+  validateListItemValue,
+  normalizePrintedText,
+  normalizeLineBreaks,
+  decimalsOf,
+  LIST_MAX_DEPTH,
+  isPlaceholderText,
+  isValidInstanceKey,
+  NUMBER_MAX_MAGNITUDE,
+  RATIO_MAX_DECIMALS,
+  LIST_TEXT_MAX_LENGTH,
+  DATE_FLOOR,
+  FUTURE_DATE_HORIZON_YEARS,
+  kebabToCamel,
+  STRING_MAX_LENGTH_DEFAULT,
+  LIST_MAX_ITEMS_DEFAULT,
+} from './canonical-validation.js'
+export type {
+  Violation,
+  ViolationRule,
+  ValidationOptions,
+  ValidationResult,
+  ValidatableExtraction,
+  SnapshotResult,
+  PreparedExtraction,
+} from './canonical-validation.js'
+export {
+  CURRENCY_CODES,
+  CURRENCY_ALIASES,
+  AMBIGUOUS_CURRENCY_FORMS,
+  normalizeCurrency,
+  isAllowedCurrency,
+  CURRENCY_MINOR_UNITS,
+  MONEY_MAX_DECIMALS,
+  minorUnitsOf,
+  parseCurrencyHeading,
+} from './currency.js'
+export type { CurrencyNormalization, CurrencyHeading } from './currency.js'
+
 export type { AggregationOp, InstanceValue } from './adapter-aggregation.js'
 export { applyAggregation, ALL_AGGREGATION_OPS } from './adapter-aggregation.js'
 
@@ -244,6 +297,11 @@ export type {
   CanonicalFieldName,
   CanonicalFieldSpec,
   CategorySchema,
+  CategoryInstanceColumns,
+  CategoryPeriodFields,
+  CategoryRequirement,
+  ListFieldName,
+  ListItemSpec,
 } from './adapter-categories.js'
 
 // NB: `buildCategoryRegistry` + the `CategoryRegistry` shape are
@@ -266,6 +324,7 @@ export {
   resolveCanonicalCategoryId,
   isLegacyCategoryId,
   isFieldSensitive,
+  isListField,
   sensitiveFieldsOf,
   isAdapterCategory,
   assertAdapterCategory,

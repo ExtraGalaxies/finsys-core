@@ -10,7 +10,7 @@
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * 26 categories · 424 canonical fields · 105 retired names
+ * 26 categories · 424 canonical fields (51 lists) · 105 retired names
  */
 
 /** Every category id the registry declares. */
@@ -468,6 +468,63 @@ export type CanonicalFieldNameLiteral =
   | "workDailyHoursAvg30d"
   | "year"
   | "zakat";
+
+/**
+ * Every canonical field declared `type: "list"` (SYS-3728): a table of rows,
+ * stored as a JSON string, never a scorable value.
+ */
+export type ListFieldNameLiteral =
+  | "bankruptcyActionCreditors"
+  | "bankruptcyActions"
+  | "creditApplications"
+  | "directorsAndOfficers"
+  | "limitedDetailSuitsAsDefendant"
+  | "mgmtAccrualsItems"
+  | "mgmtCashAtBankItems"
+  | "mgmtComputerEquipmentItems"
+  | "mgmtCostOfGoodsSoldItems"
+  | "mgmtDepositsPrepaymentsItems"
+  | "mgmtDepreciationItems"
+  | "mgmtDrawingsItems"
+  | "mgmtEquipmentToolsItems"
+  | "mgmtFurnitureFittingsItems"
+  | "mgmtHirePurchaseItems"
+  | "mgmtInsuranceItems"
+  | "mgmtInventoryItems"
+  | "mgmtLandBuildingItems"
+  | "mgmtLoansFinancingItems"
+  | "mgmtMotorVehicleItems"
+  | "mgmtOtherCreditorsItems"
+  | "mgmtOtherDebtorsItems"
+  | "mgmtOtherExpensesItems"
+  | "mgmtOtherIncomeItems"
+  | "mgmtPettyCashItems"
+  | "mgmtProfessionalFeesItems"
+  | "mgmtRenovationsItems"
+  | "mgmtRentRatesItems"
+  | "mgmtRepairsMaintenanceItems"
+  | "mgmtRetainedEarningsItems"
+  | "mgmtSalariesWagesItems"
+  | "mgmtSalesRevenueItems"
+  | "mgmtShareCapitalItems"
+  | "mgmtStaffCostsOtherItems"
+  | "mgmtSystemSoftwareItems"
+  | "mgmtTelephoneInternetItems"
+  | "mgmtTradePayablesItems"
+  | "mgmtTradeReceivablesItems"
+  | "mgmtTravelEntertainmentItems"
+  | "mgmtUtilitiesItems"
+  | "mgmtVehiclesItems"
+  | "nonBankLenderFacilities"
+  | "outstandingCreditFacilities"
+  | "shareholdersAndMembers"
+  | "shareholdingInterests"
+  | "specialAttentionAccounts"
+  | "suitsAsDefendant"
+  | "suitsAsPlaintiff"
+  | "tradeCreditReferences"
+  | "windingUpActionsAsDefendant"
+  | "windingUpActionsAsPetitioner";
 
 /**
  * Every retired name that still resolves through the compatibility layer.

@@ -16,6 +16,7 @@ import {
 import { resolveExtractionStatus, resolveExtractionStatusFromView } from './extraction-status.js'
 import { ExtractionJobStatus } from './extraction.js'
 import { assertAdapterCategory, categorySchemaOf } from './adapter-categories.js'
+import { validateFieldValue } from './canonical-validation.js'
 import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
 
 /**
@@ -367,5 +368,25 @@ describe('SYS-3705 — the v1-lineage part of every view and flat output is byte
     expect(fs.map((d) => d.hash)).toEqual([h('d'), h('8')])
     expect([...bank, ...fs].flatMap((d) => d.extraction.map((e) => e.instanceKey))).not.toContain('legacy:T5')
     expect([...bank, ...fs].flatMap((d) => d.extraction.map((e) => e.instanceKey))).not.toContain('legacy:T4')
+  })
+})
+
+describe('SYS-3728 — no string value in the golden data is a serialized structure', () => {
+  it('every string-typed field of every category, over the whole fixture, passes serialized-structure — no exception needed', () => {
+    const v = fixtureViewWithNewCategories()
+    let checked = 0
+    for (const [categoryId, cat] of Object.entries(v.categories)) {
+      const specs = new Map(categorySchemaOf(assertAdapterCategory(categoryId)).fields.map((f) => [f.name as string, f]))
+      for (const instance of cat!.instances) {
+        for (const [name, envelope] of Object.entries(instance.fields)) {
+          const spec = specs.get(name)
+          if (!spec || spec.type !== 'string' || typeof envelope.value !== 'string') continue
+          checked++
+          const rules = validateFieldValue(spec, envelope.value, { enumMembership: 'skip' }).map((x) => x.rule)
+          expect(rules, `${categoryId}.${name}`).not.toContain('serialized-structure')
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(200)
   })
 })

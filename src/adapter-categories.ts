@@ -45,10 +45,12 @@
  */
 
 import categoriesData from "./data/adapter-categories.json" with { type: "json" };
+import { JURISDICTION_CODES, type Jurisdiction } from "./jurisdiction.js";
 
 import type {
   AdapterCategoryId,
   CanonicalFieldNameLiteral,
+  ListFieldNameLiteral,
   RetiredFieldName,
 } from "./vocabulary.generated.js";
 
@@ -87,12 +89,133 @@ export type AdapterCategory = AdapterCategoryId;
 export type CanonicalFieldName = CanonicalFieldNameLiteral;
 
 /**
+ * SYS-3728: every canonical field declared `type: "list"`, generated from the
+ * registry. `Exclude<CanonicalFieldName, ListFieldName>` is the set a picker
+ * offering scorable values may draw from.
+ */
+export type ListFieldName = ListFieldNameLiteral;
+
+/**
  * Per-field metadata for a canonical field declared by a category.
  * Frozen at module load — the data file is authoritative.
  */
+/**
+ * SYS-3728: one column of a `list` field's rows.
+ *
+ * An item is NOT a canonical field. It has no fact, no confidentiality of its
+ * own (it inherits the list's), is never addressable by an eval model and never
+ * appears in a `produces` list. It exists so a renderer knows which columns a
+ * row has and how to format each — the thing prose in `description` could not
+ * tell it.
+ */
+export interface ListItemSpec {
+  /** The key the item carries in each stored row object. camelCase. */
+  readonly name: string;
+  /** Column heading. */
+  readonly displayName: string;
+  readonly type: "string" | "number";
+  /** `money` formats like any money cell; only on a `number` item. */
+  readonly kind?: "money";
+  /** SYS-3728: effective maximum length — always present on a `string` item. */
+  readonly maxLength?: number;
+  /** SYS-3728: a full-match regex source, only where the writer provably normalizes the format. */
+  readonly pattern?: string;
+  /** SYS-3728: as on a field — a per-jurisdiction full-match regex (a national id column). */
+  readonly jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>>;
+  /** SYS-3728: as on a field — an ISO calendar format, bounded (see `CanonicalFieldSpec.format`). */
+  readonly format?: "date" | "year";
+  /** SYS-3728: as on a field — the date may lie in the future (see `CanonicalFieldSpec.mayBeFuture`). */
+  readonly mayBeFuture?: true;
+}
+
+/**
+ * SYS-3728: how the table columns of a multi-instance category WITHOUT a
+ * period are labeled and ordered.
+ *
+ * A credit-bureau report carries one instance per report subject. Those are
+ * not periods, so labeling them by the position fallback ("T1 · ccris") says
+ * something false. Declared here, rather than special-cased in the renderer,
+ * so the next category shaped like it is a data edit.
+ *
+ *   labelField    — a string field whose value names the instance.
+ *   roleField     — an enum field qualifying it, shown in brackets.
+ *   roleOrder     — the roles, in the order their columns come.
+ *   sequenceField — a string field ordering instances within one role,
+ *                   compared naturally ("pbi-2" before "pbi-10").
+ *   documentLabelField — a string field identifying the source document,
+ *                   added to the label only when columns span documents.
+ */
+export interface CategoryInstanceColumns {
+  readonly labelField: string;
+  readonly roleField?: string;
+  readonly roleOrder?: ReadonlyArray<string>;
+  readonly sequenceField?: string;
+  /**
+   * A string field naming the DOCUMENT an instance came from (a report's order
+   * date). Used only when a table's columns span more than one document, so two
+   * reports on one subject stay two identifiable columns: "<label> · <value>",
+   * or "<label> · report <n>" (n = the document's position) when absent.
+   */
+  readonly documentLabelField?: string;
+}
+
 export interface CanonicalFieldSpec {
   readonly name: CanonicalFieldName;
-  readonly type: "number" | "boolean" | "string";
+  /**
+   * SYS-3728 added `"list"`: a table the source prints, stored as a JSON
+   * STRING of an array of row objects (no storage change from the prose-typed
+   * string it replaced), with its columns declared in `items`. A list is never
+   * a scorable quantity: it declares no kind, unit, range or fact.
+   */
+  readonly type: "number" | "boolean" | "string" | "list";
+  /** SYS-3728: present exactly when `type` is `"list"`. */
+  readonly items?: ReadonlyArray<ListItemSpec>;
+  /**
+   * SYS-3728: the longest value a writer may store, in UTF-16 code units.
+   * ALWAYS present on a built `string` field: the data file may raise it for a
+   * field that legitimately holds longer printed text, and every other string
+   * field gets `STRING_MAX_LENGTH_DEFAULT`. A field above that default is
+   * "long text" and may contain a newline or a tab; no other field may.
+   */
+  readonly maxLength?: number;
+  /**
+   * SYS-3728: a regex source every value must FULLY match, in every
+   * jurisdiction. Declared only where the writer provably normalizes the
+   * format (an ISO date the mapper already enforces) — never a guess at how a
+   * source prints something.
+   */
+  readonly pattern?: string;
+  /**
+   * SYS-3728: a full-match regex per jurisdiction, for a format that differs
+   * by country (a national id). Applied ONLY under the jurisdiction the caller
+   * names; an absent, unknown or pattern-less jurisdiction gets the
+   * jurisdiction-independent rules alone — never Malaysia's by default.
+   */
+  readonly jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>>;
+  /** SYS-3728: the most rows a list may hold. ALWAYS present on a built `list` field. */
+  readonly maxItems?: number;
+  /**
+   * SYS-3728: a calendar format the writer provably normalizes to — `"date"`
+   * (ISO YYYY-MM-DD, a real date, year 0001–9999) or `"year"` (YYYY, 0001–
+   * 9999). Checked by arithmetic, not by a pattern: a pattern proves the
+   * shape of 2026-02-30, not that the day exists.
+   */
+  readonly format?: "date" | "year";
+  /**
+   * SYS-3728: a dated value is PLAUSIBLE, not merely calendar-valid: never
+   * before 1900-01-01 and, by default, never after the validator's clock
+   * (today, UTC, plus one day for time zones). A field that legitimately
+   * names a future date — a hearing, a business registration's expiry, the
+   * end of a financial year still running — declares `mayBeFuture`, and is
+   * bounded at the clock plus `FUTURE_DATE_HORIZON_YEARS` instead. Only on a
+   * field with a `format`.
+   */
+  readonly mayBeFuture?: true;
+  /**
+   * SYS-3728: a `format: "date"` field of the same category this one may not
+   * follow — a period start is not after its end.
+   */
+  readonly notAfter?: string;
   readonly unit?: string;
   readonly range?: readonly [number, number];
   readonly description: string;
@@ -168,7 +291,7 @@ export interface CanonicalFieldSpec {
    * ARPU runs about 200,000 — every non-MY row would have failed a
    * constraint the data contract asserted about all of them.
    */
-  readonly kind?: "enum" | "money";
+  readonly kind?: "enum" | "money" | "currency";
   /**
    * SYS-3164: the field's confidentiality class. The ONLY way to declare
    * one is to opt OUT.
@@ -253,20 +376,68 @@ export interface CategorySchema {
    * waits for the deprecation window to close.
    */
   readonly legacyId?: string;
+  /** SYS-3728: see `CategoryInstanceColumns`. Absent for every periodised category. */
+  readonly instanceColumns?: CategoryInstanceColumns;
+  /**
+   * SYS-3728: the most reporting periods one instance carries — a period
+   * position above it is refused. Absent: positions are capped at 100.
+   */
+  readonly maxPeriods?: number;
+  /**
+   * SYS-3728: the fields that describe a reporting period's own extent, so a
+   * writer's extraction can be held consistent with itself: an envelope
+   * `periods[].start` / `.end` that disagrees with the period's `start` /
+   * `end` field, or a `year` field that is not the year of the `end` field,
+   * is refused. Each named field is `format: "date"` (`start`, `end`) or
+   * `format: "year"` (`year`).
+   */
+  readonly periodFields?: CategoryPeriodFields;
+  /**
+   * SYS-3728 round 3: fields an instance must carry — each group needs at
+   * least ONE of its fields present (in `values` or any period's), optionally
+   * only for instances whose `when` field holds a given value. A group marked
+   * `identity` is the instance's identity (a subject's name, its identifier)
+   * and is reported as `missing-identity`; any other as `missing-required`.
+   * Declared here rather than coded into the validator, so the next category
+   * with a required identity is a data edit.
+   */
+  readonly requiredAnyOf?: ReadonlyArray<CategoryRequirement>;
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
+}
+
+/** SYS-3728: see `CategorySchema.requiredAnyOf`. */
+export interface CategoryRequirement {
+  readonly anyOf: ReadonlyArray<string>;
+  readonly when?: { readonly field: string; readonly equals: string };
+  readonly identity?: true;
+}
+
+/** SYS-3728: see `CategorySchema.periodFields`. */
+export interface CategoryPeriodFields {
+  readonly start?: string;
+  readonly end?: string;
+  readonly year?: string;
 }
 
 // ── Raw data shape (as it appears in the JSON file) ──────────────────
 
 interface RawCategoryField {
   name: string;
-  type: "number" | "boolean" | "string";
+  type: "number" | "boolean" | "string" | "list";
+  items?: unknown;
   unit?: string;
   range?: [number, number];
   description: string;
   fact?: string;
   legacyName?: string;
-  kind?: "enum" | "money";
+  kind?: "enum" | "money" | "currency";
+  maxLength?: unknown;
+  pattern?: unknown;
+  jurisdictionPatterns?: unknown;
+  maxItems?: unknown;
+  format?: unknown;
+  mayBeFuture?: unknown;
+  notAfter?: unknown;
   confidentiality?: "non-sensitive";
 }
 
@@ -276,6 +447,10 @@ interface RawCategory {
   displayName: string;
   description: string;
   canonicalTable: string;
+  instanceColumns?: unknown;
+  maxPeriods?: unknown;
+  periodFields?: unknown;
+  requiredAnyOf?: unknown;
   fields: RawCategoryField[];
 }
 
@@ -313,11 +488,289 @@ const VALID_FIELD_TYPES: ReadonlyArray<CanonicalFieldSpec["type"]> = [
   "number",
   "boolean",
   "string",
+  "list",
 ];
+
+const LIST_ITEM_PROPERTIES = new Set([
+  "name",
+  "displayName",
+  "type",
+  "kind",
+  "maxLength",
+  "pattern",
+  "jurisdictionPatterns",
+  "format",
+  "mayBeFuture",
+]);
+
+/**
+ * SYS-3728: the effective maxLength of every string field and string list item
+ * that declares none. Measured, not guessed: across the 88,336 string values
+ * in finsim's canonical tables on 2026-09-23 the longest scalar was 109
+ * characters. A field that legitimately holds longer printed text declares its
+ * own `maxLength`.
+ */
+export const STRING_MAX_LENGTH_DEFAULT = 256;
+/** SYS-3728: the effective maxItems of every list that declares none. */
+export const LIST_MAX_ITEMS_DEFAULT = 500;
+/** The storage ceiling of a MySQL TEXT column, in characters of the narrowest encoding. */
+const STRING_MAX_LENGTH_CEILING = 65535;
+const LIST_MAX_ITEMS_CEILING = 10000;
+
+function compiles(source: string): boolean {
+  try {
+    new RegExp(source, "u");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** SYS-3728: `maxLength` / `pattern` / `jurisdictionPatterns` on a string field or item. */
+function validateStringConstraints(
+  at: string,
+  type: string,
+  c: { maxLength?: unknown; pattern?: unknown; jurisdictionPatterns?: unknown },
+): { maxLength?: number; pattern?: string; jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>> } {
+  if (c.maxLength !== undefined) {
+    if (type !== "string") throw new Error(`${at} declares maxLength, but only a string has a length (it is ${type})`);
+    if (!Number.isInteger(c.maxLength) || (c.maxLength as number) < 1 || (c.maxLength as number) > STRING_MAX_LENGTH_CEILING) {
+      throw new Error(`${at} has an invalid maxLength — expected an integer 1..${STRING_MAX_LENGTH_CEILING}`);
+    }
+  }
+  if (c.pattern !== undefined) {
+    if (type !== "string") throw new Error(`${at} declares a pattern, but only a string has one (it is ${type})`);
+    if (typeof c.pattern !== "string" || c.pattern.length === 0 || !compiles(c.pattern)) {
+      throw new Error(`${at} has a pattern that does not compile as a regex`);
+    }
+  }
+  let jurisdictionPatterns: Partial<Record<Jurisdiction, string>> | undefined;
+  if (c.jurisdictionPatterns !== undefined) {
+    if (type !== "string") throw new Error(`${at} declares jurisdictionPatterns, but only a string has one (it is ${type})`);
+    if (!c.jurisdictionPatterns || typeof c.jurisdictionPatterns !== "object" || Array.isArray(c.jurisdictionPatterns)) {
+      throw new Error(`${at} jurisdictionPatterns must be an object of jurisdiction → pattern`);
+    }
+    jurisdictionPatterns = {};
+    for (const [j, source] of Object.entries(c.jurisdictionPatterns as Record<string, unknown>)) {
+      if (!(JURISDICTION_CODES as readonly string[]).includes(j)) {
+        throw new Error(`${at} declares a pattern for jurisdiction "${j}", which the jurisdiction registry does not declare`);
+      }
+      if (typeof source !== "string" || source.length === 0 || !compiles(source)) {
+        throw new Error(`${at} has a pattern for "${j}" that does not compile as a regex`);
+      }
+      jurisdictionPatterns[j as Jurisdiction] = source;
+    }
+  }
+  return {
+    ...(type === "string" ? { maxLength: (c.maxLength as number | undefined) ?? STRING_MAX_LENGTH_DEFAULT } : {}),
+    ...(c.pattern !== undefined ? { pattern: c.pattern as string } : {}),
+    ...(jurisdictionPatterns !== undefined ? { jurisdictionPatterns: Object.freeze(jurisdictionPatterns) } : {}),
+  };
+}
+/** SYS-3728: `format` / `mayBeFuture` on a string field or item. */
+function validateFormat(
+  at: string,
+  type: string,
+  c: { format?: unknown; mayBeFuture?: unknown; pattern?: unknown; jurisdictionPatterns?: unknown },
+): { format?: "date" | "year"; mayBeFuture?: true } {
+  if (c.format !== undefined) {
+    if (type !== "string") throw new Error(`${at} declares a format, but only a string has one (it is ${type})`);
+    if (c.format !== "date" && c.format !== "year") {
+      throw new Error(`${at} declares format "${String(c.format)}" — expected "date" or "year"`);
+    }
+    if (c.pattern !== undefined || c.jurisdictionPatterns !== undefined) {
+      throw new Error(`${at} declares a format AND a pattern — a format is its own, stricter pattern`);
+    }
+  }
+  if (c.mayBeFuture !== undefined) {
+    if (c.mayBeFuture !== true) throw new Error(`${at} has mayBeFuture ${JSON.stringify(c.mayBeFuture)} — it is true or absent`);
+    if (c.format === undefined) throw new Error(`${at} declares mayBeFuture without a format — only a dated value has a future`);
+  }
+  return {
+    ...(c.format !== undefined ? { format: c.format as "date" | "year" } : {}),
+    ...(c.mayBeFuture === true ? { mayBeFuture: true as const } : {}),
+  };
+}
+
+const PERIOD_FIELDS_PROPERTIES: Readonly<Record<string, "date" | "year">> = { start: "date", end: "date", year: "year" };
+
+/** SYS-3728: validate a category's `periodFields` against its own fields. */
+function validatePeriodFields(raw: unknown, fields: ReadonlyArray<RawCategoryField>, where: string): CategoryPeriodFields {
+  const at = `adapter category data: ${where} periodFields`;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} must be an object`);
+  const out: Record<string, string> = {};
+  for (const [key, name] of Object.entries(raw as Record<string, unknown>)) {
+    const format = PERIOD_FIELDS_PROPERTIES[key];
+    if (format === undefined) throw new Error(`${at} has unknown property "${key}"`);
+    const field = typeof name === "string" ? fields.find((f) => f.name === name) : undefined;
+    if (!field) throw new Error(`${at}: ${key} "${String(name)}" is not a field this category declares`);
+    if (field.format !== format) throw new Error(`${at}: ${key} "${field.name}" must be format "${format}"`);
+    out[key] = field.name;
+  }
+  if (Object.keys(out).length === 0) throw new Error(`${at} names no field`);
+  return Object.freeze(out);
+}
+
+/** SYS-3728: validate a category's `requiredAnyOf` against its own fields. */
+function validateRequiredAnyOf(raw: unknown, fields: ReadonlyArray<RawCategoryField>, where: string): ReadonlyArray<CategoryRequirement> {
+  const at = `adapter category data: ${where} requiredAnyOf`;
+  if (!Array.isArray(raw) || raw.length === 0) throw new Error(`${at} must be a non-empty array of groups`);
+  return Object.freeze(
+    raw.map((g: unknown, i: number) => {
+      const group = (g ?? {}) as Record<string, unknown>;
+      const gat = `${at}[${i}]`;
+      for (const key of Object.keys(group)) {
+        if (key !== "anyOf" && key !== "when" && key !== "identity") throw new Error(`${gat} has unknown property "${key}"`);
+      }
+      const anyOf = group.anyOf;
+      if (!Array.isArray(anyOf) || anyOf.length === 0 || new Set(anyOf).size !== anyOf.length) {
+        throw new Error(`${gat}.anyOf must be a non-empty list of distinct field names`);
+      }
+      for (const name of anyOf) {
+        const f = fields.find((x) => x.name === name);
+        if (!f) throw new Error(`${gat}: "${String(name)}" is not a field this category declares`);
+        if (f.type === "list") throw new Error(`${gat}: "${f.name}" is a list — a table is never an instance's identity`);
+      }
+      let when: CategoryRequirement["when"];
+      if (group.when !== undefined) {
+        const w = (group.when ?? {}) as Record<string, unknown>;
+        const f = typeof w.field === "string" ? fields.find((x) => x.name === w.field) : undefined;
+        if (!f || f.type !== "string" || typeof w.equals !== "string" || w.equals.length === 0 || Object.keys(w).length !== 2) {
+          throw new Error(`${gat}.when must be { field: <a string field of this category>, equals: <a non-empty value> }`);
+        }
+        when = Object.freeze({ field: f.name, equals: w.equals });
+      }
+      if (group.identity !== undefined && group.identity !== true) throw new Error(`${gat}.identity is true or absent`);
+      return Object.freeze({
+        anyOf: Object.freeze([...(anyOf as string[])]),
+        ...(when !== undefined ? { when } : {}),
+        ...(group.identity === true ? { identity: true as const } : {}),
+      });
+    }),
+  );
+}
+
+const INSTANCE_COLUMNS_PROPERTIES = new Set(["labelField", "roleField", "roleOrder", "sequenceField", "documentLabelField"]);
+
+/**
+ * SYS-3728: validate a list field's `items`, and refuse everything a list
+ * cannot mean. Returns the frozen item specs.
+ */
+function validateListField(f: RawCategoryField, where: string): ReadonlyArray<ListItemSpec> {
+  const at = `adapter category data: list "${f.name}" (${where})`;
+  for (const prop of ["kind", "unit", "range", "fact"] as const) {
+    if (f[prop] !== undefined) {
+      throw new Error(
+        `${at} declares a ${prop} — a list is a table of rows, not a quantity: it is never scorable, ` +
+          `so a kind, unit, range or fact on it can only be a misdeclaration`,
+      );
+    }
+  }
+  if (!Array.isArray(f.items) || f.items.length === 0) {
+    throw new Error(`${at} must declare items — the columns its rows carry`);
+  }
+  const seen = new Set<string>();
+  const items: ListItemSpec[] = [];
+  for (const rawItem of f.items as unknown[]) {
+    const item = (rawItem ?? {}) as Record<string, unknown>;
+    if (typeof item.name !== "string" || item.name.length === 0) {
+      throw new Error(`${at} has an item without a non-empty name`);
+    }
+    const it = `${at} item "${item.name}"`;
+    for (const key of Object.keys(item)) {
+      if (!LIST_ITEM_PROPERTIES.has(key)) throw new Error(`${it} has unknown property "${key}"`);
+    }
+    if (seen.has(item.name)) throw new Error(`${at} declares duplicate item "${item.name}"`);
+    seen.add(item.name);
+    if (typeof item.displayName !== "string" || item.displayName.length === 0) {
+      throw new Error(`${it} needs a non-empty displayName`);
+    }
+    if (item.type !== "string" && item.type !== "number") {
+      throw new Error(`${it} has invalid type "${String(item.type)}" — an item is "string" or "number"`);
+    }
+    if (item.kind !== undefined) {
+      if (item.kind !== "money") throw new Error(`${it} has invalid kind "${String(item.kind)}"`);
+      if (item.type !== "number") {
+        throw new Error(`${it} is kind "money" but type "${item.type}" — a monetary amount's primitive is a number`);
+      }
+    }
+    const constraints = validateStringConstraints(it, item.type, {
+      maxLength: item.maxLength,
+      pattern: item.pattern,
+      jurisdictionPatterns: item.jurisdictionPatterns,
+    });
+    const format = validateFormat(it, item.type, item);
+    items.push(
+      Object.freeze({
+        name: item.name,
+        displayName: item.displayName,
+        type: item.type,
+        ...(item.kind !== undefined ? { kind: "money" as const } : {}),
+        ...constraints,
+        ...format,
+      }),
+    );
+  }
+  return Object.freeze(items);
+}
+
+/** SYS-3728: validate a category's `instanceColumns` against its own fields. */
+function validateInstanceColumns(
+  raw: unknown,
+  fields: ReadonlyArray<RawCategoryField>,
+  where: string,
+): CategoryInstanceColumns {
+  const at = `adapter category data: ${where} instanceColumns`;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} must be an object`);
+  const ic = raw as Record<string, unknown>;
+  for (const key of Object.keys(ic)) {
+    if (!INSTANCE_COLUMNS_PROPERTIES.has(key)) throw new Error(`${at} has unknown property "${key}"`);
+  }
+  const fieldNamed = (prop: string, value: unknown): RawCategoryField => {
+    const found = typeof value === "string" ? fields.find((x) => x.name === value) : undefined;
+    if (!found) throw new Error(`${at}: ${prop} "${String(value)}" is not a field this category declares`);
+    return found;
+  };
+  const label = fieldNamed("labelField", ic.labelField);
+  if (label.type !== "string") {
+    throw new Error(`${at}: labelField "${label.name}" must be a string field (it is ${label.type})`);
+  }
+  if (ic.roleField !== undefined) {
+    const role = fieldNamed("roleField", ic.roleField);
+    if (role.kind !== "enum") throw new Error(`${at}: roleField "${role.name}" must be a kind "enum" field`);
+    const order = ic.roleOrder;
+    if (
+      !Array.isArray(order) ||
+      order.length === 0 ||
+      order.some((r) => typeof r !== "string" || r.length === 0) ||
+      new Set(order).size !== order.length
+    ) {
+      throw new Error(`${at}: a roleField needs a roleOrder — a non-empty list of distinct role labels`);
+    }
+  } else if (ic.roleOrder !== undefined) {
+    throw new Error(`${at}: roleOrder without a roleField orders nothing`);
+  }
+  if (ic.sequenceField !== undefined) {
+    const seq = fieldNamed("sequenceField", ic.sequenceField);
+    if (seq.type !== "string") throw new Error(`${at}: sequenceField "${seq.name}" must be a string field`);
+  }
+  if (ic.documentLabelField !== undefined) {
+    const doc = fieldNamed("documentLabelField", ic.documentLabelField);
+    if (doc.type !== "string") throw new Error(`${at}: documentLabelField "${doc.name}" must be a string field`);
+  }
+  return Object.freeze({
+    labelField: ic.labelField as string,
+    ...(ic.roleField !== undefined ? { roleField: ic.roleField as string } : {}),
+    ...(ic.roleOrder !== undefined ? { roleOrder: Object.freeze([...(ic.roleOrder as string[])]) } : {}),
+    ...(ic.sequenceField !== undefined ? { sequenceField: ic.sequenceField as string } : {}),
+    ...(ic.documentLabelField !== undefined ? { documentLabelField: ic.documentLabelField as string } : {}),
+  });
+}
 
 const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> = [
   "enum",
   "money",
+  "currency",
 ];
 
 /**
@@ -472,6 +925,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       // agreement on them, not just on fact/kind/confidentiality.
       type: RawCategoryField["type"];
       unit: RawCategoryField["unit"];
+      constraints: string;
       confidentiality: "non-sensitive" | undefined;
       categories: AdapterCategory[];
     }
@@ -651,6 +1105,15 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
               `shared-fact attestations must agree on type`,
           );
         }
+        const constraintsOf = (x: RawCategoryField): string =>
+          JSON.stringify([x.maxLength ?? null, x.pattern ?? null, x.jurisdictionPatterns ?? null]);
+        if (prior.constraints !== constraintsOf(f)) {
+          throw new Error(
+            `adapter category data: canonical field "${f.name}" declared with different length / pattern ` +
+              `constraints by ${prior.categories.join(" + ")} and ${cat.id} — shared-fact attestations must ` +
+              `agree on them, or one fact is valid from one source and invalid from another`,
+          );
+        }
         if (prior.unit !== f.unit) {
           const describeUnit = (u: string | undefined): string =>
             u === undefined ? "no unit" : `unit "${u}"`;
@@ -695,6 +1158,25 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           `adapter category data: field "${f.name}" (${where}) has invalid type "${f.type}"`,
         );
       }
+      // SYS-3728: checked before the kind/unit/range rules below so a list
+      // carrying one fails with the list's own reason, not a generic one.
+      let listItems: ReadonlyArray<ListItemSpec> | undefined;
+      let maxItems: number | undefined;
+      if (f.type === "list") {
+        listItems = validateListField(f, where);
+        if (f.maxItems !== undefined && (!Number.isInteger(f.maxItems) || (f.maxItems as number) < 1 || (f.maxItems as number) > LIST_MAX_ITEMS_CEILING)) {
+          throw new Error(`adapter category data: list "${f.name}" (${where}) has an invalid maxItems — expected an integer 1..${LIST_MAX_ITEMS_CEILING}`);
+        }
+        maxItems = (f.maxItems as number | undefined) ?? LIST_MAX_ITEMS_DEFAULT;
+      } else if (f.maxItems !== undefined) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) declares maxItems, but only a list has items (it is ${f.type})`,
+        );
+      } else if (f.items !== undefined) {
+        throw new Error(
+          `adapter category data: field "${f.name}" (${where}) declares items, but only a list has items (it is ${f.type})`,
+        );
+      }
       // SYS-3249: `unit` is checked for EVERY field, kind or not. It was
       // free-form until now and read by nothing but the spec builder, so
       // an unusable value could sit in the contract indefinitely without
@@ -732,6 +1214,18 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           if (f.range !== undefined) {
             throw new Error(
               `adapter category data: field "${f.name}" (${where}) is kind "enum" but declares a range — enum labels are unordered; ordering belongs to the consumer, never the data contract`,
+            );
+          }
+        }
+        if (f.kind === "currency") {
+          if (f.type !== "string") {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "currency" but type "${f.type}" — a currency is an ISO 4217 code, a string`,
+            );
+          }
+          if (f.pattern !== undefined || f.jurisdictionPatterns !== undefined || f.range !== undefined || f.unit !== undefined) {
+            throw new Error(
+              `adapter category data: field "${f.name}" (${where}) is kind "currency" and declares a pattern, range or unit — the allowed ISO 4217 set is its whole constraint`,
             );
           }
         }
@@ -776,9 +1270,19 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         }
       }
 
+      const stringConstraints = validateStringConstraints(
+        `adapter category data: field "${f.name}" (${where})`,
+        f.type,
+        f,
+      );
+      const format = validateFormat(`adapter category data: field "${f.name}" (${where})`, f.type, f);
       const spec: CanonicalFieldSpec = Object.freeze({
         name: asFieldName(f.name),
         type: f.type,
+        ...(listItems !== undefined ? { items: listItems, maxItems } : {}),
+        ...stringConstraints,
+        ...format,
+        ...(f.notAfter !== undefined ? { notAfter: f.notAfter as string } : {}),
         ...(f.unit !== undefined ? { unit: f.unit } : {}),
         ...(f.range !== undefined ? { range: Object.freeze([f.range[0], f.range[1]]) as readonly [number, number] } : {}),
         description: f.description,
@@ -802,6 +1306,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           kind: f.kind,
           type: f.type,
           unit: f.unit,
+          constraints: JSON.stringify([f.maxLength ?? null, f.pattern ?? null, f.jurisdictionPatterns ?? null]),
           confidentiality: f.confidentiality,
           categories: [asCategoryId(cat.id)],
         });
@@ -828,12 +1333,38 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       }
     }
 
+    for (const f of cat.fields) {
+      if (f.notAfter === undefined) continue;
+      const at = `adapter category data: field "${f.name}" (${where})`;
+      const other = cat.fields.find((x) => x.name === f.notAfter);
+      if (!other) throw new Error(`${at} declares notAfter "${String(f.notAfter)}", which this category does not declare`);
+      if (f.format !== "date" || other.format !== "date") {
+        throw new Error(`${at} declares notAfter, but both it and "${other.name}" must be format "date"`);
+      }
+    }
+    if (
+      cat.maxPeriods !== undefined &&
+      (!Number.isInteger(cat.maxPeriods) || (cat.maxPeriods as number) < 1 || (cat.maxPeriods as number) > 100)
+    ) {
+      throw new Error(`adapter category data: ${where} has an invalid maxPeriods — expected an integer 1..100`);
+    }
+    if (fields.filter((x) => x.kind === "currency").length > 1) {
+      throw new Error(
+        `adapter category data: ${where} declares more than one currency field — which one denominates its money would be a guess`,
+      );
+    }
     const schema: CategorySchema = Object.freeze({
       id: asCategoryId(cat.id),
       displayName: cat.displayName,
       description: cat.description,
       canonicalTable: cat.canonicalTable,
       ...(cat.legacyId !== undefined ? { legacyId: cat.legacyId } : {}),
+      ...(cat.instanceColumns !== undefined
+        ? { instanceColumns: validateInstanceColumns(cat.instanceColumns, cat.fields, where) }
+        : {}),
+      ...(cat.maxPeriods !== undefined ? { maxPeriods: cat.maxPeriods as number } : {}),
+      ...(cat.periodFields !== undefined ? { periodFields: validatePeriodFields(cat.periodFields, cat.fields, where) } : {}),
+      ...(cat.requiredAnyOf !== undefined ? { requiredAnyOf: validateRequiredAnyOf(cat.requiredAnyOf, cat.fields, where) } : {}),
       fields: Object.freeze(fields) as ReadonlyArray<CanonicalFieldSpec>,
     });
     byId.set(cat.id, schema);
@@ -936,6 +1467,18 @@ export function categorySchemaOf(id: AdapterCategory): CategorySchema {
  */
 export function categoryFieldsOf(id: AdapterCategory): ReadonlyArray<CanonicalFieldName> {
   return categorySchemaOf(id).fields.map((f) => f.name);
+}
+
+/**
+ * SYS-3728: is this a list field — a table of rows, never a scorable value?
+ *
+ * The one question every field picker and numeric/money classifier has to ask
+ * before treating a field as a quantity. A list's stored value is a JSON
+ * string; offered to an eval model as a string field it would be compared as
+ * text, which is never what anyone meant.
+ */
+export function isListField(spec: Pick<CanonicalFieldSpec, "type">): boolean {
+  return spec.type === "list";
 }
 
 /**

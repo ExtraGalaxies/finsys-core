@@ -38,7 +38,7 @@ from collections import defaultdict
 from pathlib import Path
 
 # Paths are inputs, not constants: this runs on a developer machine against a
-# finsys-api checkout, a captured v1 response and the SYS-2499 column audit,
+# finsys-api checkout, a captured v1 response and the column-disposition audit,
 # none of which this package contains. Override with env vars, do not edit.
 CORE = Path(__file__).resolve().parent.parent
 API = Path(os.environ.get('FINSYS_API_REPO', CORE.parent / 'finsys-api'))
@@ -222,28 +222,25 @@ CONDITIONAL_KEYS = {
 for _k in CONDITIONAL_KEYS:
     v1.setdefault(_k, None)
 
-# SYS-3705 — keys a NEW COLUMN adds, which no past measurement can contain.
+# Keys a NEW COLUMN adds, which no past measurement can contain.
 #
-# finsim's spec 131 (NOW-2) found both from the outside: finsys-api began
-# serving them in its v1 response and the map had no disposition for either.
 # They are document pointers (see DOC_POINTERS below), declared here for the
 # same reason as CONDITIONAL_KEYS: the measured corpus predates them, and
 # `v1-response-keys.json` is a measurement, so it is not hand-edited.
 #
-# WHERE THE COLUMNS ARE. Both exist on finsys-api `integration/SYS-3598` and
-# NOT yet on `origin/main` (checked 2026-09-23 with `git grep` on each ref:
-# SYS-3675 migration 1786200000000 adds `ihs.experianReports`, a url_string
-# pointer; SYS-3703 migration 1786300000000 adds `ihs.managementAccounts`, a
-# path_array pointer; both are registered in src/config/documentPointerFields.ts).
+# WHERE THE COLUMNS ARE. Both exist on finsys-api's `integration` branch and
+# not yet on `origin/main`: a migration adds `ihs.experianReports`, a
+# url_string pointer; another adds `ihs.managementAccounts`, a path_array
+# pointer; both are registered in src/config/documentPointerFields.ts.
 #
 # That does NOT block a rerun, and the reason is worth stating because the
 # opposite was assumed: this script reads finsys-api `origin/main` only for
 # the authored bridges (feeders, fieldMaps, the application-record arrays),
-# and a DOC_POINTERS key is emitted before any of them is consulted. Measured
-# 2026-09-23: a rerun against origin/main, which lacks both columns, wrote a
-# map byte-identical to the hand-edited one. What the finsys-api landing DOES
-# change is the corpus: once a fresh `v1-response-keys.json` measurement
-# contains both keys, this block is redundant and can go.
+# and a DOC_POINTERS key is emitted before any of them is consulted. A rerun
+# against origin/main, which lacks both columns, writes a map byte-identical
+# to the hand-edited one. What the finsys-api landing DOES change is the
+# corpus: once a fresh `v1-response-keys.json` measurement contains both
+# keys, this block is redundant and can go.
 NEW_POINTER_KEYS = {
     'experianReports': 'SYS-3675: ihs.experianReports, a single-URL pointer (storage "single").',
     'managementAccounts': 'SYS-3703: ihs.managementAccounts, a JSON {path} array (storage "array").',
@@ -256,12 +253,12 @@ DOC_POINTERS = {
     'ic', 'consentForm', 'myKadOrPassport', 'coreIncomeDoc', 'incomeSupportingDoc',
     'incomeEPF_iakaun', 'photocopyRegistrationCard', 'bankStatementOrSavingPassbook',
     'invoices', 'supplementaryDoc', 'tnbBills',
-    # SYS-3705 — see NEW_POINTER_KEYS above for why a rerun waits on finsys-api.
+    # See NEW_POINTER_KEYS above for why a rerun waits on finsys-api.
     'experianReports', 'managementAccounts',
 }
 
 
-# ── SYS-3604 ────────────────────────────────────────────────────────────────
+# ── Surface consistency ───────────────────────────────────────────────────
 # `surface` is a PROMISE to a consumer about where to go and get the value.
 # This script already treats a relocated key with NO surface as a defect ("it
 # reads as answered and is not"), but nothing checked whether the surface it
@@ -271,7 +268,7 @@ DOC_POINTERS = {
 # `unplaced` reason quotes `entry.surface`, so a consumer was told to fetch
 # from an endpoint that will not answer.
 #
-# The endpoint's behaviour is right — applicationRecordService removed them on
+# The endpoint's behavior is right — applicationRecordService removed them on
 # purpose, with reasons (lenderId "names the COMPETING lender", the user FKs
 # identify STAFF at the originating company, finxtractConfigId's "only meaning
 # is whose credentials were used"). The map's claim about it was the false part.
@@ -324,11 +321,10 @@ SWEEP = {
                       'wanted as an SME signal (Kain) but 0 of 8,474 rows populated and no canonical '
                       'field of the right kind — subject-company.companySizeCode is a coded BAND, this '
                       'is a raw COUNT. Needs a new employeeCount:number on subject-company.'),
-    # SYS-3570 removed the 'tangibleAssets' override that sat here. Its reason
-    # ended "Needs a declared field, not a lookup", and financial-statement now
-    # DECLARES that field — so the override would suppress the very address it
-    # was asking for. With it gone the four keys resolve through the ordinary
-    # feeder branch (tangibleAssets IS in wideColumnFeeders.ts's
+    # No 'tangibleAssets' override sits here: financial-statement DECLARES
+    # that field, so an override would suppress the very address it was
+    # asking for. The four keys resolve through the ordinary feeder branch
+    # (tangibleAssets IS in wideColumnFeeders.ts's
     # FINANCIAL_STATEMENT_COLUMNS), and the substring artifact the docstring
     # above warns about still cannot come back: address() resolves the base
     # name EXACTLY, so nonCurrentAssetIntangibleAssets is unreachable from
@@ -477,7 +473,7 @@ OBLIGATIONS = {
     'otherFinancingMonthlyInstallment': 'otherFinancing',
 }
 
-# SYS-3334 (round 2, the map correction). These six strip, under PERIOD, to
+# Round 2, the map correction. These six strip, under PERIOD, to
 # the SAME base as their current-year sibling ("netProfitPriorYearT1" ->
 # "netProfit", identical to what "netProfitT1" strips to) -- so a base-keyed
 # override (SWEEP or HAND, both looked up by `base` below) cannot single
@@ -549,7 +545,7 @@ for key in sorted(v1.keys()):
             e = {'disposition': disp, 'reason': reason, 'via': 'consumer-sweep'}
             # A relocated key that names no surface is the same defect as a
             # mapped key with no address: it reads as answered and is not.
-            # SYS-3604: and a surface that does not serve the key is the same
+            # And a surface that does not serve the key is the same
             # defect again, one step further on — so the surface is only
             # promised when the endpoint's own source says it is served.
             if disp == 'relocated':
@@ -623,11 +619,10 @@ for key in sorted(v1.keys()):
         else:
             disp, target = audit.get(base, (None, None))
             if disp == 'NOT-ADAPTER' and target and target.startswith(('facility', 'workflow')):
-                # SYS-3604: this branch used to assign the surface
-                # UNCONDITIONALLY from a column-audit classification, with
-                # nothing comparing it against what the endpoint serves. That
-                # is how all six false claims were minted, and why every one of
-                # them carries `via: column-audit` and no note.
+                # The surface is never assigned UNCONDITIONALLY from a
+                # column-audit classification alone — it is checked against
+                # what the endpoint actually serves first, which is why every
+                # entry here carries `via: column-audit` and no note.
                 if key in SERVED_BY_APPLICATION_RECORD:
                     entries[key] = {'disposition': 'relocated', 'via': 'column-audit',
                                     'surface': APPLICATIONS_SURFACE}

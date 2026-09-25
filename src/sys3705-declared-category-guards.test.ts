@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
 /**
- * SYS-3705 — the three guards on a DECLARED extraction category, each proven
+ * The three guards on a DECLARED extraction category, each proven
  * to fire. None of them can fire against the shipped catalog (it is
  * consistent, which is the point), so each test swaps in a catalog that
  * breaks exactly one rule and loads the modules fresh against it.

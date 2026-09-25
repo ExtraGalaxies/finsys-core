@@ -21,14 +21,14 @@ import type { AdapterCategory } from './adapter-categories.js'
 import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
 
 /**
- * SYS-3705 — credit-bureau-report and management-account, and the generic
+ * credit-bureau-report and management-account, and the generic
  * fix that lets any category with NO v1 lineage render at all.
  *
- * Before this, a document type reached its extraction category only through
- * the frozen v1 migration map, and a field reached a table only through its
- * v1 legacy base name. A category born after the map had neither, so it
- * resolved to no category, rendered no table, and produced instance rows with
- * no metric keys — silently. The proof that the fix leaves every v1-lineage
+ * A document type reaching its extraction category ONLY through the frozen
+ * v1 migration map, and a field reaching a table ONLY through its v1 legacy
+ * base name, would leave a category born after the map with neither — no
+ * category, no table, and instance rows with no metric keys, silently. The
+ * proof that the fix leaves every v1-lineage
  * category's rows byte-identical is sys3705-v1-lineage-golden.test.ts (its
  * doc says exactly which outputs, and which parts of them, it covers);
  * this file pins what the fix DOES.
@@ -184,7 +184,7 @@ describe('management-account (SYS-3705)', () => {
       expect(f.description, f.name).toMatch(/^JSON-encoded list/)
     }
     // Everything that is neither: the eight header fields saying what the
-    // period is (SYS-3728 added mgmtCurrencySource, 9.6.0).
+    // period is (mgmtCurrencySource among them, since 9.6.0).
     expect(fields(MA).length - money.length - items.length).toBe(8)
   })
 
@@ -284,14 +284,14 @@ describe('the lineage fallback — a category with no v1 lineage renders under i
     // "cash" is in the name, and the name heuristic would call it numeric; the registry says list.
     const cash = ma.items.find((i) => i.displayName === 'Cash at Bank (Lines)')!
     expect(cash.isNumeric).toBe(false)
-    // SYS-3728: rows, not the JSON.
+    // Rows, not the JSON.
     expect(cash.formattedData).toEqual({ T1: '1 entry', T2: '-' })
     expect(cash.list!['T1']!.rows).toEqual([{ code: '-', term: 'Current account', amount: '12,000', amountAsPrinted: '-' }])
     expect(ma.items.map((i) => i.displayName)).toEqual(['Company Name', 'Period End', 'Total Assets', 'Cash at Bank (Lines)'])
 
     const cbr = tables['credit_bureau_reports']!
     const score = cbr.items.find((i) => i.displayName === 'Bureau Score')!
-    // SYS-3728: labeled by subject, principal first — was ['T1 · pbi-1', 'T1 · ccris'].
+    // Labeled by subject, principal first.
     expect(score.timePeriods).toEqual(['Example Sdn Bhd (principal)', 'A Director (party)'])
     expect(score.data).toEqual({ 'Example Sdn Bhd (principal)': 712, 'A Director (party)': 690 })
   })
@@ -307,7 +307,7 @@ describe('the lineage fallback — a category with no v1 lineage renders under i
     const status = resolveExtractionStatusFromView(v).documents.filter((d) => ['experianReports', 'managementAccounts'].includes(d.fileType))
     expect(status.map((d) => [d.fileType, d.status, d.totalColumns])).toEqual([
       ['experianReports', DocExtractionStatus.Extracted, 76],
-      // 62 since 9.6.0 (SYS-3728 mgmtCurrencySource).
+      // 62 since 9.6.0 (mgmtCurrencySource).
       ['managementAccounts', DocExtractionStatus.Extracted, 62],
     ])
 

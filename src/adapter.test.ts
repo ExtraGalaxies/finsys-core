@@ -18,7 +18,7 @@ import { describe, it, expect } from "vitest";
 import type { AdapterExtraction, PeriodValues } from "./adapter.js";
 
 /**
- * SYS-3002 — per-period value sets on AdapterExtraction. These are
+ * Per-period value sets on AdapterExtraction. These are
  * TS-shape tests: AdapterExtraction has no JSON-schema surface in this
  * package (host apps validate extractions at runtime), so the contract
  * lives in the type and these tests exercise it — a shape drift breaks

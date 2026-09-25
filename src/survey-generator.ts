@@ -78,7 +78,7 @@ export interface FieldData {
   titleLocation?: "default" | "top" | "bottom" | "left" | "hidden";
   /**
    * Semantic refinement of `type`, using the SAME vocabulary as the
-   * canonical field registry's `CanonicalFieldSpec.kind` (SYS-3249). One
+   * canonical field registry's `CanonicalFieldSpec.kind`. One
    * word, one meaning, on both halves of the system.
    *
    * `kind: "money"` says the field holds an amount of money. It does NOT
@@ -130,12 +130,12 @@ export interface UnifiedFormConfig {
   fields: Record<string, FieldData>;
   pages?: PageConfig[];  // Optional when used in editor-only mode (no rendered form)
   /**
-   * SYS-3263: the single jurisdiction this form is valid for; absent means
+   * The single jurisdiction this form is valid for; absent means
    * Malaysia. Declared HERE and not only on FormSpec because FinHub never
    * constructs a FormSpec — it handles form configs exclusively as raw
    * UnifiedFormConfig (validates, stores in a JSONB column, ships to React).
    * Without this the declaration is invisible to two of the three consumers,
-   * and SYS-3265 enforcement would need a cast to read it.
+   * and jurisdiction enforcement would need a cast to read it.
    */
   jurisdiction?: Jurisdiction;
 }

@@ -73,12 +73,9 @@ describe('getDisplayName', () => {
 })
 
 describe('groupFieldsByPattern', () => {
-  // SYS-2842: groupFieldsByPattern used to bucket fields via a hardcoded
-  // prefix-matching table (FIELD_GROUP_PREFIXES) -- adding a document type
-  // meant a code edit here. It now reads each field's catalog-declared
-  // document_group tag directly, so these tests use tagged fixtures
-  // (matching what the real catalog now carries) instead of relying on
-  // name-prefix inference.
+  // groupFieldsByPattern reads each field's catalog-declared document_group
+  // tag directly, so these tests use tagged fixtures (matching what the
+  // real catalog carries) rather than name-prefix inference.
   it('groups fields sharing the same document_group tag together', () => {
     const fields: (FieldData & { document_group?: string })[] = [
       { name: 'bank_statement_t1', type: 'file', ihs_column_names: ['bankNameT1'], document_group: 'bank_statements' },
@@ -122,7 +119,6 @@ describe('groupFieldsByPattern', () => {
         'ic_documents',
         'epf_statements',
         'payslip_statements',
-        // SYS-3705
         'credit_bureau_reports',
         'management_accounts',
       ].sort(),
@@ -516,12 +512,11 @@ describe('buildDocumentRows (SYS-2766)', () => {
     expect(buildDocumentRows({ ihsId: 1, monthlyGrossIncome: 5000 })).toEqual([])
   })
 
-  // SYS-3376: `invoices` is a real ihs pointer column (finsys-api
+  // `invoices` is a real ihs pointer column (finsys-api
   // IHS_DOCUMENT_POINTER_FIELDS, array storage, extraction: true) that the
-  // catalog never named, so an uploaded invoice was stored, billed for on
-  // extraction, and rendered in NEITHER product's documents table. The slot
-  // list is host-owned; the host carries the comparator (every pointer slot
-  // must be in getDocDisplayNames()). This pins the core half.
+  // catalog does not name. The slot list is host-owned; the host carries
+  // the comparator (every pointer slot must be in getDocDisplayNames()).
+  // This pins the core half.
   it('renders invoices — an extractable host slot the catalog used to drop silently (SYS-3376)', () => {
     const rows = buildDocumentRows({
       invoices: [
@@ -541,13 +536,12 @@ describe('buildDocumentRows (SYS-2766)', () => {
   })
 })
 
-// SYS-3438: `ViewDocument` was declared `export interface` in ihs-processing
-// and documented in the 8.1.0 CHANGELOG as exported, but never added to
-// index.ts — the published 8.1.0 d.ts has it outside the `export {}` block
-// and `import type { ViewDocument } from '@finsys/core'` is TS2459. Same pin
-// shape as canonical-view.test's CanonicalAttestation: the ROOT entry, so
-// `npm run lint` (tsc) fails if index.ts drops the name; vitest strips the
-// type import, so the runtime assertion is trivially true.
+// `ViewDocument` is declared `export interface` in ihs-processing and must
+// also be re-exported from index.ts, or `import type { ViewDocument } from
+// '@finsys/core'` is TS2459. Same pin shape as canonical-view.test's
+// CanonicalAttestation: the ROOT entry, so `npm run lint` (tsc) fails if
+// index.ts drops the name; vitest strips the type import, so the runtime
+// assertion is trivially true.
 import type * as Root from './index.js'
 describe('the documents-table types are exported from the ROOT entry (SYS-3438)', () => {
   it('ViewDocument is importable from @finsys/core, as documentsOfType() return type requires', () => {
@@ -594,7 +588,7 @@ describe('document-table maps + formatters (SYS-2766)', () => {
   })
 })
 
-// ── SYS-3249: the denomination travels with the value ────────────────
+// ── The denomination travels with the value ──────────────────────────
 describe('currency-aware value formatting', () => {
   const prov = (currency?: string) => ({
     source: 'finxtract:bank_statement',
@@ -672,7 +666,7 @@ describe('currency-aware value formatting', () => {
   })
 })
 
-// ── SYS-3249: money the word-list cannot see ─────────────────────────
+// ── Money the word-list cannot see ────────────────────────────────────
 describe('monetary fields outside the isNumericField word list', () => {
   const prov = (currency?: string) => ({
     source: 'finxtract:ssm',
@@ -728,7 +722,7 @@ describe('monetary fields outside the isNumericField word list', () => {
   })
 })
 
-// ── SYS-3249: precision is never invented ────────────────────────────
+// ── Precision is never invented ──────────────────────────────────────
 describe('fraction digits come from the currency, or from the value — never from a constant', () => {
   const P = (currency?: string) => ({
     source: 'finxtract:ssm',
@@ -740,8 +734,8 @@ describe('fraction digits come from the currency, or from the value — never fr
   })
   // Intl separates the currency code from the number with U+00A0, a
   // NON-BREAKING space — deliberate on its part (the code should not wrap
-  // away from its amount). Normalised here so assertions compare what a
-  // reader sees rather than which flavour of space Intl chose; the rendered
+  // away from its amount). Normalized here so assertions compare what a
+  // reader sees rather than which flavor of space Intl chose; the rendered
   // value keeps the nbsp, which is what consumers receive.
   const render = (data: Record<string, unknown>, prov: Record<string, unknown>) => {
     const tables = buildFileFieldTables(data, prov as never)

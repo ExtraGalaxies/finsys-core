@@ -43,13 +43,13 @@ export interface DocExtractionResult {
   totalColumns: number
   errorMessage?: string | null
   /**
-   * SYS-3378: the document's DMS content hash — present on the instance-shaped
+   * The document's DMS content hash — present on the instance-shaped
    * path, absent on the flat one. The join key to `DocumentRow.documentId`, so
    * a consumer can overlay status by identity rather than by (fileType, index).
    */
   documentId?: string
   /**
-   * SYS-3334: set only on the instance-shaped path, for a document known from
+   * Set only on the instance-shaped path, for a document known from
    * its extraction instances alone — no intake row names it. Either an upload
    * that predates the intake writer, or a join miss between an intake path and
    * an extraction key. Kept observable so a join regression cannot masquerade
@@ -260,7 +260,7 @@ export function resolveExtractionStatus(
   return { documents, summary }
 }
 
-// ── Instance-shaped resolution (SYS-3334) ──────────────────────────
+// ── Instance-shaped resolution ────────────────────────────────────────
 
 /**
  * `resolveExtractionStatus` for a v2 `CanonicalView`. Same result type, same
@@ -276,10 +276,10 @@ export function resolveExtractionStatus(
  *    predate the intake writer). Measured against v1 on 189 sim subjects ×
  *    7 types: 1321 of 1323 agree; the two that did not were one pre-writer
  *    upload (v2 now says uploaded, via the union) and one replaced file,
- *    where the append-only intake keeps the superseded write. SYS-3721
- *    settled the second: only CURRENT intake instances count (see
- *    `documentsOfType` and its `currentIntakeOfType`), so a replaced file is
- *    no longer counted, matching v1's current pointer.
+ *    where the append-only intake keeps the superseded write. Only CURRENT
+ *    intake instances count (see `documentsOfType` and its
+ *    `currentIntakeOfType`), so a replaced file is not counted, matching
+ *    v1's current pointer.
  *
  * 2. PER-DOCUMENT STATUS is joined by identity, not by position. v1 aligned
  *    upload index i with T-slot column family i and job record i. v2 joins an
@@ -292,9 +292,8 @@ export function resolveExtractionStatus(
  *    case. Job records still carry only fileType and order, so they are
  *    aligned positionally — but ONLY to the intake-ordered prefix, never to an
  *    extraction-only document that was never in the pointer array. The
- *    prefix holds CURRENT documents only (SYS-3721), so a replaced file's
- *    superseded row no longer pushes later jobs one document along, the shift
- *    this paragraph used to state.
+ *    prefix holds CURRENT documents only, so a replaced file's superseded
+ *    row never pushes later jobs one document along.
  *
  * 3. THE DENOMINATOR is the registry's field set for the extraction category
  *    — what the adapter DECLARES it produces — not the form spec's column

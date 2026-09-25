@@ -26,7 +26,7 @@
  * rejects an application, finsys-api transitions the record back to
  * `APPLICATION_FINALIZED` from `LENDER_EVALUATION`.
  *
- * `EditingApplication` (SYS-2806) is a lender-scoped detour off
+ * `EditingApplication` is a lender-scoped detour off
  * `LenderEvaluation` for manually editing extracted field values — not
  * reachable from `ApplicationFinalized`. A lender toggles into it and back
  * out to `LenderEvaluation`; it never appears on a record no lender has
@@ -79,7 +79,7 @@ export const IHS_TERMINAL_STATUSES: readonly IhsStatus[] = [
 
 /**
  * Failure statuses — a subset of terminal statuses that represent an
- * unsuccessful outcome. Useful for badge colour / messaging.
+ * unsuccessful outcome. Useful for badge color / messaging.
  */
 export const IHS_FAILURE_STATUSES: readonly IhsStatus[] = [
   IhsStatus.Declined,

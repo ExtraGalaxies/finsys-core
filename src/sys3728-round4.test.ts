@@ -6,7 +6,7 @@ import type { Violation } from './canonical-validation.js'
 import { parseCurrencyHeading } from './currency.js'
 
 /**
- * SYS-3728, fourth adversarial review (at 7c30076). Each case below was
+ * Fourth adversarial review (at 7c30076). Each case below was
  * accepted by core there and failed, or was silently changed, in storage.
  */
 

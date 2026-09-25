@@ -15,7 +15,7 @@
  */
 
 /**
- * SYS-3334 — the v2 envelope's shape is a CONTRACT, and this pins it.
+ * The v2 envelope's shape is a CONTRACT, and this pins it.
  *
  * These types moved here from `@finsys/lender-client`, which still declares
  * them for its 2.5.0 consumers and will re-export from here instead. That
@@ -44,9 +44,7 @@ import type {
   CanonicalView,
 } from './canonical-view.js';
 // The ROOT entry, not the module: this is what a consumer imports, and the
-// module-level import above cannot see a name left out of index.ts. SYS-3421:
-// `CanonicalAttestation` was declared in 8.1.0's first candidate and not
-// exported — finsys-api's resolver hit TS2305 and mirrored the interface.
+// module-level import above cannot see a name left out of index.ts.
 // `npm run lint` (tsc over src/**) turns a missing root export into TS2305
 // on this line; vitest strips the type import, so the runtime is unaffected.
 import type * as Root from './index.js';
@@ -71,7 +69,7 @@ describe('the v2 canonical envelope', () => {
       adapterId: 'a',
       adapterVersion: 1,
       fields: {},
-      // SYS-3334 (round 2, F4): the v1-slot + per-instance-label pair.
+      // (round 2, F4): the v1-slot + per-instance-label pair.
       legacySlot: 'T1',
       periodPosition: 1,
       sourceLabel: 'Maybank',
@@ -89,9 +87,9 @@ describe('the v2 canonical envelope', () => {
       confidence: 0.97,
       origin: 'extraction',
       confidentiality: 'sensitive',
-      // SYS-3415: present only under a lender-overlay projection.
+      // Present only under a lender-overlay projection.
       originalValue: 'SG',
-      // SYS-3421: present only when more than one attestation exists.
+      // Present only when more than one attestation exists.
       attestations: [
         { value: 'MY', origin: 'manual', adapterId: 'manual-override-v1', adapterVersion: 1, runId: 99, observedAt: '2026-08-19T00:00:00.000Z', lenderId: 7 },
         { value: 'SG', origin: 'extraction', adapterId: 'finxtract-ic-v1', adapterVersion: 1, runId: 42 },
@@ -108,7 +106,7 @@ describe('the v2 canonical envelope', () => {
       runId: 42,
       observedAt: '2026-08-18T00:00:00.000Z',
       fields: { contactValue: envelope },
-      // SYS-3334 (round 2, F4): present ONLY when the source row carried a v1
+      // (round 2, F4): present ONLY when the source row carried a v1
       // slot / a human label — both optional, pinned here alongside the rest.
       legacySlot: 'T2',
       sourceLabel: 'Maybank',
@@ -119,7 +117,7 @@ describe('the v2 canonical envelope', () => {
     const view: CanonicalView = {
       ihsId: 9154,
       categories: { 'applicant-contact': category },
-      // SYS-3415: present iff read under `?overlay=mine`.
+      // Present iff read under `?overlay=mine`.
       overlay: { lenderId: 7, applied: 1, updatedAt: '2026-08-18T00:00:00.000Z', unprojected: [] },
     };
     const address: CanonicalAddress = {

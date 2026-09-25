@@ -146,7 +146,7 @@ export function getGroupDisplayNames(): Record<string, string> {
 // ── File-field table building ──────────────────────────────────
 
 /**
- * SYS-3249: the set of canonical field names declared `kind: "money"`.
+ * The set of canonical field names declared `kind: "money"`.
  *
  * `isNumericField` below is a 17-word substring match over the flat column
  * name, and it misses 51 of the 143 money fields — every `payslip*` amount,
@@ -170,15 +170,13 @@ export function getGroupDisplayNames(): Record<string, string> {
 let cachedMonetaryFieldNames: Set<string> | null = null
 function isMonetaryField(fieldName: string): boolean {
   if (!cachedMonetaryFieldNames) {
-    // SYS-3333: BOTH spellings, and the legacy half is not optional.
+    // BOTH spellings, and the legacy half is not optional.
     //
     // This function is handed a FLAT column name and matches it against
-    // CANONICAL names — which worked only while the two vocabularies were
-    // identical. The moment `payslipGrossPay` became `grossPay` canonically
-    // while the flat column kept its own name, the lookup missed and the
-    // value rendered as a bare number beside its denominated neighbours. No
-    // exception, no log line: exactly the silent degrade SYS-3249's
-    // denomination work exists to prevent, reintroduced by a rename.
+    // CANONICAL names — which works only because the legacy half is
+    // included. A canonical rename with no flat-side alias would leave a
+    // value rendering as a bare number beside its denominated neighbors: no
+    // exception, no log line, just a silent degrade.
     //
     // The legacy half is read off each field's own `legacyName`, so it cannot
     // drift from the rename that created it, and it disappears with the flat
@@ -219,28 +217,27 @@ function isNumericField(fieldName: string): boolean {
 }
 
 /**
- * SYS-3249: `currency` is the ISO 4217 denomination of THIS value, read
- * from its provenance envelope — never from the field definition, and
- * never from a program-level default. It is optional, and absent means
- * "unknown", not "MYR": every pre-SYS-3249 row is absent, and defaulting
- * would render a VND amount as if it were ringgit, which is the exact
- * failure this carries a denomination to prevent.
+ * `currency` is the ISO 4217 denomination of THIS value, read from its
+ * provenance envelope — never from the field definition, and never from a
+ * program-level default. It is optional, and absent means "unknown", not
+ * "MYR": a row with no recorded currency, defaulted, would render a VND
+ * amount as if it were ringgit, which is the exact failure this carries a
+ * denomination to prevent.
  *
  * The two-fraction-digit default below is therefore kept ONLY for the
- * unknown case, where it preserves existing behaviour. When a currency IS
+ * unknown case, where it preserves existing behavior. When a currency IS
  * known the fraction digits come from the currency itself — VND is
  * zero-decimal, so 14,004,792,678,863 renders whole rather than gaining
  * two decimals that do not exist in the currency.
  *
- * The locale stays 'en-US' for now and governs only grouping/ordering,
- * not the decimal count. It becomes jurisdiction-driven under SYS-3258.
+ * The locale stays 'en-US' for now and governs only grouping/ordering, not
+ * the decimal count.
  */
 /**
- * SYS-3249: grouping, but NO invented decimals.
+ * Grouping, but NO invented decimals.
  *
- * This previously forced `minimumFractionDigits: 2` on everything that
- * reached the numeric branch. That is a claim about precision, and it is
- * wrong in two directions:
+ * Forcing `minimumFractionDigits: 2` on everything that reaches the numeric
+ * branch is a claim about precision, and it is wrong in two directions:
  *
  *  - Not every number here is money. `cashConversionCycleDays` rendered as
  *    "45.00" days and `totalShareIssued` as "1,000,000.00" shares.
@@ -286,7 +283,7 @@ function currencyFormatter(code: string): Intl.NumberFormat | null {
 }
 
 /**
- * SYS-3284/SYS-3285: the ONE money formatter the apps render through.
+ * The ONE money formatter the apps render through.
  *
  * FinHub and finsys-client each had their own. FinHub's hardcoded
  * `Intl.NumberFormat('en-MY', { currency: 'MYR' })` in the IHS views, so a
@@ -335,7 +332,7 @@ function formatValue(value: unknown, numeric: boolean, currency?: string): strin
     const num = Number(value)
     if (!isNaN(num)) {
       if (currency) {
-        // Normalised before use: extraction output is exactly where stray
+        // Normalized before use: extraction output is exactly where stray
         // whitespace and lowercase come from, and Intl rejects " myr " while
         // accepting "MYR". Recovering those is free; leaving them to the
         // degraded path renders a correct value as though it were suspect.
@@ -361,7 +358,7 @@ function formatValue(value: unknown, numeric: boolean, currency?: string): strin
 const RATIO_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 2 })
 
 /**
- * SYS-3728: a `unit: "ratio"` value as the percentage a document prints.
+ * A `unit: "ratio"` value as the percentage a document prints.
  *
  * The registry stores a ratio as a FRACTION (the bureau's printed "74.02%" is
  * stored 0.7402; see `securedOutstandingToLimitRatio`), so printing the stored
@@ -377,7 +374,7 @@ export function formatRatio(value: unknown): string {
 }
 
 /**
- * SYS-3728: a period column's heading — "FY2025 · to 31 Dec 2025" — from the
+ * A period column's heading — "FY2025 · to 31 Dec 2025" — from the
  * table's `periodHeadings` entry. `formatDate` prints the ISO end date in the
  * calling app's own style. Year only: "FY2025"; end only: "to <end>"; neither
  * (or no entry): null, and the caller keeps the column key ("T1").
@@ -394,7 +391,7 @@ export function periodHeadingLabel(
   return null
 }
 
-// ── List cells and the read-side guard (SYS-3728) ────────────────
+// ── List cells and the read-side guard ────────────────────────────
 
 /** What a cell that broke the canonical write contract shows instead of its value. */
 export const INVALID_VALUE_TEXT = '(invalid value)'
@@ -416,7 +413,7 @@ function formatListItem(v: unknown, item: ListItemSpec, currency?: string): stri
 }
 
 /**
- * SYS-3728: a stored list value as rows under its declared columns — the
+ * A stored list value as rows under its declared columns — the
  * `IhsListCell` contract (see its doc in ihs-types.ts).
  *
  * The value is checked against the SAME validator a writer enforces
@@ -435,8 +432,8 @@ export function buildListCell(value: unknown, listSpec: CanonicalFieldSpec, curr
   const parsed = parseListValue(value)
   if (!('rows' in parsed)) return invalidListCell()
   const items = listSpec.items
-  // SYS-3728 (first live render): a declared column no row fills is not a
-  // column — "Amount (as printed)" read "-" on every line that parsed.
+  // A declared column no row fills is not a column — "Amount (as printed)"
+  // would read "-" on every line otherwise.
   const filled = new Set<string>()
   const rows = parsed.rows.map((raw) => {
     const { values } = matchListRow(raw as Record<string, unknown>, items)
@@ -466,7 +463,7 @@ function listSummary(cell: IhsListCell): string {
 }
 
 /**
- * SYS-3728: the rows with every value that breaks the write contract removed,
+ * The rows with every value that breaks the write contract removed,
  * and a record of which (row, field) broke which rules. The removed value is
  * never rendered, never used as a column label, and never reaches `data`.
  */
@@ -502,7 +499,7 @@ function guardInstanceRows(
 }
 
 /**
- * SYS-3728: the field specs a category's read paths hold values to — the
+ * The field specs a category's read paths hold values to — the
  * categories with no v1 lineage, whose values reach rows, tables and scoring
  * under their canonical names. A v1-lineage category is not re-checked on
  * read (its outputs are the byte-identity contract); its writers are.
@@ -547,9 +544,9 @@ function buildTableForGroup(
         const colName = periodMap[period]
         const value = colName ? (ihsData[colName] ?? null) : null
         data[period] = value
-        // SYS-2741: colName is the exact ihs_field_metadata key (incl. T{n} suffix).
-        // SYS-3249: resolved BEFORE formatting — the envelope carries this
-        // value's currency, so the formatter needs it in hand.
+        // colName is the exact ihs_field_metadata key (incl. T{n} suffix).
+        // Resolved BEFORE formatting — the envelope carries this value's
+        // currency, so the formatter needs it in hand.
         const prov = colName ? fieldProvenance?.[colName] : undefined
         formattedData[period] = formatValue(value, numeric, prov?.currency)
         if (prov) {
@@ -585,9 +582,9 @@ function buildTableForGroup(
     for (const colName of allColumns) {
       const value = ihsData[colName] ?? null
       const numeric = isNumericField(colName) || isMonetaryField(colName)
-      // SYS-2741: single-doc columns (ssmCompanyName, companyName, icName, …) are
-      // keyed directly in ihs_field_metadata — lit up here (the value-match interim
-      // had to skip these because filename-based OCR lookup was unreliable).
+      // Single-doc columns (ssmCompanyName, companyName, icName, …) are
+      // keyed directly in ihs_field_metadata, so provenance is looked up
+      // directly rather than through the filename-based match used above.
       const prov = fieldProvenance?.[colName]
       items.push({
         displayName: getDisplayName(colName),
@@ -631,15 +628,15 @@ export function buildFileFieldTables(
   return tables
 }
 
-// ── Instance-based field grouping (SYS-2886 / Phase 5) ──────────
+// ── Instance-based field grouping ────────────────────────────────
 //
 // The catalog's T{n}-suffixed columns (bankBalanceT1..T6) declare a FIXED
 // cardinality per category -- at most 6 bank statements, 3 financial-year
 // slots, etc (buildFileFieldTables/groupColumnsByTimePeriod above are
 // bound to that fixed declaration). groupColumnsByInstance is the
 // unbounded counterpart: it takes the RAW sibling-table rows finsys-api
-// now exposes per category (SYS-2842's docInstanceStorageService -- one
-// row per uploaded document, keyed by a real instanceKey, not a
+// exposes per category (via docInstanceStorageService -- one row per
+// uploaded document, keyed by a real instanceKey, not a
 // pre-declared T{n} slot) and groups them by base metric name, with one
 // column per ROW rather than per pre-declared period.
 //
@@ -704,7 +701,7 @@ export function groupColumnsByInstance(
   return groupByLabels(baseColumnNames, instanceRows, instanceRows?.length ? instanceColumnLabels(instanceRows) : [])
 }
 
-/** groupColumnsByInstance with the column labels supplied (SYS-3728). */
+/** groupColumnsByInstance with the column labels supplied. */
 function groupByLabels(
   baseColumnNames: string[],
   instanceRows: InstanceRow[],
@@ -735,15 +732,15 @@ function groupByLabels(
  * standalone once a category has fully cut over).
  *
  * Provenance stays keyed the legacy way (`${baseName}${timePeriod}`, per
- * the epic's established SYS-2842 rule that @finsys/core's exact-string
- * lookup can't change format without a coordinated release) -- so only
+ * the rule that @finsys/core's exact-string lookup can't change format
+ * without a coordinated release) -- so only
  * instances whose timePeriod maps onto a legacy T{n} slot carry a
  * confidence dot; instances beyond that (the very capability this
  * function exists for) simply render with no confidence, same limitation
  * buildFileFieldTables already has today for anything past T6.
  */
 /**
- * SYS-3728: the column order and labels of a category that declares
+ * The column order and labels of a category that declares
  * `instanceColumns` — instances that are SUBJECTS, not periods.
  *
  * Order: by document (an instance key's part before its last `#`, in order of
@@ -820,8 +817,8 @@ function buildInstanceTable(
   currencyField?: string,
   periodFields?: CategoryPeriodFields
 ): FileFieldTableData | null {
-  // SYS-3728: with field specs, every value is held to the write contract
-  // BEFORE anything reads it — labels, ordering, currency, cells.
+  // With field specs, every value is held to the write contract BEFORE
+  // anything reads it — labels, ordering, currency, cells.
   const guard = fieldSpecs ? guardInstanceRows(rowsAsGiven, fieldSpecs) : null
   const guardedRows = guard ? guard.rows : rowsAsGiven
   const invalidOf = new Map<InstanceRow, Map<string, ViolationRule[]>>()
@@ -831,8 +828,8 @@ function buildInstanceTable(
     ? orderAndLabelInstances(guardedRows, instanceColumns)
     : { rows: guardedRows, labels: instanceColumnLabels(guardedRows) }
   const columnGroups = groupByLabels(baseNames, instanceRows, instanceLabels)
-  // SYS-3728 (first live render): the fields a subject column is ordered and
-  // headed by are not rows — "Report Section: ccris" and "Subject Role:
+  // The fields a subject column is ordered and headed by are not rows —
+  // "Report Section: ccris" and "Subject Role:
   // principal" repeated what "Example Sdn Bhd (principal)" already says, in
   // internal codes. They still order and label the columns (above).
   const headingFields = new Set(
@@ -849,7 +846,7 @@ function buildInstanceTable(
 
     const spec = fieldSpecs && Object.prototype.hasOwnProperty.call(fieldSpecs, baseName) ? fieldSpecs[baseName] : undefined
     const isList = spec?.type === 'list'
-    // SYS-3728: a list field is rows, never a number — whatever its name says.
+    // A list field is rows, never a number — whatever its name says.
     const numeric = isList
       ? false
       : numericColumns
@@ -868,11 +865,11 @@ function buildInstanceTable(
       data[label] = value
 
       const legacyKey = row.timePeriod ? `${baseName}${row.timePeriod}` : undefined
-      // SYS-3249: hoisted above the format call — the envelope carries
-      // this value's currency.
+      // Hoisted above the format call — the envelope carries this value's
+      // currency.
       const prov = legacyKey ? fieldProvenance?.[legacyKey] : undefined
-      // SYS-3728: the document's OWN currency field, when the category has one
-      // and its value passed the guard — an ISO code, never a printed symbol,
+      // The document's OWN currency field, when the category has one and
+      // its value passed the guard — an ISO code, never a printed symbol,
       // never a jurisdiction default.
       const own = currencyField ? row[currencyField] : undefined
       const currency = typeof own === 'string' ? own : prov?.currency
@@ -886,10 +883,10 @@ function buildInstanceTable(
         list[label] = cell
         formattedData[label] = listSummary(cell)
       } else if (spec?.unit === 'ratio' && numeric) {
-        // SYS-3728: stored as a fraction, printed as the percentage.
+        // Stored as a fraction, printed as the percentage.
         formattedData[label] = formatRatio(value)
       } else if (spec?.valueLabels && typeof value === 'string' && Object.prototype.hasOwnProperty.call(spec.valueLabels, value)) {
-        // SYS-3728: a code the category defines, in words; `data` keeps the code.
+        // A code the category defines, in words; `data` keeps the code.
         formattedData[label] = spec.valueLabels[value]!
       } else {
         formattedData[label] = formatValue(value, numeric, currency)
@@ -927,8 +924,8 @@ function buildInstanceTable(
   )
   if (!tableItems.length || !hasData) return null
 
-  // SYS-3728: each period column's own year and end, for its heading. Read
-  // from the guarded rows, so a value that broke the contract is null here.
+  // Each period column's own year and end, for its heading. Read from the
+  // guarded rows, so a value that broke the contract is null here.
   let periodHeadings: Record<string, IhsPeriodHeading> | undefined
   if (periodFields && (periodFields.year || periodFields.end)) {
     const str = (row: InstanceRow, f: string | undefined): string | null => {
@@ -953,8 +950,8 @@ function buildInstanceTable(
 
 /**
  * Explicit base-column declaration for a category with NO catalog `file`
- * spec -- e.g. invoice (SYS-2842 Phase 3), which was deliberately never
- * registered in form-field-base-specs.json because getDocumentTypeGroups()
+ * spec -- e.g. invoice, which is deliberately never registered in
+ * form-field-base-specs.json because getDocumentTypeGroups()
  * is shared with resolveExtractionStatus, which assumes a category's wide-
  * table columns exist to check "is this populated" against -- invoice has
  * none (sibling-table only, no wideTableMirror). Registering it there would
@@ -966,13 +963,13 @@ export interface CategorySpec {
   displayName: string
   baseColumnNames: string[]
   /**
-   * SYS-3705: which of `baseColumnNames` are numeric, when the caller KNOWS
-   * (from the registry's declared types). Absent, numeric-ness is inferred
-   * from the column name as it always was.
+   * Which of `baseColumnNames` are numeric, when the caller KNOWS (from the
+   * registry's declared types). Absent, numeric-ness is inferred from the
+   * column name instead.
    */
   numericColumnNames?: string[]
   /**
-   * SYS-3705: true when this category's column names are NOT v1 base names.
+   * True when this category's column names are NOT v1 base names.
    * The provenance map is keyed `${v1BaseName}${period}`, so a non-v1 column
    * name plus a period can spell a DIFFERENT category's key (a management
    * account's `companyName` in T1 reads `companyNameT1`, which is Form 9's)
@@ -980,8 +977,8 @@ export interface CategorySpec {
    */
   noLegacyProvenance?: boolean
   /**
-   * SYS-3728: the registry spec of each column, keyed by column name. With it,
-   * every value is checked against the canonical write contract before it is
+   * The registry spec of each column, keyed by column name. With it, every
+   * value is checked against the canonical write contract before it is
    * rendered: a value that breaks it shows `INVALID_VALUE_TEXT`, is null in
    * `data`, and is named in `FileFieldTableItem.invalid`. A `list` column
    * renders as `IhsListCell`s with a short count in `formattedData`, and is
@@ -989,19 +986,19 @@ export interface CategorySpec {
    */
   fieldSpecs?: Record<string, CanonicalFieldSpec>
   /**
-   * SYS-3728: the column holding each instance's own ISO 4217 currency (the
+   * The column holding each instance's own ISO 4217 currency (the
    * category's `kind: "currency"` field). Money cells of that instance render
    * in it; absent or invalid, they render as plain numbers.
    */
   currencyField?: string
   /**
-   * SYS-3728: label and order the columns by subject rather than by period —
-   * the category's own `CategorySchema.instanceColumns`.
+   * Label and order the columns by subject rather than by period — the
+   * category's own `CategorySchema.instanceColumns`.
    */
   instanceColumns?: CategoryInstanceColumns
   /**
-   * SYS-3728: the category's own `CategorySchema.periodFields`. With a `year`
-   * or `end`, the table carries `periodHeadings`.
+   * The category's own `CategorySchema.periodFields`. With a `year` or
+   * `end`, the table carries `periodHeadings`.
    */
   periodFields?: CategoryPeriodFields
 }
@@ -1056,12 +1053,12 @@ export function buildFileFieldTablesFromInstances(
   return tables
 }
 
-// ── Documents table (SYS-2766) ─────────────────────────────────
+// ── Documents table ───────────────────────────────────────────────
 //
 // Presentation-agnostic model of the per-document table on the IHS detail page.
 // Absorbs the doc-type maps/rules FinHub used to own inline so FinHub and
 // finsys-client render the SAME table. Pure transform: file metadata is attached
-// upstream by finsys-api (the `documentMetadata` sibling map, SYS-2765).
+// upstream by finsys-api (the `documentMetadata` sibling map).
 
 /** IHS doc-field key → human label. Its keys drive which fields become sections. */
 const DOC_DISPLAY_NAMES: Record<string, string> = {
@@ -1070,10 +1067,9 @@ const DOC_DISPLAY_NAMES: Record<string, string> = {
   form9: 'Form 9',
   epfStatements: 'EPF Statements',
   payslips: 'Payslips',
-  // SYS-3376: a host pointer slot (extraction: true) the catalog never named —
-  // an uploaded invoice rendered in NEITHER product. The slot list is owned by
-  // the host (finsys-api IHS_DOCUMENT_POINTER_FIELDS); the host carries the
-  // comparator that every slot is named here.
+  // A host pointer slot (extraction: true) the catalog never names — the
+  // slot list is owned by the host (finsys-api IHS_DOCUMENT_POINTER_FIELDS);
+  // the host carries the comparator that every slot is named here.
   invoices: 'Invoices',
   ssm: 'SSM Company Profile',
   ic: 'Identity Card',
@@ -1087,9 +1083,9 @@ const DOC_DISPLAY_NAMES: Record<string, string> = {
   photocopyRegistrationCard: 'Registration Card',
   bankStatementOrSavingPassbook: 'Bank Passbook',
   tnbBills: 'TNB Bills',
-  // SYS-3705: the first two document types with no v1 wide-table lineage —
-  // their extraction category is declared on the catalog entry
-  // (`extraction_category`), not derived from the migration map.
+  // Document types with no v1 wide-table lineage have their extraction
+  // category declared on the catalog entry (`extraction_category`), not
+  // derived from the migration map.
   experianReports: 'Credit Bureau Report',
   managementAccounts: 'Management Accounts',
 }
@@ -1110,7 +1106,7 @@ const EXTRACTABLE_DOC_TYPES = new Set<string>([
   'managementAccounts',
 ])
 
-/** Doc types that accept a replacement upload (SYS-2229 — finsys-api ignores the rest). */
+/** Doc types that accept a replacement upload (finsys-api ignores the rest). */
 const REUPLOADABLE_DOC_TYPES = new Set<string>(['bankStatements', 'financialStatements'])
 
 /** IHS doc-field key → human label (the fields that become document sections). */
@@ -1140,8 +1136,8 @@ function isProbablyId(str?: string | null): boolean {
 /**
  * One entry inside a document-pointer field.
  *
- * EXPORTED as of SYS-3174, and that is the point of exporting it. The host is
- * about to attest these entries as canonical `document-intake` rows, and the
+ * EXPORTED because the host attests these entries as canonical
+ * `document-intake` rows, and the
  * alternative to naming the shape here was for it to declare a private copy —
  * which is precisely how this codebase ended up with seven hand-written,
  * mutually-disagreeing lists of "the document fields". Every property is
@@ -1158,14 +1154,14 @@ export interface ParsedDocFile {
   month?: number
   year?: number
   /**
-   * SYS-2873: the uploader's per-file document-language choice (e.g. "vi",
-   * "en"), present only for slots whose catalog entry carries
+   * The uploader's per-file document-language choice (e.g. "vi", "en"),
+   * present only for slots whose catalog entry carries
    * document_language_options. Selects the extraction endpoint upstream;
    * absent on every Malaysia upload.
    */
   documentLanguage?: string
   /**
-   * SYS-3174: who uploaded this file — the acting principal, not the subject
+   * Who uploaded this file — the acting principal, not the subject
    * the document is about.
    *
    * The one genuine gap in this shape. It had no declaration anywhere in this
@@ -1215,7 +1211,7 @@ function toBytes(value: unknown): number | null {
 
 /**
  * Build the presentation-agnostic document rows for an IHS. Reads the doc fields
- * named in DOC_DISPLAY_NAMES + the `documentMetadata` sibling map (SYS-2765) and
+ * named in DOC_DISPLAY_NAMES + the `documentMetadata` sibling map and
  * emits a flat DocumentRow[] (all sections, in DOC_DISPLAY_NAMES order). Metadata
  * is taken inline off the entry first (supplementaryDoc is enriched inline), then
  * from `documentMetadata[path]`.
@@ -1339,7 +1335,7 @@ function isFileOrFinancialColumn(fieldName: string, fileColumnSet: Set<string>):
 
 
 /**
- * SYS-3259: money-ness is DERIVED from the registry, not listed here. A legacy
+ * Money-ness is DERIVED from the registry, not listed here. A legacy
  * name resolves through the migration map to a canonical field, and the
  * registry says whether that field's `kind` is `money`. That is 471 v1 keys;
  * the hand-written set this replaces named four, so `monthlyNetIncome`,
@@ -1350,8 +1346,8 @@ function isFileOrFinancialColumn(fieldName: string, fileColumnSet: Set<string>):
  * `relocated` (the application record) and `approvedAmount` /
  * `monthlyInstallment` are not adapter fields at all; none has a registry
  * entry to derive from. They stay, as the application record's currency
- * fields, until that record carries its own field spec (SYS-3379 / SYS-3412).
- * A test pins that this set contains ONLY names the registry cannot answer.
+ * fields, until that record carries its own field spec. A test pins that
+ * this set contains ONLY names the registry cannot answer.
  */
 export const APPLICATION_RECORD_CURRENCY_FIELDS: ReadonlySet<string> = new Set([
   'totalFinancing',
@@ -1474,7 +1470,7 @@ export function groupDetailsByCategory(details: IhsFieldDetail[]): IhsDetailCate
     }))
 }
 
-// ── Instance-shaped detail processing (SYS-3334) ────────────────────
+// ── Instance-shaped detail processing ────────────────────────────────
 
 /**
  * `processIhsDetails` for a v2 `CanonicalView` — the same output type, the
@@ -1617,7 +1613,7 @@ let documentCategoryIdsCache: Set<AdapterCategory> | null = null
  * map is silent on AND that declares nothing resolves to null and would NOT
  * be excluded here — that case is caught by the test that pins the document
  * types by name, not by this function; adding a document type means
- * declaring its extraction category on its catalog entry (SYS-3705).
+ * declaring its extraction category on its catalog entry.
  */
 export function documentCategoryIds(): ReadonlySet<AdapterCategory> {
   if (documentCategoryIdsCache) return documentCategoryIdsCache
@@ -1639,8 +1635,8 @@ const extractionCategoryCache = new Map<string, AdapterCategory | null>()
  * spec's `ihs_column_names`) and where they went.
  *
  * INTERSECTION, NOT UNION, across the columns. A fan-out key is attested by
- * more than one category — `incorporatedDate` (SYS-2722) by company-profile
- * from the SSM document AND by company-registration from Form 9 — so a single
+ * more than one category — `incorporatedDate` by company-profile from the
+ * SSM document AND by company-registration from Form 9 — so a single
  * column can name two categories and still be right. The category a document
  * type EXTRACTS INTO is the one every one of its mapped columns names: for
  * Form 9 that is company-registration ({cp,cr} ∩ {cr} ∩ {cr}); for SSM it is
@@ -1648,8 +1644,8 @@ const extractionCategoryCache = new Map<string, AdapterCategory | null>()
  * is empty or has two members, because then "the" extraction category does
  * not exist and every caller would pick one silently.
  *
- * SYS-3705: when NO column votes — a type added after the map was frozen,
- * whose columns never existed in the v1 wide table — the answer is the
+ * When NO column votes — a type added after the map was frozen, whose
+ * columns never existed in the v1 wide table — the answer is the
  * catalog's own `extraction_category` declaration on the type's `file`
  * entries (`DocumentTypeGroup.extractionCategory`). Null only when the map is
  * silent AND nothing is declared. A declaration on a type the map DOES speak
@@ -1659,8 +1655,8 @@ export function extractionCategoryOf(documentType: string): AdapterCategory | nu
   if (extractionCategoryCache.has(documentType)) return extractionCategoryCache.get(documentType)!
   const group = getDocumentTypeGroups().find((g) => g.documentType === documentType)
   const derived = v1DerivedCategoryOf(documentType)
-  // SYS-3705: the catalog's declaration, for a type the frozen map cannot
-  // speak for. Consulted only when the map is SILENT (no column voted), so
+  // The catalog's declaration, for a type the frozen map cannot speak for.
+  // Consulted only when the map is SILENT (no column voted), so
   // every type with v1 lineage resolves exactly as it did; a declaration on
   // such a type is a cross-check, never an override.
   const declared = group?.extractionCategory
@@ -1700,7 +1696,7 @@ function v1DerivedCategoryOf(documentType: string): AdapterCategory | null {
 let canonicalNamedCache: ReadonlySet<AdapterCategory> | null = null
 
 /**
- * SYS-3705: the document-extraction categories with NO v1 lineage — the ones
+ * The document-extraction categories with NO v1 lineage — the ones
  * a document type reaches only through its catalog `extraction_category`
  * declaration, because none of its columns ever existed in the v1 wide table
  * (the migration map is silent for it).
@@ -1737,21 +1733,21 @@ export function canonicalNamedCategories(): ReadonlySet<AdapterCategory> {
   return out
 }
 
-// ── Instance-shaped document rows (SYS-3378) ─────────────────────────
+// ── Instance-shaped document rows ─────────────────────────────────────
 
 /**
  * `buildDocumentRows` for a v2 `CanonicalView`. Same `DocumentRow[]`, same
  * grouping and order (DOC_DISPLAY_NAMES), same capabilities — read from the
  * `document-intake` instances instead of the wide pointer columns. This is
- * the Phase 6 blocker SYS-3378 names: until this exists, dropping a pointer
- * column blanks the documents table in both products.
+ * the Phase 6 blocker: until this exists, dropping a pointer column blanks
+ * the documents table in both products.
  *
  * WHICH DOCUMENTS. Every CURRENT `document-intake` instance whose
  * `documentType` is a type the table shows, in intake order (a replaced
- * upload keeps its intake row but is not listed — SYS-3721, see
- * `documentsOfType`) — UNIONED with any document the
- * extraction categories know that intake does not (an upload predating the
- * intake writer; measured 1 of 1323 on the sim). The same union, in the same
+ * upload keeps its intake row but is not listed — see `documentsOfType`) —
+ * UNIONED with any document the extraction categories know that intake
+ * does not (an upload predating the intake writer, which is rare but real).
+ * The same union, in the same
  * order, that `resolveExtractionStatusFromView` walks, so a consumer aligning
  * status to rows by (docType, index) still can; and both now carry the
  * document hash as `documentId`, so it can join by identity instead.
@@ -1849,15 +1845,15 @@ export interface ViewDocument {
  * `resolveExtractionStatusFromView` so their (docType, index) alignment is a
  * property of one function, not a coincidence of two.
  *
- * CURRENT ONLY (SYS-3721). Intake is append-only: a replaced upload keeps its
- * row as the audit record. It is not listed here — see `currentIntakeOfType`
+ * CURRENT ONLY. Intake is append-only: a replaced upload keeps its row as
+ * the audit record. It is not listed here — see `currentIntakeOfType`
  * for the signal — and its extraction, if any survived, is not resurrected as
  * an extraction-only document, nor (for identity-less `legacy:T{n}` rows
  * observed before the current save, on a type with a replaced row) attached
  * to its replacement.
  *
- * LEGACY SLOTS (SYS-3720). A `legacy:T{n}` row carries a slot, not a
- * document identity; `legacyDocumentOrdinal` says which document a slot
+ * LEGACY SLOTS. A `legacy:T{n}` row carries a slot, not a document
+ * identity; `legacyDocumentOrdinal` says which document a slot
  * belongs to. When intake holds documents of the type, a slot attaches to
  * one of them or to nothing: it never becomes a document of its own.
  */
@@ -1935,7 +1931,7 @@ export function documentsOfType(
   //    their own slot (`legacySlot`, else the one the key names) and, for a
   //    financial statement, its period coordinate. Pinned for bank and for
   //    the financial-statement shapes in sys3720-current-documents.test.ts. It never
-  //    becomes a document: that was SYS-3720, one statement listed as two.
+  //    becomes a document — that would double-count one statement as two.
   //  - Intake holds none: a pre-writer subject whose uploads left no intake
   //    row. Each document the slots describe is listed, marked
   //    extraction-only, with no identity.
@@ -1959,8 +1955,8 @@ export function documentsOfType(
 }
 
 /**
- * SYS-3721 — which of a type's intake instances the application CURRENTLY
- * holds, and which a later save replaced.
+ * Which of a type's intake instances the application CURRENTLY holds, and
+ * which a later save replaced.
  *
  * THE SIGNAL. finsys-api attests the WHOLE pointer column on every save that
  * touches it (`documentIntakeTriggerService.deriveDocumentIntakeInstances`
@@ -1969,9 +1965,8 @@ export function documentsOfType(
  * overwrites `observed_at`. So after any save, every file still in the column
  * carries that save's `observedAt`, and a file the save dropped keeps an
  * older one. Current = the instances at the newest `observedAt` of the type.
- * Measured on the finsim database 2026-09-23: that rule agreed with "the path
- * is in the current pointer column" on all 6,704 intake rows of the seven v1
- * document types.
+ * That rule agrees with "the path is in the current pointer column" across
+ * every intake row of the seven v1 document types.
  *
  * Why not `uploadedAt`: no writer records it (NULL on every row measured),
  * and an upload time says when a file arrived, not whether it is still held.
@@ -2018,7 +2013,7 @@ function splitCurrentIntake(ofType: CanonicalInstance[]): CurrentIntake {
 }
 
 /**
- * SYS-3720 — which document a `legacy:T{n}` slot belongs to, 1-based.
+ * Which document a `legacy:T{n}` slot belongs to, 1-based.
  *
  * FINANCIAL STATEMENTS: a slot is a period, not a document. finsys-api's
  * `financialStatementSpec.slotFor`: a year=1 statement fills T1 (its current
@@ -2092,7 +2087,7 @@ function stringOrNull(v: unknown): string | null {
   return typeof v === 'string' && v !== '' ? v : null
 }
 
-// ── SYS-3334: buildFileFieldTables — the last flat function's instance-shaped sibling ──
+// ── buildFileFieldTables — the last flat function's instance-shaped sibling ──
 
 const HASH_PERIOD_SUFFIX = /#T(\d+)$/
 
@@ -2130,8 +2125,8 @@ function instancePositions(view: CanonicalView, category: AdapterCategory): Map<
 
 /**
  * `InstanceRow.timePeriod` for one instance, FIVE rules in priority order —
- * widened from three by SYS-3334 F4 (round 2 review), and from four by
- * SYS-3517 F1 (rule 1b, which is a STOP, not another derivation):
+ * widened from three by F4 (round 2 review), and from four by F1 (rule 1b,
+ * which is a STOP, not another derivation):
  *
  * 1. `instance.legacySlot`, VERBATIM, when present AND it matches
  *    `LEGACY_SLOT_SHAPE` (M4, round 4 — see that constant's doc: rejected
@@ -2143,8 +2138,8 @@ function instancePositions(view: CanonicalView, category: AdapterCategory): Map<
  *    of it. When it is present AND well-shaped, rules 1b-4 below are not
  *    even consulted: the wire already answered the question they exist to
  *    approximate.
- * 1b. NULL, when the instance carries a `periodPosition` (SYS-3517 F1 — see
- *    the rule's own comment in the function body for the mechanism and the
+ * 1b. NULL, when the instance carries a `periodPosition` (F1 — see the
+ *    rule's own comment in the function body for the mechanism and the
  *    measurement). A coordinate producer stamps `legacySlot` on every row
  *    that has a v1 slot, so having reached this line the wire has said
  *    there is none — an ANSWER, not silence, and the only one of the five
@@ -2193,10 +2188,10 @@ function instancePositions(view: CanonicalView, category: AdapterCategory): Map<
  * set — so a producer bug never renders as a period that looks legitimate in
  * a column header or a provenance key.
  *
- * CORRECTED (SYS-3517): this used to say "falls through to rule 2", and
- * since rule 1b that is true only for a row carrying no `periodPosition`. On
- * a COORDINATE row, "as if absent" now means the cascade STOPS at rule 1b
- * and the period is null — the coordinate producer's own statement that this
+ * "Falls through to rule 2" is true only for a row carrying no
+ * `periodPosition`. On a COORDINATE row, "as if absent" instead means the
+ * cascade STOPS at rule 1b and the period is null — the coordinate
+ * producer's own statement that this
  * row had no v1 slot, which is the whole point of that rule. Two
  * consequences, both deliberate:
  *
@@ -2207,16 +2202,15 @@ function instancePositions(view: CanonicalView, category: AdapterCategory): Map<
  *    now renders `timePeriod: null, periodPosition: 1` — exactly the shape
  *    finsys-client's coordinate branch SELECTS for, so such a producer bug
  *    would read as a true current-year row rather than as a visible anomaly.
- *    UNREACHABLE today and pinned by a test rather than left to trust:
- *    probed against the finsim MySQL 2026-08-22, no value outside
- *    `/^T[1-9]\d*$/` exists in any of the four sibling tables. If a producer
- *    ever emits one, the answer is a loud rejection at the emitter, not a
- *    third rule here.
+ *    UNREACHABLE today and pinned by a test rather than left to trust: no
+ *    value outside `/^T[1-9]\d*$/` has been observed in any of the four
+ *    sibling tables. If a producer ever emits one, the answer is a loud
+ *    rejection at the emitter, not a third rule here.
  */
 const LEGACY_SLOT_SHAPE = /^T[1-9]\d*$/
 
 /**
- * SYS-3517 F1 — the shape `periodPosition` is trusted in, and the same
+ * F1 — the shape `periodPosition` is trusted in, and the same
  * discipline as `LEGACY_SLOT_SHAPE`: a finite number >= 1, per
  * `CanonicalInstance.periodPosition`'s declared "1-based period
  * coordinate". A value outside it (0, a negative, a non-finite number) is
@@ -2224,18 +2218,17 @@ const LEGACY_SLOT_SHAPE = /^T[1-9]\d*$/
  * all and rules 2-4 run exactly as they always did — never coerced into
  * "the current-year row".
  *
- * THE GATE IS THE PRODUCER'S, CHARACTER FOR CHARACTER (SYS-3526 release
- * prep). finsys-api's projector applies `Number.isFinite(p) && p >= 1`
+ * THE GATE IS THE PRODUCER'S, CHARACTER FOR CHARACTER. finsys-api's
+ * projector applies `Number.isFinite(p) && p >= 1`
  * (`ihsCanonicalReadService.projectInstance`, B9), citing this package's
- * `legacySlot` precedent; this was written as `Number.isInteger` and was
- * therefore STRICTER than the producer it receives from. That is the wrong
- * direction for a receiver, and not a harmless one: a `2.5` crossed the wire
- * and was silently dropped here, and dropping the coordinate un-fires rule
- * 1b, so the row's adopted `#T{n}` key gets read as a real slot and the
- * DEVOPS-535 overlap comes back for exactly that row. Out of range is now
- * out of range on both sides and nothing in between is invented. Unreachable
- * today either way — the column is `int` — which is why this is a
- * consistency fix rather than a defect fix, and why it is cheap to make now.
+ * `legacySlot` precedent, and this gate must match it exactly rather than
+ * being stricter (e.g. `Number.isInteger`). A stricter receiver is the wrong
+ * direction, and not a harmless one: a `2.5` crossing the wire and being
+ * silently dropped here un-fires rule 1b, so the row's adopted `#T{n}` key
+ * gets read as a real slot and the overlap-projection bug this rule exists
+ * to prevent comes back for exactly that row. Out of range is out of range
+ * on both sides and nothing in between is invented. Unreachable today either
+ * way — the column is `int`.
  *
  * An admitted-but-odd coordinate is inert downstream rather than dangerous:
  * the consumer branch that reads coordinates tests `periodPosition === 1`,
@@ -2253,7 +2246,7 @@ function timePeriodOf(
   canonicalNamed = false,
 ): string | null {
   if (instance.legacySlot && LEGACY_SLOT_SHAPE.test(instance.legacySlot)) return instance.legacySlot
-  // SYS-3705: a category with NO v1 lineage never had a v1 slot to withhold,
+  // A category with NO v1 lineage never had a v1 slot to withhold,
   // so rule 1b's premise ("the producer stamps legacySlot on every row that
   // has one") says nothing about it. Its period IS its coordinate: position
   // n of the document's declared periods renders as T{n} — a management
@@ -2263,7 +2256,7 @@ function timePeriodOf(
     const p = coordinateOf(instance)
     if (p !== null && Number.isInteger(p)) return `T${p}`
   }
-  // RULE 1b (SYS-3517 F1). A `periodPosition` on the wire says the producer
+  // RULE 1b (F1). A `periodPosition` on the wire says the producer
   // stores this category by (instance, period) COORDINATE — and a coordinate
   // producer stamps `legacySlot` on every row that HAS a v1 slot. So on such
   // an instance the slot's absence is INFORMATIVE, not silence: it is the
@@ -2271,8 +2264,8 @@ function timePeriodOf(
   // period is null. Rules 2-4 below are all DERIVATIONS of a slot the wire
   // did not state, and running any of them here manufactures one.
   //
-  // The row this protects is DEVOPS-535's: a year-2 financial statement's
-  // OWN current fiscal year, stored at position 1 with `timePeriod = NULL`
+  // The row this protects: a year-2 financial statement's OWN current
+  // fiscal year, stored at position 1 with `timePeriod = NULL`
   // (financialStatementSpec.ts `slotFor`, the only (year, position) pair
   // that maps to null). Its key routinely ends `#T1` — not a period, but a
   // HISTORICAL KEY the re-extraction ADOPTED ("Historical keys are never
@@ -2281,10 +2274,8 @@ function timePeriodOf(
   // one null the coordinate model exists to preserve into a second claimant
   // on slot T1, and the finsys-client resolver's coordinate branch
   // (`timePeriod === null && periodPosition === 1`) can then never fire —
-  // reinstating, under V2 only, the exact overlap projection DEVOPS-535
-  // removed. Measured on finsim 2026-08-22, ihs 282/283: 90000 returned
-  // where the document says 77777, and on ihs 282 the fabricated claimant
-  // also won `latest/currentYear`, returning 77777 where 120000 was right.
+  // reinstating, under V2 only, the exact overlap-projection bug this rule
+  // otherwise prevents.
   //
   // NOT a widening of rule 1: this reads the slot's ABSENCE, never its
   // presence. A coordinate row that DOES carry a well-shaped `legacySlot`
@@ -2321,7 +2312,7 @@ function timePeriodOf(
  */
 const SOURCE_LABEL_LEGACY_NAME: Partial<Record<AdapterCategory, string>> = {
   'finxtract-bank-statement': 'bankName',
-  // SYS-3705: keyed by CANONICAL name, because this category's rows are (see
+  // Keyed by CANONICAL name, because this category's rows are (see
   // `canonicalNamedCategories`). One credit-bureau report yields one instance
   // per subject entry — `ccris` / `iriss` for the subject it was ordered on,
   // `pbi-1..n` for each party — all at the same document position, so the
@@ -2329,7 +2320,7 @@ const SOURCE_LABEL_LEGACY_NAME: Partial<Record<AdapterCategory, string>> = {
   'credit-bureau-report': 'section',
 }
 
-/** Numeric ordering for `InstanceRow.timePeriod` (SYS-3334 F5, round 2): `'T1'
+/** Numeric ordering for `InstanceRow.timePeriod` (F5, round 2): `'T1'
  * < 'T2' < … < 'T10'`. Anything that is not a bare `T{n}` — null, or F6's
  * `'#1'`/`'#2'` index fallback — sorts LAST, stable in original order; it
  * carries no period to order BY, so v1's "declared slot" ordering has
@@ -2347,38 +2338,28 @@ interface InstanceRowPair {
 
 /**
  * `instanceRowsFromView`'s row-building step, paired with the SOURCE
- * instance and sorted by numeric period (SYS-3334 F5, round 2).
+ * instance and sorted by numeric period (F5, round 2).
  *
  * WHY PAIRS, NOT TWO ARRAYS. `fieldProvenanceFromView` needs both a row's
  * RESOLVED period (`row.timePeriod` — the full four-rule cascade, F6's
  * `instanceKey: ''` rescue included) and the SAME instance's envelopes,
  * `adapterId`, `observedAt` and `runId` (what a provenance entry is built
- * from) — one pass, one resolved fact, rather than two.
+ * from) — one pass, one resolved fact, rather than two. `.instance` is
+ * load-bearing here (M1): `fieldProvenanceFromView` consumes THESE pairs
+ * rather than deriving the period itself, so a row F6 rescued from a blank
+ * header still carries its rescued period through to provenance instead of
+ * recomputing null.
  *
- * CORRECTED (M1, round 4): this comment used to name
- * `buildFileFieldTablesFromView` as the consumer that needed the pairing —
- * it does not; that function only ever calls `instanceRowsFromView`, which
- * keeps `.row` and discards `.instance`. `.instance` was, in fact, dead on
- * every path until M1's fix (below): `fieldProvenanceFromView` used to walk
- * `category.instances` directly and call `timePeriodOf` a SECOND time,
- * which — for a row F6 had rescued from a blank header — recomputed null
- * instead of reusing the rescued period, so the rescued column could never
- * carry a confidence dot. `fieldProvenanceFromView` now consumes THESE
- * pairs instead, making `.instance` load-bearing: one derivation of a row's
- * period, read by every caller that needs it.
- *
- * WHY SORT AT ALL (F5). `instanceRowsFromView` used to return rows in view
- * (extraction-array) order. v1's `extractTimePeriods` sorted its T-slots
- * ASCENDING before rendering, so whenever intake order (which
- * `instancePositions` derives period from) disagreed with the extraction
- * array's own order, the resulting table rendered out of sequence — a
- * later-uploaded, earlier-period document could render AFTER an
- * earlier-uploaded, later-period one. Sorted here, once, so every caller
- * (this function, `buildFileFieldTablesFromView`) sees ascending period
- * order without re-deriving it. Rows without a parseable period (null, or
- * F6's `#n` fallback) sort LAST, stable in their original order — nothing
- * ranks them against a real period, so they should not silently jump ahead
- * of one.
+ * WHY SORT AT ALL (F5). v1's `extractTimePeriods` sorted its T-slots
+ * ASCENDING before rendering. Intake order (which `instancePositions`
+ * derives period from) can disagree with the extraction array's own order,
+ * which would otherwise render a later-uploaded, earlier-period document
+ * AFTER an earlier-uploaded, later-period one. Sorted here, once, so every
+ * caller (this function, `buildFileFieldTablesFromView`) sees ascending
+ * period order without re-deriving it. Rows without a parseable period
+ * (null, or F6's `#n` fallback) sort LAST, stable in their original order —
+ * nothing ranks them against a real period, so they should not silently
+ * jump ahead of one.
  */
 function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory): InstanceRowPair[] {
   const instances = view.categories[category]?.instances ?? []
@@ -2386,7 +2367,7 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
 
   const positions = instancePositions(view, category)
   const sourceLabelField = SOURCE_LABEL_LEGACY_NAME[category]
-  // SYS-3705: decided per category, once — see `canonicalNamedCategories`.
+  // Decided per category, once — see `canonicalNamedCategories`.
   const canonicalFields = canonicalNamedCategories().has(category)
     ? new Set<string>(categoryFieldsOf(category))
     : null
@@ -2402,17 +2383,18 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
       // current-year row by it. Without this the flat-vs-view rows differ on
       // exactly the column that decides which number a lender scores on.
       //
-      // SYS-3517 F1: through `coordinateOf`, the SAME gate rule 1b applies,
-      // so the row can never advertise a coordinate the period rule refused
-      // to honor. A row carrying `periodPosition: 0` beside a slot derived
-      // as if no coordinate existed is a declared-vs-actual drift of the
-      // kind this package's release notes are organised against, and the
+      // F1: through `coordinateOf`, the SAME gate rule 1b applies, so the
+      // row can never advertise a coordinate the period rule refused to
+      // honor. A row carrying `periodPosition: 0` beside a slot derived as
+      // if no coordinate existed is a declared-vs-actual drift of the kind
+      // this package's release notes are organized against, and the
       // resolver's `periodPosition === 1` test would read it as a real
       // coordinate on a row that was never treated as one.
       ...(coordinateOf(instance) !== null ? { periodPosition: instance.periodPosition } : {}),
     }
-    // SYS-3517 F1: the `coordinateOf` clause is new. F6's rescue is for a
-    // period that is UNKNOWN (nothing on the wire named one, so label the
+    // F1: the `coordinateOf` clause guards a different case than F6's rescue.
+    // F6's rescue is for a period that is UNKNOWN (nothing on the wire named
+    // one, so label the
     // lone document T1 rather than render a blank header). A coordinate
     // row's period is KNOWN and is deliberately none — rule 1b just said so
     // — and rescuing it would re-fabricate, eight lines later, the very slot
@@ -2420,7 +2402,7 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
     // coordinate today; the clause is here so rule 1b cannot be undone by a
     // branch written for a different question if one ever does.
     if (row.timePeriod === null && instance.instanceKey === '' && coordinateOf(instance) === null) {
-      // SYS-3334 F6 (round 2): a single-cardinality category's ONE instance
+      // F6 (round 2): a single-cardinality category's ONE instance
       // carries instanceKey '' by convention (canonical-view.ts's own
       // contract) — and IS slot 1, the same way any other lone document
       // would position-fallback to T1. Without this, `timePeriodOf` answers
@@ -2433,7 +2415,7 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
     }
     for (const [field, envelope] of Object.entries(instance.fields)) {
       // A v1-lineage category writes each field under its legacy base name
-      // and skips the rest, exactly as before SYS-3705. A lineage-free one
+      // and skips the rest. A lineage-free one
       // writes under the canonical name — the only name it has — and skips
       // anything its category does not declare, the same way.
       const column = canonicalFields !== null
@@ -2442,7 +2424,7 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
       if (column === null) continue
       row[column] = envelope.value
     }
-    // SYS-3334 F4 (round 2): the wire's OWN per-instance label (finsys-api's
+    // F4 (round 2): the wire's OWN per-instance label (finsys-api's
     // provenance-on-the-wire fix) wins over the registry-derived one — it is
     // the actual value the source row carried, not a guess from a field this
     // function happens to recognize. The registry fallback stays for every
@@ -2465,7 +2447,7 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
 
 /**
  * `InstanceRow[]` for one category of a `CanonicalView` — one row per v2
- * instance of that category, ORDERED BY NUMERIC PERIOD (SYS-3334 F5, round
+ * instance of that category, ORDERED BY NUMERIC PERIOD (F5, round
  * 2 — see `instanceRowPairsFromView`'s doc for why; rows without one trail,
  * stable in view order). The bridge `buildFileFieldTablesFromView` needs: it
  * feeds a view into `buildFileFieldTablesFromInstances`, which was built for
@@ -2481,7 +2463,7 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
  * the registry-derived one for the one category with an obvious label field
  * (`SOURCE_LABEL_LEGACY_NAME`), else null.
  *
- * SYS-3705: for a category in `canonicalNamedCategories()` (no v1 lineage at
+ * For a category in `canonicalNamedCategories()` (no v1 lineage at
  * all — reached only through a catalog `extraction_category` declaration)
  * every field the category DECLARES becomes `row[canonicalName] = value`
  * instead, anything else is skipped, and a `periodPosition` coordinate is the
@@ -2497,15 +2479,15 @@ function instanceRowPairsFromView(view: CanonicalView, category: AdapterCategory
  * way and produces rows with no metric keys — `groupColumnsByInstance`
  * treats that as "no data" for every base column, and
  * `buildFileFieldTablesFromInstances` omits the table, same as an empty
- * `instanceRows` array would.) SYS-3334 F1 (round 2): this claim used to be
- * false for exactly one shape — a `mapped-fanout` field (`incorporatedDate`)
- * — because `v1LegacyBaseNameOf` answered null for it despite it having a
- * wide column; fixed at the source in `v1-migration-map.ts`, so the claim
- * above is accurate again rather than merely aspirational.
+ * `instanceRows` array would.) F1 (round 2): the one exception is a
+ * `mapped-fanout` field (`incorporatedDate`), which `v1LegacyBaseNameOf`
+ * would otherwise answer null for despite it having a wide column; fixed at
+ * the source in `v1-migration-map.ts`, so the claim above holds without
+ * exception.
  */
 export function instanceRowsFromView(view: CanonicalView, category: AdapterCategory): InstanceRow[] {
   const rows = instanceRowPairsFromView(view, category).map((p) => p.row)
-  // SYS-3728: a constrained category's rows never carry a value that breaks
+  // A constrained category's rows never carry a value that breaks
   // the write contract — it is null, and named (rules only) in `invalidFields`.
   // Scoring reads these rows.
   const specs = readGuardSpecs(category)
@@ -2534,9 +2516,9 @@ export function instanceRowsFromView(view: CanonicalView, category: AdapterCateg
  * 'extraction' -> 'extracted'. Anything else — absent, or a class this
  * bridge does not recognize — degrades to 'derived'.
  *
- * SYS-3334 F7 (round 2 review): that fallback is NOT "the type's documented
- * meaning" for one real case, 'form-intake', and the earlier wording of this
- * comment overclaimed it. `IhsFieldOrigin`'s own doc (ihs-types.ts) says
+ * F7 (round 2 review): that fallback is NOT "the type's documented
+ * meaning" for one real case, 'form-intake'. `IhsFieldOrigin`'s own doc
+ * (ihs-types.ts) says
  * `derived` means "computed / no-confidence path" — a value nobody attested,
  * produced by a formula. A form-intake value is neither: an APPLICANT typed
  * it, which is a real assertion, just not one the closed v1 vocabulary has a
@@ -2561,7 +2543,7 @@ function legacyOriginOf(origin: string | undefined): IhsFieldOrigin {
 /**
  * The per-(legacy-key) provenance map every instance-shaped file-field
  * function synthesizes from `CanonicalView` envelopes — HOISTED out of
- * `buildFileFieldTablesFromView` (SYS-3334 F3, round 2 review) so it can be
+ * `buildFileFieldTablesFromView` (F3, round 2 review) so it can be
  * called on its own, and FIXED at the same time: the inline version this
  * replaces built its map with a bare `synthesized[key] = entry` inside a
  * loop, so two envelopes landing on the same key SILENTLY collided —
@@ -2578,8 +2560,7 @@ function legacyOriginOf(origin: string | undefined): IhsFieldOrigin {
  * cell's, and the caller-override contract (`fieldProvenance` beating the
  * synthesized map) should hold for it too.
  *
- * KEYING, two paths — BOTH emitted when both answer (H1, round 4;
- * corrected from "only when (1) has no answer" below):
+ * KEYING, two paths — BOTH emitted when both answer (H1, round 4):
  *   1. THE EXACT v1 KEY, via `v1KeyForAddress(category, field, instanceKey)`,
  *      with the SAME keyless fallback `processIhsDetailsFromView` uses when
  *      the instance key carries no discriminating power for this field
@@ -2814,7 +2795,7 @@ export function fieldProvenanceFromView(
  * `buildFileFieldTables` for a v2 `CanonicalView` — the fourth and last flat
  * file-field function to get an instance-shaped sibling (the finsys-client
  * migration's last flat surface to gain one; see this module's other
- * SYS-3334 doc comments on
+ * doc comments on
  * `processIhsDetailsFromView` / `resolveExtractionStatusFromView` /
  * `buildDocumentRowsFromView` for the same discipline applied here).
  *
@@ -2830,7 +2811,7 @@ export function fieldProvenanceFromView(
  * (`extractionCategoryOf` returns null) contributes no table, same as an
  * absent category does today for `buildFileFieldTablesFromInstances`.
  *
- * SYS-3705: a document type whose category has NO v1 lineage
+ * A document type whose category has NO v1 lineage
  * (`canonicalNamedCategories`) has no `ihs_column_names` to derive columns
  * from, so its table is built through `buildFileFieldTablesFromInstances`'s
  * `categoryOverrides` path instead: its columns are the category's registry
@@ -2842,8 +2823,8 @@ export function fieldProvenanceFromView(
  * a canonical name plus a period can spell another category's v1 key
  * (`companyNameT1` is Form 9's) and would borrow that document's confidence.
  *
- * PROVENANCE, WITHOUT A V1 SIDECAR — now `fieldProvenanceFromView` (SYS-3334
- * F3, round 2). `buildInstanceTable` (inside `buildFileFieldTablesFromInstances`)
+ * PROVENANCE, WITHOUT A V1 SIDECAR — via `fieldProvenanceFromView` (F3,
+ * round 2). `buildInstanceTable` (inside `buildFileFieldTablesFromInstances`)
  * looks up per-cell provenance in a `fieldProvenance` map keyed by
  * `${legacyBaseName}${timePeriod}` — the exact wide-table column name
  * (`bankBalanceT1`). v1 fed that map from a sidecar finsys-api built
@@ -2906,16 +2887,16 @@ export function buildFileFieldTablesFromView(
     if (category === null) continue
 
     instancesByCategory[group.documentGroup] = instanceRowsFromView(view, category)
-    // SYS-3705: a lineage-free category has no `ihs_column_names` to derive
+    // A lineage-free category has no `ihs_column_names` to derive
     // its columns from, so its columns are its registry fields, in registry
     // order, through the same override path invoice uses — and numeric means
     // the registry SAYS number, not that the name happens to contain "cash".
     if (canonicalNamed.has(category)) {
       const schema = categorySchemaOf(category)
       const fields = schema.fields
-      // SYS-3728: a list field's columns come from its item schema.
-      // SYS-3728: every column's spec, so the table holds each value to the
-      // write contract; and the category's own currency field, if it has one.
+      // A list field's columns come from its item schema. Every column's
+      // spec is carried so the table holds each value to the write
+      // contract; and the category's own currency field, if it has one.
       const fieldSpecs = Object.fromEntries(fields.map((f) => [f.name as string, f]))
       const currencyField = fields.find((f) => f.kind === 'currency')?.name
       lineageFree[group.documentGroup] = {
@@ -2940,7 +2921,7 @@ export function buildFileFieldTablesFromView(
   )
 }
 
-// ── The v1-shape bridge (SYS-3334) ────────────────────────────────────
+// ── The v1-shape bridge ─────────────────────────────────────────────────
 
 /**
  * The record half of the v2 read pair, structurally — core does not import
@@ -3220,21 +3201,16 @@ function valueAtInstanceKey(view: CanonicalView, address: V1Address): AddressLoo
  * prefix or continues it at a `#`-delimited boundary (`document-intake` keys
  * are `<docType>#<sha256>`), aggregated into the array shape v1 held.
  *
- * SYS-3596 — this used to return the FIRST match only, and defended that as
- * "the stated parity choice" on the premise that "v1 held ONE value per
- * pointer column". That premise was wrong, and this package contradicted it
- * in seventeen places: every migration-map entry resolving through this
- * function says "SHAPE CHANGE, not a rename. The v1 column held a JSON array
- * of paths". So six bank statements came back as one bare URL string, and
- * `buildDocumentRows` — which feeds the document table — rendered one row.
- * The other five were not listed, not downloadable, and (bankStatements and
- * financialStatements being re-uploadable) not replaceable either.
+ * Every migration-map entry resolving through this function says "SHAPE
+ * CHANGE, not a rename. The v1 column held a JSON array of paths" — so
+ * returning only the first match would silently drop every additional
+ * document under one v1 key.
  *
- * It stayed invisible because nothing user-facing reads the bridged fields
- * today: finsys-client's detail page bypasses this bridge, and finsys-api
- * does not import `flatRecordFromView` at all. It stops being invisible at
- * Phase 6, when the flat columns drop and the published read has to be served
- * from the canonical plane.
+ * Nothing user-facing reads the bridged fields today: finsys-client's
+ * detail page bypasses this bridge, and finsys-api does not import
+ * `flatRecordFromView` at all. That changes at Phase 6, when the flat
+ * columns drop and the published read has to be served from the canonical
+ * plane.
  *
  * ORDERED BY `periodPosition`, not view order — the same 1-based ordinal the
  * rendered tables use, so the bridged list and the instance-shaped list agree
@@ -3277,8 +3253,8 @@ function valueAtInstanceKeyPrefix(view: CanonicalView, address: V1Address): Addr
   const keyed = instances.filter(
     (i) => i.instanceKey === prefix || i.instanceKey.startsWith(`${prefix}#`),
   )
-  // SYS-3721: a v1 pointer column held the files the application CURRENTLY
-  // has — finsys-api's own v1 response still serves exactly that. A replaced
+  // A v1 pointer column held the files the application CURRENTLY has —
+  // finsys-api's own v1 response still serves exactly that. A replaced
   // upload keeps its append-only intake row, so the rows are narrowed by the
   // same rule `documentsOfType` lists by (`currentIntakeOfType`).
   const matches = address.category === 'document-intake' ? splitCurrentIntake(keyed).current : keyed
@@ -3335,16 +3311,16 @@ function valueAtInstanceKeyPrefix(view: CanonicalView, address: V1Address): Addr
  * `ambiguous`, the same way the plain-address lookup already does for its own
  * multi-instance case.
  *
- * SYS-3526 — WHICH one it picks is LAST, not first, and that is the whole of
- * this fix. Three consumers resolve a contested slot and this was the only one
+ * WHICH one it picks is LAST, not first, and that is the whole of this fix.
+ * Three consumers resolve a contested slot and this was the only one
  * that disagreed:
  *
  *   v1                 `ihsService.getIhsDetailsById` merges each sibling
  *                      row's `toSuffixedObject()` into ONE accumulating object
  *                      under `order: { id: "ASC" }` — the LAST row by id owns
  *                      the slot. All four tables that reach this lookup carry
- *                      that clause, under finsys-api's own SYS-2916 comment
- *                      naming "the suffixed spread's later-masks-earlier
+ *                      that clause, under finsys-api's own comment naming
+ *                      "the suffixed spread's later-masks-earlier
  *                      behavior" as a contract rather than an accident.
  *   v2 instance path   finsys-client `selectFinancialRow` — last matching row
  *                      wins, over `instanceRowsFromView`'s rows.
@@ -3373,14 +3349,14 @@ function valueAtInstanceKeyPrefix(view: CanonicalView, address: V1Address): Addr
  *     a candidate here at all — `withField` cannot see it, and this answers
  *     the earlier row's value where v1 answered null.
  *  2. v1 pre-filters by recency BEFORE spreading — financial statements drop
- *     a T1 row whose `financialYearEnd` is not the newest (SYS-2972), bank
- *     statements keep only the newest `statementDate` per period (SYS-2979);
- *     EPF and payslip have no filter, so for them v1 is pure
+ *     a T1 row whose `financialYearEnd` is not the newest, bank statements
+ *     keep only the newest `statementDate` per period; EPF and payslip
+ *     have no filter, so for them v1 is pure
  *     last-write-wins. `financialYearEnd` has no v1 wide column at all, so it
  *     never reaches an `InstanceRow` and that filter is not expressible here.
  *     Replicating either would make this function a SECOND implementation of
- *     "which document is newest" — the drift SYS-2994 was filed to stop on
- *     the finsys-api side — so it deliberately does not. Where a filter would
+ *     "which document is newest" — the drift finsys-api's own guard exists
+ *     to stop — so it deliberately does not. Where a filter would
  *     change the answer, first-match was not right either; last-match is
  *     right whenever the newer document has the higher id, which is the
  *     ordinary case and the measured one.
@@ -3403,7 +3379,7 @@ function valueAtTSlot(view: CanonicalView, address: V1Address, tSlot: string, ro
   if (withSlot.length === 0) return { found: false, reason: `no ${tSlot} row` }
   const withField = withSlot.filter((r) => Object.prototype.hasOwnProperty.call(r, base))
   if (withField.length === 0) return { found: false, reason: `${tSlot} row lacks ${base}` }
-  // SYS-3526: the LAST row that carries the field, not the first — see this
+  // The LAST row that carries the field, not the first — see this
   // function's doc for the three-consumer disagreement this closes, and for
   // why "last" is last-by-arrival here rather than merely last-in-array.
   return { found: true, value: withField[withField.length - 1]![base], multiple: withField.length > 1 }
@@ -3591,8 +3567,8 @@ export function flatRecordFromView(view: CanonicalView, record?: ApplicationReco
       // retired, vocabulary-gap, structural, needs-decision, mapped-pending-build,
       // withheld: never placed, regardless of what the view holds.
       //
-      // SYS-3604 — `withheld` lands here rather than in the `relocated` branch
-      // above, and that is the point of it existing. `relocated` LOOKS THE KEY
+      // `withheld` lands here rather than in the `relocated` branch above,
+      // and that is the point of it existing. `relocated` LOOKS THE KEY
       // UP in the application record and, on a miss, emits a reason quoting
       // `entry.surface`. For a key the successor deliberately refuses, that
       // told the caller to fetch from an endpoint that will not answer. Here

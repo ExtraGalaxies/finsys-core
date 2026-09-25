@@ -284,7 +284,7 @@ describe("Field Validators Zod Validation", () => {
 });
 
 /**
- * SYS-3289 — a form-field label must never name a currency.
+ * A form-field label must never name a currency.
  *
  * The catalog shipped "Financing Amount (RM)" and "Car Price (MYR)". Because
  * the currency was PROSE inside the label, it rendered identically under a

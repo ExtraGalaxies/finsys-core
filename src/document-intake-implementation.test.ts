@@ -14,7 +14,7 @@ import { AdapterExecutionMode, executionModeOf } from "./adapter-manifest.js";
 import manifestSchema from "./schema/adapter-manifest.schema.json" with { type: "json" };
 
 /**
- * SYS-3174 — `document-intake` as its own implementation type.
+ * `document-intake` as its own implementation type.
  *
  * WHY A SEVENTH TYPE RATHER THAN REUSING ONE. Only three existing types are
  * shape-compatible (discriminator-only, no fieldMap): `manual-override`,

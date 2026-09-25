@@ -6,7 +6,7 @@ import {
 } from "./adapter-categories.js";
 
 /**
- * SYS-3359 — subject-company.
+ * subject-company.
  *
  * This category was declared once before and dropped, on a measurement that
  * said no live form collects any of its six columns. Three of them are

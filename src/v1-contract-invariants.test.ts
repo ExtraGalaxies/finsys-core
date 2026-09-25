@@ -9,9 +9,9 @@ import { v1MigrationEntry, v1MigrationKeys } from './v1-migration-map.js'
  * it. Deliberately NOT scenario tests.
  *
  * Three core defects were found by inspection rather than by any suite —
- * SYS-3596 (17 document keys collapsed N instances to one), SYS-3602
- * (`icInstances` dropped entirely) and SYS-3604 (six keys promised a surface
- * that refuses them). None was reachable by an end-to-end run, and no amount of
+ * 17 document keys collapsed N instances to one, `icInstances` dropped
+ * entirely, and six keys promised a surface that refuses them. None was
+ * reachable by an end-to-end run, and no amount of
  * harness coverage would have caught them, because all three live in code paths
  * NOTHING CURRENTLY EXERCISES. They are Phase 6 time bombs precisely because
  * they are unreached today.
@@ -32,11 +32,10 @@ const doc = (key: string, path: string, periodPosition?: number): CanonicalInsta
 
 describe('v1 contract invariants — the map versus what the bridge actually serves', () => {
   it('every instanceKeyPrefix key returns an ARRAY when instances exist (SYS-3596 class)', () => {
-    // v1 held a JSON array in one wide column; v2 keys one instance per file.
-    // The bridge used to return the FIRST instance's bare path, so N documents
-    // became one string. Fixed for all 17 in 9.2.0 — this stops any one of them
-    // regressing, and covers the 14 the original report never observed. 19
-    // since SYS-3705 gave experianReports and managementAccounts their entries.
+    // v1 held a JSON array in one wide column; v2 keys one instance per file,
+    // so returning the FIRST instance's bare path would collapse N documents
+    // into one string. This stops any one of the 19 prefix keys regressing
+    // (17 from the original fix, plus experianReports and managementAccounts).
     const prefixKeys = v1MigrationKeys().filter(
       (k) => v1MigrationEntry(k)?.address?.instanceKeyPrefix !== undefined,
     )
@@ -72,9 +71,9 @@ describe('v1 contract invariants — the map versus what the bridge actually ser
     // counts "seven entries" where the map has eight.
     //
     // NOT fixed here on purpose. v1's icInstances emission is field-
-    // authorization gated (finsys-api, SYS-2503/3179), so a reconstruction has
-    // to inherit that gating or it re-opens a leak. That is a decision for
-    // SYS-3602, not a one-liner to slip into a map fix.
+    // authorization gated (finsys-api), so a reconstruction has
+    // to inherit that gating or it re-opens a leak. That is its own decision,
+    // not a one-liner to slip into a map fix.
     //
     // Flips to live when SYS-3602 ships.
     const declared = v1MigrationKeys().filter((k) => {

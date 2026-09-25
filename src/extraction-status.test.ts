@@ -2,13 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { resolveExtractionStatus, DocExtractionStatus } from './extraction-status.js'
 
 describe('resolveExtractionStatus', () => {
-  // SYS-2842: resolveExtractionStatus used to iterate a fixed enum
-  // (Object.values(ExtractionFileType)) in a specific declared order; it
-  // now iterates the catalog-derived document-type registry, in catalog
-  // declaration order -- a real, intentional order change (both current
-  // consumers key results by fileType/displayName, confirmed order-
-  // independent, but pin the new order explicitly so a future accidental
-  // reorder is caught here rather than discovered downstream).
+  // resolveExtractionStatus iterates the catalog-derived document-type
+  // registry, in catalog declaration order. Both current consumers key
+  // results by fileType/displayName (confirmed order-independent), but the
+  // order is pinned explicitly so a future accidental reorder is caught
+  // here rather than discovered downstream.
   it('emits documents in catalog declaration order', () => {
     const result = resolveExtractionStatus({ ihsId: 1 })
     expect(result.documents.map((d) => d.fileType)).toEqual([

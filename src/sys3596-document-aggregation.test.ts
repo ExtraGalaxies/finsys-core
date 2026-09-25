@@ -5,16 +5,15 @@ import { buildDocumentRows, flatRecordFromView, parseFileField } from './ihs-pro
 import v1MigrationMap from './data/v1-migration-map.json' with { type: 'json' }
 
 /**
- * SYS-3596 — the v1-compat bridge collapsed N documents to one.
+ * The v1-compat bridge must not collapse N documents to one.
  *
  * v1 held a JSON array in one wide column. v2 keys one `document-intake`
- * instance per file (`<docType>#<sha256>`). `valueAtInstanceKeyPrefix` resolved
- * the v1 key by taking the FIRST matching instance and returning its single
- * `pathInDms`, so six bank statements came back as one bare URL string.
+ * instance per file (`<docType>#<sha256>`). `valueAtInstanceKeyPrefix` must
+ * aggregate every matching instance, not take the FIRST and return its
+ * single `pathInDms` — that would make six bank statements come back as one
+ * bare URL string.
  *
- * It survived review because its docblock called first-in-order "the stated
- * parity choice", on the premise that "v1 held ONE value per pointer column".
- * The migration map's own entry for each of these keys says the opposite —
+ * The migration map's own entry for each of these keys says
  * "SHAPE CHANGE, not a rename" — seventeen times over.
  */
 

@@ -7,7 +7,7 @@ import type { FileFieldTableItem, IhsListCell } from './ihs-types.js'
 import categoriesData from './data/adapter-categories.json' with { type: 'json' }
 
 /**
- * SYS-3728 — list fields.
+ * List fields.
  *
  * Every table a credit-bureau report or a management account prints was
  * declared `type: "string"` and described in prose as "a JSON-encoded list".

@@ -2,7 +2,7 @@ name: Publish
 on:
   release:
     types: [published]
-  # DEVOPS-524: manual retry lever. A release-event run executes the workflow
+  # Manual retry lever. A release-event run executes the workflow
   # at the release's target SHA, so a fix merged AFTER a release can't be
   # picked up by re-running the failed run -- without this, retrying a failed
   # publish means deleting and recreating the GitHub release. Publishing is

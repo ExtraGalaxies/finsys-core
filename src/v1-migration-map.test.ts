@@ -15,7 +15,7 @@
  */
 
 /**
- * SYS-3414 — the closure proof for the v1 migration map.
+ * The closure proof for the v1 migration map.
  *
  * The map was generated, and a generator that emits confident nonsense is the
  * thing this file exists to catch. Two rounds of exactly that happened while
@@ -60,7 +60,7 @@ const DISPOSITIONS: readonly V1Disposition[] = [
   'retired',
   'vocabulary-gap',
   'needs-decision',
-  // SYS-3604 — v1 serves it, the v2 successor deliberately refuses it, and
+  // v1 serves it, the v2 successor deliberately refuses it, and
   // there is no other destination. Listed here as well as in the source's own
   // set deliberately: this copy is an INDEPENDENT assertion, so a disposition
   // added to the source without thought lands here as a failure.
@@ -185,13 +185,14 @@ describe('v1 migration map', () => {
       }
     }
     // The six moved OUT of `mapped` and INTO `needs-decision` — nowhere else.
-    // 671 since SYS-3570: the four `tangibleAssets*` keys moved the other way,
-    // out of `vocabulary-gap` and into `mapped`, once financial-statement
-    // declared the field their reason said they needed. `needs-decision` is
-    // UNCHANGED at 11 — deliberately, because `currentAssetCash*` sits there
-    // and did not ride along (SYS-3574 owns that call). 673 since SYS-3705:
-    // two NEW keys (the experianReports / managementAccounts pointers), not
-    // moved ones — every other disposition's count is untouched.
+    // The count also reflects: the four `tangibleAssets*` keys moved the
+    // other way, out of `vocabulary-gap` and into `mapped`, once
+    // financial-statement declared the field their reason said they needed.
+    // `needs-decision` is UNCHANGED at 11 — deliberately, because
+    // `currentAssetCash*` sits there and did not ride along (a separate
+    // owner's call). Two NEW keys (the experianReports / managementAccounts
+    // pointers) are also mapped, not moved — every other disposition's count
+    // is untouched.
     expect(v1KeysByDisposition('mapped').length).toBe(673);
     expect(v1KeysByDisposition('needs-decision').length).toBe(11);
   });
@@ -211,11 +212,11 @@ describe('v1 migration map', () => {
     }
 
     // The negative half, and the reason it is in the SAME test rather than a
-    // neighbouring one: these two keys arrived at the same sweep together and
+    // neighboring one: these two keys arrived at the same sweep together and
     // read as one job. They are not. `currentAssetCash` is `needs-decision`,
     // NOT `vocabulary-gap` — the category already declares six overlapping
     // cash fields, and which of them the extractor populates is the
-    // financial-statement owner's call (SYS-3574), not a name lookup. A
+    // financial-statement owner's call, not a name lookup. A
     // future edit that "finishes the pair" by giving it an address makes this
     // red, which is the point.
     for (const key of ['currentAssetCashT1', 'currentAssetCashT2', 'currentAssetCashT3']) {
@@ -234,9 +235,8 @@ describe('v1 migration map', () => {
     // (ihsService.ts) — where the other five are assigned unconditionally,
     // as `[]` when empty. No sampled record had an IC extraction row, so no
     // measurement could ever have contained the key, and nothing could
-    // report it missing. Checked 2026-08-22: of the seven conditionally
-    // assigned keys in that serializer, this was the only one the union
-    // missed.
+    // report it missing: of the seven conditionally assigned keys in that
+    // serializer, this was the only one the union missed.
     for (const key of [
       'financialStatementInstances',
       'bankStatementInstances',
@@ -263,7 +263,7 @@ describe('v1 migration map', () => {
     expect(v1MigrationEntry('a-key-that-does-not-exist')).toBeNull();
   });
 
-  // ── SYS-3604 ──────────────────────────────────────────────────────────
+  // ── Endpoint-vs-map consistency ─────────────────────────────────────────
   it('never promises a surface for a key that surface refuses to serve', () => {
     // `surface` is a PROMISE about where to go and get the value, and it is
     // not decorative: flatRecordFromView quotes it back to the caller in its

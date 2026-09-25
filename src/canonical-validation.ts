@@ -15,7 +15,7 @@
  */
 
 /**
- * SYS-3728: THE canonical write contract — one validator, used by every writer
+ * THE canonical write contract — one validator, used by every writer
  * before it persists and by every reader before it renders.
  *
  * WHY IT EXISTS. A credit-bureau table reached storage as a JSON array in a
@@ -61,7 +61,7 @@ import { isAllowedCurrency, minorUnitsOf, MONEY_MAX_DECIMALS } from './currency.
 export { STRING_MAX_LENGTH_DEFAULT, LIST_MAX_ITEMS_DEFAULT }
 
 /**
- * SYS-3728: the `currencySource` value meaning the currency was NOT printed —
+ * The `currencySource` value meaning the currency was NOT printed —
  * the writer took the application jurisdiction's own. The only value the
  * consistency rule treats specially; any other label is a printed source.
  */
@@ -486,7 +486,7 @@ function isInstant(value: string): boolean {
 export const NUMBER_MAX_MAGNITUDE = 1e15
 
 /**
- * SYS-3728 round 4: the most decimals a ratio (`unit: "ratio"`) may carry —
+ * Round 4: the most decimals a ratio (`unit: "ratio"`) may carry —
  * the storage scale of a ratio column (DECIMAL(12,6)). More is refused
  * (`excess-precision`), never rounded: 4e-7 would be stored as 0, and float
  * noise (0.14300000000000002) would be stored as a value nobody printed. A

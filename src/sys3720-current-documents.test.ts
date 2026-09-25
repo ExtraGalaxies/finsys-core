@@ -16,26 +16,26 @@ import { assertAdapterCategory, categorySchemaOf } from './adapter-categories.js
 import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
 
 /**
- * SYS-3720 + SYS-3721 — which documents v2 lists.
+ * Which documents v2 lists.
  *
- * SYS-3720: a `legacy:T{n}` extraction row was read as "the n-th intake
- * document", and a slot past the intake count became a document of its own.
- * For financial statements a T-slot is not a document number (finsys-api
- * `financialStatementSpec.ts` `slotFor`: a year=1 statement fills T1 and T2,
- * a year=2 statement fills T3 only), so one statement rendered as two.
+ * A `legacy:T{n}` extraction row is never read as "the n-th intake
+ * document", and a slot past the intake count never becomes a document of
+ * its own. For financial statements a T-slot is not a document number
+ * (finsys-api `financialStatementSpec.ts` `slotFor`: a year=1 statement
+ * fills T1 and T2, a year=2 statement fills T3 only), so treating a slot as
+ * a document number would render one statement as two.
  *
- * SYS-3721: intake is append-only, so a replaced upload keeps its row and v2
- * listed it beside its replacement. Decided on SYS-3721 (2026-09-23): v2 lists
- * CURRENT documents only.
+ * Intake is append-only, so a replaced upload keeps its row. v2 lists
+ * CURRENT documents only, never a replaced upload beside its replacement.
  *
  * THE SIGNAL, and why it is a timestamp. finsys-api attests the WHOLE pointer
  * column on every save that touches it (`deriveDocumentIntakeInstances` over
  * the saved column value) and upserts each file onto (ihs, adapter,
  * instance_key), overwriting `observed_at`. So every file still in the column
  * carries the newest save's `observedAt`, and a replaced file keeps the older
- * one. Measured on the finsim database 2026-09-23: for every v1 document type,
- * "observedAt is the newest of its type" agreed with "the path is in the
- * current pointer column" on all 6,704 intake rows.
+ * one. Measured against the finsim database: for every v1 document type,
+ * "observedAt is the newest of its type" agrees with "the path is in the
+ * current pointer column" across every intake row.
  *
  * The digest block below was captured on 9.4.0 (d54e94b) BEFORE the change,
  * one SHA-256 per (fixture, output). The CONTROL fixtures must not move; each
@@ -249,7 +249,7 @@ const JOBS: ExtractionJobRecord[] = [
  * it is still pinned.
  */
 const FIELDS_ADDED_SINCE_9_4_0: Record<string, string[]> = {
-  // 9.6.0, SYS-3728: where the statement's currency came from.
+  // 9.6.0: where the statement's currency came from.
   managementAccounts: ['mgmtCurrencySource'],
 }
 function statusAsAt940(r: ReturnType<typeof resolveExtractionStatusFromView>): unknown {
@@ -285,7 +285,7 @@ function allDigests(): Record<string, Record<string, string>> {
   )
 }
 
-// Captured on 9.4.0 (d54e94b), before any SYS-3720/3721 change.
+// Captured on 9.4.0 (d54e94b), before this change.
 const DIGESTS_AT_9_4_0: Record<string, Record<string, string>> = {
   'control: three bank statements, one save, two extracted': {
     'documentsOfType': 'bfa12f077031d0fe9059168a74dc293f07467dab606ad90a3da7cdecfa65e7c3',
@@ -438,7 +438,7 @@ const MOVES: Record<string, { outputs: string[]; why: string }> = {
   // flatRecordFromView too: its v1 `financialStatements` pointer array now
   // holds the current file only, as finsys-api's own v1 response does.
   'SYS-3721: financial statement replaced': { outputs: [...SHAPE_ONLY, 'flatRecordFromView'], why: 'the replaced upload is not listed, and not in the v1 pointer array' },
-  // Bank rows with no period of their own are labelled by list position
+  // Bank rows with no period of their own are labeled by list position
   // (timePeriodOf rule 4), so removing the replaced file from the list moves
   // the current files' labels to where v1 put them: T1..T3, not T2..T4.
   'SYS-3721: first of three bank statements replaced': {

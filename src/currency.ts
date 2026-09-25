@@ -15,8 +15,8 @@
  */
 
 /**
- * SYS-3728: the currencies a canonical `kind: "currency"` field may hold, and
- * the ONE place a printed currency becomes a code.
+ * The currencies a canonical `kind: "currency"` field may hold, and the ONE
+ * place a printed currency becomes a code.
  *
  * A stored currency is an ISO 4217 code, never the printed form. "RM", "RM."
  * and "MYR" are one currency printed three ways; storing them as printed makes
@@ -95,7 +95,7 @@ export function normalizeCurrency(printed: unknown): CurrencyNormalization {
 }
 
 /**
- * SYS-3728 round 3: the ISO 4217 minor units of every allowed currency — how
+ * Round 3: the ISO 4217 minor units of every allowed currency — how
  * many decimals an amount in it can carry. VND has none (ISO 4217 lists the
  * dong with 0 minor units); every other allowed currency has two.
  *
@@ -160,7 +160,7 @@ const HEADING_SCALES: ReadonlyArray<readonly [RegExp, 1000 | 1000000]> = [
  * "Ringgit Malaysia" → MYR ×1; "RM'000", "RM '000", "RM’000", "RM`000",
  * "RM 000", "(RM'000)", "RM('000)", "RM (000)", "RM thousand" → MYR ×1000;
  * "RM mil", "RM Mil.", "RM million", "RM'm", "RM'000'000" → MYR ×1,000,000
- * (SYS-3728 round 4: the headings real statements print); likewise for every
+ * (round 4: the headings real statements print); likewise for every
  * form `normalizeCurrency`
  * knows. The currency form is matched by `normalizeCurrency` itself, so the
  * two can never disagree about what "RM" is. Anything not recognized is

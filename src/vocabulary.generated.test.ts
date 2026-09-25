@@ -13,7 +13,7 @@ import type {
 const here = dirname(fileURLToPath(import.meta.url));
 
 /**
- * SYS-3347 — the generated unions must agree with the registry they claim to
+ * The generated unions must agree with the registry they claim to
  * describe.
  *
  * A generated file that is committed can go stale, and a stale one is worse

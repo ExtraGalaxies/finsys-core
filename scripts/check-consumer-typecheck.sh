@@ -7,7 +7,7 @@
 # reference in our .d.ts is the consumer's compile error, not ours. That is how
 # `export { ... } from 'survey-core'` sat in dist/index.d.ts while survey-core
 # was an OPTIONAL peer nobody installs: TS2307 for every consumer on defaults,
-# green here (SYS-3420). Found by a review of a downstream package, not by
+# green here. Found by a review of a downstream package, not by
 # anything in this repo.
 #
 # WHAT IT DOES. `npm pack` the package, install ONLY that tarball into a fresh

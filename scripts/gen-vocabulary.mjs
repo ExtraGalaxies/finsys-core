@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * SYS-3347 — generate the vocabulary literal unions from the registry.
+ * Generate the vocabulary literal unions from the registry.
  *
  *   node scripts/gen-vocabulary.mjs           # write src/vocabulary.generated.ts
  *   node scripts/gen-vocabulary.mjs --check   # exit 1 if that file is stale
@@ -37,7 +37,7 @@ function build() {
 
   const categoryIds = uniqSorted(categories.map((c) => c.id));
   const canonical = uniqSorted(categories.flatMap((c) => c.fields.map((f) => f.name)));
-  // SYS-3728: every field declared `type: "list"` — a table of rows. A
+  // Every field declared `type: "list"` — a table of rows. A
   // consumer building a field picker or a numeric classifier types its filter
   // against this union, so a list offered as a scorable value is a compile
   // error rather than a runtime string comparison against JSON.

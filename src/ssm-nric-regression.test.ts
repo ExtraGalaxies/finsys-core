@@ -15,7 +15,7 @@
  */
 
 /**
- * Regression tests for SYS-2085 / SYS-528:
+ * Regression tests for the ssm and ic field specs:
  * - ssm file field with SSM IHS column names
  * - ic file field with NRIC IHS column names
  *
@@ -51,7 +51,7 @@ describe("ssm field spec (SYS-2085)", () => {
   const SSM_IHS_COLUMNS = [
     "ssmCompanyName",
     "ssmCompanyRegNo",
-    // SYS-2722: incorporation date is a single canonical fact regardless of
+    // Incorporation date is a single canonical fact regardless of
     // which document it was extracted from (Form 9 or SSM profile) -- route
     // through the same ihs.incorporatedDate column processForm9 uses, not a
     // parallel ssm-specific twin.

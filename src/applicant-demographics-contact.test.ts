@@ -10,9 +10,8 @@ import {
 type CategoryField = ReturnType<typeof categorySchemaOf>["fields"][number];
 
 /**
- * SYS-3338 — applicant-demographics and applicant-contact, the two categories
- * that finish the applicant-typed identity set alongside applicant-identity
- * (SYS-3166).
+ * applicant-demographics and applicant-contact, the two categories
+ * that finish the applicant-typed identity set alongside applicant-identity.
  *
  * The scope was chosen against the 60 live form configs rather than against
  * the column list: all 8 demographic columns are collected by a typed input on
@@ -112,7 +111,7 @@ describe("applicant-demographics (SYS-3338)", () => {
   });
 
   it("resolves every field to sensitive, because none opts out", () => {
-    // Absent means sensitive (SYS-3164), and categorySchemaOf resolves the
+    // Absent means sensitive, and categorySchemaOf resolves the
     // absence to the literal "sensitive" rather than leaving it undefined —
     // so this asserts the OUTCOME, which is what consumers act on, not the
     // spelling in the data file. Demographics is uniformly sensitive: race,

@@ -29,16 +29,16 @@ export class FormSpec {
   private _schemaVersion: string;
   private _pages: PageConfig[] = [];
   /**
-   * SYS-3263: the single jurisdiction this form is valid for.
+   * The single jurisdiction this form is valid for.
    *
-   * SINGLE, not a list, decided by Kain 2026-08-06: a form for jurisdiction X
-   * may be used by many programs in jurisdiction X. Forms are NOT scoped to a
-   * program and do not become so — the rule is that a form's jurisdiction and
-   * its target program's jurisdiction must AGREE.
+   * SINGLE, not a list: a form for jurisdiction X may be used by many
+   * programs in jurisdiction X. Forms are NOT scoped to a program and do
+   * not become so — the rule is that a form's jurisdiction and its target
+   * program's jurisdiction must AGREE.
    *
    * Optional, and absent means Malaysia. Every form authored before this
    * shipped has no declaration, and none is being backfilled — the same
-   * null-means-MY precedent SYS-2872 set for Program and Ihs.
+   * null-means-MY precedent Program and Ihs use.
    *
    * The accepted cost of a single value: a genuinely jurisdiction-neutral
    * form — a pure document-upload flow with no country-specific fields — has
@@ -46,9 +46,8 @@ export class FormSpec {
    * No such form exists today. Widening a scalar to a list later is additive
    * and needs no backfill, which is why the cheaper option is the one taken.
    *
-   * Nothing ENFORCES agreement yet; SYS-3265 does that, and SYS-3264 supplies
-   * the missing half it needs (a submission does not currently record which
-   * form produced it). This field only makes the fact declarable.
+   * Nothing ENFORCES agreement yet (a submission does not currently record
+   * which form produced it). This field only makes the fact declarable.
    */
   private _jurisdiction?: Jurisdiction;
 
@@ -107,7 +106,7 @@ export class FormSpec {
    * The declared jurisdiction, or undefined if the form does not declare one.
    * Prefer `effectiveJurisdiction` for any decision — a reader that treats
    * undefined as "no jurisdiction" rather than "Malaysia" will refuse every
-   * form authored before SYS-3263.
+   * form authored before jurisdictions existed.
    */
   get jurisdiction(): Jurisdiction | undefined {
     return this._jurisdiction;
@@ -124,8 +123,8 @@ export class FormSpec {
    * Delegates rather than using `?? DEFAULT_JURISDICTION`. `??` is nullish-only,
    * so it returned '' for an empty declaration and 'my' for a miscased one —
    * values outside the Jurisdiction union, handed back typed AS Jurisdiction.
-   * This is the accessor SYS-3265 compares against a program's jurisdiction, so
-   * it was the one place the "unknown is not the default" rule failed open.
+   * This is the accessor compared against a program's jurisdiction, so it is
+   * the one place the "unknown is not the default" rule must not fail open.
    *
    * Callers must handle null. It means "this form declares something we do not
    * recognize", which is not the same as "this form is Malaysian".
@@ -229,16 +228,15 @@ export class FormSpec {
       });
     }
 
-    // SYS-3263: an unrecognized jurisdiction is an ERROR, not a value that
+    // An unrecognized jurisdiction is an ERROR, not a value that
     // quietly never matches anything. A typo'd "VM" would otherwise sit in
-    // the spec looking declared while failing every compatibility check
-    // SYS-3265 makes — and failing them for a reason nobody could see.
+    // the spec looking declared while failing every compatibility check —
+    // and failing them for a reason nobody could see.
     // Absent is fine and means Malaysia; only a PRESENT-but-unknown value
     // is refused.
     // One predicate, shared with effectiveJurisdiction and resolveJurisdiction,
-    // because three implementations of "is this absent?" disagreed on null and
-    // ''. null is what a JSONB column and a React "not set" actually write, and
-    // it is the shape SYS-2872's own precedent is written in.
+    // so "is this absent?" answers consistently for null and ''. null is
+    // what a JSONB column and a React "not set" actually write.
     if (resolveJurisdiction(this._jurisdiction ?? undefined) === null) {
       errors.push({
         message: `jurisdiction: unknown jurisdiction '${String(this._jurisdiction)}' — expected one of ${JURISDICTION_CODES.join(', ')}, or omit it to declare Malaysia`,

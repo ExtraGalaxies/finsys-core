@@ -15,7 +15,7 @@ import { minorUnitsOf, parseCurrencyHeading } from './currency.js'
 import categoriesData from './data/adapter-categories.json' with { type: 'json' }
 
 /**
- * SYS-3728, third adversarial review (at a991654). Each refusal below was
+ * Third adversarial review (at a991654). Each refusal below was
  * ACCEPTED there — stored different from what was validated, or not refused at
  * all — and each acceptance is a real-shaped value round 2 refused.
  */

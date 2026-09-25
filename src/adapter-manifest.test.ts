@@ -28,7 +28,7 @@ const ajv = new Ajv({ allErrors: true });
 const validate = ajv.compile(schema);
 
 /**
- * SYS-3043: compile-time exhaustiveness helper for the "maximal manifest"
+ * Compile-time exhaustiveness helper for the "maximal manifest"
  * anti-drift canaries below. Every key of T becomes required (`-?` strips
  * optionality) — assigning a canary fixture (typed narrowly via `satisfies
  * AdapterManifest`, which preserves the fixture's own literal key set
@@ -97,7 +97,7 @@ function validTypescript(): AdapterManifest {
 }
 
 /**
- * SYS-3347: a name deliberately OUTSIDE the generated vocabulary.
+ * A name deliberately OUTSIDE the generated vocabulary.
  *
  * The literal unions make a retired or invented name a compile error, which is
  * the point — but these tests exist to prove the RUNTIME guards reject exactly
@@ -132,8 +132,7 @@ describe("Adapter manifest JSON-schema validation", () => {
   });
 
   it("accepts any non-empty category string — membership is a runtime check (SYS-2500), not the schema's job", () => {
-    // Pre-SYS-2500 the schema pinned `category` to an enum. It now
-    // validates STRUCTURE only; whether the category actually exists is
+    // The schema validates STRUCTURE only; whether the category actually exists is
     // enforced against the registry via assertAdapterCategory() at
     // registration time (see adapter-categories.test.ts). This keeps
     // "add a category = data-file edit, no schema change" honest.
@@ -228,7 +227,6 @@ describe("Adapter manifest JSON-schema validation", () => {
     expect(validate(m)).toBe(false);
   });
 
-  // SYS-2460 — fetch contract additions to the manifest schema.
   it("accepts a manifest with partner-specific requiredIdentityFields", () => {
     const m = {
       ...validTypescript(),
@@ -270,9 +268,8 @@ describe("Adapter manifest JSON-schema validation", () => {
     expect(validate(m)).toBe(false);
   });
 
-  // The next three tests cover constraints added in the second pass on
-  // the SYS-2460 schema after the frontier code review flagged the
-  // core-field + length-bound gaps.
+  // The next three tests cover core-field and length-bound constraints
+  // on requiredIdentityFields.
   it("rejects requiredIdentityFields naming a core field ('ic')", () => {
     // 'ic' can legitimately be empty for non-MY scope per ApplicantIdentity's
     // doc contract. If a partner declared it required the host would
@@ -298,7 +295,7 @@ describe("Adapter manifest JSON-schema validation", () => {
 });
 
 /**
- * SYS-2501 — the two data-only implementation flavours. Both are
+ * The two data-only implementation flavors. Both are
  * manifest-shape-only: no code is loaded; the discriminator tells the
  * host which of its own surfaces (form submission handler / operator
  * override endpoints) acts as the runtime.
@@ -389,18 +386,14 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
   });
 
   /**
-   * SYS-3358 — the instanceKey slot. The schema governs SHAPE only; the
+   * The instanceKey slot. The schema governs SHAPE only; the
    * cardinality invariant (a "single" manifest must carry no instanceKey)
    * is the HOST's.
    *
-   * An earlier version of this comment said JSON Schema "cannot" relate a
-   * sibling property to an array element's contents. That is false, and a
-   * review disproved it by execution: draft-07 `if`/`then` expresses the
-   * invariant correctly on the first try, accepting single-without-key and
-   * multi-with-key while rejecting single-with-key, with no collateral
-   * damage to the other `oneOf` branches.
-   *
-   * The split is still right, for the reason that actually applies. The
+   * A draft-07 `if`/`then` CAN express the invariant directly — accepting
+   * single-without-key and multi-with-key while rejecting single-with-key,
+   * with no collateral damage to the other `oneOf` branches — but the split
+   * is still right, for the reason that actually applies. The
    * `then` branch has to RESTATE properties.implementation.properties.
    * fieldMap.items outside the form-intake `oneOf` branch — a second copy
    * of a nested shape that must then stay in step with the first, which is
@@ -463,7 +456,7 @@ describe("SYS-2501: form-intake + manual-override implementation types", () => {
 });
 
 /**
- * SYS-2998 — extraction-pipeline implementation type. Declaration-only:
+ * The extraction-pipeline implementation type. Declaration-only:
  * the host application's own document-extraction pipeline IS the
  * implementation, so like manual-override the shape is empty beyond the
  * discriminator.
@@ -517,7 +510,7 @@ describe("SYS-2998: extraction-pipeline implementation type", () => {
 });
 
 /**
- * SYS-3036 — `external-assertion` implementation type. Declaration-only,
+ * The `external-assertion` implementation type. Declaration-only,
  * same empty-beyond-the-discriminator shape as `manual-override` and
  * `extraction-pipeline`: no code, no fetch(), no extract(). Ownership of
  * this discriminator moved here from a host-local schema patch — these
@@ -607,7 +600,7 @@ describe("SYS-3036: external-assertion implementation type", () => {
       notes: "Exists to keep the schema and the type in lockstep.",
       implementation: { type: "external-assertion" },
     } satisfies AdapterManifest;
-    // SYS-3043: same compile-time closure as the typescript-flavor canary
+    // Same compile-time closure as the typescript-flavor canary
     // above — see AllKeysRequired's doc comment.
     const _antiDriftStructuralCheck: AllKeysRequired<AdapterManifest> = maximal;
     const ok = validate(maximal);
@@ -622,7 +615,7 @@ describe("SYS-3036: external-assertion implementation type", () => {
 });
 
 /**
- * SYS-3036 — `AdapterExecutionMode` + `executionModeOf()`. Published so
+ * `AdapterExecutionMode` + `executionModeOf()`. Published so
  * every host classifies `implementation.type` identically instead of
  * re-deriving its own switch (which is exactly how the host-local
  * `external-assertion` extension diverged from core in the first place).
@@ -676,9 +669,8 @@ describe("SYS-3036: executionModeOf classification", () => {
 });
 
 /**
- * SYS-2502 — explicit cardinality + per-applicant singleton fields.
- * Both OPTIONAL: absence must keep every pre-existing manifest valid
- * (backward compat is the ticket's stated done-condition).
+ * Explicit cardinality + per-applicant singleton fields.
+ * Both OPTIONAL: absence must keep every pre-existing manifest valid.
  */
 describe("SYS-2502: cardinality + singletonFields", () => {
   it("accepts cardinality 'single' and 'multi'", () => {
@@ -726,7 +718,7 @@ describe("SYS-2502: cardinality + singletonFields", () => {
 });
 
 /**
- * SYS-2503 — declarative per-field authorization gating. The schema
+ * Declarative per-field authorization gating. The schema
  * validates SHAPE; the "keys ⊆ produces" rule and the actual read-time
  * enforcement are host-side (finsys-api), mirroring how produces ⊆
  * category-fields is handled.
@@ -814,7 +806,7 @@ describe("SYS-2503: fieldAuthorizations", () => {
 });
 
 /**
- * SYS-3002 — period declarations on the manifest. The array order IS
+ * Period declarations on the manifest. The array order IS
  * the contract: element 1 (index 0) is period1 — numbering is 1-BASED,
  * there is no period0. Absence means the single-period convention, so
  * every pre-existing manifest stays valid.
@@ -910,9 +902,9 @@ describe("SYS-3002: periods declaration", () => {
 });
 
 /**
- * SYS-3003 — the finxtract-financial-statement category is registered
- * now, so the "financial-statement-shaped" fixture above stops being
- * hypothetical: an extraction-pipeline manifest for the real category
+ * The finxtract-financial-statement category is registered, so the
+ * "financial-statement-shaped" fixture above is not hypothetical: an
+ * extraction-pipeline manifest for the real category
  * must pass the schema AND stay inside the category's canonical
  * vocabulary.
  */
@@ -1076,7 +1068,7 @@ describe("enumValues JSON-schema validation", () => {
       notes: "Exists to keep the schema and the type in lockstep.",
       implementation: { type: "typescript", entryPoint: "extract.ts" },
     } satisfies AdapterManifest;
-    // SYS-3043: compile-time closure of the anti-drift canary itself — see
+    // Compile-time closure of the anti-drift canary itself — see
     // AllKeysRequired's doc comment. If AdapterManifest gains a new key
     // that this fixture doesn't populate, the line below fails to
     // compile.

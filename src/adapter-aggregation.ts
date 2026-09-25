@@ -80,7 +80,7 @@ export interface InstanceValue {
 /**
  * Apply an aggregation operator to a list of instance values.
  *
- * Behaviour for empty + null-only lists:
+ * Behavior for empty + null-only lists:
  *   - empty list → `null`
  *   - all-null values → `null`
  *   - `count` on either of the above → `0`

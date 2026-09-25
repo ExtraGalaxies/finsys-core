@@ -19,17 +19,13 @@ import manifestSchema from "./schema/adapter-manifest.schema.json" with { type: 
 import categoriesData from "./data/adapter-categories.json" with { type: "json" };
 
 /**
- * SYS-2500 changed the model. The AdapterCategory id set used to live in
- * THREE places that had to agree (a TS union, the data file, the
- * manifest JSON-schema enum), guarded by a hand-maintained list here.
- * It now lives in ONE place — `data/adapter-categories.json` — loaded
- * into a runtime registry. There is no TS union and no schema enum to
- * drift.
+ * The AdapterCategory id set lives in ONE place — `data/adapter-categories.json`
+ * — loaded into a runtime registry. There is no TS union and no schema enum
+ * to drift.
  *
- * This guard's job is therefore inverted: instead of checking that the
- * three sources agree, it checks that the single source of truth stays
- * single — i.e. that nobody reintroduces a hardcoded enum/union that
- * could silently drift from the data file again.
+ * This guard checks that the single source of truth stays single — i.e.
+ * that nobody reintroduces a hardcoded enum/union that could silently
+ * drift from the data file.
  */
 describe("AdapterCategory single-source-of-truth guard", () => {
   it("the runtime registry matches the data file exactly", () => {
@@ -45,9 +41,9 @@ describe("AdapterCategory single-source-of-truth guard", () => {
   });
 
   it("the manifest JSON-schema `category` is an OPEN string, not an enum", () => {
-    // The whole point of SYS-2500: adding a category is a data-file edit
-    // with no schema change. A reintroduced enum would re-create the
-    // three-sources-of-truth drift problem. Fail loudly if one appears.
+    // Adding a category is a data-file edit with no schema change. A
+    // reintroduced enum would re-create the three-sources-of-truth drift
+    // problem. Fail loudly if one appears.
     const category = (
       manifestSchema as unknown as {
         properties: { category: Record<string, unknown> };

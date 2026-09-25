@@ -31,13 +31,13 @@ jobs:
           mode: firewall-free
       - name: Upgrade npm to 12
         run: npm install -g npm@12.0.1
-      # DEVOPS-524: setup-node writes the legacy `always-auth` key into its
+      # setup-node writes the legacy `always-auth` key into its
       # generated userconfig whenever registry-url is set. npm 12 removed the
-      # key, and the repo's strict-npmrc=true baseline (DEVOPS-501) turns the
+      # key, and the repo's strict-npmrc=true baseline turns the
       # old "unknown config" warning into a hard EUNKNOWNCONFIG error at the
-      # very next npm invocation -- which killed the v4.2.0 release publish.
-      # Strip it after the npm upgrade; the auth token line setup-node also
-      # writes (_authToken) is still valid and untouched.
+      # very next npm invocation. Strip it after the npm upgrade; the auth
+      # token line setup-node also writes (_authToken) is still valid and
+      # untouched.
       - name: Strip legacy always-auth from setup-node's userconfig (npm 12 rejects it)
         run: |
           if [ -n "${NPM_CONFIG_USERCONFIG:-}" ] && [ -f "$NPM_CONFIG_USERCONFIG" ]; then
@@ -49,11 +49,11 @@ jobs:
         run: npm run build
       - name: Test
         run: npm test --if-present
-      # DEVOPS-687: block a release that is not ready, rather than discovering
+      # Block a release that is not ready, rather than discovering
       # it afterwards on a public registry where nothing can be taken back.
       #
-      # Every check here corresponds to something that actually went wrong on
-      # 2026-08-13/14, and every one of them was found by a human noticing
+      # Every check here corresponds to something that actually went wrong,
+      # and every one of them was found by a human noticing
       # rather than by anything executing. They share one shape: a DECLARED
       # fact drifting from an ACTUAL one, with nothing comparing the two.
       #
@@ -116,7 +116,7 @@ jobs:
           //    declaration existed to prevent.
           //
           //    Deliberately NOT a full semver implementation, and deliberately
-          //    FAIL-CLOSED on a shape it does not recognise. A range parser
+          //    FAIL-CLOSED on a shape it does not recognize. A range parser
           //    that silently passes what it cannot read is worse than no check:
           //    it reports confidence it has not earned.
           const admitsMajorClause = (clause, major) => {
@@ -130,7 +130,7 @@ jobs:
             if (caret) return major === Number(caret[1])
             const exact = clause.match(/^\s*(\d+)\.\d+\.\d+\s*$/)
             if (exact) return major === Number(exact[1])
-            return null // unrecognised — caller fails closed
+            return null // unrecognized — caller fails closed
           }
 
           //    A union ("^2.5.0 || ^3.0.0") admits `major` if ANY clause does.
@@ -139,7 +139,7 @@ jobs:
           //    return a confident verdict for the union — so "^2.5.0 || ^3.0.0"
           //    was reported as excluding a latest of 3. That is a WRONG ANSWER,
           //    not a fail-closed, which is the one thing this parser is not
-          //    allowed to produce. (DEVOPS-688)
+          //    allowed to produce.
           const admitsMajor = (range, major) => {
             const clauses = String(range).split("||").map((c) => c.trim()).filter(Boolean)
             if (clauses.length === 0) return null

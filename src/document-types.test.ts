@@ -13,7 +13,7 @@ describe('document-types', () => {
         'ic',
         'epfStatements',
         'payslips',
-        // SYS-3705: the first two types with no v1 wide-table lineage.
+        // The first two types with no v1 wide-table lineage.
         'experianReports',
         'managementAccounts',
       ])

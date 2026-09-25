@@ -10,7 +10,7 @@ import {
 type CategoryField = ReturnType<typeof categorySchemaOf>["fields"][number];
 
 /**
- * SYS-3336 — applicant-address.
+ * applicant-address.
  *
  * The wide `ihs` table spends a whole column family on each of three
  * addresses (permanent, residential, office) and cannot hold a fourth. Every
@@ -58,9 +58,8 @@ describe("applicant-address (SYS-3336)", () => {
    * the fact anyway would put every applicant into the disagreement surface
    * with a conflict that is an artifact of shape, not of what they said.
    *
-   * SYS-3336's own text says ic ships icAddress with no fact. That was true
-   * when the ticket was written and stopped being true with SYS-3333, which
-   * gave personAddress one — so the decision recorded here is the live one.
+   * ic ships its address as icAddress, the legacy name for personAddress,
+   * which now carries a fact — so the decision recorded here is the live one.
    */
   it("does NOT co-attest the document's address blob", () => {
     for (const f of categorySchemaOf("applicant-address").fields) {
@@ -96,8 +95,8 @@ describe("applicant-address (SYS-3336)", () => {
   it("declares no enum kind — the state choice set is per form", () => {
     // kind "enum" promises a CLOSED label set and the host makes every
     // producing adapter enumerate it. A form-intake adapter spanning 60
-    // heterogeneous form configs cannot; the host refused two adapters over
-    // exactly this under SYS-3338.
+    // heterogeneous form configs cannot; the host has refused adapters over
+    // exactly this.
     expect(by("addressStateCode").kind).toBeUndefined();
   });
 

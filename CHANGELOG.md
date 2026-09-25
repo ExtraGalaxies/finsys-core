@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 9.7.0
+## [9.7.0] - 2026-09-25
 
 _MINOR — one required category attribute and three helpers. Every shipped
 category declares it, so no consumer of the shipped registry sees a change

@@ -6,7 +6,7 @@ import { buildFileFieldTablesFromView } from './ihs-processing.js'
 import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
 
 /**
- * SYS-3728, CTO decision 2026-09-24: about a third of Malaysian management
+ * About a third of Malaysian management
  * accounts print no currency anywhere. On a Malaysian application whose
  * statement prints none — no heading, no prefix on any figure — the writer
  * stores MYR and records that it INFERRED it (`mgmtCurrencySource`), so a

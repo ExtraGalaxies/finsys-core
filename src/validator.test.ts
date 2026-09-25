@@ -137,11 +137,10 @@ describe('deprecated aliases', () => {
     pages: [{ id: 'p1', fields: ['name'] }]
   };
 
-  // SYS-3171: validateFormSpec / validatePagesConfig were removed in 5.0.0.
-  // They were @deprecated aliases that only called validateFormConfig, and a
-  // sweep of finsys-api, finhub-adonisjs, finsys-client, lead-gen-ui and
-  // finsys-adapter-toolkit found zero consumers — a major is the one moment
-  // removing them is free.
+  // validateFormSpec / validatePagesConfig were removed in 5.0.0. They were
+  // @deprecated aliases that only called validateFormConfig, and a sweep of
+  // finsys-api, finhub-adonisjs, finsys-client, lead-gen-ui and
+  // finsys-adapter-toolkit found zero consumers.
   it('validateFormConfig accepts the config the removed aliases used to', () => {
     expect(validateFormConfig(validConfig).valid).toBe(true);
   });

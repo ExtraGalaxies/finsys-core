@@ -13,7 +13,7 @@ import {
 import type { ValidationOptions, Violation } from './canonical-validation.js'
 
 /**
- * SYS-3728, second adversarial review (at 000ab42). Every refused input below
+ * Second adversarial review (at 000ab42). Every refused input below
  * was ACCEPTED there; every accepted one is real-shaped data the tightened
  * rules must not refuse. The operator's standard, verbatim: "this data is
  * highly sensitive. you can't just spew anything into these slots. the

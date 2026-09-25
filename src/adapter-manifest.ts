@@ -16,12 +16,12 @@
 
 /**
  * Adapter manifest — the declarative descriptor every adapter ships
- * alongside its implementation. The host app's discovery mechanism
- * (SYS-2444) reads `manifest.json` from each adapter directory, validates
- * it against the JSON-schema in `schema/adapter-manifest.schema.json`,
- * and uses the manifest to construct + register the runtime adapter.
+ * alongside its implementation. The host app's discovery mechanism reads
+ * `manifest.json` from each adapter directory, validates it against the
+ * JSON-schema in `schema/adapter-manifest.schema.json`, and uses the
+ * manifest to construct + register the runtime adapter.
  *
- * Two adapter flavours both use this manifest shape:
+ * Two adapter flavors both use this manifest shape:
  *
  *   1. Declarative JSON-only adapter (no TypeScript code) — `manifest.json`
  *      includes a `fieldMap` declaring source-path → canonical-field
@@ -83,33 +83,32 @@ export interface AdapterManifest {
   readonly produces: ReadonlyArray<CanonicalFieldName>;
 
   /**
-   * Adapter implementation flavour. Discriminator drives the rest of
+   * Adapter implementation flavor. Discriminator drives the rest of
    * the manifest shape.
    *
    *   - `declarative` — JSON-only adapter; `fieldMap` is required, no
    *     code is loaded.
    *   - `typescript` — TS/JS adapter; `entryPoint` is required, the
    *     host imports it dynamically.
-   *   - `form-intake` — SYS-2501: data-only adapter declaring
+   *   - `form-intake` — data-only adapter declaring
    *     form-field-id → canonical-field mappings. No code is loaded and
    *     no fetch()/extract() ever runs; the host's form submission
    *     handler IS the runtime, and this manifest is how a
    *     borrower-entered scalar becomes a canonical, provenance-carrying
    *     field instead of a hand-wired column write.
-   *   - `manual-override` — SYS-2501: data-only adapter declaring that
+   *   - `manual-override` — data-only adapter declaring that
    *     this category's fields may be operator-overridden
    *     post-extraction. `produces` IS the override surface (a separate
    *     list could only duplicate or contradict it); the host's
    *     override endpoints gate on membership.
-   *   - `extraction-pipeline` — SYS-2998: declaration-only adapter whose
+   *   - `extraction-pipeline` — declaration-only adapter whose
    *     implementation IS the host application's own document-extraction
    *     pipeline. No code is loaded and neither fetch() nor extract()
    *     ever runs — the host's pipeline writes the canonical rows and
    *     records the adapter runs itself; the manifest exists purely as
    *     the declaration plane (produces, cardinality,
    *     fieldAuthorizations) for data the host was already producing.
-   *   - `external-assertion` — SYS-3036 (ownership moved here from a
-   *     host-local extension): declaration-only adapter that is executed
+   *   - `external-assertion` — declaration-only adapter that is executed
    *     entirely OUTSIDE the host. An externally-orchestrated process
    *     completes its own ceremony/extraction and PUSHES the result to
    *     the host's assertion-ingest surface. No code is loaded and
@@ -129,29 +128,24 @@ export interface AdapterManifest {
     | DocumentIntakeImplementation;
 
   /**
-   * SYS-2502: explicit instance cardinality.
+   * Explicit instance cardinality.
    *
    *   - `single` — at most one instance per applicant; extract() returns
    *     one AdapterExtraction with `instanceKey: ""`.
    *   - `multi` — unbounded instances per applicant, each with a stable,
    *     non-empty instanceKey.
    *
-   * REQUIRED as of 5.0.0 (SYS-3171). It was optional for backward
-   * compatibility with manifests written before the field existed, which
-   * relied on the implicit convention (instanceKey `""` → single,
-   * non-empty → multi) and let the host infer. Inference is the problem:
-   * it cannot tell a declared-single adapter emitting a multi-keyed
-   * instance from a legitimately multi one, so the host silently stored
-   * the mismatch instead of rejecting it. An explicit declaration is what
-   * makes that rejection possible at persistence time.
-   *
-   * Every in-repo manifest already declared it, so this costs nothing
-   * here; the migration is for adapters maintained outside this package.
+   * REQUIRED. An implicit convention (instanceKey `""` → single,
+   * non-empty → multi) would let the host infer this, but inference is
+   * the problem: it cannot tell a declared-single adapter emitting a
+   * multi-keyed instance from a legitimately multi one, so the host would
+   * silently store the mismatch instead of rejecting it. An explicit
+   * declaration is what makes that rejection possible at persistence time.
    */
   readonly cardinality: "single" | "multi";
 
   /**
-   * SYS-2502: per-applicant singleton fields on a multi-instance
+   * Per-applicant singleton fields on a multi-instance
    * category — fields whose value describes the APPLICANT (one value
    * regardless of how many instances exist) rather than the instance,
    * e.g. accountHolderName on bank statements. Every entry MUST also
@@ -186,7 +180,7 @@ export interface AdapterManifest {
   readonly requiredIdentityFields?: ReadonlyArray<string>;
 
   /**
-   * SYS-2503: declarative per-field authorization gating. Keyed by
+   * Declarative per-field authorization gating. Keyed by
    * canonical field name (every key MUST also appear in `produces` —
    * host validates at registration, same as `singletonFields`).
    *
@@ -213,7 +207,7 @@ export interface AdapterManifest {
   >;
 
   /**
-   * SYS-3002: ordered period declarations — the contract for the
+   * Ordered period declarations — the contract for the
    * period axis of this adapter's category.
    *
    * The period axis is ordered BY CONTRACT: `periodN` is a POSITIONAL
@@ -286,13 +280,10 @@ export interface AdapterManifest {
    * refused loudly, not coerced into matching. Vendors own their exact
    * label byte-for-byte; hosts never guess at reconciliation.
    */
-  // SYS-3347: PARTIAL. This was a total Record, which only ever type-checked
-  // because the key was `string` — an index signature, so any subset
-  // satisfied it. Under the literal union a total Record demands all 224
-  // canonical fields, which is not and never was the intent: enumValues is a
-  // sparse map naming only the enum-kind fields this adapter produces. Every
-  // other vocabulary-keyed map here is already Partial; this one was the
-  // outlier, and the union is what made that visible.
+  // PARTIAL, deliberately: a total Record here would demand all 224
+  // canonical fields under the literal union, which is not the intent —
+  // enumValues is a sparse map naming only the enum-kind fields this
+  // adapter produces.
   readonly enumValues?: Readonly<Partial<Record<CanonicalFieldName, ReadonlyArray<string>>>>;
 
   /**
@@ -304,7 +295,7 @@ export interface AdapterManifest {
 }
 
 /**
- * SYS-3002: one declared period on the adapter's period axis. See
+ * One declared period on the adapter's period axis. See
  * {@link AdapterManifest.periods} for the positional (1-based) identity
  * semantics — the entry's position in the `periods` array IS the
  * period's identity; the entry itself only labels the role.
@@ -322,7 +313,7 @@ export interface PeriodDeclaration {
 }
 
 /**
- * SYS-2503: one field's authorization gate. See
+ * One field's authorization gate. See
  * {@link AdapterManifest.fieldAuthorizations} for semantics.
  *
  * A union rather than an all-optional interface so a no-op gate (`{}`)
@@ -363,7 +354,7 @@ export interface TypescriptImplementation {
 }
 
 /**
- * SYS-2501: data-only implementation for borrower/operator form intake.
+ * Data-only implementation for borrower/operator form intake.
  * The manifest declares which form fields feed which canonical fields;
  * the host's form submission handler applies the mapping — no adapter
  * code exists to load, and neither fetch() nor extract() ever runs.
@@ -394,7 +385,7 @@ export interface FormIntakeFieldMapEntry {
   readonly canonical: CanonicalFieldName;
 
   /**
-   * SYS-3358: which INSTANCE of a multi-cardinality category this form
+   * Which INSTANCE of a multi-cardinality category this form
    * field feeds. Omitted means the single instance (`""`).
    *
    * WHY IT LIVES ON THE ENTRY, not on a rule
@@ -418,8 +409,8 @@ export interface FormIntakeFieldMapEntry {
    *
    * INVARIANT, enforced by the host at derivation time: a manifest
    * declaring `cardinality: "single"` MUST NOT carry an instanceKey on
-   * any entry. Since SYS-3171 the host infers nothing from instanceKey
-   * shape, so a single-cardinality adapter quietly emitting keyed
+   * any entry. The host infers nothing from instanceKey shape, so a
+   * single-cardinality adapter quietly emitting keyed
    * instances would store rows no single-instance reader ever looks at —
    * a declaration and a behavior disagreeing, with nothing comparing
    * them.
@@ -433,7 +424,7 @@ export interface FormIntakeFieldMapEntry {
 }
 
 /**
- * SYS-2501: data-only implementation declaring that the adapter's
+ * Data-only implementation declaring that the adapter's
  * `produces` list is operator-overridable post-extraction. The manifest
  * gates the override surface; the host's override endpoints check
  * membership in `produces` before accepting a manual value. No code, no
@@ -445,7 +436,7 @@ export interface ManualOverrideImplementation {
 }
 
 /**
- * SYS-2998: declaration-only implementation for adapters whose
+ * Declaration-only implementation for adapters whose
  * implementation IS the host application's own extraction pipeline
  * (e.g. the FinXtract document-processing pipeline wrapped as
  * "finxtract-bank-statement-v1"). The host's pipeline code performs the
@@ -466,7 +457,7 @@ export interface ExtractionPipelineImplementation {
 }
 
 /**
- * SYS-3036: declaration-only implementation for adapters that are
+ * Declaration-only implementation for adapters that are
  * executed entirely OUTSIDE the host application. An externally-
  * orchestrated process (a partner-run ceremony, an out-of-band
  * verification flow, etc.) completes its own extraction and PUSHES the
@@ -487,7 +478,7 @@ export interface ExternalAssertionImplementation {
 }
 
 /**
- * SYS-3174: declaration-only implementation for the host's own document
+ * Declaration-only implementation for the host's own document
  * UPLOAD path. The host receives a file, stores it, and records the pointer;
  * this manifest is how that write becomes declared, provenance-carrying
  * data instead of an untracked poke at a wide column. No code, no fetch(),
@@ -515,7 +506,7 @@ export interface DocumentIntakeImplementation {
 }
 
 /**
- * SYS-3036: how a registered adapter participates at execution time,
+ * How a registered adapter participates at execution time,
  * derived purely from `implementation.type`. Published here (rather than
  * re-derived per host) so every host classifies manifests identically:
  *
@@ -544,7 +535,7 @@ export enum AdapterExecutionMode {
 }
 
 /**
- * SYS-3036: classify a manifest's `implementation.type` into its
+ * Classify a manifest's `implementation.type` into its
  * `AdapterExecutionMode`. Exhaustive over every discriminator this
  * version of `@finsys/core` publishes — the switch has an explicit case
  * per type and THROWS on anything else (Ajv should already have refused
@@ -598,7 +589,7 @@ export interface FieldMapEntry {
    *   - `to_boolean`      — truthy → true, falsy → false
    *   - `to_integer`      — round + cast
    * Adapters needing more complex transforms should use the
-   * `typescript` implementation flavour instead.
+   * `typescript` implementation flavor instead.
    */
   readonly transform?: "identity" | "pct_to_ratio01" | "to_boolean" | "to_integer";
 }

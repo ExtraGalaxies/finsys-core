@@ -23,7 +23,7 @@
  * (telco-carrier, payment-network, document-extractor, social-presence,
  * …) are declared here; specific vendor implementations live OUTSIDE
  * this open-source package, in private extension directories loaded
- * by the host app at runtime (see SYS-2444 plugin discovery).
+ * by the host app at runtime (plugin discovery).
  *
  * Design notes:
  *   - extract() is async — every real adapter does I/O (HTTP, OCR, LLM).
@@ -33,7 +33,7 @@
  *     dialect inconsistency.
  *   - The contract makes no statement about persistence. The host app's
  *     adapter runner catches the return value, persists canonical fields
- *     + raw payload to the storage tables (SYS-2441), and writes
+ *     + raw payload to the storage tables, and writes
  *     provenance to `ihs_extraction_runs`. Adapters are pure functions
  *     of (raw payload) → (canonical fields). This separation lets
  *     adapters be swapped, replayed, and tested without DB state.
@@ -87,7 +87,7 @@ export type CanonicalFieldValues = Partial<Record<CanonicalFieldName, CanonicalF
  * MUST be stable across re-extractions so the storage layer can
  * replace-in-place rather than accumulating duplicates. Conventions:
  *   - For periodic data: encode the period (`'2026-Q1'`, `'2026-03'`)
-   * NOTE (SYS-3002): that is the multi-INSTANCE axis — one snapshot per
+   * NOTE: that is the multi-INSTANCE axis — one snapshot per
    * instance. Do NOT encode a within-document period into the instance
    * key; period-scoped values belong in `periods` (contractual 1-based
    * positions). The two axes compose: instance = which document/snapshot,
@@ -111,7 +111,7 @@ export interface AdapterExtraction {
   readonly values: CanonicalFieldValues;
 
   /**
-   * SYS-2502: when this instance's data was OBSERVED at the source
+   * When this instance's data was OBSERVED at the source
    * (ISO-8601) — the statement's own date, the partner snapshot's
    * timestamp — as distinct from when the adapter RAN. Optional for
    * backward compatibility with already-shipped adapters (the host
@@ -124,10 +124,9 @@ export interface AdapterExtraction {
   readonly observedAt?: string;
 
   /**
-   * SYS-2502 (prototyped in finsys-api under SYS-2977): optional
-   * per-field extraction confidence, 0..1, keyed by canonical field
-   * name. This is the provenance slot SYS-2819 identified as the
-   * missing precondition for FinXtract-as-adapter — probabilistic
+   * Optional per-field extraction confidence, 0..1, keyed by canonical
+   * field name — the provenance slot FinXtract-as-adapter needs:
+   * probabilistic
    * extractors (OCR/LLM) carry real per-field confidence; partner-API
    * adapters (a telco returning a number) simply omit it. `null` marks
    * a field whose value is derived/computed rather than directly
@@ -137,7 +136,7 @@ export interface AdapterExtraction {
   readonly confidence?: Partial<Record<CanonicalFieldName, number | null>>;
 
   /**
-   * SYS-3002: per-period value sets for adapters whose category
+   * Per-period value sets for adapters whose category
    * declares a period axis (see `AdapterManifest.periods`). Each entry
    * carries the values for ONE contractual position; `position` is
    * 1-based — period1 is the first declared period, there is no
@@ -157,7 +156,7 @@ export interface AdapterExtraction {
 }
 
 /**
- * SYS-3002: one period's value set within an AdapterExtraction
+ * One period's value set within an AdapterExtraction
  * instance. Identity is `position` — the 1-based index into the
  * manifest's declared `periods` array — never the dates: declared
  * positions may overlap, nest, vary in length, or be staggered (e.g.
@@ -211,7 +210,7 @@ export type CanonicalFieldValue = number | string | boolean | null;
 
 /**
  * The interface every adapter implements. Adapters are loaded by the
- * host app's discovery mechanism (SYS-2444); the host app constructs
+ * host app's discovery mechanism; the host app constructs
  * the adapter from its manifest + extract module, then registers it
  * against the registry by `id`.
  *

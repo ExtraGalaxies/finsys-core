@@ -6,12 +6,12 @@ import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
 import type { FileFieldTableData, FileFieldTableItem } from './ihs-types.js'
 
 /**
- * SYS-3728, the first live render (FinSys Client + FinHub, 2026-09-24). Each
+ * The first live render (FinSys Client + FinHub). Each
  * case below is a defect seen on screen with every earlier test green:
  *
  *   - a ratio stored as a fraction (0.7402) printed "0.74" beside a report
  *     that prints "74.02%";
- *   - the facility table's "No." (the report's row number) was labelled
+ *   - the facility table's "No." (the report's row number) was labeled
  *     "Account No.";
  *   - management-account period columns were headed "T1" / "T2";
  *   - a declared list column no row fills ("Amount (as printed)") took a

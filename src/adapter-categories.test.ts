@@ -32,7 +32,7 @@ import {
 } from "./adapter-categories.js";
 
 /**
- * SYS-3347: a name deliberately OUTSIDE the generated vocabulary.
+ * A name deliberately OUTSIDE the generated vocabulary.
  *
  * The literal unions make a retired or invented name a compile error, which is
  * the point — but these tests exist to prove the RUNTIME guards reject exactly
@@ -60,7 +60,7 @@ describe("Adapter category catalogue", () => {
       for (const f of cat.fields) {
         expect(f.name).toMatch(/\S/);
         expect(["number", "boolean", "string", "list"]).toContain(f.type);
-        // SYS-3728: items exactly when the field is a list.
+        // Only list fields define items.
         expect(f.items !== undefined, f.name).toBe(f.type === "list");
         expect(f.description).toMatch(/\S/);
       }
@@ -92,10 +92,10 @@ describe("Adapter category catalogue", () => {
   it("every category declares a distinct canonical storage table", () => {
     const tables = new Set<string>();
     for (const cat of allCategories()) {
-      // SYS-2998: the invariant is the IHS namespace prefix — alt-data
-      // tables (ihs_alt_data_*) AND promoted legacy sibling tables
-      // (ihsbankstatement, ...) are both canonical now.
-      // SYS-3327: case-preserving — `ihsPayslip` is the physical name.
+      // The invariant is the IHS namespace prefix — alt-data tables
+      // (ihs_alt_data_*) and promoted legacy sibling tables
+      // (ihsbankstatement, ...) are both canonical.
+      // Case-preserving: `ihsPayslip` is the physical name.
       expect(cat.canonicalTable).toMatch(/^ihs[A-Za-z0-9_]*$/);
       expect(tables.has(cat.canonicalTable)).toBe(false);
       tables.add(cat.canonicalTable);
@@ -155,7 +155,7 @@ describe("categoryForField", () => {
   });
 });
 
-// ── SYS-2500: extensible registry helpers ────────────────────────────
+// ── Extensible registry helpers ────────────────────────────────────────
 
 describe("ADAPTER_CATEGORY_IDS", () => {
   it("lists every category id from allCategories()", () => {
@@ -186,7 +186,7 @@ describe("isAdapterCategory / assertAdapterCategory", () => {
   });
 });
 
-// ── SYS-2500: the social-media category (extensibility demonstrator) ──
+// ── The social-media category (extensibility demonstrator) ────────────
 
 describe("social-media category", () => {
   it("is declared with the canonical social table", () => {
@@ -223,7 +223,7 @@ describe("social-media category", () => {
   });
 });
 
-// ── SYS-2548: the trade-credit category (accounting AR/AP model) ────
+// ── The trade-credit category (accounting AR/AP model) ────────────────
 
 describe("trade-credit category", () => {
   it("is declared with the canonical trade-credit table", () => {
@@ -276,7 +276,7 @@ describe("trade-credit category", () => {
   });
 });
 
-// ── SYS-2500: the loader is genuinely data-driven ────────────────────
+// ── The loader is genuinely data-driven ────────────────────────────────
 
 type RawArg = Parameters<typeof buildCategoryRegistry>[0];
 
@@ -340,10 +340,9 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
   });
 
   it("rejects a canonicalTable outside the ihs namespace", () => {
-    // SYS-2998 widened the invariant from the ihs_alt_data_ naming scheme
-    // to the ihs table-namespace prefix (promoted sibling tables like
-    // ihsbankstatement are canonical now) — but a table outside the
-    // namespace is still refused.
+    // Promoted sibling tables like ihsbankstatement are canonical too, not
+    // just ihs_alt_data_* ones — but a table outside the ihs namespace is
+    // still refused.
     const raw = validRaw();
     raw.categories[0].canonicalTable = "some_other_table";
     expect(() => buildCategoryRegistry(raw)).toThrow(/"ihs"-prefixed/);
@@ -357,9 +356,7 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
     expect(() => buildCategoryRegistry(raw)).toThrow(/duplicate canonicalTable/);
   });
   it("admits a camel-cased table inside the ihs namespace (SYS-3327: ihsPayslip is the physical name)", () => {
-    // The lowercase-only rule this replaces is WHY the payslip declaration
-    // was wrong: it could not be written correctly. Case-sensitive schema,
-    // case-preserving declaration.
+    // Case-sensitive schema, case-preserving declaration.
     const raw = validRaw();
     raw.categories[0].canonicalTable = "ihsPayslip";
     expect(buildCategoryRegistry(raw).byId.get(raw.categories[0].id)?.canonicalTable).toBe("ihsPayslip");
@@ -542,7 +539,7 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
   });
 });
 
-// ── SYS-2561: the geolocation category (hourly track + derived signals) ──
+// ── The geolocation category (hourly track + derived signals) ──────────
 
 describe("geolocation category", () => {
   it("is declared with the canonical geolocation table", () => {
@@ -595,27 +592,25 @@ describe("geolocation category", () => {
   });
 });
 
-// ── SYS-2998: FinXtract document-extraction categories ──────────────────
+// ── FinXtract document-extraction categories ─────────────────────────────
 describe("FinXtract document-extraction categories", () => {
   it("declares the four doc-extraction categories with their canonical tables", () => {
-    // SYS-3333 de-prefixed three of the four category ids. `finxtract-` names
-    // the VENDOR and stays on the adapter ids (finxtract-payslip-v1 and
-    // friends); a category is a field set, not a source, so the source has no
-    // business in its id. The tables are untouched — no data moved.
+    // `finxtract-` names the VENDOR and stays on the adapter ids
+    // (finxtract-payslip-v1 and friends); a category is a field set, not a
+    // source, so the source has no business in its id.
     expect(categorySchemaOf("person-identity").canonicalTable).toBe("ihs_alt_data_ic");
-    // The two bank categories KEEP their ids this release. De-prefixing the
-    // document one would land on `bank-statement`, which the partner feed
-    // already holds — and a legacy alias may never collide with a live id, or
-    // a pre-sweep manifest saying "bank-statement" is unresolvable (partner
-    // feed before, document after). Renaming them waits for the deprecation
-    // window to close. Their FIELDS are swept regardless, which is where the
-    // shared facts come from.
+    // The two bank categories keep their ids: de-prefixing the document one
+    // would land on `bank-statement`, which the partner feed already holds,
+    // and a legacy alias must never collide with a live id (a pre-sweep
+    // manifest saying "bank-statement" would be unresolvable — partner feed
+    // before, document after). Their FIELDS are swept regardless, which is
+    // where the shared facts come from.
     expect(categorySchemaOf("epf-statement").canonicalTable).toBe("ihsepfstatement");
-    // SYS-3327: the physical table is `ihsPayslip` — the ONE camel-cased
-    // sibling (bank/epf/financial are all-lowercase) — and the database runs
-    // lower_case_table_names=0, so "ihspayslip" resolved to no table at all.
-    // Measured on the finsim MySQL 2026-08-19. This line used to restate the
-    // wrong literal, which is how a declared/actual drift passes its own test.
+    // The physical table is `ihsPayslip` — the ONE camel-cased sibling
+    // (bank/epf/financial are all-lowercase). The database runs
+    // lower_case_table_names=0, so "ihspayslip" resolves to no table at all.
+    // This assertion pins the literal, so a declared/actual mismatch fails
+    // here rather than passing silently.
     expect(categorySchemaOf("payslip").canonicalTable).toBe("ihsPayslip");
     // The fourth keeps its id, and the reason is worth stating: de-prefixing
     // it lands on `bank-statement`, which the partner-feed category already
@@ -626,12 +621,9 @@ describe("FinXtract document-extraction categories", () => {
   });
 
   it("person-identity declares exactly the nine identity fields (unblocks finxtract-ic-v1 registration)", () => {
-    // SYS-3163 renamed five off the ic* prefix; SYS-3333 finished the job. The
-    // four that kept the prefix did so on the reasoning that "no form collects
-    // them, so they have no second attester and nothing to share with" — which
-    // was true of a form, and false of the EPF statement, which attests the
-    // holder's address. Measured: four sources attest a person's name and one
-    // declared the fact.
+    // Fields keep the ic* prefix only when no form collects them, so they
+    // have no second attester and nothing to share with — which is false of
+    // the EPF statement, which attests the holder's address.
     expect([...categoryFieldsOf("person-identity")].sort()).toEqual([
       "personAddress",
       "personDateOfBirth",
@@ -672,16 +664,13 @@ describe("FinXtract document-extraction categories", () => {
   });
 
   it("the bank feed and the bank document share exactly the facts that ARE shared", () => {
-    // REVERSES a prior decision, deliberately. This test used to assert ZERO
-    // shared names between the two, on the reasoning that "a manifest can never
-    // accidentally produce across the two vocabularies". The concern is real
-    // and is now handled by a stronger rule than name-disjointness: core
-    // refuses a shared name UNLESS both declarations carry the same fact id, so
-    // sharing is a written-down decision rather than an accident. `companyName`
-    // has spanned three categories on exactly that basis since SYS-3163.
+    // Sharing a name across categories is deliberate, not accidental: core
+    // refuses a shared name UNLESS both declarations carry the same fact id,
+    // so sharing is a written-down decision. `companyName` spans three
+    // categories on exactly that basis.
     //
-    // The cost of the old rule was that a partner feed and an uploaded
-    // statement reporting DIFFERENT closing balances were structurally
+    // Disjoint names alone would make a partner feed and an uploaded
+    // statement reporting DIFFERENT closing balances structurally
     // incomparable — which is the signal this whole phase exists to surface.
     const partner = new Set(categoryFieldsOf("bank-statement"));
     const document = new Set(categoryFieldsOf("finxtract-bank-statement"));
@@ -713,20 +702,17 @@ describe("FinXtract document-extraction categories", () => {
   });
 });
 
-// ── SYS-3003: the financial-statement document-extraction category ──────
-// Deferred from the 4.4.0 batch until the period-declaration contract
-// (SYS-3002) landed: one document = one audited financial statement
-// carrying period1 (its current fiscal year) + period2 (its prior
-// comparative year).
+// ── The financial-statement document-extraction category ────────────────
+// One document = one audited financial statement carrying period1 (its
+// current fiscal year) + period2 (its prior comparative year).
 describe("finxtract-financial-statement category", () => {
   it("is declared with the promoted financial-statement sibling table", () => {
     const cat = categorySchemaOf("financial-statement");
     expect(cat.canonicalTable).toBe("ihsfinancialstatement");
     // The canonical vocabulary is exactly the host's financial metric keys,
-    // verbatim and unprefixed. 123 since SYS-3570: `tangibleAssets` was the
-    // one host metric with no declared field, and the v2 read enumerates
-    // from THIS registry rather than from row keys — so a column core does
-    // not declare cannot leave the server however populated it is.
+    // verbatim and unprefixed. The v2 read enumerates from THIS registry
+    // rather than from row keys — so a column core does not declare cannot
+    // leave the server however populated it is.
     expect(cat.fields).toHaveLength(123);
   });
 
@@ -746,11 +732,10 @@ describe("finxtract-financial-statement category", () => {
   });
 
   it("declares the monetary metrics as kind money, carrying no currency of their own", () => {
-    // SYS-3249: these declared unit: "MYR" until the currency of a value
-    // stopped being a property of its field. The denomination now travels
-    // on the value's provenance envelope, so the field says only THAT it
-    // is money — never WHICH money. A VN financial statement writes these
-    // same columns, which is precisely why the field cannot name one.
+    // Currency is not a property of the field. The denomination travels on
+    // the value's provenance envelope, so the field says only THAT it is
+    // money — never WHICH money. A VN financial statement writes these same
+    // columns, which is precisely why the field cannot name one.
     const spec = (name: string) =>
       categorySchemaOf("financial-statement").fields.find(
         (f) => f.name === name,
@@ -796,11 +781,10 @@ describe("finxtract-financial-statement category", () => {
   });
 });
 
-// ── SYS-3004: SSM Form 9 + SSM company-profile extraction categories ────
-// The last two FinXtract doc types join the category registry — and the
-// first exercise of the shared-fact attestation model: form9 + ssm both
-// extract a company's incorporation date, and form9 + the financial
-// statement both extract the company's name. One fact, N attestations.
+// ── SSM Form 9 + SSM company-profile extraction categories ──────────────
+// form9 + ssm both extract a company's incorporation date, and form9 + the
+// financial statement both extract the company's name: one fact, N
+// attestations.
 describe("finxtract-form9 category", () => {
   it("is declared with its canonical alt-data table and exactly three fields", () => {
     const cat = categorySchemaOf("company-registration");
@@ -813,10 +797,8 @@ describe("finxtract-form9 category", () => {
   });
 
   it("declares three shared-fact attestations, no unique fields", () => {
-    // SYS-3163: companyRegNo gained a fact when finxtract-ssm was renamed
-    // onto the same name. The shared-name rule REQUIRES it — a name declared
-    // by two categories where one carries no fact is refused at load, so
-    // form9's declaration had to gain the fact in the same change.
+    // The shared-name rule REQUIRES a fact here — a name declared by two
+    // categories where one carries no fact is refused at load.
     const spec = (name: string) =>
       categorySchemaOf("company-registration").fields.find((f) => f.name === name);
     expect(spec("companyName")?.fact).toBe("companyName");
@@ -841,10 +823,9 @@ describe("finxtract-ssm category", () => {
   it("is declared with its canonical alt-data table and exactly the sixteen profile fields", () => {
     const cat = categorySchemaOf("company-profile");
     expect(cat.canonicalTable).toBe("ihs_alt_data_ssm");
-    // SYS-3333: ssmCompanyEntityType -> companyEntityType and
-    // ssmPaidUpCapital -> paidUpCapital. The ssm* prefix named the SOURCE,
-    // which provenance already records, and it is what would stop a future
-    // subject-company category attesting the same entity type.
+    // The ssm* prefix named the SOURCE, which provenance already records,
+    // and it is what would stop a future subject-company category attesting
+    // the same entity type.
     expect([...categoryFieldsOf("company-profile")].sort()).toEqual([
       "businessCommencementDate",
       "businessNature",
@@ -875,18 +856,16 @@ describe("finxtract-ssm category", () => {
         expect(f.type, `${f.name} type`).toBe("string");
       }
     }
-    // SYS-3249: was unit "MYR"; a field declares that it is money, not
-    // which currency the money is in.
+    // A field declares that it is money, not which currency the money is in.
     const paidUp = cat.fields.find((f) => f.name === "paidUpCapital");
     expect(paidUp?.kind).toBe("money");
     expect(paidUp?.unit).toBeUndefined();
   });
 
   it("attests three shared facts; all other names are unique to ssm", () => {
-    // SYS-3163: companyName and companyRegNo joined companyIncorporationDate.
-    // Three documents attest a company's name — Form 9, SSM and the financial
-    // statement — and before this they did not share the fact, so a Form 9 /
-    // SSM conflict was invisible to the disagreement surface.
+    // Three documents attest a company's name — Form 9, SSM, and the
+    // financial statement — sharing the fact so a Form 9 / SSM conflict is
+    // visible on the disagreement surface.
     const SHARED = new Set(["companyIncorporationDate", "companyName", "companyRegNo"]);
     const cat = categorySchemaOf("company-profile");
     for (const f of cat.fields) {
@@ -919,8 +898,6 @@ describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
   it("factOf returns the fact id for attestation fields and null otherwise", () => {
     expect(factOf("companyIncorporationDate")).toBe("companyIncorporationDate");
     expect(factOf("companyName")).toBe("companyName");
-    // SYS-3163: companyRegNo became a shared fact when finxtract-ssm was
-    // renamed onto the name form9 already used.
     expect(factOf("companyRegNo")).toBe("companyRegNo");
     // Uniquely-declared, fact-less names → null.
     expect(factOf("onTimePaymentRatio24m")).toBeNull();
@@ -933,12 +910,11 @@ describe("factOf / categoriesAttestingFact (shared-fact public API)", () => {
       "company-registration",
       "company-profile",
     ]);
-    // SYS-3163: three documents attest a company's name, and now all three
-    // share the fact. Before this, SSM's was a separate fact-less name, so a
-    // Form 9 / SSM conflict could not be seen at all.
-    // SYS-3705: a management account is the applicant company's own
-    // statement, so it attests the same name — a fourth attestor, and a
-    // management-account / audited-statement disagreement is now visible.
+    // Three documents attest a company's name and share the fact, so a Form
+    // 9 / SSM conflict is visible. A management account is the applicant
+    // company's own statement and attests the same name — a fourth
+    // attestor, making a management-account / audited-statement
+    // disagreement visible too.
     expect(categoriesAttestingFact("companyName")).toEqual([
       "financial-statement",
       "company-registration",
@@ -1000,13 +976,11 @@ describe("enum field kind", () => {
   });
 
   it("shared-fact attestations must agree on TYPE — the gap the kind clause only appeared to cover", () => {
-    // SYS-3350. `kind` implies type for money and enum, so that subset was
-    // already caught — which is exactly what made this look covered. The six
-    // KIND-LESS shared facts (personName, personIdNumber, personAddress,
-    // companyName, companyRegNo, companyIncorporationDate) had nothing checking
-    // them at all: a review set epf-statement's personName to type "number"
-    // against the SHIPPED data and it LOADED CLEAN, after which one fact was
-    // served as a string by three categories and a number by a fourth.
+    // `kind` implies type for money and enum, so that subset is already
+    // caught. The six KIND-LESS shared facts (personName, personIdNumber,
+    // personAddress, companyName, companyRegNo, companyIncorporationDate)
+    // have nothing else checking they agree — without this, one fact could
+    // be served as a string by three categories and a number by a fourth.
     // Cross-source comparability is the whole reason a fact id exists.
     const raw = validRaw();
     const attester = (id: string, type: "number" | "boolean" | "string", desc: string) => ({
@@ -1023,9 +997,9 @@ describe("enum field kind", () => {
   });
 
   it("shared-fact attestations must agree on UNIT — one number, two quantities otherwise", () => {
-    // SYS-3350. Same class: without this, one fact could be a count in one
-    // category and a ratio in another, and the disagreement comparison the fact
-    // id exists for would be comparing two different quantities.
+    // Same class: without this, one fact could be a count in one category
+    // and a ratio in another, and the disagreement comparison the fact id
+    // exists for would be comparing two different quantities.
     const raw = validRaw();
     const attester = (id: string, unit: string) => ({
       id,
@@ -1084,13 +1058,13 @@ describe("enum field kind", () => {
     expect(() => buildCategoryRegistry(raw)).toThrow(/must agree on kind/);
   });
 
-  // ── SYS-3164: field confidentiality (fail-closed) ──────────────────
+  // ── Field confidentiality (fail-closed) ─────────────────────────────
 
   it("SYS-3171: an unclassified field is RESOLVED to sensitive on the built spec", () => {
     // The asymmetry is the design. AUTHORING stays opt-out-only — the data
     // file omits the property and "sensitive" is unspellable there — but the
     // BUILT spec always states the class outright, because the registry is
-    // serialised verbatim to finhub and finsys-client and on that wire
+    // serialized verbatim to finhub and finsys-client and on that wire
     // "absent means sensitive" is carried by nothing.
     const raw = validRaw();
     const rawField = raw.categories[0].fields[0];
@@ -1277,15 +1251,14 @@ describe("isFieldSensitive / sensitiveFieldsOf (SYS-3164)", () => {
   });
 })
 
-// ── SYS-3249: currency belongs to the value, not the field ───────────
+// ── Currency belongs to the value, not the field ─────────────────────
 describe("monetary fields and the closed unit set", () => {
   const CURRENCY_CODE = /^[A-Z]{3}$/;
 
   it("no canonical field anywhere declares a currency as its unit", () => {
-    // The census, and the point of the whole change. 143 fields declared
-    // unit: "MYR" — a statement that was only ever true of Malaysian data,
-    // on fields a Vietnamese financial statement writes too. This fails if
-    // one comes back.
+    // A unit of "MYR" is only ever true of Malaysian data, on fields a
+    // Vietnamese financial statement writes too. This fails if one comes
+    // back.
     const offenders: string[] = [];
     for (const cat of allCategories()) {
       for (const f of cat.fields) {
@@ -1304,24 +1277,24 @@ describe("monetary fields and the closed unit set", () => {
     const money = allCategories().flatMap((cat) =>
       cat.fields.filter((f) => f.kind === "money").map((f) => ({ cat: cat.id, f })),
     );
-    // Pinned, not `toBeGreaterThan(0)`. The 143 were converted by a SCRIPT,
-    // and a script is exactly what can drop 140 of them while leaving 3 —
-    // which a lower bound would wave through. If this number changes, that
-    // is either a new money field (raise it deliberately) or a regression.
-    // 145 since SYS-3337: applicant-income declares grossPay and netPay,
-    // co-attesting the payslip's. Raised deliberately, which is what this
-    // pin asks for.
-    // 148 since SYS-3339: applicant-collateral declares collateralMarketValue
-    // and collateralPurchasePriceOnTheRoad; applicant-obligations declares
-    // obligationMonthlyInstallment. THREE here but only TWO in the
-    // legacyName pin below — the third has no flat column to rename, because
-    // five flat columns collapse into it. See that assertion.
-    // 149 since SYS-3570: financial-statement declares tangibleAssets, a
-    // money-valued statement aggregate like its totalAssets neighbour.
-    // 178 since SYS-3705: credit-bureau-report declares 11 (paid-up capital
-    // and the printed balance / limit totals) and management-account 18 (its
-    // 17 printed totals plus the host-computed revenue total). Its line-item
-    // categories are JSON lists, not money.
+    // Pinned, not `toBeGreaterThan(0)`. Money fields were converted from
+    // flat units by a script, and a script is exactly what can drop most of
+    // them while leaving a few — which a lower bound would wave through. If
+    // this number changes, that is either a new money field (raise it
+    // deliberately) or a regression.
+    //
+    // The 178 breaks down as: applicant-income's grossPay and netPay
+    // (co-attesting the payslip's); applicant-collateral's
+    // collateralMarketValue and collateralPurchasePriceOnTheRoad, plus
+    // applicant-obligations' obligationMonthlyInstallment (three fields
+    // here, though only two appear in the legacyName pin below — the third
+    // has no flat column to rename, because five flat columns collapse into
+    // it; see that assertion); financial-statement's tangibleAssets, a
+    // money-valued aggregate like its totalAssets neighbor; and
+    // credit-bureau-report's 11 (paid-up capital and the printed balance /
+    // limit totals) plus management-account's 18 (its 17 printed totals plus
+    // the host-computed revenue total — its line-item categories are JSON
+    // lists, not money).
     expect(money.length).toBe(178);
     for (const { cat, f } of money) {
       expect(f.type, `${cat}.${f.name} type`).toBe("number");
@@ -1392,7 +1365,7 @@ describe("monetary fields and the closed unit set", () => {
   });
 })
 
-// ── SYS-3249: the drift guard the allow-list alone does not give you ─
+// ── The drift guard the allow-list alone does not give you ───────────
 describe("monetary declaration cannot be skipped by silence", () => {
   it("every numeric canonical field declares a unit OR kind money", () => {
     // The allow-list closes "declares MYR" and the per-kind block closes
@@ -1424,24 +1397,22 @@ describe("monetary declaration cannot be skipped by silence", () => {
   });
 })
 
-// ── SYS-3333: the legacy-name bridge ─────────────────────────────────────
+// ── The legacy-name bridge ────────────────────────────────────────────────
 describe("legacyName — the bridge between the canonical and flat vocabularies", () => {
   it("a renamed money field is still detected as money under its FLAT name", () => {
-    // The regression this contract exists for, stated at the level it broke.
     // isMonetaryField() in ihs-processing.ts is handed a flat column name and
-    // matches it against canonical names; before legacyName existed, renaming
-    // grossPay left `payslipGrossPay` unrecognised and its value rendered as a
-    // bare number beside denominated neighbours. Silent, and wrong-looking.
+    // matches it against canonical names; without legacyName, renaming
+    // grossPay would leave `payslipGrossPay` unrecognized and its value
+    // rendered as a bare number beside denominated neighbors — silent, and
+    // wrong-looking.
+    //
     // A SET of every name isMonetaryField will answer to, built the way
-    // isMonetaryField builds it. It used to be a Map keyed on field name,
-    // which was fine while each money field was declared by one category and
-    // silently wrong the moment two shared a name: SYS-3337's
-    // applicant-income.grossPay co-attests the payslip's, with its own flat
-    // name (monthlyGrossIncome), and a Map keeps only whichever was iterated
-    // last. The product was never wrong — isMonetaryField accumulates into a
-    // Set and holds both — so this was the test under-specifying the contract,
-    // and it would have started hiding a missing alias rather than reporting
-    // one.
+    // isMonetaryField builds it: a Map keyed on field name would be wrong the
+    // moment two categories shared a name, since applicant-income.grossPay
+    // co-attests the payslip's under its own flat name (monthlyGrossIncome),
+    // and a Map keeps only whichever was iterated last. isMonetaryField
+    // itself accumulates into a Set and holds both, so this assertion must
+    // match that shape or it silently under-specifies the contract.
     const knownAsMoney = new Set<string>();
     const legacyNames: Array<string> = [];
     for (const cat of allCategories()) {
@@ -1463,23 +1434,19 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
     // …and the count is asserted so a future rename that forgets the alias
     // shows up here rather than as a table of undenominated numbers.
     //
-    // PINNED, not a lower bound — the same reasoning as money.length two hunks
-    // above, which this assertion sat beside while quietly contradicting. It
-    // was toBeGreaterThan(15) against a true count of 26, so a regression
-    // stripping legacyName from any TEN money fields stayed green. A lower
-    // bound is precisely what waves through the script that drops most of a
-    // set and leaves a few.
+    // PINNED, not a lower bound — same reasoning as money.length above: a
+    // lower bound is precisely what waves through a script that drops most
+    // of a set and leaves a few.
     //
-    // 28 since SYS-3339, while money.length went up by THREE. The gap is
-    // deliberate and is the interesting half: applicant-obligations'
-    // obligationMonthlyInstallment records NO legacyName because five flat
-    // columns (housingLoan…, hirePurchase…, personalLoan…, creditCard…,
-    // otherFinancing…MonthlyInstallment) all collapse into it. A legacyName
-    // is a one-to-one rename; naming any one of the five would resolve that
-    // spelling as money and leave the other four reading as bare numbers,
-    // which is worse than declaring nothing. The flat bridge for that field
-    // is (obligationType, amount) -> column, a per-instance function that
-    // does not belong in this map.
+    // This count is deliberately smaller than money.length: applicant-
+    // obligations' obligationMonthlyInstallment records NO legacyName,
+    // because five flat columns (housingLoan…, hirePurchase…,
+    // personalLoan…, creditCard…, otherFinancing…MonthlyInstallment) all
+    // collapse into it. A legacyName is a one-to-one rename; naming any one
+    // of the five would resolve that spelling as money and leave the other
+    // four reading as bare numbers, which is worse than declaring nothing.
+    // The flat bridge for that field is (obligationType, amount) -> column,
+    // a per-instance function that does not belong in this map.
     const renamedMoney = legacyNames;
     expect(renamedMoney.length, "renamed money fields must all record a legacyName").toBe(28);
   });
@@ -1564,7 +1531,7 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
   });
 });
 
-// ── SYS-3333: the naming conventions, enforced at load ───────────────────
+// ── The naming conventions, enforced at load ─────────────────────────────
 describe("naming conventions are refused at load, not merely applied once", () => {
   const one = (field: Record<string, unknown>) => ({
     schemaVersion: "1.0.0",
@@ -1606,7 +1573,7 @@ describe("naming conventions are refused at load, not merely applied once", () =
   });
 
   it("the shipped registry satisfies every convention it enforces", () => {
-    // Belt and braces: the guards run at load, so this can only fail if a
+    // Belt and suspenders: the guards run at load, so this can only fail if a
     // guard is weakened. That is exactly when it should fail.
     for (const cat of allCategories()) {
       // `finxtract-bank-statement` is the ONE documented exception, and it is

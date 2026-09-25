@@ -60,9 +60,9 @@ export type { RHFStep, RHFSchemaOutput } from "./rhf-generator.js";
 // Form domain classes
 export { FormSpec } from "./form-spec.js";
 
-// SYS-3263: the jurisdiction registry. Shared contract — finsys-api's own
-// copy (src/domain/constants/jurisdiction.ts, SYS-2872) should import from
-// here rather than keep its own; that de-duplication is SYS-3258's.
+// The jurisdiction registry. Shared contract — finsys-api's own
+// copy (src/domain/constants/jurisdiction.ts) should import from
+// here rather than keep its own.
 export {
   JURISDICTION,
   DEFAULT_JURISDICTION,
@@ -105,7 +105,7 @@ export {
   buildFileFieldTablesFromInstances,
   processIhsDetails,
   groupDetailsByCategory,
-  // SYS-3334: the instance-shaped path — same output types, fed by a CanonicalView
+  // The instance-shaped path — same output types, fed by a CanonicalView
   processIhsDetailsFromView,
   documentCategoryIds,
   extractionCategoryOf,
@@ -115,19 +115,19 @@ export {
   documentHashOfKey,
   documentHashOfPath,
   legacyOrdinalOfKey,
-  // SYS-3334: buildFileFieldTables's instance-shaped sibling — the fourth
+  // buildFileFieldTables's instance-shaped sibling — the fourth
   // and last flat file-field function to get one.
   instanceRowsFromView,
   buildFileFieldTablesFromView,
-  // SYS-3728: a stored list value as rows under its declared columns.
+  // A stored list value as rows under its declared columns.
   buildListCell,
   formatRatio,
   periodHeadingLabel,
   INVALID_VALUE_TEXT,
-  // SYS-3334 F3 (round 2 review): the provenance synthesis hoisted out of
+  // F3 (round 2 review): the provenance synthesis hoisted out of
   // buildFileFieldTablesFromView — collision-aware, and usable on its own.
   fieldProvenanceFromView,
-  // SYS-3334: the v1-shape bridge — the migration map run FORWARD (v1 key ->
+  // The v1-shape bridge — the migration map run FORWARD (v1 key ->
   // address -> value), so a consumer walking every flat key (an evaluation
   // data factory, MatchingUtil, jurisdictionOf, the SSM panel) reads a
   // CanonicalView through one map instead of each growing its own reverse walk.
@@ -201,8 +201,8 @@ export type {
   IhsListColumn,
   IhsPeriodHeading,
   IhsFieldProvenance,
-  // SYS-3334 F3 (round 2 review): IhsFieldProvenance + the overlay-replaced
-  // value, for fieldProvenanceFromView's return shape.
+  // IhsFieldProvenance + the overlay-replaced value, for
+  // fieldProvenanceFromView's return shape.
   IhsFieldProvenanceWithOriginal,
   DocumentRow,
   DocumentRowCapabilities,
@@ -212,24 +212,24 @@ export type {
 
 export type { CategorySpec } from './ihs-processing.js'
 
-// SYS-3174: the shape of one entry inside a document-pointer field. Exported
+// The shape of one entry inside a document-pointer field. Exported
 // so the host can name what it is attesting as `document-intake` rows rather
 // than declaring a private copy of it.
 export type { ParsedDocFile } from './ihs-processing.js'
 
-// SYS-3334: the v1-shape bridge's own types — the record half of the v2 read
+// The v1-shape bridge's own types — the record half of the v2 read
 // pair (structural, so core need not import the SDK) and its return shape.
 export type { ApplicationRecordLike, FlatRecordFromView } from './ihs-processing.js'
-// SYS-3438: `ViewDocument` (documentsOfType's return type) was declared and
-// documented as exported in 8.1.0 and never added here — TS2459 for consumers.
+// `ViewDocument` (documentsOfType's return type), exported so consumers
+// can name it.
 export type { ViewDocument } from './ihs-processing.js'
 
-// ── Source Adapter framework (SYS-2440) ──────────────────────────────
+// ── Source Adapter framework ──────────────────────────────────────────
 // The contract for ingesting unstructured / partner-specific data
 // sources and producing canonical credit signals. Vendor-specific
 // adapter implementations live OUTSIDE this open-source package, in
 // private extension directories loaded by the host app at runtime.
-// finsys-core publishes the contract + the category catalogue.
+// finsys-core publishes the contract + the category catalog.
 
 export type {
   RawPayload,
@@ -244,7 +244,7 @@ export type {
 
 export { AdapterError } from './adapter.js'
 
-// SYS-3728: the canonical write contract — one validator for writers and readers.
+// The canonical write contract — one validator for writers and readers.
 export {
   validateCanonicalFields,
   validateFieldValue,
@@ -350,11 +350,11 @@ export type {
   PeriodDeclaration,
 } from './adapter-manifest.js'
 
-// SYS-3036: execution-mode classification, published so every host
+// Execution-mode classification, published so every host
 // classifies manifests identically instead of re-deriving the switch.
 export { AdapterExecutionMode, executionModeOf } from './adapter-manifest.js'
 
-// SYS-3414: where every v1 flat-IHS key goes in v2 — including the ones with
+// Where every v1 flat-IHS key goes in v2 — including the ones with
 // no destination, which is the half a rename table omits and the half that
 // loses data. A migration instrument, not a runtime shim.
 export type {
@@ -375,44 +375,42 @@ export {
   v1LegacyBaseNameOf,
 } from './v1-migration-map.js';
 
-// SYS-3334: the v2 canonical envelope. Owned here rather than in the lender
+// The v2 canonical envelope. Owned here rather than in the lender
 // SDK, because it is the wire shape of a published API and every consumer
 // needs it — finhub through its own gateway, FHD's portal later, not only
 // external lenders holding @finsys/lender-client (which re-exports these).
 export type {
   CanonicalFieldEnvelope,
-  // SYS-3421: declared in 8.1.0's first candidate but left out of this list —
-  // finsys-api's resolver found it (TS2305) and had to mirror the interface
-  // locally. Every member of the envelope is exported, or the wire shape is
+  // Every member of the envelope is exported, or the wire shape is
   // not owned here at all.
   CanonicalAttestation,
   CanonicalInstance,
   CanonicalCategory,
   CanonicalView,
   CanonicalAddress,
-  // SYS-3542 (SYS-3463a): the subject-scoped counterpart CanonicalView's own
+  // The subject-scoped counterpart CanonicalView's own
   // doc anticipates by name. See canonical-view.ts for why these cannot be
   // interchangeable with the application-scoped types above.
   SubjectInstance,
   SubjectCanonicalCategory,
   SubjectCanonicalView,
-  // SYS-3554: the (furnisherId, recordRef) pair that identifies a contributed
+  // The (furnisherId, recordRef) pair that identifies a contributed
   // observation, replacing SubjectInstance's old `{ sourceIhsId: number }`.
   SubjectSource,
-  // SYS-3464: one canonical field's winning observation, carrying THAT
+  // One canonical field's winning observation, carrying THAT
   // observation's provenance rather than the row's. Reached through
   // SubjectCanonicalCategory.fieldsByInstanceKey, which is what a consumer
   // reads for a field's value instead of spreading instances[0].fields flat.
   SubjectFieldSelection,
 } from './canonical-view.js';
 
-// SYS-3542 (SYS-3463a): the one merge that builds a SubjectCanonicalView out
+// The one merge that builds a SubjectCanonicalView out
 // of several applications' CanonicalViews. Kept in its own module rather
 // than canonical-view.ts — see that file's "WHAT THIS FILE IS NOT" note and
 // subject-canonical-view.ts's own doc for why instance-selection logic lives
 // apart from the types it selects over.
 export type { SubjectViewRecord, SubjectViewErrorCode } from './subject-canonical-view.js';
-// SYS-3554: `sameSubjectSource` is the supported way to ask whether two
+// `sameSubjectSource` is the supported way to ask whether two
 // SubjectInstances came from the same furnished record — exported so that no
 // consumer builds a joined `${furnisherId}#${recordRef}` key to do it, which
 // is ambiguous because both halves are opaque. See SubjectSource's own doc.

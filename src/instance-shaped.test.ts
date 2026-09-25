@@ -32,12 +32,11 @@ import { getDocumentTypeGroups } from './document-types.js'
 import type { CanonicalView, CanonicalInstance } from './canonical-view.js'
 
 /**
- * SYS-3334 — the instance-shaped path. Every assertion here pins a DECISION
+ * The instance-shaped path. Every assertion here pins a DECISION
  * made while re-deriving the flat functions for a CanonicalView, so that a
  * later change to any of them is a change somebody chose. The measurements
- * that motivated each decision were taken against the running sim on
- * 2026-08-18 (157 subjects, both paths on the same record) and are quoted
- * where they matter.
+ * that motivated each decision were taken against the running sim (157
+ * subjects, both paths on the same record) and are quoted where they matter.
  */
 
 // ── Fixture builders ────────────────────────────────────────────────
@@ -116,13 +115,11 @@ describe('v1LegacyBaseNameOf — the T-slot base-name bridge (SYS-3334)', () => 
     // to 'netProfit' — the ordinary case legacyBaseNameIndex's conflict
     // check exists to verify still holds.
     //
-    // UPDATED (SYS-3334 round 2, the map correction): this comment used to
-    // say the `…PriorYearT{n}` siblings strip to the same base AND attest
-    // this SAME address — that was the bug (see the "map correction"
-    // describe below). They are `needs-decision` now and carry no address at
-    // all, so they no longer contribute to this answer; the value below is
-    // unchanged only because the three plain T-slots were always sufficient
-    // to determine it on their own.
+    // The `…PriorYearT{n}` siblings strip to the same base but are
+    // `needs-decision` (see the "map correction" describe below) and carry
+    // no address at all, so they do not contribute to this answer; the value
+    // below is unchanged only because the three plain T-slots were always
+    // sufficient to determine it on their own.
     expect(v1LegacyBaseNameOf('financial-statement', 'netProfit')).toBe('netProfit')
   })
 
@@ -188,13 +185,13 @@ describe('F1 — a mapped-fanout address resolves through v1LegacyBaseNameOf ins
     // the moment the set changes rather than silently agreeing with a stale
     // expectation.
     //
-    // SYS-3570 took `tangibleAssets` OUT of this set — the mechanism working
-    // as designed: declaring the field gave the four `tangibleAssets*` map
-    // keys a real address, and the derivation went green here without being
-    // told about it. `currentAssetCash` stays: it is `needs-decision`, not a
+    // Declaring `tangibleAssets` on the category gave the four
+    // `tangibleAssets*` map keys a real address, and the derivation went
+    // green here without being told about it — the mechanism working as
+    // designed. `currentAssetCash` stays: it is `needs-decision`, not a
     // vocabulary gap — the category already declares six overlapping cash
     // fields and which one the extractor populates is the financial-statement
-    // owner's call (SYS-3574), not a name lookup.
+    // owner's call, not a name lookup.
     const group = getDocumentTypeGroups().find((g) => g.documentType === 'financialStatements')!
     const category = extractionCategoryOf(group.documentType)!
 
@@ -240,14 +237,14 @@ describe('F1 — a mapped-fanout address resolves through v1LegacyBaseNameOf ins
 
     expect(unreachableByGroup).toEqual({
       bank_statements: [],
-      // SYS-3570 removed `tangibleAssets` from this group's unreachable set.
+      // `tangibleAssets` is no longer in this group's unreachable set.
       financials: ['currentAssetCash'],
       form9: [],
       ssm_documents: [],
       ic_documents: [],
       epf_statements: [],
       payslip_statements: [],
-      // SYS-3705: no catalog columns at all, so nothing to lose an address.
+      // No catalog columns at all, so nothing to lose an address.
       credit_bureau_reports: [],
       management_accounts: [],
     })
@@ -260,7 +257,7 @@ describe('extractionCategoryOf / documentCategoryIds — derived, not listed', (
   it('names one extraction category per document type, through the map', () => {
     // Pinned so a registry or map edit that moves a document type is a
     // change somebody sees. Form 9 and SSM share the fan-out key
-    // incorporatedDate (SYS-2722) and still resolve cleanly — the intersection
+    // incorporatedDate and still resolve cleanly — the intersection
     // across a type's columns, not the union.
     expect(Object.fromEntries(getDocumentTypeGroups().map((g) => [g.documentType, extractionCategoryOf(g.documentType)]))).toEqual({
       bankStatements: 'finxtract-bank-statement',
@@ -270,7 +267,7 @@ describe('extractionCategoryOf / documentCategoryIds — derived, not listed', (
       ic: 'person-identity',
       epfStatements: 'epf-statement',
       payslips: 'payslip',
-      // SYS-3705: through the catalog's extraction_category declaration —
+      // Through the catalog's extraction_category declaration —
       // the map is silent for both (their columns never existed in v1).
       experianReports: 'credit-bureau-report',
       managementAccounts: 'management-account',
@@ -430,7 +427,7 @@ describe('processIhsDetailsFromView — the panel v1 rendered, from a v2 view', 
     // lender cannot distinguish "false" from "never asked" in either panel.
     // NOT fixed here — parity with the flat path is the contract, and the
     // flat path drops it too, so changing one side breaks the side-by-side
-    // comparison the whole SYS-3334 release measures against. Whether
+    // comparison this release measures against. Whether
     // `false` should render is Kain's call, not this processor's.
     const flat = processIhsDetails({ handsetFinancingActive: false })
     expect(flat.some((d) => d.name === 'handsetFinancingActive')).toBe(false)
@@ -447,7 +444,7 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
     // The registry side.
     expect(Object.fromEntries(getDocumentTypeGroups().map((g) => [g.documentType, categoryFieldsOf(extractionCategoryOf(g.documentType)!).length]))).toEqual({
       bankStatements: 8,
-      // 123 since SYS-3570 declared financial-statement.tangibleAssets.
+      // 123: financial-statement declares tangibleAssets.
       financialStatements: 123,
       form9: 3,
       ssm: 16,
@@ -455,7 +452,7 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
       epfStatements: 9,
       payslips: 15,
       experianReports: 76,
-      // 62 since 9.6.0 (SYS-3728 declared mgmtCurrencySource).
+      // 62 since 9.6.0: management-account declares mgmtCurrencySource.
       managementAccounts: 62,
     })
     // The flat path's side, measured on a record with ONE file per type: the
@@ -469,7 +466,7 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
       epfStatements: '[{"path":"https://x/f"}]', payslips: '[{"path":"https://x/g"}]',
     }
     const flat = resolveExtractionStatus(oneOfEach)
-    // SYS-3705: the two lineage-free types have no wide columns, so the
+    // The two lineage-free types have no wide columns, so the
     // flat path's denominator for them is 0 — the flat path never sees them.
     expect(Object.fromEntries(flat.documents.map((d) => [d.fileType, d.totalColumns]))).toEqual({
       bankStatements: 8, financialStatements: 13, form9: 3, ssm: 16, ic: 9, epfStatements: 9, payslips: 15,
@@ -589,7 +586,7 @@ describe('resolveExtractionStatusFromView — a re-derivation, with its decision
   })
 })
 
-// ── SYS-3378: document rows from the view ──────────────────────────
+// ── Document rows from the view ───────────────────────────────────────
 
 describe('buildDocumentRowsFromView — the documents table, from intake instances', () => {
   const hashA = 'a'.repeat(64)
@@ -602,10 +599,9 @@ describe('buildDocumentRowsFromView — the documents table, from intake instanc
         inst('bankStatements#1', { documentType: 'bankStatements', pathInDms: `${DMS}${hashA}`, uploadedAt: '2026-08-01T00:00:00.000Z', uploadedBy: 'agent:7' }),
         inst('bankStatements#2', { documentType: 'bankStatements', pathInDms: `${DMS}${hashB}?sig=x` }, { observedAt: '2026-08-02T00:00:00.000Z' }),
         inst('ssm#3', { documentType: 'ssm', pathInDms: `${DMS}${'e'.repeat(64)}` }),
-        // SYS-3376: `invoices` is a host pointer slot (finsys-api's
-        // IHS_DOCUMENT_POINTER_FIELDS, extraction: true) that the catalog did
-        // not name, so an uploaded invoice rendered in NEITHER product. It is a
-        // row now, in catalog order (after payslips, before ssm).
+        // `invoices` is a host pointer slot (finsys-api's
+        // IHS_DOCUMENT_POINTER_FIELDS, extraction: true) that the catalog does
+        // not name. It is a row in catalog order (after payslips, before ssm).
         inst('invoices#4', { documentType: 'invoices', pathInDms: `${DMS}${'f'.repeat(64)}` }),
       ],
     },
@@ -635,7 +631,7 @@ describe('buildDocumentRowsFromView — the documents table, from intake instanc
     expect(rows[0]).toMatchObject({ fileName: 'jan.pdf', fileType: 'PDF', fileSize: 1234, uploadedAt: '2026-08-01T00:00:00.000Z', uploadedBy: 'agent:7', displayName: 'jan.pdf' })
     expect(rows[1]).toMatchObject({ fileName: null, uploadedAt: '2026-08-02T00:00:00.000Z', displayName: 'Bank Statements 2', path: `${DMS}${hashB}?sig=x` })
     expect(rows[2]).toMatchObject({ path: null, uploadedAt: null, displayName: 'Bank Statements 3', capabilities: { download: true, viewJson: true, reExtract: true, reUpload: true } })
-    // rows[3] is the invoice since SYS-3376; SSM is the last row.
+    // rows[3] is the invoice; SSM is the last row.
     expect(rows[3]).toMatchObject({ displayName: 'Invoices', capabilities: { viewJson: true, reUpload: false } })
     expect(rows[4]).toMatchObject({ displayName: 'SSM Company Profile', capabilities: { viewJson: true } })
   })
@@ -673,10 +669,10 @@ describe('legacy slot rows — positional, as v1 was, and only where identity is
   // whose ONLY extraction rows are `legacy:T{n}` — no document behind them.
   const hashA = 'a'.repeat(64)
   const hashB = 'b'.repeat(64)
-  // SYS-3720 CHANGED THIS TEST. It used to pin a financial-statement slot as
-  // "the n-th intake document" and a slot past the intake count as a document
-  // of its own — which listed one statement as two. A financial-statement slot
-  // is a period: T1/T2 are the first statement, T3 the second.
+  // A financial-statement slot is a period, not a document of its own:
+  // T1/T2 are the first statement, T3 the second. A slot past the intake
+  // count never becomes its own document — that would list one statement
+  // as two.
   it('financial statements: legacy:T1/T2 attach to the first intake statement, T3 to the second; a hashed run supersedes; no slot becomes a document', () => {
     const v = view({
       'document-intake': {
@@ -739,7 +735,7 @@ describe('legacy slot rows — positional, as v1 was, and only where identity is
   })
 })
 
-// ── SYS-3259: currency is derived, and the residual is named ───────
+// ── Currency is derived, and the residual is named ─────────────────
 
 describe('inferValueFormat currency — derived from the registry (SYS-3259)', () => {
   it('a registry money field renders as CURRENCY through its legacy name — the four-name set could not', () => {
@@ -887,22 +883,18 @@ describe('F6 — a single-cardinality instanceKey \'\' with no period gets a rea
   })
 })
 
-// ── SYS-3334: buildFileFieldTablesFromView — the fourth flat function's instance-shaped sibling ──
+// ── buildFileFieldTablesFromView — the fourth flat function's instance-shaped sibling ──
 
 describe('buildFileFieldTablesFromView — buildFileFieldTables\'s last instance-shaped sibling', () => {
   const hash1 = 'a'.repeat(64)
   const hash2 = 'b'.repeat(64)
 
   it('(a) two bank-statement instances, SPARSELY populated (M2, round 4 — 3 of 8 base columns, not all 8): view items are a SUBSET of flat items, values equal by position on the ones both sides have', () => {
-    // M2 (round 4): the PREVIOUS version of this fixture populated all 8
-    // base columns on both instances, which is the only reason it could
-    // assert full item-LIST equality between the two paths — `buildInstanceTable`
-    // DROPS a base column with no value in ANY instance
-    // (`if (!hasAny) continue`), while v1's TIME_SERIES branch has no such
-    // guard and renders one item per CATALOG base column regardless of
-    // data. With everything populated, that difference never had a chance
-    // to fire, so the equality the old comment stated was a fixture
-    // artifact, not a real invariant. Sparsened to 3 of 8 so it does.
+    // Sparsely populated (3 of 8 base columns, not all 8) so the difference
+    // between the two paths can actually fire: `buildInstanceTable` DROPS a
+    // base column with no value in ANY instance (`if (!hasAny) continue`),
+    // while v1's TIME_SERIES branch has no such guard and renders one item
+    // per CATALOG base column regardless of data.
     //
     // v1 and v2 built from the SAME numbers on the 3 populated columns, so
     // any divergence there is either a stated structural difference (below)
@@ -1557,7 +1549,7 @@ describe('fieldProvenanceFromView — hoisted provenance synthesis, collision-aw
   })
 })
 
-// ── flatRecordFromView — the migration map run FORWARD (SYS-3334) ──────
+// ── flatRecordFromView — the migration map run FORWARD ──────────────────
 
 describe('flatRecordFromView — the v1 flat record\'s shape, re-derived from a CanonicalView (SYS-3334)', () => {
   const hash1 = '1'.repeat(64)
@@ -1627,10 +1619,10 @@ describe('flatRecordFromView — the v1 flat record\'s shape, re-derived from a 
     const { record: out } = flatRecordFromView(v2, record)
     expect(out['email']).toBe(v1.email)
     expect(out['mobilePhoneNo']).toBe(v1.mobilePhoneNo)
-    // SYS-3596: this key now aggregates to the v1 ARRAY shape rather than a
-    // bare scalar (see valueAtInstanceKeyPrefix). One intake instance in this
-    // fixture, so one entry — still proving the pointer RESOLVES, which is
-    // what this assertion was here for.
+    // This key aggregates to the v1 ARRAY shape rather than a bare scalar
+    // (see valueAtInstanceKeyPrefix). One intake instance in this fixture,
+    // so one entry — still proving the pointer RESOLVES, which is what
+    // this assertion is here for.
     expect(out['bankStatements']).toEqual([{ path: v1.bankStatements }])
   })
 
@@ -1768,11 +1760,9 @@ describe('flatRecordFromView — two rows sharing a T-slot place ONE of them AND
       },
     })
     const { record: out, ambiguous } = flatRecordFromView(v2)
-    // SYS-3526: this line read 9000 ("first row — the rule is unchanged")
-    // until the three-consumer disagreement was measured. M-2's finding — a
-    // slot can hold two rows, a flat scalar can only hold one — is unchanged
-    // and is still what the assertion below pins; only WHICH one moved, to
-    // the one v1 and finsys-client both already served.
+    // M-2's finding — a slot can hold two rows, a flat scalar can only hold
+    // one — is what the assertion below pins: the LAST row that carries the
+    // field wins, the one v1 and finsys-client both already served.
     expect(out['bankBalanceT1']).toBe(9500)
     expect(ambiguous).toContain('bankBalanceT1')
 
@@ -1866,10 +1856,9 @@ describe('flatRecordFromView — valueAtInstanceKeyPrefix does not let a longer 
       },
     })
     const { record: out } = flatRecordFromView(v2)
-    // SYS-3596: aggregation makes this guard STRICTER, not weaker. Under the
-    // old first-match behaviour a broken boundary swapped one value for
-    // another; now it would silently add a foreign document to the list, so
-    // the assertion is on the whole set rather than on which one won.
+    // Aggregation makes this guard STRICTER, not weaker: a broken boundary
+    // would silently add a foreign document to the list, so the assertion
+    // is on the whole set rather than on which one won.
     expect((out['bankStatements'] as Array<{ path: string }>).map((e) => e.path)).toEqual([
       `${DMS}right.pdf`,
     ])
@@ -1948,10 +1937,10 @@ describe('flatRecordFromView — the relocated unplaced reason names the surface
   })
 })
 
-// ── SYS-3517 F1: a slotless COORDINATE must not be fabricated into a slot ──
+// ── F1: a slotless COORDINATE must not be fabricated into a slot ──────────
 
 /**
- * The live shape, read off finsim's MySQL on 2026-08-22 (ihs 282 and 283,
+ * The live shape, read off finsim's MySQL (ihs 282 and 283,
  * `ihsfinancialstatement`). Two financial-statement documents, four rows:
  *
  *   id  instanceKey                       timePeriod  periodPosition  netProfit
@@ -1960,8 +1949,8 @@ describe('flatRecordFromView — the relocated unplaced reason names the surface
  *   357 financialStatement:<doc2>#T1      NULL        1                77777
  *   358 financialStatement:<doc2>#T3      T3          2                55555
  *
- * Row 357 is the DEVOPS-535 coordinate: document #2's OWN current fiscal
- * year, which the pre-SYS-3003 slot model discarded and SYS-3003 stores at
+ * Row 357 is a coordinate row: document #2's OWN current fiscal
+ * year, which the old slot model discarded and the coordinate model stores at
  * (instance, position 1) with a DELIBERATELY NULL slot. Its `#T1` suffix is
  * not a period — it is a HISTORICAL ADOPTED KEY (financialStatementSpec.ts:
  * "re-extraction of a pre-cutover document ADOPTS its existing `#T{n}` /
@@ -1988,7 +1977,7 @@ const fsCoordinateView = (): CanonicalView =>
 
 /**
  * finsys-client's `selectFinancialRow` (app/evaluation/ihs_value_provider.ts),
- * mirrored EXACTLY — the coordinate scan first (DEVOPS-535), then the T-slot
+ * mirrored EXACTLY — the coordinate scan first, then the T-slot
  * scan, both last-match-wins. Mirrored rather than imported because that
  * resolver lives in a different repo and this package's contract to it is
  * the row shape, not the code. If the mirror and the original ever diverge,
@@ -2034,7 +2023,7 @@ describe('timePeriodOf — a periodPosition with no legacySlot is a SLOTLESS coo
     const rows = instanceRowsFromView(fsCoordinateView(), 'financial-statement')
 
     expect(selectFinancialRowMirror(rows, 0, 'currentYear')!['netProfit']).toBe(120000)
-    // The number the whole of DEVOPS-535 exists to return: document #2's OWN
+    // The number the coordinate model exists to return: document #2's OWN
     // current year, NOT document #1's prior-year overlap (90000).
     expect(selectFinancialRowMirror(rows, 1, 'currentYear')!['netProfit']).toBe(77777)
     expect(selectFinancialRowMirror(rows, 1, 'priorYear')!['netProfit']).toBe(55555)
@@ -2144,7 +2133,7 @@ describe('timePeriodOf — the #T{n} rule is NARROWED, not removed (SYS-3517 F1,
   })
 })
 
-// ── SYS-3517 F1: the measured consequence for the RENDERED table ──────
+// ── F1: the measured consequence for the RENDERED table ────────────────
 
 describe('buildFileFieldTablesFromView — a slotless coordinate row loses its (wrong) T1 column header and gets its instance key instead (SYS-3517 F1, measured consequence)', () => {
   it('pins the header a slotless row renders under, because BOTH the old and the new one are unsatisfactory and the choice belongs to the table\'s owner, not to this fix', () => {
@@ -2212,7 +2201,7 @@ describe('buildFileFieldTablesFromView — a slotless coordinate row loses its (
   })
 })
 
-// ── SYS-3517 F2: NOT FIXED HERE — this package cannot know arrival order ──
+// ── F2: NOT FIXED HERE — this package cannot know arrival order ───────────
 
 describe('instanceRowPairsFromView — a contested slot resolves to the LAST-EMITTED row, so the VIEW\'s emission order decides which document a lender scores on (SYS-3517 F2)', () => {
   /**
@@ -2263,7 +2252,7 @@ describe('instanceRowPairsFromView — a contested slot resolves to the LAST-EMI
    *      the running sim container's own `dist`. The measurements quoted
    *      above therefore describe the state BEFORE that merge; they are kept
    *      as the record of why the clause exists, not as current behavior.
-   *      SYS-3526 is the consequence: with arrival order restored, this
+   *      The consequence: with arrival order restored, this
    *      package's FLAT path was left taking the first match where every
    *      other consumer takes the last (see its own describe below).
    *   2. Durably: the view should carry the ordinal explicitly (an additive
@@ -2301,7 +2290,7 @@ describe('instanceRowPairsFromView — a contested slot resolves to the LAST-EMI
   })
 })
 
-// ── SYS-3517 F1: an out-of-shape coordinate is ABSENT on both surfaces ──
+// ── F1: an out-of-shape coordinate is ABSENT on both surfaces ─────────────
 
 describe('instanceRowsFromView — an out-of-shape periodPosition is treated as absent by BOTH the period rule and the row (SYS-3517 F1)', () => {
   it('periodPosition 0 does not silence the period cascade AND does not reach the row (mutation: spread on `!== undefined` instead of the shape gate -> the row advertises periodPosition 0 on a slot derived as if no coordinate existed)', () => {
@@ -2323,12 +2312,12 @@ describe('instanceRowsFromView — an out-of-shape periodPosition is treated as 
   })
 
   it('SYS-3526 release prep: a FRACTIONAL coordinate is HONORED, because the producer\'s own gate admits it — a receiver must not be stricter than its producer (mutation: restore `Number.isInteger` in coordinateOf -> the row silently loses the coordinate and its adopted #T1 key fabricates slot T1 again)', () => {
-    // `coordinateOf` used to require `Number.isInteger`; finsys-api's
-    // `projectInstance` requires `Number.isFinite && >= 1`. A 2.5 therefore
-    // crossed the wire and was silently DROPPED here — and dropping it is
-    // not a no-op: with the coordinate gone, rule 1b does not fire, the
-    // adopted `#T1` key is read as slot T1, and the exact DEVOPS-535
-    // overlap this ticket removed comes back for that row.
+    // `coordinateOf`'s gate must match finsys-api's `projectInstance` exactly
+    // (`Number.isFinite && >= 1`). A stricter gate here would silently DROP
+    // a value like 2.5 that the producer considers valid — and dropping it
+    // is not a no-op: with the coordinate gone, rule 1b does not fire, the
+    // adopted `#T1` key is read as slot T1, and the overlap-projection bug
+    // this design prevents comes back for that row.
     //
     // Unreachable today — the column is `int` — but the two gates should
     // read the same, and if they must differ the RECEIVER is the wrong one
@@ -2350,13 +2339,13 @@ describe('instanceRowsFromView — an out-of-shape periodPosition is treated as 
   })
 })
 
-// ── SYS-3517 F1: F6's blank-key rescue must not undo rule 1b ───────────
+// ── F1: F6's blank-key rescue must not undo rule 1b ────────────────────────
 
 describe('instanceRowsFromView — the F6 blank-instanceKey rescue does not re-fabricate a slot rule 1b withheld (SYS-3517 F1)', () => {
   it('a lone slotless COORDINATE instance keyed \'\' stays null instead of being rescued to T1 (mutation: drop the coordinate clause from the F6 guard -> "T1", and rule 1b is undone eight lines after it fired)', () => {
     // F6 exists for DISPLAY: a single-cardinality category's one instance
     // carries instanceKey '' by contract, `timePeriodOf` answers null, and
-    // the table would render a blank column header — so it is labelled T1,
+    // the table would render a blank column header — so it is labeled T1,
     // "the same way any other lone document would position-fallback to T1".
     //
     // That reasoning holds only for a row whose period is UNKNOWN. A
@@ -2393,7 +2382,7 @@ describe('instanceRowsFromView — the F6 blank-instanceKey rescue does not re-f
   })
 })
 
-// ── SYS-3517: the PARITY oracle — v1 and v2 must answer the same ───────
+// ── The PARITY oracle — v1 and v2 must answer the same ────────────────────
 
 /**
  * Phase 5's mandate is PARITY with the eval system, so a v1/v2 disagreement
@@ -2493,7 +2482,7 @@ function v2ViewOf(rows: FsDbRow[]): CanonicalView {
   })
 }
 
-/** Every address the DEVOPS-535 model exercises, resolved. */
+/** Every address the coordinate model exercises, resolved. */
 const ADDRESSES = [
   ['latest/currentYear', 0, 'currentYear'],
   ['latest/priorYear', 0, 'priorYear'],
@@ -2600,7 +2589,7 @@ describe('PARITY — the v1 sidecar and the v2 bridge must resolve the same numb
   })
 })
 
-// ── SYS-3526: the FLAT path's contested-slot tiebreak ──────────────────
+// ── The FLAT path's contested-slot tiebreak ────────────────────────────────
 
 /**
  * THREE CONSUMERS OF ONE CASCADE, AND THIS WAS THE ONE THAT DISAGREED.
@@ -2612,7 +2601,7 @@ describe('PARITY — the v1 sidecar and the v2 bridge must resolve the same numb
  *                        object under `order: { id: "ASC" }` — so the LAST
  *                        row by id owns the slot. finsys-api's own comment
  *                        on each of the four list reads calls this the
- *                        "later-masks-earlier" contract (SYS-2916).
+ *                        "later-masks-earlier" contract.
  *   v2, instance path    finsys-client `selectFinancialRow` — LAST matching
  *                        row wins, over `instanceRowsFromView`'s stable,
  *                        view-ordered rows.
@@ -2650,9 +2639,9 @@ describe('PARITY — the v1 sidecar and the v2 bridge must resolve the same numb
  *     not carry the fact; no rule here can recover it.
  *  2. v1 PRE-FILTERS BY RECENCY before spreading. Financial statements drop
  *     any T1 row whose `financialYearEnd` is not the newest
- *     (`filterFinancialStatementsForFlatSpread`, SYS-2972); bank statements
+ *     (`filterFinancialStatementsForFlatSpread`); bank statements
  *     keep only the newest `statementDate` per period
- *     (`filterBankStatementsForFlatSpread`, SYS-2979). Both then spread
+ *     (`filterBankStatementsForFlatSpread`). Both then spread
  *     last-wins over whatever survives. EPF and payslip have no filter at
  *     all, so for them v1 is pure last-write-wins and the oracle below is
  *     unconditional. `financialYearEnd` has NO v1 wide column (it is on
@@ -2660,8 +2649,8 @@ describe('PARITY — the v1 sidecar and the v2 bridge must resolve the same numb
  *     map), so it never reaches an `InstanceRow` and the financial filter
  *     is not even expressible here. Replicating either would make this
  *     function a SECOND implementation of "which document is newest" —
- *     precisely the drift SYS-2994 was filed to stop on the finsys-api
- *     side — so it deliberately does not. Where a filter would change the
+ *     precisely the drift finsys-api's own guard exists to stop — so it
+ *     deliberately does not. Where a filter would change the
  *     answer, the old first-match rule was not right either; last-match is
  *     right whenever the newer document has the higher id, which is the
  *     ordinary case and the measured one.
@@ -2676,7 +2665,7 @@ interface SlotRow {
 /**
  * v1's flat spread for ONE sibling table, mirrored: id ASC, each row's
  * `toSuffixedObject()` merged into one accumulating object. A NULL-slot row
- * has no suffixed representation at all (SYS-3003) and contributes nothing.
+ * has no suffixed representation at all and contributes nothing.
  * Mirrored rather than imported for the same reason `v1SidecarRows` above
  * is: finsys-api is a different repo and this row shape is the contract.
  */
@@ -2840,7 +2829,7 @@ describe('SYS-3526 — a contested T-slot resolves LAST-WRITE-WINS on the flat p
   })
 })
 
-// ── SYS-3517: the PARITY SCOPE RULE, and the one open question in it ───
+// ── The PARITY SCOPE RULE, and the one open question in it ────────────────
 
 /**
  * WHEN THE PARITY ASSERTION APPLIES. Phase 5's mandate is that the eval
@@ -2874,23 +2863,22 @@ describe('SYS-3526 — a contested T-slot resolves LAST-WRITE-WINS on the flat p
  *    not be placed on the canonical plane, and `ihsCanonicalOverlayService`'s
  *    own M2 note says financial-statement T-slot columns are effectively
  *    unprojectable in exactly the two-rows-share-a-timePeriod state this
- *    ticket is about. That is a SECOND parity-defect class, adjacent to
- *    SYS-3517 and not fixed by it.
+ *    is about. That is a SECOND parity-defect class, adjacent to
+ *    this parity work and not fixed by it.
  *  - No sim fixture exercises the combination: joining `ihs_field_overlay`
  *    to `ihsfinancialstatement` returns NO application, so the 72-pair
- *    v1-vs-v2 sweep run for this ticket contains zero overlay-bearing
- *    financial-statement records and settles nothing here.
+ *    v1-vs-v2 sweep contains zero overlay-bearing financial-statement
+ *    records and settles nothing here.
  *
- * WHO SETTLES IT: SYS-3415's owner (that ticket is the Phase 5 work on this
- * overlay). What is needed first is the FIXTURE — an application submitted
+ * WHO SETTLES IT: the owner of the Phase 5 overlay work. What is needed first is the FIXTURE — an application submitted
  * through v1, edited through the overlay, carrying two financial-statement
  * documents — which does not exist anywhere today.
  */
 describe('PARITY SCOPE — the lender edit overlay (SYS-3517, open question; owner SYS-3415)', () => {
   it.skip('GATE — a v1-submitted, overlay-edited application evals the same under both read shapes', () => {
     // Flips to live when a fixture exists (finsim: v1 submission + lender
-    // overlay edit + two financial-statement documents) AND SYS-3415's owner
-    // confirms the overlay is a v1-vocabulary write. If it is NOT — if some
+    // overlay edit + two financial-statement documents) AND the Phase 5
+    // overlay work's owner confirms the overlay is a v1-vocabulary write. If it is NOT — if some
     // staged edit can only be expressed on the canonical plane — then this
     // assertion is wrong to make at all and this block should be DELETED
     // with that finding recorded, not made to pass.

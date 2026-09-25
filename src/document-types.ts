@@ -55,7 +55,7 @@
  *     financial statements and EPF statements are annual (EPF's own
  *     column names literally contain "Year", e.g. epfStatementYearT1).
  *
- * Mirrors the AdapterCategory pattern (SYS-2500): runtime lookup/grouping
+ * Mirrors the AdapterCategory pattern: runtime lookup/grouping
  * derived from JSON data, no compile-time exhaustiveness. Same trade-off
  * applies -- no autocomplete on a document-type string; a wrong one is
  * caught by isDocumentType/assertDocumentType at the trust boundary
@@ -78,7 +78,7 @@ export interface DocumentTypeGroup {
   /** Reserved for a future borrower-client payload-routing consolidation. Taken from the group's first entry; not enforced consistent across entries (all groups agree today, but a future mixed-format group would silently inherit the first entry's value). */
   readonly wireFormat?: WireFormat
   /**
-   * SYS-3705: the adapter category this type's extracted values land in,
+   * The adapter category this type's extracted values land in,
    * when the catalog DECLARES it (`extraction_category` on the group's
    * entries). Only a type with no v1 wide-table lineage needs to — for every
    * other type `extractionCategoryOf` derives the answer from the migration
@@ -103,7 +103,7 @@ export interface TaggedFieldData extends FieldData {
   /** What unit document_slot's number measures for this field. */
   time_period_unit?: TimePeriodUnit
   /**
-   * SYS-2873: languages this upload slot's per-file document-language
+   * Languages this upload slot's per-file document-language
    * selector offers (e.g. ["vi", "en"]). Presence of the tag is what makes
    * a renderer show the selector at all — entries without it (every
    * Malaysia slot) render no language UI. The uploader's per-file choice
@@ -114,7 +114,7 @@ export interface TaggedFieldData extends FieldData {
    */
   document_language_options?: readonly string[]
   /**
-   * SYS-3705: the adapter category this document type EXTRACTS INTO, for a
+   * The adapter category this document type EXTRACTS INTO, for a
    * type whose columns were never in the v1 wide table (so the migration map
    * cannot derive it). Every entry of a group that declares it must declare
    * the same value.
@@ -159,7 +159,7 @@ function buildDocumentTypeGroups(): readonly DocumentTypeGroup[] {
       })
     }
     const entry = byDocumentType.get(documentType)!
-    // SYS-3705: unlike wire_format (first entry wins, see DocumentTypeGroup),
+    // Unlike wire_format (first entry wins, see DocumentTypeGroup),
     // a disagreement here would route one type's extractions into two
     // categories depending on catalog order, so it is refused outright.
     if (f.extraction_category !== entry.extractionCategory) {

@@ -15,7 +15,7 @@
  */
 
 /**
- * Generic adapter category catalogue.
+ * Generic adapter category catalog.
  *
  * Each category declares the canonical field set produced by any
  * adapter of that category — regardless of vendor. This is the
@@ -30,18 +30,14 @@
  * these canonical fields; clients render against these canonical
  * fields. Vendor identity never crosses that boundary.
  *
- * SYS-2500 (extensible categories)
- * --------------------------------
- * The category id set used to be a hardcoded TypeScript union, kept in
- * sync by hand with the data file and the manifest JSON-schema enum
- * (three sources of truth, a drift test, and a deliberate edit in each
- * place to add a category). It is now backed by a single source of
- * truth: this package's `data/adapter-categories.json`, loaded +
- * validated into a runtime registry at module load. Adding a category
- * is a JSON-file edit plus a finsys-core minor bump — no union edit, no
- * schema enum edit. `AdapterCategory` is an open `string`; membership
- * is validated at trust boundaries via `isAdapterCategory()` /
- * `assertAdapterCategory()`.
+ * Extensible categories
+ * ----------------------
+ * The category id set is backed by a single source of truth: this
+ * package's `data/adapter-categories.json`, loaded + validated into a
+ * runtime registry at module load. Adding a category is a JSON-file edit
+ * plus a finsys-core minor bump — no union edit, no schema enum edit.
+ * `AdapterCategory` is an open `string`; membership is validated at trust
+ * boundaries via `isAdapterCategory()` / `assertAdapterCategory()`.
  */
 
 import categoriesData from "./data/adapter-categories.json" with { type: "json" };
@@ -57,9 +53,9 @@ import type {
 /**
  * Adapter category identifier.
  *
- * A LITERAL UNION, generated from the registry (SYS-3347). It was an open
- * `string` from the registry-loaded rework, on reasoning that was sound while the set only
- * GREW: growth is backwards-compatible, so a runtime check sufficed.
+ * A LITERAL UNION, generated from the registry. It was an open `string`
+ * on reasoning that was sound while the set only GREW: growth is
+ * backwards-compatible, so a runtime check sufficed.
  *
  * That stopped holding the moment names get RETIRED. The registry's own
  * lookups fail open by design — `resolveCanonicalCategoryId` answers null and
@@ -77,8 +73,8 @@ export type AdapterCategory = AdapterCategoryId;
 
 /**
  * Every canonical field name any category declares — a LITERAL UNION,
- * generated from the registry (SYS-3347). See `AdapterCategory` above for why
- * this is no longer `string`.
+ * generated from the registry. See `AdapterCategory` above for why this is
+ * no longer `string`.
  *
  * Adapter `produces` lists are typed `ReadonlyArray<CanonicalFieldName>`, so a
  * manifest naming a retired field now fails to compile. The host still
@@ -89,7 +85,7 @@ export type AdapterCategory = AdapterCategoryId;
 export type CanonicalFieldName = CanonicalFieldNameLiteral;
 
 /**
- * SYS-3728: every canonical field declared `type: "list"`, generated from the
+ * Every canonical field declared `type: "list"`, generated from the
  * registry. `Exclude<CanonicalFieldName, ListFieldName>` is the set a picker
  * offering scorable values may draw from.
  */
@@ -100,7 +96,7 @@ export type ListFieldName = ListFieldNameLiteral;
  * Frozen at module load — the data file is authoritative.
  */
 /**
- * SYS-3728: one column of a `list` field's rows.
+ * One column of a `list` field's rows.
  *
  * An item is NOT a canonical field. It has no fact, no confidentiality of its
  * own (it inherits the list's), is never addressable by an eval model and never
@@ -116,21 +112,21 @@ export interface ListItemSpec {
   readonly type: "string" | "number";
   /** `money` formats like any money cell; only on a `number` item. */
   readonly kind?: "money";
-  /** SYS-3728: effective maximum length — always present on a `string` item. */
+  /** Effective maximum length — always present on a `string` item. */
   readonly maxLength?: number;
-  /** SYS-3728: a full-match regex source, only where the writer provably normalizes the format. */
+  /** A full-match regex source, only where the writer provably normalizes the format. */
   readonly pattern?: string;
-  /** SYS-3728: as on a field — a per-jurisdiction full-match regex (a national id column). */
+  /** As on a field — a per-jurisdiction full-match regex (a national id column). */
   readonly jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>>;
-  /** SYS-3728: as on a field — an ISO calendar format, bounded (see `CanonicalFieldSpec.format`). */
+  /** As on a field — an ISO calendar format, bounded (see `CanonicalFieldSpec.format`). */
   readonly format?: "date" | "year";
-  /** SYS-3728: as on a field — the date may lie in the future (see `CanonicalFieldSpec.mayBeFuture`). */
+  /** As on a field — the date may lie in the future (see `CanonicalFieldSpec.mayBeFuture`). */
   readonly mayBeFuture?: true;
 }
 
 /**
- * SYS-3728: how the table columns of a multi-instance category WITHOUT a
- * period are labeled and ordered.
+ * How the table columns of a multi-instance category WITHOUT a period are
+ * labeled and ordered.
  *
  * A credit-bureau report carries one instance per report subject. Those are
  * not periods, so labeling them by the position fallback ("T1 · ccris") says
@@ -162,47 +158,46 @@ export interface CategoryInstanceColumns {
 export interface CanonicalFieldSpec {
   readonly name: CanonicalFieldName;
   /**
-   * SYS-3728 added `"list"`: a table the source prints, stored as a JSON
-   * STRING of an array of row objects (no storage change from the prose-typed
-   * string it replaced), with its columns declared in `items`. A list is never
-   * a scorable quantity: it declares no kind, unit, range or fact.
+   * `"list"`: a table the source prints, stored as a JSON STRING of an array
+   * of row objects, with its columns declared in `items`. A list is never a
+   * scorable quantity: it declares no kind, unit, range or fact.
    */
   readonly type: "number" | "boolean" | "string" | "list";
-  /** SYS-3728: present exactly when `type` is `"list"`. */
+  /** Present exactly when `type` is `"list"`. */
   readonly items?: ReadonlyArray<ListItemSpec>;
   /**
-   * SYS-3728: the longest value a writer may store, in UTF-16 code units.
-   * ALWAYS present on a built `string` field: the data file may raise it for a
+   * The longest value a writer may store, in UTF-16 code units. ALWAYS
+   * present on a built `string` field: the data file may raise it for a
    * field that legitimately holds longer printed text, and every other string
    * field gets `STRING_MAX_LENGTH_DEFAULT`. A field above that default is
    * "long text" and may contain a newline or a tab; no other field may.
    */
   readonly maxLength?: number;
   /**
-   * SYS-3728: a regex source every value must FULLY match, in every
-   * jurisdiction. Declared only where the writer provably normalizes the
-   * format (an ISO date the mapper already enforces) — never a guess at how a
-   * source prints something.
+   * A regex source every value must FULLY match, in every jurisdiction.
+   * Declared only where the writer provably normalizes the format (an ISO
+   * date the mapper already enforces) — never a guess at how a source
+   * prints something.
    */
   readonly pattern?: string;
   /**
-   * SYS-3728: a full-match regex per jurisdiction, for a format that differs
-   * by country (a national id). Applied ONLY under the jurisdiction the caller
+   * A full-match regex per jurisdiction, for a format that differs by
+   * country (a national id). Applied ONLY under the jurisdiction the caller
    * names; an absent, unknown or pattern-less jurisdiction gets the
    * jurisdiction-independent rules alone — never Malaysia's by default.
    */
   readonly jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>>;
-  /** SYS-3728: the most rows a list may hold. ALWAYS present on a built `list` field. */
+  /** The most rows a list may hold. ALWAYS present on a built `list` field. */
   readonly maxItems?: number;
   /**
-   * SYS-3728: a calendar format the writer provably normalizes to — `"date"`
+   * A calendar format the writer provably normalizes to — `"date"`
    * (ISO YYYY-MM-DD, a real date, year 0001–9999) or `"year"` (YYYY, 0001–
    * 9999). Checked by arithmetic, not by a pattern: a pattern proves the
    * shape of 2026-02-30, not that the day exists.
    */
   readonly format?: "date" | "year";
   /**
-   * SYS-3728: a dated value is PLAUSIBLE, not merely calendar-valid: never
+   * A dated value is PLAUSIBLE, not merely calendar-valid: never
    * before 1900-01-01 and, by default, never after the validator's clock
    * (today, UTC, plus one day for time zones). A field that legitimately
    * names a future date — a hearing, a business registration's expiry, the
@@ -212,12 +207,12 @@ export interface CanonicalFieldSpec {
    */
   readonly mayBeFuture?: true;
   /**
-   * SYS-3728: a `format: "date"` field of the same category this one may not
+   * A `format: "date"` field of the same category this one may not
    * follow — a period start is not after its end.
    */
   readonly notAfter?: string;
   /**
-   * SYS-3728: display words for codes the CATEGORY itself defines (a
+   * Display words for codes the CATEGORY itself defines (a
    * management account's `mgmtPeriodSource` "own" / "comparative", its
    * `mgmtStatementsRead` "BS,PL"), keyed by the stored value. Presentation
    * only: the table builder prints the label in `formattedData` and leaves
@@ -229,7 +224,7 @@ export interface CanonicalFieldSpec {
    */
   readonly valueLabels?: Readonly<Record<string, string>>;
   /**
-   * SYS-3728: this enum records WHERE the category's `kind: "currency"` field
+   * This enum records WHERE the category's `kind: "currency"` field
    * came from — `"printed"` (on the statement) or `"inferred"` (not printed;
    * the writer took the application jurisdiction's own currency). The
    * extraction-level rule (`currency-source-mismatch`): a source describes a
@@ -256,8 +251,8 @@ export interface CanonicalFieldSpec {
    */
   readonly fact?: string;
   /**
-   * SYS-3333: the name this field had in the LEGACY flat vocabulary, when
-   * the canonical rename moved it.
+   * The name this field had in the LEGACY flat vocabulary, when the
+   * canonical rename moved it.
    *
    * It exists because the two vocabularies were identical until the rename,
    * and code quietly relied on that. `isMonetaryField` in ihs-processing.ts
@@ -265,9 +260,9 @@ export interface CanonicalFieldSpec {
    * against the set of CANONICAL names declared `kind: "money"`. That worked
    * only while `payslipGrossPay` was both. Rename the canonical side alone
    * and the lookup silently misses — a money value renders as a bare number
-   * beside its denominated neighbours, which is the precise failure
-   * SYS-3249's denomination work exists to prevent. No exception, no log
-   * line, just a wrong-looking table.
+   * beside its denominated neighbors, which is the precise failure this
+   * field exists to prevent. No exception, no log line, just a
+   * wrong-looking table.
    *
    * So the alias lives ON the field it renames rather than in a side map: a
    * side map can drift, and this one is load-bearing for as long as the flat
@@ -295,7 +290,7 @@ export interface CanonicalFieldSpec {
    * string-normalized) and MUST NOT declare a `range` (labels are
    * unordered).
    *
-   * `"money"` (SYS-3249): the field's value is a monetary amount, and is
+   * `"money"`: the field's value is a monetary amount, and is
    * therefore INCOMPLETE ON ITS OWN. The primitive is still a number —
    * which is why this is a refinement of `type` rather than a member of
    * it — but the number means nothing without a denomination, and the
@@ -316,15 +311,15 @@ export interface CanonicalFieldSpec {
    */
   readonly kind?: "enum" | "money" | "currency";
   /**
-   * SYS-3164: the field's confidentiality class. The ONLY way to declare
-   * one is to opt OUT.
+   * The field's confidentiality class. The ONLY way to declare one is to
+   * opt OUT.
    *
    * ABSENT MEANS SENSITIVE. There is deliberately no `"sensitive"`
    * spelling: a field is sensitive unless someone has looked at it and
    * said otherwise, so the failure mode of forgetting is a field that is
    * over-protected, never one that is silently exposed. That polarity is
    * not a preference — it is the lesson already recorded in finhub's
-   * SYS-2806 audit-redaction allowlist, where "a newly added IHS column
+   * audit-redaction allowlist, where "a newly added IHS column
    * that's never classified here defaults to sensitive, not safe" is the
    * property that makes the list safe to add columns around. An opt-in
    * `sensitive: true` flag inverts exactly that: every field anyone
@@ -351,17 +346,17 @@ export interface CanonicalFieldSpec {
    * under its own retention window. Encrypting the canonical column
    * while the identical value sits in the clear next to it makes the
    * guarantee "at rest, in one of two places" — so the consumer that
-   * honours this must cover both, or say plainly that it does not.
+   * honors this must cover both, or say plainly that it does not.
    *
    * Shared-fact attestations must AGREE on this (enforced at load): one
    * real-world fact cannot be sensitive when a document attests it and
    * non-sensitive when a form does.
    *
-   * SYS-3171: ALWAYS PRESENT on a built spec, even though authoring stays
+   * ALWAYS PRESENT on a built spec, even though authoring stays
    * opt-out-only (see RawCategoryField, where it remains optional and
    * `"sensitive"` is still unspellable). The asymmetry is the point.
    *
-   * The registry is serialised verbatim to finhub and finsys-client, and
+   * The registry is serialized verbatim to finhub and finsys-client, and
    * on that wire "absent means sensitive" is carried by NOTHING — a
    * consumer writing `if (field.confidentiality) protect()` reads exactly
    * backwards and compiles clean. Emitting the value explicitly makes the
@@ -384,7 +379,7 @@ export interface CategorySchema {
   readonly description: string;
   readonly canonicalTable: string;
   /**
-   * SYS-3333: the id this category had before it was renamed.
+   * The id this category had before it was renamed.
    *
    * The transition has to be COMPATIBLE: a manifest that registered yesterday
    * must register today. So a legacy id is not decoration — the host resolves
@@ -392,31 +387,29 @@ export interface CategorySchema {
    * name the operator never chose to change.
    *
    * A legacy id may never collide with a LIVE id (enforced below). That rule
-   * is why the two bank categories kept their names in this release: reusing
-   * `bank-statement` for the document category would have made a pre-sweep
-   * manifest saying `bank-statement` genuinely ambiguous — the partner feed
-   * before, the document after — with no correct resolution. Renaming them
-   * waits for the deprecation window to close.
+   * is why the two bank categories keep their names: reusing `bank-statement`
+   * for the document category would make a pre-sweep manifest saying
+   * `bank-statement` genuinely ambiguous — the partner feed before, the
+   * document after — with no correct resolution. Renaming them waits for the
+   * deprecation window to close.
    */
   readonly legacyId?: string;
   /**
-   * SYS-3739: whether a credit reporting agency may ever receive this
-   * category. `processor-only` data was obtained by the host acting as a
-   * processor for someone else (a bureau report a lender bought), so it is
-   * never releasable to a bureau, whatever the relationship of the program
-   * that holds it. Required on every category: a new category cannot ship
-   * without someone deciding which side of that line it sits on.
+   * Whether a credit reporting agency may ever receive this category.
+   * `processor-only` data was obtained while acting as a processor for someone
+   * else (a bureau report a lender bought), so it is never releasable to a
+   * bureau. Required, so no category ships without that decision.
    */
   readonly egressClass: CategoryEgressClass;
-  /** SYS-3728: see `CategoryInstanceColumns`. Absent for every periodised category. */
+  /** See `CategoryInstanceColumns`. Absent for every periodized category. */
   readonly instanceColumns?: CategoryInstanceColumns;
   /**
-   * SYS-3728: the most reporting periods one instance carries — a period
-   * position above it is refused. Absent: positions are capped at 100.
+   * The most reporting periods one instance carries — a period position
+   * above it is refused. Absent: positions are capped at 100.
    */
   readonly maxPeriods?: number;
   /**
-   * SYS-3728: the fields that describe a reporting period's own extent, so a
+   * The fields that describe a reporting period's own extent, so a
    * writer's extraction can be held consistent with itself: an envelope
    * `periods[].start` / `.end` that disagrees with the period's `start` /
    * `end` field, or a `year` field that is not the year of the `end` field,
@@ -425,9 +418,9 @@ export interface CategorySchema {
    */
   readonly periodFields?: CategoryPeriodFields;
   /**
-   * SYS-3728 round 3: fields an instance must carry — each group needs at
-   * least ONE of its fields present (in `values` or any period's), optionally
-   * only for instances whose `when` field holds a given value. A group marked
+   * Fields an instance must carry — each group needs at least ONE of its
+   * fields present (in `values` or any period's), optionally only for
+   * instances whose `when` field holds a given value. A group marked
    * `identity` is the instance's identity (a subject's name, its identifier)
    * and is reported as `missing-identity`; any other as `missing-required`.
    * Declared here rather than coded into the validator, so the next category
@@ -437,23 +430,23 @@ export interface CategorySchema {
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
 }
 
-/** SYS-3739: see `CategorySchema.egressClass`. */
+/** See `CategorySchema.egressClass`. */
 export type CategoryEgressClass = "contributable" | "processor-only";
 
-/** SYS-3739: every value `CategorySchema.egressClass` may take. */
+/** Every value `CategorySchema.egressClass` may take. */
 export const CATEGORY_EGRESS_CLASSES: ReadonlyArray<CategoryEgressClass> = Object.freeze([
   "contributable",
   "processor-only",
 ]);
 
-/** SYS-3728: see `CategorySchema.requiredAnyOf`. */
+/** See `CategorySchema.requiredAnyOf`. */
 export interface CategoryRequirement {
   readonly anyOf: ReadonlyArray<string>;
   readonly when?: { readonly field: string; readonly equals: string };
   readonly identity?: true;
 }
 
-/** SYS-3728: see `CategorySchema.periodFields`. */
+/** See `CategorySchema.periodFields`. */
 export interface CategoryPeriodFields {
   readonly start?: string;
   readonly end?: string;
@@ -506,8 +499,8 @@ interface RawCategoryData {
 // ── Registry: load-time validation + indexing ────────────────────────
 
 /*
- * SYS-3347 — the two narrowing points, and why a cast is correct here rather
- * than a smell.
+ * The two narrowing points, and why a cast is correct here rather than a
+ * smell.
  *
  * `AdapterCategory` and `CanonicalFieldName` are literal unions GENERATED FROM
  * this very JSON file. So inside the loader, a name read out of it is a member
@@ -548,14 +541,13 @@ const LIST_ITEM_PROPERTIES = new Set([
 ]);
 
 /**
- * SYS-3728: the effective maxLength of every string field and string list item
- * that declares none. Measured, not guessed: across the 88,336 string values
- * in finsim's canonical tables on 2026-09-23 the longest scalar was 109
- * characters. A field that legitimately holds longer printed text declares its
- * own `maxLength`.
+ * The effective maxLength of every string field and string list item that
+ * declares none. Measured, not guessed, against finsim's canonical tables,
+ * comfortably above the longest scalar seen. A field that legitimately holds
+ * longer printed text declares its own `maxLength`.
  */
 export const STRING_MAX_LENGTH_DEFAULT = 256;
-/** SYS-3728: the effective maxItems of every list that declares none. */
+/** The effective maxItems of every list that declares none. */
 export const LIST_MAX_ITEMS_DEFAULT = 500;
 /** The storage ceiling of a MySQL TEXT column, in characters of the narrowest encoding. */
 const STRING_MAX_LENGTH_CEILING = 65535;
@@ -570,7 +562,7 @@ function compiles(source: string): boolean {
   }
 }
 
-/** SYS-3728: `maxLength` / `pattern` / `jurisdictionPatterns` on a string field or item. */
+/** `maxLength` / `pattern` / `jurisdictionPatterns` on a string field or item. */
 function validateStringConstraints(
   at: string,
   type: string,
@@ -611,7 +603,7 @@ function validateStringConstraints(
     ...(jurisdictionPatterns !== undefined ? { jurisdictionPatterns: Object.freeze(jurisdictionPatterns) } : {}),
   };
 }
-/** SYS-3728: `valueLabels` — a string field's stored value → its display words. */
+/** `valueLabels` — a string field's stored value → its display words. */
 function validateValueLabels(at: string, type: string, raw: unknown): Readonly<Record<string, string>> | undefined {
   if (raw === undefined) return undefined;
   if (type !== "string") throw new Error(`${at} declares valueLabels, but only a string field has coded values (it is ${type})`);
@@ -628,7 +620,7 @@ function validateValueLabels(at: string, type: string, raw: unknown): Readonly<R
   return Object.freeze(out);
 }
 
-/** SYS-3728: `format` / `mayBeFuture` on a string field or item. */
+/** `format` / `mayBeFuture` on a string field or item. */
 function validateFormat(
   at: string,
   type: string,
@@ -655,7 +647,7 @@ function validateFormat(
 
 const PERIOD_FIELDS_PROPERTIES: Readonly<Record<string, "date" | "year">> = { start: "date", end: "date", year: "year" };
 
-/** SYS-3728: validate a category's `periodFields` against its own fields. */
+/** Validate a category's `periodFields` against its own fields. */
 function validatePeriodFields(raw: unknown, fields: ReadonlyArray<RawCategoryField>, where: string): CategoryPeriodFields {
   const at = `adapter category data: ${where} periodFields`;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} must be an object`);
@@ -672,7 +664,7 @@ function validatePeriodFields(raw: unknown, fields: ReadonlyArray<RawCategoryFie
   return Object.freeze(out);
 }
 
-/** SYS-3728: validate a category's `requiredAnyOf` against its own fields. */
+/** Validate a category's `requiredAnyOf` against its own fields. */
 function validateRequiredAnyOf(raw: unknown, fields: ReadonlyArray<RawCategoryField>, where: string): ReadonlyArray<CategoryRequirement> {
   const at = `adapter category data: ${where} requiredAnyOf`;
   if (!Array.isArray(raw) || raw.length === 0) throw new Error(`${at} must be a non-empty array of groups`);
@@ -714,8 +706,8 @@ function validateRequiredAnyOf(raw: unknown, fields: ReadonlyArray<RawCategoryFi
 const INSTANCE_COLUMNS_PROPERTIES = new Set(["labelField", "roleField", "roleOrder", "sequenceField", "documentLabelField"]);
 
 /**
- * SYS-3728: validate a list field's `items`, and refuse everything a list
- * cannot mean. Returns the frozen item specs.
+ * Validate a list field's `items`, and refuse everything a list cannot
+ * mean. Returns the frozen item specs.
  */
 function validateListField(f: RawCategoryField, where: string): ReadonlyArray<ListItemSpec> {
   const at = `adapter category data: list "${f.name}" (${where})`;
@@ -775,7 +767,7 @@ function validateListField(f: RawCategoryField, where: string): ReadonlyArray<Li
   return Object.freeze(items);
 }
 
-/** SYS-3728: validate a category's `instanceColumns` against its own fields. */
+/** Validate a category's `instanceColumns` against its own fields. */
 function validateInstanceColumns(
   raw: unknown,
   fields: ReadonlyArray<RawCategoryField>,
@@ -835,17 +827,16 @@ const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> 
 ];
 
 /**
- * SYS-3249: the closed set of units a field may declare, and — more to
- * the point — the set a currency can never join.
+ * The closed set of units a field may declare, and — more to the point —
+ * the set a currency can never join.
  *
  * Every member is an INTRINSIC unit of measure: a property of the
  * quantity itself, true wherever it is observed. A currency is not that.
  * It is a property of the OBSERVATION, it varies between two values of
  * the same field, and one source can report several in a single document
  * (an FX transaction on a bank statement, cross-border settlement on a
- * payment network). Declaring `unit: "MYR"` on a field said something
- * about the field that was only ever true of Malaysian data, and 143
- * fields said it.
+ * payment network). Declaring `unit: "MYR"` on a field says something
+ * about the field that is only ever true of Malaysian data.
  *
  * Money is expressed as `kind: "money"` instead, and the denomination
  * travels with the value on its provenance envelope.
@@ -858,9 +849,9 @@ const VALID_FIELD_KINDS: ReadonlyArray<NonNullable<CanonicalFieldSpec["kind"]>> 
  */
 const VALID_FIELD_UNITS: ReadonlyArray<string> = [
   "ratio",
-  // SYS-3336: a residency duration is collected as YEARS and MONTHS in two
-  // separate inputs, and form intake has no transform slot to fold them into
-  // one figure — so both have to be expressible. The numeric-unit guard asking
+  // A residency duration is collected as YEARS and MONTHS in two separate
+  // inputs, and form intake has no transform slot to fold them into one
+  // figure — so both have to be expressible. The numeric-unit guard asking
   // for this is the guard working: a bare number of years beside a number of
   // months is exactly the ambiguity it exists to refuse.
   "years",
@@ -875,22 +866,22 @@ const VALID_FIELD_UNITS: ReadonlyArray<string> = [
 ];
 
 /**
- * SYS-3164. One entry, and that is the point — see `confidentiality` on
+ * One entry, and that is the point — see `confidentiality` on
  * `CanonicalFieldSpec`. "sensitive" is unspellable because it is the
  * default; the only declarable value is the opt-out.
  */
 /**
- * SYS-3333: a canonical field name must not encode its denomination.
- * ISO-4217-shaped suffix, matched title-case because that is how these names
- * were formed (`telcoArpuMyr`, `arTotalOutstandingMyr`).
+ * A canonical field name must not encode its denomination. ISO-4217-shaped
+ * suffix, matched title-case because that is how these names were formed
+ * (`telcoArpuMyr`, `arTotalOutstandingMyr`).
  */
 const CURRENCY_SUFFIXED = /(Myr|Usd|Eur|Gbp|Sgd|Vnd|Thb|Idr|Php|Jpy|Cny|Aud)$/;
 
 /**
- * SYS-3333: the retired window convention. `T3`/`T12` said the same thing as
- * `3m`/`12m` in a second dialect, and the T-form additionally collides with
- * the legacy flat T-suffix (`revenueT1`), which means a period position, not a
- * window length — two different ideas wearing one spelling.
+ * The retired window convention. `T3`/`T12` said the same thing as `3m`/`12m`
+ * in a second dialect, and the T-form additionally collides with the legacy
+ * flat T-suffix (`revenueT1`), which means a period position, not a window
+ * length — two different ideas wearing one spelling.
  */
 const T_WINDOW_SUFFIXED = /T\d+$/;
 
@@ -904,7 +895,7 @@ const VALID_FIELD_CONFIDENTIALITY: ReadonlyArray<
  * conforming data object in tests via `buildCategoryRegistry`).
  */
 /*
- * SYS-3347 — the lookup maps are keyed by `string`, deliberately.
+ * The lookup maps are keyed by `string`, deliberately.
  *
  * Their whole job is to answer "is this arbitrary value one of ours?", so a
  * union key would reject the untrusted input they exist to test —
@@ -931,7 +922,7 @@ export interface CategoryRegistry {
   /** fact id → every category attesting it, in data-file order. */
   readonly factToCategories: ReadonlyMap<string, ReadonlyArray<AdapterCategory>>;
   /**
-   * SYS-3333: legacy flat name → the canonical name that replaced it.
+   * Legacy flat name → the canonical name that replaced it.
    *
    * One-way and transitional. It exists so code that is handed a FLAT
    * column name can reach the canonical field's declarations (is it money?
@@ -945,8 +936,8 @@ export interface CategoryRegistry {
  * Validate + index raw category data into an immutable registry.
  *
  * Pure function — exported so the loader can be exercised against
- * fixture data in tests (SYS-2500: prove the registry is genuinely
- * data-driven, not hardcoded). Throws on ANY structural violation so a
+ * fixture data in tests, proving the registry is genuinely data-driven,
+ * not hardcoded. Throws on ANY structural violation so a
  * malformed JSON edit fails loudly at module load rather than producing
  * silent gaps at read time. The invariants enforced here are the ones
  * the old test suite asserted after the fact; making them load-time
@@ -967,8 +958,8 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
   const fieldToCategory = new Map<string, AdapterCategory>();
   const fieldToFact = new Map<string, string>();
   const factToCategories = new Map<string, AdapterCategory[]>();
-  // SYS-3333: legacy flat name -> canonical name. Validated below against
-  // BOTH namespaces: a legacy name may not shadow a live canonical name
+  // Legacy flat name -> canonical name. Validated below against BOTH
+  // namespaces: a legacy name may not shadow a live canonical name
   // (the lookup would be ambiguous), and two fields may not claim the same
   // legacy name (the lookup would be wrong for one of them).
   const legacyToCanonical = new Map<string, CanonicalFieldName>();
@@ -982,8 +973,8 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     {
       fact: string | undefined;
       kind: RawCategoryField["kind"];
-      // SYS-3350: carried so shared-fact attestations can be checked for
-      // agreement on them, not just on fact/kind/confidentiality.
+      // Carried so shared-fact attestations can be checked for agreement on
+      // them, not just on fact/kind/confidentiality.
       type: RawCategoryField["type"];
       unit: RawCategoryField["unit"];
       constraints: string;
@@ -1009,20 +1000,15 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     if (typeof cat.description !== "string" || cat.description.length === 0) {
       throw new Error(`adapter category data: ${where} needs a non-empty description`);
     }
-    // Canonical tables live in the host's IHS namespace. Originally every
-    // category stored into a dedicated `ihs_alt_data_*` table; since the
-    // document-extraction categories (SYS-2998), a category may instead be
-    // canonical over a promoted legacy sibling table (`ihsbankstatement`,
-    // `ihsepfstatement`, ...) — so the invariant is the namespace prefix,
-    // not the alt-data naming scheme.
+    // Canonical tables live in the host's IHS namespace: either a dedicated
+    // `ihs_alt_data_*` table, or a promoted legacy sibling table
+    // (`ihsbankstatement`, `ihsepfstatement`, ...) — the invariant is the
+    // namespace prefix, not the alt-data naming scheme.
     //
-    // SYS-3327: the physical schema has ONE camel-cased table, `ihsPayslip`,
-    // and the database runs lower_case_table_names=0, so case is part of the
-    // name. This rule used to be lowercase-only — which meant the payslip
-    // declaration COULD NOT be written correctly and was written wrong, and
-    // its own test restated the wrong literal. The namespace prefix is the
-    // invariant; the case is the schema's to dictate. (SYS-3341 derives the
-    // table from the category id and retires the question.)
+    // The physical schema has ONE camel-cased table, `ihsPayslip`, and the
+    // database runs lower_case_table_names=0, so case is part of the name.
+    // The namespace prefix is the invariant; the case is the schema's to
+    // dictate.
     if (typeof cat.canonicalTable !== "string" || !/^ihs[A-Za-z0-9_]*$/.test(cat.canonicalTable)) {
       throw new Error(
         `adapter category data: ${where} canonicalTable must be an "ihs"-prefixed table identifier (got "${cat.canonicalTable}")`,
@@ -1072,14 +1058,10 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
             `canonical name — a legacyName records a rename, so an unchanged name must not declare one`,
         );
       }
-      // SYS-3333 — the naming conventions, ENFORCED rather than merely applied.
-      //
-      // The sweep that produced this vocabulary found 5 currency-suffixed
-      // names, 15 window-suffixed names in TWO conventions, and ~50 names
-      // repeating their own source. None of that was anyone's decision; it
-      // accumulated because nothing refused it. A one-time cleanup with no
-      // guard is a cleanup that happens again in a year, and this vocabulary
-      // is about to be read by a regulated credit bureau.
+      // The naming conventions here are enforced, not merely applied by
+      // convention — this vocabulary is read by a regulated credit bureau,
+      // so drift has to be a load error rather than something review has
+      // to catch.
       //
       // Only mechanically-decidable rules live here. "A name should not repeat
       // its source" needs judgement (`statementDate` in a bank-statement
@@ -1120,7 +1102,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       // `fact` id — the declarations are then independent attestations
       // of one shared real-world fact. A name declared with a fact in
       // one place and without (or with a different fact) elsewhere is
-      // the SYS-2722 drift pattern and is refused at load time.
+      // drift, and is refused at load time.
       const prior = declarations.get(f.name);
       if (prior) {
         if (prior.categories.includes(asCategoryId(cat.id))) {
@@ -1152,17 +1134,14 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
               `shared-fact attestations must agree on kind`,
           );
         }
-        // SYS-3350: `type` and `unit` were the last unpoliced properties of a
-        // shared fact, and `type` is the one the `kind` clause above only
-        // APPEARS to cover.
-        //
-        // kind implies type for money and enum, so that subset was already
-        // caught. The six kind-less shared facts — personName, personIdNumber,
-        // personAddress, companyName, companyRegNo, companyIncorporationDate —
-        // had nothing checking them at all. A review demonstrated it by
-        // mutation: setting epf-statement's personName to `type: "number"`
-        // LOADED CLEAN, after which allCategories() served one fact as a string
-        // from three categories and a number from a fourth.
+        // `type` and `unit` are the last unpoliced properties of a shared
+        // fact, and `type` is the one the `kind` clause above only APPEARS to
+        // cover: kind implies type for money and enum, so that subset is
+        // already caught. The six kind-less shared facts — personName,
+        // personIdNumber, personAddress, companyName, companyRegNo,
+        // companyIncorporationDate — have nothing else checking they agree:
+        // without this, one fact could be served as a string by three
+        // categories and a number by a fourth.
         //
         // Cross-source comparability is the entire reason a fact id exists. Two
         // attestations that cannot be compared as the same primitive are not
@@ -1193,7 +1172,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
               `unit, or one number means two different quantities`,
           );
         }
-        // SYS-3164: same drift class again. One real-world fact cannot be
+        // Same drift class again. One real-world fact cannot be
         // sensitive when a document attests it and non-sensitive when a
         // form does — storage would then hold the two attestations of one
         // fact under different protection, and which one you got would
@@ -1227,7 +1206,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           `adapter category data: field "${f.name}" (${where}) has invalid type "${f.type}"`,
         );
       }
-      // SYS-3728: checked before the kind/unit/range rules below so a list
+      // Checked before the kind/unit/range rules below so a list
       // carrying one fails with the list's own reason, not a generic one.
       let listItems: ReadonlyArray<ListItemSpec> | undefined;
       let maxItems: number | undefined;
@@ -1246,11 +1225,10 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
           `adapter category data: field "${f.name}" (${where}) declares items, but only a list has items (it is ${f.type})`,
         );
       }
-      // SYS-3249: `unit` is checked for EVERY field, kind or not. It was
-      // free-form until now and read by nothing but the spec builder, so
-      // an unusable value could sit in the contract indefinitely without
-      // anything noticing — which is exactly what 143 fields declaring
-      // `unit: "MYR"` did. Closing the set is the control.
+      // `unit` is checked for EVERY field, kind or not. Free-form, it is
+      // read by nothing but the spec builder, so an unusable value could
+      // sit in the contract indefinitely without anything noticing.
+      // Closing the set is the control.
       if (f.unit !== undefined && !VALID_FIELD_UNITS.includes(f.unit)) {
         const looksLikeCurrency = /^[A-Z]{3}$/.test(f.unit);
         throw new Error(
@@ -1361,8 +1339,8 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
         ...(f.fact !== undefined ? { fact: f.fact } : {}),
         ...(f.legacyName !== undefined ? { legacyName: f.legacyName } : {}),
         ...(f.kind !== undefined ? { kind: f.kind } : {}),
-        // SYS-3171: resolved, never conditional — absence in the data file
-        // means sensitive, and the built spec says so out loud.
+        // Resolved, never conditional — absence in the data file means
+        // sensitive, and the built spec says so out loud.
         confidentiality: f.confidentiality ?? "sensitive",
       });
       fields.push(spec);
@@ -1457,8 +1435,8 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     all.push(schema);
   }
 
-  // SYS-3333 — a legacy category id must resolve to exactly one live category,
-  // and must not shadow one. Checked before the field-level pass so a
+  // A legacy category id must resolve to exactly one live category, and
+  // must not shadow one. Checked before the field-level pass so a
   // structurally impossible alias fails on its own terms.
   for (const cat of raw.categories) {
     if (cat.legacyId === undefined) continue;
@@ -1487,9 +1465,9 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     }
   }
 
-  // SYS-3333 — deferred to here on purpose. A legacy alias may legally be
-  // declared BEFORE the canonical field that would shadow it appears later in
-  // the file, so the check is only sound once every category is indexed.
+  // Deferred to here on purpose. A legacy alias may legally be declared
+  // BEFORE the canonical field that would shadow it appears later in the
+  // file, so the check is only sound once every category is indexed.
   for (const [legacy, canonical] of legacyToCanonical) {
     if (declarations.has(legacy)) {
       throw new Error(
@@ -1559,7 +1537,7 @@ export function categoryFieldsOf(id: AdapterCategory): ReadonlyArray<CanonicalFi
 }
 
 /**
- * SYS-3728: is this a list field — a table of rows, never a scorable value?
+ * Is this a list field — a table of rows, never a scorable value?
  *
  * The one question every field picker and numeric/money classifier has to ask
  * before treating a field as a quantity. A list's stored value is a JSON
@@ -1571,7 +1549,7 @@ export function isListField(spec: Pick<CanonicalFieldSpec, "type">): boolean {
 }
 
 /**
- * SYS-3164: is this field of this category sensitive?
+ * Is this field of this category sensitive?
  *
  * Answers TRUE for anything not explicitly declared `"non-sensitive"` —
  * including a field name the category does not declare at all. That last
@@ -1587,7 +1565,7 @@ export function isFieldSensitive(id: AdapterCategory, field: CanonicalFieldName)
 }
 
 /**
- * SYS-3164: every field of this category that is sensitive — i.e. every
+ * Every field of this category that is sensitive — i.e. every
  * field that did not opt out. The complement of the declared
  * `"non-sensitive"` set, so a newly added field appears here until
  * someone classifies it.
@@ -1656,7 +1634,7 @@ export function factOf(field: CanonicalFieldName): string | null {
 }
 
 /**
- * SYS-3333: resolve a category id from EITHER vocabulary to the canonical one.
+ * Resolve a category id from EITHER vocabulary to the canonical one.
  *
  * Returns `id` unchanged when it is already a live category id, the canonical
  * id when `id` is a recorded `legacyId`, and null when it is neither. The
@@ -1680,7 +1658,7 @@ export function resolveCanonicalCategoryId(id: string): AdapterCategory | null {
 }
 
 /**
- * SYS-3333: true when `id` is a RETIRED category id rather than a live one.
+ * True when `id` is a RETIRED category id rather than a live one.
  *
  * Callers use this to decide whether to emit a deprecation warning — the
  * resolution itself is the same either way, and a caller that cannot tell the
@@ -1691,11 +1669,11 @@ export function isLegacyCategoryId(id: string): boolean {
 }
 
 /**
- * SYS-3333: resolve a field name from EITHER vocabulary to the canonical one.
+ * Resolve a field name from EITHER vocabulary to the canonical one.
  *
  * Returns `name` unchanged when it is already canonical, the canonical name
  * when `name` is a recorded `legacyName`, and null when it is neither — so a
- * caller can tell a rename it must honour from a typo it must refuse.
+ * caller can tell a rename it must honor from a typo it must refuse.
  *
  * TRANSITIONAL. It exists because artifacts written under the old vocabulary
  * are still in circulation — partner manifests, pushed assertions, eval models
@@ -1740,7 +1718,7 @@ export function isAdapterCategory(id: string): boolean {
  * is an open `string`, so there is no type-level narrowing to apply.
  * The companion to `isAdapterCategory` for call sites that want a hard
  * failure (e.g. the host rejecting a manifest whose category isn't in
- * this finsys-core version's catalogue).
+ * this finsys-core version's catalog).
  */
 export function assertAdapterCategory(id: string): AdapterCategory {
   if (!registry.byId.has(id)) {

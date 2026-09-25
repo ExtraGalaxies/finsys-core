@@ -10,12 +10,12 @@ import {
 type CategoryField = ReturnType<typeof categorySchemaOf>["fields"][number];
 
 /**
- * SYS-3337 — applicant-employment and applicant-income.
+ * applicant-employment and applicant-income.
  *
  * These are the first applicant-typed categories that genuinely SHARE facts
  * with a document category. applicant-identity shares with the IC, but only
- * because SYS-3333 had already de-prefixed it; here the pairing is the point
- * of the ticket: a borrower's stated employer and stated income competing with
+ * because that field was already de-prefixed; here the pairing is the
+ * point: a borrower's stated employer and stated income competing with
  * what their payslip says is the highest-value comparison the disagreement
  * surface will see on this data.
  *
@@ -31,7 +31,7 @@ type CategoryField = ReturnType<typeof categorySchemaOf>["fields"][number];
  * the SPA bundle rather than stored as rows — and those three columns arrive
  * only from there. Customer-facing forms, invisible to the query of record.
  *
- * SYS-3359 carries subject-company at its measured three fields. Any future
+ * subject-company carries its measured three fields. Any future
  * "no live form collects this" claim has to name WHICH population it queried,
  * or it will be this same mistake wearing a different column name.
  */
@@ -63,9 +63,8 @@ describe("applicant-employment (SYS-3337)", () => {
   });
 
   /**
-   * The pairing this ticket exists for. The payslip attests employerName from
-   * the document side — SYS-3333 de-prefixed it from payslipEmployerName,
-   * which is precisely the dependency the ticket was blocked on.
+   * The pairing this category exists for. The payslip attests employerName
+   * from the document side, de-prefixed from payslipEmployerName.
    */
   it("co-attests employerName with the payslip", () => {
     const f = categorySchemaOf("applicant-employment").fields.find(
@@ -162,8 +161,7 @@ describe("applicant-income (SYS-3337)", () => {
    *
    *   - the fact makes it comparable across sources
    *   - kind "money" makes it denominated, so it renders with a currency
-   *   - legacyName keeps isMonetaryField answering to the FLAT column name,
-   *     which is the whole reason SYS-3333 added the alias
+   *   - legacyName keeps isMonetaryField answering to the FLAT column name
    */
   it("co-attests grossPay and netPay with the payslip, as money, without losing the flat name", () => {
     const by = new Map(categorySchemaOf("applicant-income").fields.map((f) => [f.name, f] as const));

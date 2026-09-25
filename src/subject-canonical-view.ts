@@ -15,16 +15,14 @@
  */
 
 /**
- * SYS-3542 (SYS-3463a) — the merge that builds a `SubjectCanonicalView` out
- * of several furnished records' `CanonicalView`s.
+ * The merge that builds a `SubjectCanonicalView` out of several furnished
+ * records' `CanonicalView`s.
  *
- * SYS-3554 GAVE THIS FUNCTION A FURNISHER AXIS, and it is the reason most of
- * the paragraphs below were rewritten rather than extended. A bureau
- * aggregates from MANY furnishers, each running their own finsys-api
- * instance; this function was built when there was one, and it used that one
+ * THIS FUNCTION HAS A FURNISHER AXIS. A bureau aggregates from MANY
+ * furnishers, each running their own finsys-api instance; using any one
  * instance's auto-increment primary key (`ihsId`) as a global identity, as an
- * instance-key qualifier, and as a recency proxy. All three break on the
- * second furnisher, and two of the three break SILENTLY: lender A's
+ * instance-key qualifier, or as a recency proxy breaks on the second
+ * furnisher, and two of the three break SILENTLY: lender A's
  * application 7 and lender B's application 7 are the same number, so their
  * documents merged under one qualified key (one lender's financial statement
  * landing in another's place inside a credit report) and the recency proxy
@@ -62,7 +60,7 @@
  * separately proves the secondary key is the SOURCE pair (not array position
  * either) the same way.
  *
- * PARSING, NOT COMPARING THE RAW STRING (this is the SYS-3542 review's F1).
+ * PARSING, NOT COMPARING THE RAW STRING (F1).
  * `CanonicalInstance.observedAt`'s own doc documents two ways a raw string
  * comparison silently misorders real inputs: a mixed UTC offset (`+08:00` —
  * this estate's own timezone — sorts as "later" than an earlier moment
@@ -88,28 +86,22 @@
  * precedent, that is the producer's failure to raise loudly at the point it
  * happened, not a reason for every consumer to gain a novel throw path.
  *
- * WHAT HAPPENS WHEN `observedAt` CANNOT SEPARATE TWO INSTANCES (SYS-3554,
- * replacing the SYS-3542 review's F5 tie-break). This function has shipped
- * three answers and the first two were both wrong in the same direction —
- * they invented an ordering and told nobody.
- *
- * The FIRST was "keep the earlier-listed record", which is ordering by
- * ARRIVAL: on a category where NO instance carries `observedAt` (routine for
+ * WHAT HAPPENS WHEN `observedAt` CANNOT SEPARATE TWO INSTANCES (replacing an
+ * earlier F5 tie-break). Neither of the two prior approaches can be trusted
+ * across furnishers: ordering by array-arrival order is purely the caller's
+ * order on a category where NO instance carries `observedAt` (routine for
  * some alt-data adapters, which this package documents `observedAt` as
- * optional to allow for) the result was purely the caller's array order.
+ * optional to allow for); and `sourceIhsId` DESCENDING as a recency proxy
+ * assumes a SINGULAR producer ("applications are id-ordered by creation in
+ * every producer this package has observed") — but `sourceIhsId` is one
+ * finsys-api instance's auto-increment primary key, and a bureau aggregates
+ * from MANY furnishers, each with their own sequence, so across furnishers
+ * the proxy is not weak, it is meaningless: it systematically prefers
+ * whoever has the higher sequence numbers. Lender B's application 500 is
+ * not newer than lender A's 12000.
  *
- * The SECOND was `sourceIhsId` DESCENDING as a recency proxy, and its own
- * docblock stated the assumption that killed it: higher-id-wins is defensible
- * "since applications are id-ordered by creation in every producer this
- * package has observed" — SINGULAR producer. `sourceIhsId` was one
- * finsys-api instance's auto-increment primary key. A bureau aggregates from
- * MANY furnishers, each with their own sequence, so across furnishers the
- * proxy is not weak, it is meaningless: it systematically prefers whoever has
- * the higher sequence numbers. Lender B's application 500 is not newer than
- * lender A's 12000.
- *
- * THE THIRD, AND THE CURRENT ONE: the merge stops inventing an ordering it
- * cannot justify, and reports the question instead. Two decisions, and they
+ * THE CURRENT ANSWER: the merge stops inventing an ordering it cannot
+ * justify, and reports the question instead. Two decisions, and they
  * are separate:
  *
  *   1. ORDER: `compareSources` below, an ASCENDING lexicographic comparison
@@ -117,9 +109,8 @@
  *      job is to be a deterministic TOTAL order so that the merge stays
  *      genuinely order-independent — the same instance sorts first regardless
  *      of which record a caller listed first — and it carries NO temporal
- *      meaning whatsoever. That is a downgrade from F5's claim and a
- *      deliberate one: F5's key also carried no temporal meaning across
- *      furnishers, it merely looked as though it did. There is no honest
+ *      meaning whatsoever. F5's key also carried no temporal meaning across
+ *      furnishers; it merely looked as though it did. There is no honest
  *      replacement proxy to reach for, because the one per-record axis a
  *      furnisher could have ordered by is `recordRef`, which `SubjectSource`
  *      makes OPAQUE by contract precisely so that nobody reasons from it.
@@ -129,12 +120,11 @@
  *      more than one source. That is the part that matters — an arbitrary
  *      order is only dangerous when a consumer cannot tell it is arbitrary,
  *      and `SubjectCanonicalCategory.instances[0]` is documented as the
- *      instance `CanonicalAddress`'s "latest wins" rule would pick. Per
- *      SYS-3464's principle, two records that can disagree about a disputed
- *      value are worse than one incomplete record, and the disagreement is
- *      itself the finding. The per-field resolution that would legitimately
- *      settle a contested lead SHIPPED in SYS-3464, in this same version —
- *      see `buildFieldSelections` below. This sentence used to defer to it.
+ *      instance `CanonicalAddress`'s "latest wins" rule would pick. Two
+ *      records that can disagree about a disputed value are worse than one
+ *      incomplete record, and the disagreement is itself the finding. The
+ *      per-field resolution that legitimately settles a contested lead is
+ *      `buildFieldSelections` below.
  *
  * WITHIN ONE SOURCE nothing changed and nothing needed to: `compareSources`
  * returns 0 for two instances of the same record, so they keep their relative
@@ -146,7 +136,7 @@
  * `contestedLead`: one furnisher listing its own instances in its own order
  * is not a disagreement between sources.
  *
- * ALIASING (SYS-3542 review's F7): a merged `SubjectInstance`'s `fields` is
+ * ALIASING (F7): a merged `SubjectInstance`'s `fields` is
  * a FRESH object (`{ ...instance.fields }`), not the source instance's own —
  * so replacing a field on a merged instance (`fields.someKey = redacted`,
  * this codebase's own idiom throughout, e.g. `ihs-processing.ts`'s
@@ -161,7 +151,7 @@
  * rather than deep-cloning a wire payload nobody here mutates in place.
  *
  * `source` IS THE THIRD CASE, and it behaves like the envelope rather than
- * like `fields` (SYS-3554): every instance a record contributes shares ONE
+ * like `fields`: every instance a record contributes shares ONE
  * `SubjectSource` object, and it is the caller's own — the object passed
  * in on `SubjectViewRecord.source`, not a copy. Same idiom, same caveat:
  * mutating it in place reaches every merged instance AND the caller's input,
@@ -173,8 +163,8 @@
  * compare against never behaves differently from one holding a reference to
  * this one. The same object is what `contestedLead.sources` lists.
  *
- * PER-APPLICATION MEMBERS ARE STRIPPED, NOT JUST UN-TYPED (SYS-3542 review's
- * F12): `SubjectInstance` (`canonical-view.ts`) types `legacySlot` and
+ * PER-APPLICATION MEMBERS ARE STRIPPED, NOT JUST UN-TYPED (F12):
+ * `SubjectInstance` (`canonical-view.ts`) types `legacySlot` and
  * `periodPosition` out via `Omit`, for the same reason `SubjectCanonicalCategory`
  * omits `cardinality` — both describe exactly one application's v1
  * reconstruction and stop meaning anything merged across several. A type
@@ -184,11 +174,11 @@
  * type — so this merge deletes both keys from each instance it builds, not
  * only from the type that describes the result.
  *
- * THE ERROR TYPE (SYS-3542 review's F11). Every throw below raises
+ * THE ERROR TYPE (F11). Every throw below raises
  * `SubjectViewError`, not a bare `Error` — matching the one precedent this
  * package already ships for a typed, caller-branchable failure
  * (`AdapterError`, `adapter.ts`: a `readonly` discriminator set in the
- * constructor alongside the message). SYS-3545 (SYS-3463d) needs to turn
+ * constructor alongside the message). A bureau denial path needs to turn
  * "zero released records for this digest" into a denial with a specific
  * reason rather than a 500; if the only way to tell that apart from, say,
  * "the caller passed contradictory subjectKinds" is regexing an English
@@ -205,7 +195,7 @@
  *
  * ─────────────────────────────────────────────────────────────────────────
  *
- * PER-FIELD RECENCY (SYS-3464), AND WHY IT IS BUREAU-SIDE ONLY. The sort
+ * PER-FIELD RECENCY, AND WHY IT IS BUREAU-SIDE ONLY. The sort
  * above orders ROWS. A consumer that then spreads `instances[0].fields` flat
  * has performed latest-ROW-wins, and at subject scope that ERASES: a fresher
  * PARTIAL row from one source blanks every field of that category another
@@ -257,10 +247,10 @@
  * here so that getting it wrong requires contradicting a written rule.
  *
  *   Every row-level filter must run BEFORE `subjectViewFromRecords`, never
- *   after it. Concretely: the SYS-3448 quarantine gate (is this contributed
- *   row released, or is it quarantined / superseded / retired?) and the
- *   SYS-3462 disclosure class (may THIS subscriber, for THIS purpose, see
- *   this row?) both decide row by row, and `records` must already contain
+ *   after it. Concretely: the quarantine gate (is this contributed row
+ *   released, or is it quarantined / superseded / retired?) and the
+ *   disclosure class (may THIS subscriber, for THIS purpose, see this
+ *   row?) both decide row by row, and `records` must already contain
  *   only the rows that survived both.
  *
  * WHY THE ORDER IS THE WHOLE OF IT. Filtering AFTER the pick lets a newer
@@ -274,8 +264,8 @@
  * and is not, because a missing field and a withheld field are indistinguish-
  * able to the reader. Nothing errors in either case.
  *
- * SYS-3464 makes the invariant STRICTER, not merely inherited: it now binds
- * per FIELD. Under row-latest a late filter dropped one row's worth of
+ * Per-field selection makes the invariant STRICTER, not merely inherited: it
+ * now binds per FIELD. Under row-latest a late filter dropped one row's worth of
  * fields; under per-field selection a single removed row can change the
  * winner of any subset of the fields in its category, so a post-hoc filter
  * cannot be repaired LOCALLY, field by field — the whole
@@ -304,24 +294,20 @@ import type {
 /**
  * Discriminator for every way `subjectViewFromRecords` can refuse its input.
  * A `subjectViewFromRecords` caller — or a caller further downstream, like
- * the SYS-3545 denial path this was added for — branches on this, never on
- * the message text. See this file's own "THE ERROR TYPE" doc for why.
+ * a bureau denial path — branches on this, never on the message text. See
+ * this file's own "THE ERROR TYPE" doc for why.
  *
  *   no-records                  — `records` was empty; there is no subject
  *                                  to describe.
  *   subject-kind-disagreement   — two records named different `subjectKind`s
  *                                  for what is asserted to be one subject.
  *   missing-source-identity     — a record's `source` did not carry a
- *                                  non-empty `furnisherId` AND `recordRef`
- *                                  (SYS-3554).
+ *                                  non-empty `furnisherId` AND `recordRef`.
  *   duplicate-source-record     — the same `(furnisherId, recordRef)` PAIR
- *                                  appeared in more than one record
- *                                  (SYS-3554; renamed from
- *                                  `duplicate-source-ihs-id`, which named a
- *                                  key that no longer exists — and whose
- *                                  meaning was the defect: two DIFFERENT
- *                                  furnishers sharing a record ref used to
- *                                  raise it and must not).
+ *                                  appeared in more than one record. Two
+ *                                  DIFFERENT furnishers sharing a record ref
+ *                                  is NOT this error — each furnisher's refs
+ *                                  are local to that furnisher.
  *   overlay-projection-present  — a record's `CanonicalView` carried
  *                                  `overlay`; this function's input contract
  *                                  is facts-only views.
@@ -360,11 +346,7 @@ export class SubjectViewError extends Error {
  * one producer's world, and knows nothing about the subject behind it or the
  * bureau in front of it).
  *
- * WHY `source` IS SUPPLIED HERE RATHER THAN READ OFF `view.ihsId` (SYS-3554).
- * Until this ticket that is exactly what this function did, on the argument —
- * stated in this doc's previous revision — that "`CanonicalView` already
- * carries it and a second field would be a second place for the two to
- * disagree." That argument is now inverted, and the inversion is the point:
+ * WHY `source` IS SUPPLIED HERE RATHER THAN READ OFF `view.ihsId`.
  * `view` IS PAYLOAD. It is a document the bureau pulled from a furnisher, and
  * a furnisher must not be able to say who it is. Furnisher identity derives
  * from the CREDENTIALED CHANNEL — every pull is bureau-initiated against one
@@ -388,7 +370,7 @@ export class SubjectViewError extends Error {
 export interface SubjectViewRecord {
   subjectKind: string
   /**
-   * SYS-3554 — the pair that identifies this contributed observation, stamped
+   * The pair that identifies this contributed observation, stamped
    * by the caller from the credentialed pull channel. REQUIRED: there is no
    * default and no fallback to `view.ihsId`, deliberately, because a
    * `furnisherId` this function could invent would be one every furnisher
@@ -525,7 +507,7 @@ interface FieldSelectionInProgress {
 }
 
 /**
- * SYS-3464 — the per-field selection, filled into `into` (the category's own
+ * The per-field selection, filled into `into` (the category's own
  * `fieldsByInstanceKey`). Read `SubjectFieldSelection` and
  * `SubjectCanonicalCategory.fieldsByInstanceKey` (`canonical-view.ts`) for what
  * this member means and why it is keyed on `instanceKey`; this doc is the HOW.
@@ -628,14 +610,14 @@ function buildFieldSelections(
 /**
  * Merge one subject's contributed records into the one subject-scoped view. See
  * this file's own doc for the ordering rule, the parsing rule, the
- * tie-break, the aliasing contract, and — SYS-3464 — per-field recency plus
- * the filter-ordering contract a caller owes this function.
+ * tie-break, the aliasing contract, and per-field recency plus the
+ * filter-ordering contract a caller owes this function.
  *
  * IT RETURNS TWO ANSWERS, NOT ONE, AND THEY ARE FOR DIFFERENT QUESTIONS.
  * `instances` is the ledger, ordered latest-row-first. `fieldsByInstanceKey`
  * is the per-field selection, and it is what a consumer reads to get a FIELD's
  * value; spreading `instances[0].fields` flat is latest-ROW-wins and erases
- * every field the newest partial row did not mention (SYS-3464).
+ * every field the newest partial row did not mention.
  *
  * `subjectKind` DISAGREEMENT ACROSS RECORDS: every record here is asserted
  * by its caller to describe the SAME subject, so a differing `subjectKind`
@@ -651,36 +633,32 @@ function buildFieldSelections(
  * half separately precisely so a message can never be parsed back into a
  * pair — rather than guessing.
  *
- * A DUPLICATE SOURCE **PAIR** ACROSS RECORDS (SYS-3542 review's F3, rescoped
- * by SYS-3554): throws, naming the repeated pair. Uniqueness at subject scope
+ * A DUPLICATE SOURCE **PAIR** ACROSS RECORDS (F3): throws, naming the
+ * repeated pair. Uniqueness at subject scope
  * is the tuple `(furnisherId, recordRef, instanceKey)`, so two records
  * carrying the SAME pair are two copies of one furnished record and their
  * instances would be indistinguishable from each other in any correctly-keyed
  * lookup — a caller bug this function can see, and it does not let the second
  * copy masquerade as a second observation.
  *
- * WHAT IT MUST NOT DO, AND USED TO (SYS-3554, consequence 1): two DIFFERENT
- * furnishers using the SAME `recordRef` are not a duplicate. They are the
- * ordinary case — a bureau aggregating many finsys-api instances, each with
- * its own auto-increment sequence, so lender A's application 7 and lender B's
- * application 7 are the same number and mean nothing to each other. The
- * previous check keyed on that bare foreign sequence, so those two records
- * raised `duplicate-source-ihs-id` and the subject failed EVERY inquiry. Both
- * halves are compared, and they are compared separately: a check that keyed
+ * WHAT IT MUST NOT DO: two DIFFERENT furnishers using the SAME `recordRef`
+ * are not a duplicate. They are the ordinary case — a bureau aggregating
+ * many finsys-api instances, each with its own auto-increment sequence, so
+ * lender A's application 7 and lender B's application 7 are the same number
+ * and mean nothing to each other. Both halves are compared, and they are
+ * compared separately: a check that keyed
  * on a `#`-joined pair would call `('a', 'b#c')` and `('a#b', 'c')` duplicates
  * of each other, reintroducing the same false collision one level up.
  *
- * AN ABSENT OR EMPTY HALF OF THE PAIR (SYS-3554): also throws
- * (`missing-source-identity`), rather than defaulting. An empty `furnisherId`
- * is every furnisher at once — it is the pre-SYS-3554 world spelled with a
- * different character — and an empty `recordRef` collides with every other
- * ref-less record from the same furnisher. Both would fail CLOSED-looking
- * (one subject, plausibly merged) while being the exact conflation this
- * function was rewritten to make impossible, so neither is accepted as a
- * value.
+ * AN ABSENT OR EMPTY HALF OF THE PAIR: also throws (`missing-source-identity`),
+ * rather than defaulting. An empty `furnisherId` is every furnisher at once,
+ * and an empty `recordRef` collides with every other ref-less record from
+ * the same furnisher. Both would fail CLOSED-looking (one subject, plausibly
+ * merged) while being the exact conflation this function exists to make
+ * impossible, so neither is accepted as a value.
  *
- * OVERLAY PROJECTIONS ARE REJECTED (SYS-3542 review's F2, the most serious
- * finding on the first pass). `CanonicalView.overlay`'s presence is the
+ * OVERLAY PROJECTIONS ARE REJECTED (F2, the most serious finding on the
+ * first review pass). `CanonicalView.overlay`'s presence is the
  * signal that this view's field `value`s "may be the calling lender's
  * staged edits rather than attested facts" (see that member's own doc). A
  * merge that silently dropped `overlay` while passing the staged `value`s
@@ -709,7 +687,7 @@ export function subjectViewFromRecords(records: readonly SubjectViewRecord[]): S
   // delimiter of the day can be mistaken for part of another furnisher's id.
   // A `Map` rather than an object because a furnisher id is caller-supplied
   // text like any other, and '__proto__' is exactly as legal a string here as
-  // it is for a category id below (SYS-3542 review's F10, same hazard).
+  // it is for a category id below (F10, same hazard).
   const seenRefsByFurnisher = new Map<string, Set<string>>()
   for (const record of records) {
     if (record.subjectKind !== subjectKind) {
@@ -770,7 +748,7 @@ export function subjectViewFromRecords(records: readonly SubjectViewRecord[]): S
   // Object.create(null): categoryId comes off a Record read from the wire,
   // and a plain `{}` accumulator lets a category literally named
   // "__proto__" read back Object.prototype instead of undefined, so
-  // `??=` silently never assigns it (SYS-3542 review's F10). A null-
+  // `??=` silently never assigns it (F10). A null-
   // prototype object has no such accessor to intercept the assignment.
   const categories: Record<string, SubjectCanonicalCategory> = Object.create(null)
 
@@ -799,13 +777,13 @@ export function subjectViewFromRecords(records: readonly SubjectViewRecord[]): S
         // carrying them typed.
         const { legacySlot: _legacySlot, periodPosition: _periodPosition, ...rest } = instance
         const subjectInstance: SubjectInstance = {
-          // `instanceKey` is NOT rewritten (SYS-3554) — it passes through RAW,
-          // `''` included. Uniqueness is the tuple (furnisherId, recordRef,
-          // instanceKey), carried structurally in `source` below; the
-          // `${sourceIhsId}#${rawKey}` qualification this line used to perform
-          // is gone rather than re-delimited, because both halves of the pair
-          // are opaque strings and no delimiter is absent from both. See
-          // `SubjectInstance`'s own doc (`canonical-view.ts`).
+          // `instanceKey` is NOT rewritten — it passes through RAW, `''`
+          // included. Uniqueness is the tuple (furnisherId, recordRef,
+          // instanceKey), carried structurally in `source` below. A
+          // `${sourceIhsId}#${rawKey}` qualification is deliberately not
+          // used, because both halves of the pair are opaque strings and no
+          // delimiter is absent from both. See `SubjectInstance`'s own doc
+          // (`canonical-view.ts`).
           ...rest,
           // A fresh object, not the source instance's own — see this file's
           // own "ALIASING" section for exactly what this does and does not

@@ -13,7 +13,7 @@ import { buildFileFieldTablesFromInstances, buildFileFieldTablesFromView, instan
 import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
 
 /**
- * SYS-3728 adversarial review: every input below was ACCEPTED by 36ccb84.
+ * Adversarial review: every input below was ACCEPTED by 36ccb84.
  * Each is now refused, by the rule named beside it.
  */
 

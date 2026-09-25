@@ -6,7 +6,7 @@ import {
 } from "./adapter-categories.js";
 
 /**
- * SYS-3166 — applicant-identity, the registry's first NON-DOCUMENT attestor.
+ * applicant-identity, the registry's first NON-DOCUMENT attestor.
  *
  * Every other category is an extraction pipeline reading a document. These are
  * values a person typed about themselves, which is why this category is what

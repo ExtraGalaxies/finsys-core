@@ -39,8 +39,7 @@ describe('jurisdiction registry', () => {
     expect(DEFAULT_JURISDICTION).toBe(JURISDICTION.MALAYSIA)
     expect(resolveJurisdiction(undefined)).toBe('MY')
     // null IS absent: it is what a JSONB column and a React "not set" write,
-    // and it is the shape SYS-2872's precedent is phrased in for
-    // Program.jurisdiction and Ihs.jurisdiction.
+    // and it is the shape Program.jurisdiction and Ihs.jurisdiction use.
     expect(resolveJurisdiction(null)).toBe('MY')
   })
 
@@ -48,7 +47,7 @@ describe('jurisdiction registry', () => {
     // Deliberately different from null. finsys-api fails CLOSED on '' —
     // financialStatementSpecFor throws, extractionApiService refuses the
     // route — and Program.jurisdiction is a plain varchar, so '' is
-    // reachable. If this returned Malaysia, SYS-3258 swapping finsys-api
+    // reachable. If this returned Malaysia, swapping finsys-api
     // onto this helper would silently turn "refuse extraction" into
     // "extract as Malaysian".
     expect(resolveJurisdiction('')).toBeNull()
@@ -65,7 +64,7 @@ describe('jurisdiction registry', () => {
   })
 
   it('is case-strict — "my" is not Malaysia', () => {
-    // Normalising case would let two spellings of one jurisdiction coexist,
+    // Normalizing case would let two spellings of one jurisdiction coexist,
     // which reads as agreement until something compares them literally.
     expect(isJurisdiction('MY')).toBe(true)
     expect(isJurisdiction('my')).toBe(false)
@@ -147,13 +146,10 @@ describe('FormSpec declares a single jurisdiction', () => {
   })
 
   it('the values that are neither absent nor valid all fail the same way', () => {
-    // The three shapes that had three different answers before review:
+    // The three shapes that must all fail the same way:
     //   ''    — an empty select, and what finsys-api fails CLOSED on
-    //   null  — what a JSONB column and a React "not set" actually write,
-    //           and the shape SYS-2872's own precedent is phrased in
+    //   null  — what a JSONB column and a React "not set" actually write
     //   'my'  — a miscased declaration
-    // Each was previously handed back by effectiveJurisdiction typed as a
-    // Jurisdiction, and null skipped validate() entirely.
     for (const bad of ['', 'my', 'VM'] as unknown[]) {
       const s = spec()
       ;(s as unknown as { _jurisdiction: unknown })._jurisdiction = bad
@@ -180,7 +176,7 @@ describe('FormSpec declares a single jurisdiction', () => {
   })
 })
 
-// ── SYS-3266: the one predicate every tier shares ────────────────────
+// ── The one predicate every tier shares ────────────────────────────────
 describe('checkJurisdictionCompatibility', () => {
   it('matching jurisdictions are compatible, and it says which', () => {
     for (const j of JURISDICTION_CODES) {
@@ -206,8 +202,8 @@ describe('checkJurisdictionCompatibility', () => {
   })
 
   it('absence on either side means Malaysia — so legacy pairings still work', () => {
-    // Every form authored before SYS-3263 declares nothing, and every
-    // pre-SYS-2872 program is null. If absence did not resolve to Malaysia,
+    // Every form authored before jurisdictions existed declares nothing, and
+    // every legacy program is null. If absence did not resolve to Malaysia,
     // this predicate would refuse all existing production traffic on the day
     // it shipped.
     expect(checkJurisdictionCompatibility(undefined, undefined).compatible).toBe(true)
@@ -230,7 +226,7 @@ describe('checkJurisdictionCompatibility', () => {
   it('the SAME unrecognized value on both sides is NOT a match', () => {
     // The case worth being deliberate about. Two sides both declaring "VM"
     // is not agreement — it is the same typo twice, and letting a pair of
-    // mistakes authorise each other is exactly the silent-pass this whole
+    // mistakes authorize each other is exactly the silent-pass this whole
     // axis exists to prevent.
     const r = checkJurisdictionCompatibility('VM', 'VM')
     expect(r.compatible).toBe(false)
@@ -277,7 +273,7 @@ describe('nationalIdEncodesBirthDate (SYS-3257)', () => {
   });
 
   it('an UNRESOLVABLE jurisdiction does not derive', () => {
-    // Deriving on a code we do not recognise is the guess this replaces.
+    // Deriving on a code we do not recognize is the guess this replaces.
     // Note '' is NO_JURISDICTION_BASIS — no basis, so no derivation.
     expect(nationalIdEncodesBirthDate('ZZ')).toBe(false);
     expect(nationalIdEncodesBirthDate('')).toBe(false);

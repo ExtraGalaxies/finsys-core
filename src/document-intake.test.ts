@@ -18,7 +18,7 @@ import { parseFileField } from "./ihs-processing.js";
 import type { ParsedDocFile } from "./ihs-processing.js";
 
 /**
- * SYS-3174 — the document-intake category, and the one field the file shape
+ * The document-intake category, and the one field the file shape
  * was missing.
  *
  * WHY THIS EXISTS. Every extracted VALUE already carries provenance: which
@@ -89,7 +89,7 @@ describe("document-intake category", () => {
 });
 
 /**
- * SYS-3174 — `uploadedBy` is the one genuine gap in the stored file shape.
+ * `uploadedBy` is the one genuine gap in the stored file shape.
  *
  * Everything else the category names already travels with each uploaded file
  * entry. `uploadedBy` does not: it appears nowhere in this package, and the

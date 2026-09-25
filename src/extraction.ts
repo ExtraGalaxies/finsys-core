@@ -30,14 +30,9 @@ export enum ExtractionJobStatus {
  * the `type` field on finsys-api's File entity and the config keys in
  * finXtractApi.api.
  *
- * Was a closed enum (FinancialStatement/BankStatement/Epf/Payslip/Ssm/
- * Form9/Ic) requiring a core release to add a new document type, even
- * though nothing outside finsys-api's own request validation actually
- * needed it to be a closed set (confirmed: zero external consumers
- * import a specific member by name). Now an open string, matching the
- * AdapterCategory precedent (SYS-2500) -- the authoritative set of valid
- * values lives in document-types.ts, derived from the field-spec catalog.
- * Use isDocumentType()/assertDocumentType() from document-types.ts for
- * the runtime validation that used to be the enum's job.
+ * An open string, matching the AdapterCategory precedent -- the
+ * authoritative set of valid values lives in document-types.ts, derived
+ * from the field-spec catalog. Use isDocumentType()/assertDocumentType()
+ * from document-types.ts for runtime validation.
  */
 export type ExtractionFileType = string

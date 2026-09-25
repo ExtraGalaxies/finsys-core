@@ -15,15 +15,12 @@
  */
 
 /**
- * SYS-3542 (SYS-3463a), rescoped by SYS-3554 (the furnisher axis).
- *
  * CLOCK: no fixture below mixes a fixed timestamp with a clock-relative
  * assertion — every `observedAt` is a literal ISO string compared only
  * against another literal in the same fixture, and nothing here reads the wall
  * clock (`subjectViewFromRecords` itself never touches `Date`). There is
- * therefore nothing to freeze. SYS-3554 added no clock-reading fixture and no
- * relative timestamp; `contestedLead` is decided by comparing two parsed
- * literals to each other, never to now.
+ * therefore nothing to freeze; `contestedLead` is decided by comparing two
+ * parsed literals to each other, never to now.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -78,7 +75,7 @@ function src(furnisherId: string, recordRef: string): SubjectSource {
 }
 
 /**
- * SYS-3554: every record this helper builds carries the SAME `view.ihsId`,
+ * Every record this helper builds carries the SAME `view.ihsId`,
  * deliberately, and no test overrides it. `ihsId` is a foreign tenant's
  * auto-increment primary key arriving inside a PULLED PAYLOAD; identity comes
  * from `source`, which the caller stamps from the credentialed channel. Baking
@@ -186,12 +183,10 @@ describe('subjectViewFromRecords — the flat-field latest-by-observedAt rule', 
   })
 
   /**
-   * F5 (review), REPLACED BY SYS-3554. The tie-break used to be `sourceIhsId`
-   * DESCENDING as a recency proxy; it is now a deterministic order over the
-   * SOURCE PAIR that claims no temporal meaning at all, plus `contestedLead`
-   * saying so out loud. What survives from F5 is the property F5 was actually
-   * for: BOTH feed orders land on the SAME lead, which the arrival-order rule
-   * F5 replaced could not do (it produced a different "winner" per order).
+   * F5 (review). The tie-break is a deterministic order over the SOURCE PAIR
+   * that claims no temporal meaning at all, plus `contestedLead` saying so
+   * out loud. What survives from F5 is the property F5 was actually for:
+   * BOTH feed orders land on the SAME lead.
    */
   it('breaks a tie (equal or both-absent observedAt) deterministically, regardless of feed order', () => {
     const a = record(src('a-furnisher', '1'), 'individual', {
@@ -216,11 +211,8 @@ describe('subjectViewFromRecords — the flat-field latest-by-observedAt rule', 
 
   /**
    * The case F4/F5 exist for: a category where NO instance carries
-   * `observedAt` at all. Before F5's fix, this fell back to record-arrival
-   * order — order-DEPENDENT despite the CHANGELOG's original "regardless of
-   * feed order" claim. It is still genuinely order-independent, and SYS-3554
-   * adds the part F5 was missing: the lead is now MARKED as unresolved rather
-   * than presented as the latest.
+   * `observedAt` at all. It is genuinely order-independent, and the lead is
+   * MARKED as unresolved rather than presented as the latest.
    */
   it('is order-independent even when NOTHING in the category carries observedAt', () => {
     const a = record(src('a-furnisher', '10'), 'individual', {
@@ -341,15 +333,13 @@ describe('subjectViewFromRecords — the flat-field latest-by-observedAt rule', 
 
 describe('subjectViewFromRecords — the furnisher axis (SYS-3554)', () => {
   /**
-   * THE DECISIVE TEST, and it was impossible to write against the previous
-   * contract — which is the point. A bureau aggregates from MANY furnishers,
-   * each running their own finsys-api instance with its own auto-increment
-   * sequence, so lender A's application 7 and lender B's application 7 are the
-   * same value and mean nothing to each other. Before SYS-3554 these two
-   * records raised `duplicate-source-ihs-id` and the subject failed every
-   * inquiry; had the throw not fired first, their instances would have merged
-   * silently under one qualified key, putting one lender's document in the
-   * other's place inside a credit report.
+   * THE DECISIVE TEST. A bureau aggregates from MANY furnishers, each running
+   * their own finsys-api instance with its own auto-increment sequence, so
+   * lender A's application 7 and lender B's application 7 are the same value
+   * and mean nothing to each other. Without correct furnisher-scoped
+   * identity, their instances would merge silently under one qualified key,
+   * putting one lender's document in the other's place inside a credit
+   * report.
    */
   it('gives two furnishers with COLLIDING record refs two distinct instances, neither overwriting the other', () => {
     const lenderA = record(src('furnisher-a', '7'), 'individual', {
@@ -481,9 +471,9 @@ describe("subjectViewFromRecords — ordering does not depend on any furnisher's
    * THE PROOF that the recency proxy is gone rather than renamed. Two
    * furnishers tie on `observedAt` (both absent). Under the old rule the
    * winner was whichever record had the higher `sourceIhsId`, so SWAPPING the
-   * two furnishers' sequence numbers flipped the lead — that is precisely the
-   * systematic preference for whoever numbers higher that SYS-3554 names.
-   * Here the same furnisher leads under both assignments, because the
+   * two furnishers' sequence numbers flipped the lead — a systematic
+   * preference for whoever numbers higher. Here the same furnisher leads
+   * under both assignments, because the
    * sequence numbers are not consulted at all.
    */
   it('gives the same lead when the two furnishers swap sequence numbers', () => {
@@ -625,12 +615,11 @@ describe('subjectViewFromRecords — contestedLead marks an unresolved lead (SYS
 
 describe('subjectViewFromRecords — instanceKey passes through RAW (SYS-3554)', () => {
   /**
-   * SYS-3542 rewrote every key to `${sourceIhsId}#${rawKey}` so a lookup over
-   * a category's instances could stay one-dimensional. SYS-3554 reverses that:
-   * the qualifier would now be an opaque string, so the scheme is no longer
-   * reversible (finsys-client's seat slices at the first '#' on the stated
-   * argument that "sourceIhsId is numeric"), and no delimiter is safe when
-   * both halves are opaque. Uniqueness is the TUPLE instead.
+   * A qualifier of `${sourceIhsId}#${rawKey}` would now be an opaque string,
+   * so the scheme would no longer be reversible (finsys-client's seat slices
+   * at the first '#' on the stated argument that "sourceIhsId is numeric"),
+   * and no delimiter is safe when both halves are opaque. Uniqueness is the
+   * TUPLE instead.
    */
   it('leaves "" as "" and never prefixes it with anything', () => {
     const merged = subjectViewFromRecords([
@@ -802,7 +791,7 @@ describe('subjectViewFromRecords — a hostile category id does not vanish (F10)
   })
 
   /**
-   * SYS-3554: the same hazard, one level down. The duplicate check keys on
+   * The same hazard, one level down. The duplicate check keys on
    * `furnisherId`, which is bureau-minted TEXT — a plain-object accumulator
    * would let a furnisher registered as '__proto__' read back
    * Object.prototype, so a `has` check would answer for a furnisher that had
@@ -885,8 +874,8 @@ describe('subjectViewFromRecords — the error type is the contract, not the pro
     }
 
     // Every condition gets its OWN code — a caller distinguishing "genuinely
-    // no subject" from "caller passed contradictory subjectKinds" (the
-    // SYS-3545 motivation) needs these to never collapse onto each other.
+    // no subject" from "caller passed contradictory subjectKinds" needs
+    // these to never collapse onto each other.
     const codes = caughtAll.map((e) => (e as SubjectViewError).code)
     expect(new Set(codes).size).toBe(codes.length)
     expect(codes.sort()).toEqual(
@@ -947,7 +936,7 @@ describe('subjectViewFromRecords — legacySlot and periodPosition are stripped,
 })
 
 /**
- * SYS-3464 — per-field recency across sources.
+ * Per-field recency across sources.
  *
  * CLOCK (this block, restating the file header's rule because this block is
  * the one that turns on `observedAt` ordering hardest): every timestamp below

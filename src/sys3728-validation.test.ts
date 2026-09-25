@@ -13,7 +13,7 @@ import { CURRENCY_CODES, normalizeCurrency, isAllowedCurrency } from './currency
 import { JURISDICTION_DISPLAY_CURRENCY } from './jurisdiction.js'
 
 /**
- * SYS-3728 — the canonical write contract.
+ * The canonical write contract.
  *
  * The defect this exists for passed every check because the DECLARATION was
  * wrong: a JSON array is a perfectly valid string, so a field declared
@@ -92,13 +92,11 @@ describe('SYS-3728 — every field has an enforceable declaration', () => {
     ])
   })
 
-  // SYS-3728 (second review): identifier fields now carry an ASCII identifier
-  // charset, and the two NEW-IC fields (plus the bankruptcy new-IC column) the
-  // Malaysian NRIC shape under MY. This REVERSES the earlier pin of "no
-  // jurisdiction pattern shipped": the operator's standard is that identifier
-  // slots accept nothing but identifiers. The mappers normalize to these forms
-  // and OMIT a value that cannot meet them, so a pattern here never refuses a
-  // whole report for one unreadable id.
+  // Identifier fields carry an ASCII identifier charset, and the two NEW-IC
+  // fields (plus the bankruptcy new-IC column) the Malaysian NRIC shape under
+  // MY: identifier slots accept nothing but identifiers. The mappers
+  // normalize to these forms and OMIT a value that cannot meet them, so a
+  // pattern here never refuses a whole report for one unreadable id.
   const IDENT = '[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*'
   const REG = `${IDENT}(?: \\(${IDENT}\\))?`
   const NRIC = { MY: '\\d{6}-?\\d{2}-?\\d{4}' }

@@ -7,11 +7,11 @@ import {
 } from "./adapter-categories.js";
 
 /**
- * SYS-3339 — applicant-collateral, applicant-obligations, related-person.
+ * applicant-collateral, applicant-obligations, related-person.
  *
  * Three categories, ONE shipped manifest between them, and the asymmetry is
  * the thing these tests exist to hold still. The measurement behind it, taken
- * 2026-08-15 against BOTH live form-spec populations plus the sim's `ihs`:
+ * against BOTH live form-spec populations plus the sim's `ihs`:
  *
  *   applicant-collateral    3 of 11 columns collected by a live form
  *   applicant-obligations   0 of 5
@@ -119,7 +119,7 @@ describe("applicant-collateral (SYS-3339)", () => {
     expect(f.type).toBe("number");
     // The v2 authoring catalog bounds yearMake [2014, 2100] per form. A
     // CATEGORY bound must hold for every lender, including a used-vehicle
-    // programme accepting a 1998 model, so it is deliberately wider.
+    // program accepting a 1998 model, so it is deliberately wider.
     expect(f.range).toEqual([1900, 2100]);
     expect(f.range![0]).toBeLessThan(2014);
     // `years` would read as a duration and be wrong by about two thousand.
@@ -223,7 +223,7 @@ describe("related-person (SYS-3339)", () => {
       "relatedPersonPhoneAreaCode",
       "relatedPersonRole",
     ]);
-    // The line against applicant-contact, which is the nearest neighbour:
+    // The line against applicant-contact, which is the nearest neighbor:
     // it models a CHANNEL and carries contactName / contactRelationship so an
     // emergency contact's channel can say whose it is. It has no id number, no
     // id type and no date of birth, and should not — a contact point carrying
@@ -286,10 +286,10 @@ describe("all three categories, together", () => {
   });
 
   it("keep the SSM person blobs where they are — the open call, recorded", () => {
-    // SYS-3339 carried an open call: company-profile's `directors`,
+    // An open call: company-profile's `directors`,
     // `shareholders` and `previousDirectors` are JSON blobs of people with
-    // roles, and no category covers their contents. Decided NO for this
-    // ticket, on three grounds that are measurements rather than preferences:
+    // roles, and no category covers their contents. Decided NO, on three
+    // grounds that are measurements rather than preferences:
     //
     //  1. THE SUBJECT DIFFERS. related-person's role is against an
     //     APPLICATION (a named contact, a guarantor). The SSM blobs describe

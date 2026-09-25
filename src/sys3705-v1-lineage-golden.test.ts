@@ -20,9 +20,9 @@ import { validateFieldValue } from './canonical-validation.js'
 import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
 
 /**
- * SYS-3705 — the byte-identity proof for v1-lineage output.
+ * The byte-identity proof for v1-lineage output.
  *
- * SYS-3705 changes how a document type resolves its extraction category, and
+ * This change alters how a document type resolves its extraction category, and
  * how a category's fields become instance rows and table columns, so that a
  * category with NO v1 lineage renders at all. The hard requirement is that
  * every category that DOES have v1 lineage renders exactly as before.
@@ -54,7 +54,7 @@ import type { CanonicalInstance, CanonicalView } from './canonical-view.js'
  *
  * Do NOT update the snapshot to make this pass. A diff here means a
  * v1-lineage category now renders differently, which is the one thing
- * SYS-3705 promised it would not do.
+ * this change promised it would not do.
  */
 
 /** Every document type registered at 9.3.0, in catalog order. */
@@ -69,7 +69,7 @@ const V1_CATEGORIES = [
   'applicant-obligations', 'related-person', 'document-intake',
 ] as const
 
-/** Captured at 0618e34 (v9.3.0), before any SYS-3705 production change. */
+/** Captured at 0618e34 (v9.3.0), before this change. */
 const GOLDEN_DIGESTS_AT_9_3_0: Record<string, string> = {
   extractionCategoryOf: 'f63e14699827da940b6e20040c6fd779fae659069da2bbaa4a25ff05365c4503',
   documentsOfType: '9ed395a03fc5817cf391cbe14da4a574316c44d8f91a8f5ddb9bb44eafeb15d8',
@@ -246,7 +246,7 @@ function flatFixture(): Record<string, unknown> {
 }
 
 /**
- * The same fixture with the two SYS-3705 categories populated beside the v1
+ * The same fixture with the two new lineage-free categories populated beside the v1
  * ones — a credit-bureau report (principal + one party) and a two-period
  * management account, both joined to intake rows. Their presence must not
  * move a single byte of the v1 part of any output (their own rows are
@@ -309,8 +309,8 @@ function everyOutput(v: CanonicalView = fixtureView()): Record<string, unknown> 
     // the v1 types are what must not move.
     resolveExtractionStatusFromView: keepV1Types(resolveExtractionStatusFromView(v, jobs).documents),
     processIhsDetailsFromView: processIhsDetailsFromView(v),
-    // The new types' POINTER keys are v1 keys of their own (SYS-3705 gave them
-    // map entries), so they now appear in `record` or, with no intake row, in
+    // The new types' POINTER keys are v1 keys of their own (the migration map
+    // gives them entries), so they now appear in `record` or, with no intake row, in
     // `unplaced`. They are new keys, not moved ones: drop exactly those two.
     flatRecordFromView: withoutNewPointerKeys(flatRecordFromView(v)),
     // The v1 flat functions: the new catalog entries must not reach them.

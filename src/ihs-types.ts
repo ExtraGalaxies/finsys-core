@@ -33,17 +33,17 @@ export enum FileFieldTableType {
 }
 
 /**
- * Per-field extraction provenance (SYS-2737/SYS-2741). The single canonical
+ * Per-field extraction provenance. The single canonical
  * envelope — finsys-api writes it (ihs_field_metadata), finsys-core surfaces it
  * onto detail cells, both consumers render it. Vocabulary mirrors adapter_runs
- * (SYS-2441) so FinXtract + adapter provenance converge at SYS-2499 Phase 5.
+ * so FinXtract + adapter provenance converge.
  *
  *   source      — who produced the value, e.g. "finxtract:ssm"
  *   confidence  — normalized 0..1; null when derived/computed (no score)
  *   observedAt  — ISO wall-clock of the extraction run
  *   sourceRunId — the extraction run/job id that wrote it
  *   origin      — "extracted" (a real {value,confidence} leaf) vs "derived"
- *                 (computed / no-confidence path) vs "manual" (SYS-2806, a
+ *                 (computed / no-confidence path) vs "manual" (a
  *                 lender-entered correction, committed once its edit overlay
  *                 is approved). A "derived" field must render as "no
  *                 confidence available", never a fabricated low score; a
@@ -65,7 +65,7 @@ export interface IhsFieldProvenance {
   /**
    * ISO wall-clock of the extraction run.
    *
-   * SYS-3334 F7/F10 (round 2): `fieldProvenanceFromView` (ihs-processing.ts)
+   * F7/F10 (round 2): `fieldProvenanceFromView` (ihs-processing.ts)
    * writes `''` here when the source instance carries no `observedAt` at
    * all — kept a required `string` rather than made optional, because
    * loosening this type ripples into every consumer that already
@@ -82,7 +82,7 @@ export interface IhsFieldProvenance {
   sourceRunId: string | null
   origin: IhsFieldOrigin
   /**
-   * SYS-3249: the denomination of a monetary value (ISO 4217, e.g. "MYR",
+   * The denomination of a monetary value (ISO 4217, e.g. "MYR",
    * "VND", "THB"). Present only for `kind: "money"` canonical fields.
    *
    * It lives here rather than on the field definition because currency is
@@ -93,8 +93,8 @@ export interface IhsFieldProvenance {
    * the same instant — which is exactly the granularity a denomination
    * needs.
    *
-   * OPTIONAL, and absence is not "no currency" — it is "written before
-   * SYS-3249, or by a producer that does not yet record one". Readers must
+   * OPTIONAL, and absence is not "no currency" — it is "written by a
+   * producer that does not yet record one". Readers must
    * treat absence as unknown and say so, never as a default currency. A
    * value silently rendered in the wrong denomination is the failure this
    * field exists to prevent, and defaulting would reintroduce it wearing a
@@ -122,7 +122,7 @@ export interface IhsFieldProvenance {
 /**
  * `IhsFieldProvenance` plus the value an overlay projection REPLACED.
  *
- * SYS-3334 F3 (round 2): `fieldProvenanceFromView` synthesizes provenance
+ * F3 (round 2): `fieldProvenanceFromView` synthesizes provenance
  * from `CanonicalView` envelopes, which — under a lender-overlay projection
  * (`?overlay=mine`) — can carry `originalValue` (`CanonicalFieldEnvelope`'s
  * own member: the attested value a staged edit is standing in for). Plain
@@ -153,7 +153,7 @@ export interface FileFieldTableItem {
   type: FileFieldTableType
   isNumeric: boolean
   /**
-   * SYS-2741: per-cell extraction provenance, keyed exactly like `data` (period
+   * Per-cell extraction provenance, keyed exactly like `data` (period
    * key for TIME_SERIES, `'value'` for KEY_VALUE). `confidence` carries only
    * scored (origin 'extracted') cells so a numeric dot never renders for a
    * derived value; `provenance` carries the full envelope for every known cell.
@@ -161,7 +161,7 @@ export interface FileFieldTableItem {
   confidence?: Record<string, number>
   provenance?: Record<string, IhsFieldProvenance>
   /**
-   * SYS-3728: present only on an item whose field is a `list` (a table the
+   * Present only on an item whose field is a `list` (a table the
    * source prints — a management account's line items, a bureau report's
    * facilities). Keyed like `data`, with an entry only for a column that has a
    * stored value. Additive: `data` still carries the stored value unchanged,
@@ -171,7 +171,7 @@ export interface FileFieldTableItem {
    */
   list?: Record<string, IhsListCell>
   /**
-   * SYS-3728: the columns whose stored value broke the canonical write
+   * The columns whose stored value broke the canonical write
    * contract (`validateFieldValue`), with the rules it broke — keyed like
    * `data`. For each, `data` is null, `formattedData` is "(invalid value)",
    * and a list's cell is the invalid marker: the stored content is never
@@ -181,7 +181,7 @@ export interface FileFieldTableItem {
   invalid?: Record<string, ViolationRule[]>
 }
 
-/** SYS-3728: one column of an `IhsListCell`. */
+/** One column of an `IhsListCell`. */
 export interface IhsListColumn {
   /** The item name from the field's `items`, or `'value'` for the one column of an invalid cell. */
   name: string
@@ -194,12 +194,11 @@ export interface IhsListColumn {
 }
 
 /**
- * SYS-3728: a list field's value in one table column, as rows.
+ * A list field's value in one table column, as rows.
  *
  * `columns` are the field's declared items, in declared order, that at least
- * one row fills: a declared column no row fills is left out (SYS-3728, first
- * live render — "Amount (as printed)" showed a dash on every management-account
- * line; it appears only on a list with an unreadable line). Two cells of one
+ * one row fills: a declared column no row fills is left out — it appears
+ * only on a list with an unreadable line. Two cells of one
  * field may therefore differ in shape. `rows` still carry every declared key.
  * A stored key matches an item by its exact name or by its
  * kebab-case spelling (`appointment-date` → `appointmentDate`).
@@ -229,7 +228,7 @@ export interface FileFieldTableData {
   items: FileFieldTableItem[]
   hasData: boolean
   /**
-   * SYS-3728: for a category that declares `periodFields` (a management
+   * For a category that declares `periodFields` (a management
    * account), each column's period as stored — keyed like `data`, `year` and
    * `end` (ISO date) or null when the instance has none or it broke the write
    * contract. A consumer heads the column with `periodHeadingLabel`, printing
@@ -239,7 +238,7 @@ export interface FileFieldTableData {
   periodHeadings?: Record<string, IhsPeriodHeading>
 }
 
-/** SYS-3728: one period column's own year and end — see `FileFieldTableData.periodHeadings`. */
+/** One period column's own year and end — see `FileFieldTableData.periodHeadings`. */
 export interface IhsPeriodHeading {
   year: string | null
   end: string | null
@@ -247,12 +246,12 @@ export interface IhsPeriodHeading {
 
 /**
  * One sibling-table row as finsys-api's `docInstanceStorageService` writes
- * it (SYS-2842) -- the unbounded counterpart to a T{n}-suffixed wide-table
+ * it -- the unbounded counterpart to a T{n}-suffixed wide-table
  * slot. `instanceKey` is the real, collision-free per-document key;
  * `sourceLabel` is a human label when the doc type has one (e.g. a bank
  * name); `timePeriod` is the same descriptive value column the legacy
  * T{n} scheme used, kept for period-labeling and legacy provenance lookup
- * (SYS-2886 Phase 5) -- no longer the row's key. Metric fields are the
+ * -- no longer the row's key. Metric fields are the
  * category's own base (unsuffixed) column names.
  */
 export interface InstanceRow {
@@ -260,7 +259,7 @@ export interface InstanceRow {
   sourceLabel?: string | null
   timePeriod?: string | null
   /**
-   * SYS-3728: on a row of a constrained category (no v1 lineage), the fields
+   * On a row of a constrained category (no v1 lineage), the fields
    * whose stored value broke the canonical write contract, with the rules —
    * each such field is null on the row. Absent when every value is valid. No
    * category may declare a field of this name (tested).
@@ -269,11 +268,11 @@ export interface InstanceRow {
   [metricKey: string]: unknown
 }
 
-// ── Documents table (SYS-2765 / SYS-2766) ──────────────────────
+// ── Documents table ─────────────────────────────────────────────
 
 /**
  * Per-document File metadata attached by finsys-api `getIhsDetailsById` as the
- * `documentMetadata` sibling map (SYS-2765), keyed by the document's raw stored
+ * `documentMetadata` sibling map, keyed by the document's raw stored
  * path. The single source for the documents table's Type / Size / Uploaded
  * columns — the IHS doc fields themselves carry only the path.
  */

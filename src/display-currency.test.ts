@@ -7,7 +7,7 @@ import {
 } from './index.js'
 
 /**
- * SYS-3284/SYS-3285. The rule these pin is a precedence, not a lookup:
+ * The rule these pin is a precedence, not a lookup:
  * the value's own currency wins, then the jurisdiction's display default,
  * then nothing. "Nothing" is a real answer — a bare grouped number is honest
  * where a guess is not, and guessing is precisely the bug being fixed.
@@ -25,7 +25,7 @@ describe('resolveDisplayCurrency', () => {
   })
 
   it("the VALUE's own currency always wins over the jurisdiction default", () => {
-    // The whole point of SYS-3249: one document can report several currencies.
+    // One document can report several currencies.
     // A USD figure on a Vietnamese record must render as USD, not VND.
     expect(resolveDisplayCurrency('USD', 'VN')).toBe('USD')
     expect(resolveDisplayCurrency('VND', 'MY')).toBe('VND')

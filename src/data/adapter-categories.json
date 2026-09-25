@@ -1,11 +1,12 @@
 {
-  "schemaVersion": "1.6.0",
+  "schemaVersion": "1.7.0",
   "categories": [
     {
       "id": "telco-carrier",
       "displayName": "Telco Carrier",
       "description": "Mobile carrier bill-payment + account-history signals. Any mobile carrier implementing this category produces the same canonical field set.",
       "canonicalTable": "ihs_alt_data_telco",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "onTimePaymentRatio24m",
@@ -105,6 +106,7 @@
       "displayName": "Payment Network",
       "description": "Merchant-side payment-flow signals from POS / payment-gateway networks. Captures actual transaction velocity rather than self-reported revenue.",
       "canonicalTable": "ihs_alt_data_payments",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "monthlyVolume3m",
@@ -171,6 +173,7 @@
       "displayName": "Bank Statement",
       "description": "Per-month bank-statement extractions. Naturally multi-instance: one statement per (account, month). Eval components typically aggregate across instances (sum closing balance, max debit, count of bounced transactions).",
       "canonicalTable": "ihs_alt_data_bank_statements",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "statementMonth",
@@ -227,6 +230,7 @@
       "displayName": "Social Media Presence",
       "description": "Public business-presence signals from social / commerce platforms \u2014 establishment, reach, engagement authenticity, customer reputation, and account standing. Vendor-agnostic: any platform exposing a public business profile maps its data to this canonical field set. Useful as thin-file corroboration of a borrower's operating reality where formal financials are sparse.",
       "canonicalTable": "ihs_alt_data_social_media",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "accountTenureMonths",
@@ -318,6 +322,7 @@
       "displayName": "Trade Credit (Accounting)",
       "description": "Accounts-receivable / accounts-payable aging and ledger-derived working-capital signals sourced from a business's accounting / ERP system. Captures how promptly the business collects from its debtors and pays its creditors, the aging profile and concentration of its receivables, and P&L / cash-conversion efficiency. Vendor-agnostic: any accounting or ERP system that exposes an AR/AP aging report plus a P&L summary maps its data to this canonical field set. A direct, high-signal view of trade-obligation behaviour \u2014 closer to formal credit history than most alternative data \u2014 and the anchor for cross-referencing self-reported accounting figures against bank-statement reality.",
       "canonicalTable": "ihs_alt_data_trade_credit",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "arDaysSalesOutstanding",
@@ -420,6 +425,7 @@
       "displayName": "Geolocation",
       "description": "Hourly-granularity movement track plus derived mobility signals for an applicant, sourced from any location-capable provider (telco network location, mobile-SDK GPS, GIS / address-verification services). Two instance kinds share this category: point instances (instanceKey 'pt:<ISO-hour>') carry one observed position per hourly bucket, mirroring the bank-statement multi-instance pattern; a single summary instance (instanceKey 'summary') carries adapter-derived behaviour signals \u2014 most importantly work-pattern regularity (sustained weekday dwell at a stable work anchor corroborates income reliability), residential stability, vacation windows, and dwell in operator-flagged hotspot zones. Vendor-agnostic: the source classifies or the adapter infers place labels; no provider-specific semantics leak into the field set. Raw coordinates are sensitive personal data \u2014 product-plane persistence is gated on PDPA consent + CRA Act 710 s25 retention review.",
       "canonicalTable": "ihs_alt_data_geolocation",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "latitude",
@@ -556,6 +562,7 @@
       "displayName": "Identity Document (IC / Passport)",
       "description": "Identity fields extracted from a Malaysian IC (MyKad) or passport document. Produced by the host's document-extraction pipeline; one instance per identity document.",
       "canonicalTable": "ihs_alt_data_ic",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "personName",
@@ -628,6 +635,7 @@
       "displayName": "Bank Statement (Document Extraction)",
       "description": "Fields extracted from an uploaded bank-statement document by the host's extraction pipeline. One instance per statement document; each statement covers a single month. Distinct from the partner-API 'bank-statement' category: same real-world domain, different source and different canonical vocabulary.",
       "canonicalTable": "ihsbankstatement",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "issuingBankName",
@@ -687,6 +695,7 @@
       "displayName": "EPF Statement (Document Extraction)",
       "description": "Fields extracted from an uploaded EPF (KWSP) statement document by the host's extraction pipeline. One instance per statement document. Field names carry the 'epf' prefix \u2014 the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
       "canonicalTable": "ihsepfstatement",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "personName",
@@ -755,6 +764,7 @@
       "displayName": "Payslip (Document Extraction)",
       "description": "Fields extracted from an uploaded payslip document by the host's extraction pipeline. One instance per payslip document; each payslip covers a single pay period. Field names carry the 'payslip' prefix \u2014 the same prefix-namespaced vocabulary the host's flat read path and the eval engine already use, which also keeps canonical names globally unique across categories.",
       "canonicalTable": "ihsPayslip",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "employerName",
@@ -869,6 +879,7 @@
       "displayName": "Financial Statement (Document Extraction)",
       "description": "Fields extracted from an uploaded audited financial-statement document by the host's extraction pipeline. One document = one audited financial statement carrying TWO declared periods per the period-axis contract: period1 is its current fiscal year, period2 is its prior comparative year. Metric names are bare in the flat vocabulary, like the bank-statement extraction category's.",
       "canonicalTable": "ihsfinancialstatement",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "localNo",
@@ -1612,6 +1623,7 @@
       "displayName": "SSM Form 9 (Document Extraction)",
       "description": "Fields extracted from an uploaded SSM Form 9 (Certificate of Incorporation of Private Company) document by the host's extraction pipeline. One instance per uploaded document. The company name and incorporation date are attestations of shared facts \u2014 the company-profile and financial-statement extraction categories attest the same real-world facts from their own documents.",
       "canonicalTable": "ihs_alt_data_form9",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "companyName",
@@ -1639,6 +1651,7 @@
       "displayName": "SSM Company Profile (Document Extraction)",
       "description": "Fields extracted from an uploaded SSM company-profile document (company or business registration extract) by the host's extraction pipeline. One instance per uploaded document. Covers registration identity, status, key dates, registered address, capital, and the officer/shareholder registers. The incorporation date is an attestation of a shared fact \u2014 the Form 9 extraction category attests the same real-world fact from its own document.",
       "canonicalTable": "ihs_alt_data_ssm",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "companyEntityType",
@@ -1734,6 +1747,7 @@
       "displayName": "Applicant-Provided Identity",
       "description": "Identity values the applicant typed into a lending application form. The first NON-DOCUMENT attestor in the registry: every other category is an extraction pipeline reading a document, while these are values a person entered about themselves. One instance per application.",
       "canonicalTable": "ihs_alt_data_applicant_identity",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "personName",
@@ -1765,6 +1779,7 @@
       "id": "applicant-demographics",
       "displayName": "Applicant-Provided Demographics",
       "canonicalTable": "ihs_alt_data_applicant_demographics",
+      "egressClass": "contributable",
       "description": "Demographic attributes the applicant selected on a lending application form. Split out of applicant-identity (SYS-3166) rather than merged into it, and not cosmetically: every field here is uniformly sensitive, so confidentiality is decided once for the category instead of being re-argued per field a few hundred times over. applicant-identity keeps the legally-identifying facts \u2014 name, id number, date of birth, nationality \u2014 which are the subject key under Act 710 s.28. One instance per application.",
       "fields": [
         {
@@ -1814,6 +1829,7 @@
       "id": "applicant-contact",
       "displayName": "Applicant-Provided Contact Point",
       "canonicalTable": "ihs_alt_data_applicant_contact",
+      "egressClass": "contributable",
       "description": "One way to reach the applicant \u2014 a phone line, an email address, or an emergency contact. MULTI-instance, keyed by the kind of contact point, because the wide ihs table flattens five phone lines into five column families (mobile, office, international, emergency, and an unqualified phoneNumber) and therefore cannot hold a sixth. The instance key IS what the column suffix was encoding. Fields absent for a given kind are simply absent on that instance rather than being null columns for everyone.",
       "fields": [
         {
@@ -1847,6 +1863,7 @@
       "id": "applicant-address",
       "displayName": "Applicant-Provided Address",
       "canonicalTable": "ihs_alt_data_applicant_address",
+      "egressClass": "contributable",
       "description": "One address the applicant entered on a lending application form. MULTI-instance, keyed by which address it is (\"permanent\", \"residential\", \"office\"), because the wide ihs table spends a whole column family on each and therefore cannot hold a fourth. Declaring this single would re-encode that limit permanently, and unlike a wrong field name it is not repairable later \u2014 the information would never have been captured. Ragged coverage across the three becomes ABSENT FIELDS on an instance rather than null columns for everyone: the permanent block has no state column of its own (its state landed in the unprefixed `state`), and only the residential block carries an occupancy duration.",
       "fields": [
         {
@@ -1902,6 +1919,7 @@
       "id": "applicant-employment",
       "displayName": "Applicant-Provided Employment",
       "canonicalTable": "ihs_alt_data_applicant_employment",
+      "egressClass": "contributable",
       "description": "One job the applicant described on a lending application form. MULTI-instance: a person can hold two jobs and the wide ihs table, which has exactly one unprefixed employment block, cannot say so. Today's form collects only the current one, so the sole adapter emits a single instance under the key \"current\" \u2014 an explicit key rather than the empty one, because \"\" reads as \"the single instance a single-cardinality category has\" and this category is not that. A second job becomes another row.",
       "fields": [
         {
@@ -1963,6 +1981,7 @@
       "id": "applicant-income",
       "displayName": "Applicant-Provided Income",
       "canonicalTable": "ihs_alt_data_applicant_income",
+      "egressClass": "contributable",
       "description": "The applicant's stated income position. SINGLE-instance: unlike employment, these describe the person overall rather than one job, and the wide table's single block is not a limitation being inherited here \u2014 it matches what is being said.",
       "fields": [
         {
@@ -2007,6 +2026,7 @@
       "id": "subject-company",
       "displayName": "Applicant-Provided Company Profile",
       "canonicalTable": "ihs_alt_data_subject_company",
+      "egressClass": "contributable",
       "description": "The company an application is about, as the applicant describes it. SINGLE-instance: one application has one subject company. THREE fields, not the six wide columns the transition plan grouped here \u2014 companyBackground, noOfEmployees and companyWebsite are collected by no live form in either population (0 of 4,622 ihs rows), and a field no form can feed is a promise this category cannot keep. They stay wide-table-only until something collects them. The three that ARE collected arrive from the lead-gen SPAs, not from FinHub's form_configs; a measurement over form_configs alone reports all six as uncollected, which is exactly how this category came to be dropped once already.",
       "fields": [
         {
@@ -2030,6 +2050,7 @@
       "id": "applicant-collateral",
       "displayName": "Applicant-Provided Collateral",
       "canonicalTable": "ihs_alt_data_applicant_collateral",
+      "egressClass": "contributable",
       "description": "The asset offered as security on a lending application, as the applicant (or the lender's own Open API caller) stated it. MULTI-instance, and not speculatively: finsys-api's lender Open API already models this block as `collateral[0]` \u2014 an ARRAY (see COLLATERAL_FIELDS in src/utils/ihsFieldDefs.ts) \u2014 so more than one collateral item is the EXISTING published contract, while the wide `ihs` table has exactly one column per attribute and can therefore hold exactly one item. The instance key is the array index the contract already uses, so a second collateral is one more row rather than eleven more columns. Every field describes a MOTOR VEHICLE, and is named for that rather than for the generic role, because the category's whole field set is vehicle-specific (a chassis number, an engine number and a laden-weight flag say nothing about a property or a machine). Naming them collateralIdentifier / collateralAttribute would buy a generality the data cannot honour; property or equipment collateral gets its own category with its own facts, and this one stays honest about what it can describe.",
       "fields": [
         {
@@ -2111,6 +2132,7 @@
       "id": "applicant-obligations",
       "displayName": "Applicant-Declared Monthly Obligations",
       "canonicalTable": "ihs_alt_data_applicant_obligations",
+      "egressClass": "contributable",
       "description": "One existing monthly debt commitment the applicant declared \u2014 the input to a debt-service ratio. MULTI-instance, keyed by the kind of obligation, and this is the textbook case for the whole transition: the wide `ihs` table spends five columns on five FIXED kinds (housing loan, hire purchase, personal loan, credit card, other financing), so an applicant with a SIXTH commitment has nowhere to put it and the DSR is computed from an amount that is knowably incomplete. Five columns collapse to two fields; the kind moves from the column NAME into a value, and a sixth obligation becomes one more row. NO adapter maps this category today and that is deliberate rather than unfinished \u2014 no live form collects any of the five columns (measured 2026-08-15 across both form-spec populations: 0 of 60 FinHub form_configs, 0 of the four lead-gen SPA bundles, and 0 of 4,624 rows in the sim's `ihs`), so a form-intake manifest over them would mint an APPLICANT attestation for a value no applicant ever gave. The declaration is the useful half: it reserves the vocabulary, states the shape, and lets the manifest arrive as a declaration when a lender authors the fields (all five are already authorable in @finsys/core's v2 form catalog, category 4 'Financial Information').",
       "fields": [
         {
@@ -2130,6 +2152,7 @@
       "id": "related-person",
       "displayName": "Related Person",
       "canonicalTable": "ihs_alt_data_related_person",
+      "egressClass": "contributable",
       "description": "A person other than the applicant who stands in a declared ROLE to the application \u2014 a company's named contact person, a director, a guarantor, a next of kin. MULTI-instance, keyed by role. Distinct from applicant-contact, which is the nearest neighbour and the one worth drawing the line against: applicant-contact models a CHANNEL (a phone line, an email address) and carries contactName / contactRelationship so an emergency contact's channel can say whose it is. It cannot carry an id number, an id type or a date of birth, and it should not \u2014 a contact POINT that carried identity facts would be two things at once. This category models the PERSON, with identity, and lets their contact details hang off them. NO adapter maps it today, and the reason is stronger here than for applicant-obligations: the eight wide `ihs` columns behind it (contactPersonName, contactPersonEmail, contactPersonPhoneNo, contactPersonPhoneNoAreaCode, contactPersonDateOfBirth, contactPersonPosition, contactPersonIdNo, contactPersonIdType) are ABSENT FROM @finsys/core's v2 form-authoring catalog entirely \u2014 verified 2026-08-15 against src/data/form-field-base-specs.json, where all 173 authorable fields were checked and none of the eight appears. So unlike applicant-collateral's unused fields, a lender CANNOT put these on a form today even if they wanted to: the columns are reachable only through the lender Open API's own payload, not through any form a borrower fills. 0 of 4,624 rows in the sim's `ihs` carry any of them. Declaring the category without a manifest states the shape and reserves the names; adding the fields to the authoring catalog is what would make a manifest meaningful, and that is a form-authoring change, not this one.",
       "fields": [
         {
@@ -2187,6 +2210,7 @@
       "displayName": "Document Intake",
       "description": "One instance per uploaded document file. This category is about the POINTER, not the document's contents — the extracted values already live in bank-statement, payslip, financial-statement and the rest, each carrying full provenance. The pointer itself had none: it is a bare string, or a JSON array of them, sitting in a wide column with no record of who put it there or when. This gives a pointer the same standing as every other fact on the canonical plane. It carries no value parsed OUT of the document, deliberately — a category mixing a file's identity with a file's contents would make it impossible to say which adapter run attested what.",
       "canonicalTable": "ihs_alt_data_document_intake",
+      "egressClass": "contributable",
       "fields": [
         {
           "name": "documentType",
@@ -2215,6 +2239,7 @@
       "displayName": "Credit Bureau Report (Document Extraction)",
       "description": "Fields extracted from an uploaded credit-bureau report by the host's extraction pipeline. Vendor-neutral: any bureau-report adapter produces this field set. ONE INSTANCE PER SUBJECT ENTRY, not per document — a report ordered on a company carries the company (section ccris) followed by one entry per party with business interest (pbi-1..n); a report ordered on an individual carries one entry (section iriss). A field the report does not print is absent. Figures the source prints as text (RM 300,000.00, 74.02%) are parsed by the adapter; tables are carried as JSON-encoded lists, the company-profile category's precedent for directors and shareholders. Subject identity here is a THIRD party's as often as the applicant's, so no field co-attests an applicant identity fact.",
       "canonicalTable": "ihs_alt_data_credit_bureau_report",
+      "egressClass": "processor-only",
       "instanceColumns": {
         "labelField": "subjectName",
         "roleField": "subjectRole",
@@ -3104,6 +3129,7 @@
       "displayName": "Management Account (Document Extraction)",
       "description": "Fields extracted from an uploaded management account (an SME's balance sheet and profit and loss, as produced by a bookkeeper or accounting package) by the host's extraction pipeline. Periodized: one document carries up to three reporting periods, newest first, stored per (instance, period position) — position 1 is the latest period (T-1), 2 the one before it, 3 the one before that. Totals are numbers where the statement prints them (plus one host-computed revenue total, since the statement prints revenue only as lines); every line-item category is a JSON-encoded list of the account lines printed under it. Metric names carry the mgmt prefix because the bare accounting vocabulary (totalAssets, grossProfit, …) is already declared by the audited financial-statement category, and field names are global.",
       "canonicalTable": "ihs_alt_data_management_account",
+      "egressClass": "contributable",
       "maxPeriods": 3,
       "periodFields": { "start": "mgmtPeriodStart", "end": "mgmtPeriodEnd", "year": "mgmtPeriodYear" },
       "fields": [

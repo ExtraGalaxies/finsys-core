@@ -176,7 +176,7 @@ describe('SYS-3728 — the loader refuses a bad constraint', () => {
   const raw = (field: Record<string, unknown>, more: Array<Record<string, unknown>> = []): Raw =>
     ({
       schemaVersion: '1.0.0',
-      categories: [{ id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', fields: [{ name: 'f', description: 'd', ...field }, ...more] }],
+      categories: [{ id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', egressClass: 'contributable', fields: [{ name: 'f', description: 'd', ...field }, ...more] }],
     }) as unknown as Raw
 
   it('accepts well-formed constraints', () => {
@@ -216,8 +216,8 @@ describe('SYS-3728 — the loader refuses a bad constraint', () => {
       ({
         schemaVersion: '1.0.0',
         categories: [
-          { id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', fields: [{ name: 'companyName', type: 'string', fact: 'companyName', description: 'd', ...a }] },
-          { id: 'y', displayName: 'Y', description: 'y', canonicalTable: 'ihs_alt_data_y', fields: [{ name: 'companyName', type: 'string', fact: 'companyName', description: 'd', ...b }] },
+          { id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', egressClass: 'contributable', fields: [{ name: 'companyName', type: 'string', fact: 'companyName', description: 'd', ...a }] },
+          { id: 'y', displayName: 'Y', description: 'y', canonicalTable: 'ihs_alt_data_y', egressClass: 'contributable', fields: [{ name: 'companyName', type: 'string', fact: 'companyName', description: 'd', ...b }] },
         ],
       }) as unknown as Raw
     expect(() => buildCategoryRegistry(two({}, {}))).not.toThrow()
@@ -422,7 +422,7 @@ describe('SYS-3728 — jurisdiction patterns apply only under their own jurisdic
   const reg = buildCategoryRegistry({
     schemaVersion: '1.0.0',
     categories: [{
-      id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x',
+      id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', egressClass: 'contributable',
       fields: [{ name: 'nationalId', type: 'string', description: 'd', jurisdictionPatterns: { MY: '\\d{6}-?\\d{2}-?\\d{4}' } }],
     }],
   } as unknown as Parameters<typeof buildCategoryRegistry>[0])

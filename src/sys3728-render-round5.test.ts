@@ -225,7 +225,7 @@ describe('R5b — the loader holds valueLabels to its shape', () => {
     ({
       schemaVersion: '1.0.0',
       categories: [{
-        id: 'x-cat', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x',
+        id: 'x-cat', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', egressClass: 'contributable',
         fields: [{ name: 'code', type: 'string', description: 'd', ...override }],
       }],
     }) as unknown as Raw

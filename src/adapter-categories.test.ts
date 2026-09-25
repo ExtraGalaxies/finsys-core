@@ -290,6 +290,7 @@ function validRaw(): RawArg {
         displayName: "Fixture Source",
         description: "A category that exists only in this test.",
         canonicalTable: "ihs_alt_data_fixture",
+        egressClass: "contributable",
         fields: [
           {
             name: "fixtureScore",
@@ -377,6 +378,7 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
       displayName: "Fixture Two",
       description: "Second test category.",
       canonicalTable: "ihs_alt_data_fixture_two",
+      egressClass: "contributable",
       fields: [{ name: "fixtureScore", type: "number", description: "Clashes." }],
     });
     expect(() => buildCategoryRegistry(raw)).toThrow(/globally unique/);
@@ -390,6 +392,7 @@ describe("buildCategoryRegistry (data-driven loader)", () => {
       displayName: "Fixture Two",
       description: "Second test category.",
       canonicalTable: "ihs_alt_data_fixture_two",
+      egressClass: "contributable",
       fields,
     };
   }
@@ -1011,6 +1014,7 @@ describe("enum field kind", () => {
       displayName: id,
       description: desc,
       canonicalTable: `ihs_alt_data_${id.replace(/-/g, "_")}`,
+      egressClass: "contributable",
       fields: [{ name: "sharedName", type, fact: "sharedName", description: desc }],
     });
     raw.categories.push(attester("fixture-type-a", "string", "Attested as a string here."));
@@ -1028,6 +1032,7 @@ describe("enum field kind", () => {
       displayName: id,
       description: "Unit drift fixture.",
       canonicalTable: `ihs_alt_data_${id.replace(/-/g, "_")}`,
+      egressClass: "contributable",
       fields: [
         {
           name: "sharedCount",
@@ -1050,6 +1055,7 @@ describe("enum field kind", () => {
       displayName: "Fixture Doc A",
       description: "First attester.",
       canonicalTable: "ihs_alt_data_fixture_a",
+      egressClass: "contributable",
       fields: [
         {
           name: "sharedTier",
@@ -1065,6 +1071,7 @@ describe("enum field kind", () => {
       displayName: "Fixture Doc B",
       description: "Second attester — drifts on kind.",
       canonicalTable: "ihs_alt_data_fixture_b",
+      egressClass: "contributable",
       fields: [
         {
           name: "sharedTier",
@@ -1130,6 +1137,7 @@ describe("enum field kind", () => {
       displayName: "Fixture Conf A",
       description: "Attests the fact as sensitive (by omission).",
       canonicalTable: "ihs_alt_data_fixture_conf_a",
+      egressClass: "contributable",
       fields: [
         { name: "sharedName", type: "string", fact: "sharedName", description: "Sensitive here." },
       ],
@@ -1139,6 +1147,7 @@ describe("enum field kind", () => {
       displayName: "Fixture Conf B",
       description: "Same fact, opted out — incoherent.",
       canonicalTable: "ihs_alt_data_fixture_conf_b",
+      egressClass: "contributable",
       fields: [
         {
           name: "sharedName",
@@ -1164,6 +1173,7 @@ describe("enum field kind", () => {
         displayName: `Fixture Agree ${id.slice(-1).toUpperCase()}`,
         description: "Attests the shared fact, both opted out.",
         canonicalTable: `ihs_alt_data_${id.replace(/-/g, "_")}`,
+        egressClass: "contributable",
         fields: [
           {
             name: "sharedPublicTier",
@@ -1190,6 +1200,7 @@ describe("enum field kind", () => {
         displayName: `Fixture Doc ${suffix.toUpperCase()}`,
         description: "An attester.",
         canonicalTable: `ihs_alt_data_fixture_${suffix}`,
+        egressClass: "contributable",
         fields: [
           {
             name: "sharedTier",
@@ -1492,6 +1503,7 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
           displayName: "A",
           description: "d",
           canonicalTable: "ihs_fixture_a",
+          egressClass: "contributable",
           fields: [{ name: "alpha", type: "string", description: "d", legacyName: "beta" }],
         },
         {
@@ -1499,6 +1511,7 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
           displayName: "B",
           description: "d",
           canonicalTable: "ihs_fixture_b",
+          egressClass: "contributable",
           fields: [{ name: "beta", type: "string", description: "d" }],
         },
       ],
@@ -1515,6 +1528,7 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
           displayName: "A",
           description: "d",
           canonicalTable: "ihs_fixture_a",
+          egressClass: "contributable",
           fields: [{ name: "alpha", type: "string", description: "d", legacyName: "old" }],
         },
         {
@@ -1522,6 +1536,7 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
           displayName: "B",
           description: "d",
           canonicalTable: "ihs_fixture_b",
+          egressClass: "contributable",
           fields: [{ name: "gamma", type: "string", description: "d", legacyName: "old" }],
         },
       ],
@@ -1540,6 +1555,7 @@ describe("legacyName — the bridge between the canonical and flat vocabularies"
           displayName: "A",
           description: "d",
           canonicalTable: "ihs_fixture_a",
+          egressClass: "contributable",
           fields: [{ name: "alpha", type: "string", description: "d", legacyName: "alpha" }],
         },
       ],
@@ -1558,6 +1574,7 @@ describe("naming conventions are refused at load, not merely applied once", () =
         displayName: "A",
         description: "d",
         canonicalTable: "ihs_fixture_a",
+        egressClass: "contributable",
         fields: [{ type: "string", description: "d", ...field }],
       },
     ],

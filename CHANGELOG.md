@@ -4,6 +4,31 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 9.7.0
+
+_MINOR — one required category attribute and three helpers. Every shipped
+category declares it, so no consumer of the shipped registry sees a change
+it must act on; a host building its own registry with `buildCategoryRegistry`
+must now declare it on every category._
+
+### Added
+
+- **SYS-3739 — `CategorySchema.egressClass`** (`"contributable"` |
+  `"processor-only"`), REQUIRED on every category. The loader refuses a
+  category whose value is missing or not one of the two. `credit-bureau-report`
+  is `processor-only`; every other category is `contributable`. Why: a bureau
+  report a lender bought was obtained by the host acting as that lender's
+  processor, so no credit reporting agency may ever receive it — whatever the
+  relationship of the program holding it. Declared on the category rather than
+  kept as a list in the consumer, so a new category cannot ship without
+  someone deciding which side of that line it sits on. Category data
+  `schemaVersion` 1.6.0 → 1.7.0.
+- **`processorOnlyCategories()`**, **`egressClassOf(id)`** and
+  **`isProcessorOnlyCategory(id)`**, plus `CATEGORY_EGRESS_CLASSES` and the
+  `CategoryEgressClass` type. `egressClassOf` resolves legacy ids and returns
+  null for an id this version does not declare — a caller enforcing egress
+  decides unknowns itself, and should fail closed.
+
 ## [9.6.0] - 2026-09-24
 
 _MINOR — one field, one field attribute, one violation rule. Additive: rows

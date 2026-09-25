@@ -394,6 +394,13 @@ export interface CategorySchema {
    * deprecation window to close.
    */
   readonly legacyId?: string;
+  /**
+   * Whether a credit reporting agency may ever receive this category.
+   * `processor-only` data was obtained while acting as a processor for someone
+   * else (a bureau report a lender bought), so it is never releasable to a
+   * bureau. Required, so no category ships without that decision.
+   */
+  readonly egressClass: CategoryEgressClass;
   /** See `CategoryInstanceColumns`. Absent for every periodized category. */
   readonly instanceColumns?: CategoryInstanceColumns;
   /**
@@ -422,6 +429,15 @@ export interface CategorySchema {
   readonly requiredAnyOf?: ReadonlyArray<CategoryRequirement>;
   readonly fields: ReadonlyArray<CanonicalFieldSpec>;
 }
+
+/** See `CategorySchema.egressClass`. */
+export type CategoryEgressClass = "contributable" | "processor-only";
+
+/** Every value `CategorySchema.egressClass` may take. */
+export const CATEGORY_EGRESS_CLASSES: ReadonlyArray<CategoryEgressClass> = Object.freeze([
+  "contributable",
+  "processor-only",
+]);
 
 /** See `CategorySchema.requiredAnyOf`. */
 export interface CategoryRequirement {
@@ -467,6 +483,7 @@ interface RawCategory {
   displayName: string;
   description: string;
   canonicalTable: string;
+  egressClass?: unknown;
   instanceColumns?: unknown;
   maxPeriods?: unknown;
   periodFields?: unknown;
@@ -1008,6 +1025,14 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
     if (!Array.isArray(cat.fields) || cat.fields.length === 0) {
       throw new Error(`adapter category data: ${where} must declare at least one field`);
     }
+    // SYS-3739: required, not defaulted. A default would decide the question
+    // for every future category by omission — and the safe default for a
+    // bureau is not the safe default for a lender.
+    if (!CATEGORY_EGRESS_CLASSES.includes(cat.egressClass as CategoryEgressClass)) {
+      throw new Error(
+        `adapter category data: ${where} needs an egressClass — one of ${CATEGORY_EGRESS_CLASSES.join(" | ")}`,
+      );
+    }
 
     const fields: CanonicalFieldSpec[] = [];
     for (const f of cat.fields) {
@@ -1395,6 +1420,7 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
       displayName: cat.displayName,
       description: cat.description,
       canonicalTable: cat.canonicalTable,
+      egressClass: cat.egressClass as CategoryEgressClass,
       ...(cat.legacyId !== undefined ? { legacyId: cat.legacyId } : {}),
       ...(cat.instanceColumns !== undefined
         ? { instanceColumns: validateInstanceColumns(cat.instanceColumns, cat.fields, where) }
@@ -1475,6 +1501,10 @@ export function buildCategoryRegistry(raw: RawCategoryData): CategoryRegistry {
  */
 const registry = buildCategoryRegistry(categoriesData as RawCategoryData);
 
+const PROCESSOR_ONLY: ReadonlyArray<AdapterCategory> = Object.freeze(
+  registry.all.filter((c) => c.egressClass === "processor-only").map((c) => c.id),
+);
+
 /**
  * Every category id declared by this version of finsys-core, in
  * data-file order. The runtime equivalent of the old hardcoded union —
@@ -1552,6 +1582,30 @@ export function sensitiveFieldsOf(id: AdapterCategory): ReadonlyArray<CanonicalF
  */
 export function allCategories(): ReadonlyArray<CategorySchema> {
   return registry.all;
+}
+
+/**
+ * SYS-3739: the egress class of a category, or null for an id this version
+ * does not declare. Legacy ids resolve to their live category. The null is
+ * deliberate: an unknown category's class is not something core can know,
+ * and a caller enforcing egress must decide how to treat it (fail closed).
+ */
+export function egressClassOf(id: string): CategoryEgressClass | null {
+  const canonical = resolveCanonicalCategoryId(id);
+  return canonical === null ? null : categorySchemaOf(canonical).egressClass;
+}
+
+/** SYS-3739: true only for a declared category whose egressClass is `processor-only`. */
+export function isProcessorOnlyCategory(id: string): boolean {
+  return egressClassOf(id) === "processor-only";
+}
+
+/**
+ * SYS-3739: every category declared `processor-only`, in data-file order —
+ * the set a bureau may never receive.
+ */
+export function processorOnlyCategories(): ReadonlyArray<AdapterCategory> {
+  return PROCESSOR_ONLY;
 }
 
 /**

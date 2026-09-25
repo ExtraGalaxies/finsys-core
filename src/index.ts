@@ -298,6 +298,7 @@ export type {
   CanonicalFieldName,
   CanonicalFieldSpec,
   CategorySchema,
+  CategoryEgressClass,
   CategoryInstanceColumns,
   CategoryPeriodFields,
   CategoryRequirement,
@@ -329,6 +330,10 @@ export {
   sensitiveFieldsOf,
   isAdapterCategory,
   assertAdapterCategory,
+  CATEGORY_EGRESS_CLASSES,
+  egressClassOf,
+  isProcessorOnlyCategory,
+  processorOnlyCategories,
 } from './adapter-categories.js'
 
 export type {

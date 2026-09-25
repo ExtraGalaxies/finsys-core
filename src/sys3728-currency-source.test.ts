@@ -47,7 +47,7 @@ describe('the declaration', () => {
 describe('the loader holds currencySource to its shape', () => {
   const raw = (fs: unknown[]) => ({
     schemaVersion: '1',
-    categories: [{ id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', fields: fs }],
+    categories: [{ id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', egressClass: 'contributable', fields: fs }],
   })
   const cur = { name: 'c', type: 'string', kind: 'currency', description: 'd' }
   const src = (more: Record<string, unknown> = {}) => ({ name: 's', type: 'string', kind: 'enum', currencySource: true, description: 'd', ...more })

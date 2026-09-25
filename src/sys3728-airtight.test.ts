@@ -522,7 +522,7 @@ describe('the loader refuses a malformed format, mayBeFuture or periodFields', (
   const raw = (fields: Array<Record<string, unknown>>, more: Record<string, unknown> = {}): Raw =>
     ({
       schemaVersion: '1.0.0',
-      categories: [{ id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', ...more, fields: fields.map((f) => ({ description: 'd', ...f })) }],
+      categories: [{ id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', egressClass: 'contributable', ...more, fields: fields.map((f) => ({ description: 'd', ...f })) }],
     }) as unknown as Raw
   const list = (item: Record<string, unknown>) => [{ name: 'l', type: 'list', items: [{ name: 'c', displayName: 'C', ...item }] }]
 

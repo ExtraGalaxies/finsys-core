@@ -293,7 +293,7 @@ describe('S2 — a date must exist, and a start may not follow its end', () => {
 
   it('the loader refuses a bad format or order declaration', () => {
     const raw = (fields: Array<Record<string, unknown>>, extra: Record<string, unknown> = {}) =>
-      ({ schemaVersion: '1', categories: [{ id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', fields, ...extra }] }) as never
+      ({ schemaVersion: '1', categories: [{ id: 'x', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', egressClass: 'contributable', fields, ...extra }] }) as never
     expect(() => buildCategoryRegistry(raw([{ name: 'a', type: 'number', format: 'date', description: 'd' }]))).toThrow(/format.*string/)
     expect(() => buildCategoryRegistry(raw([{ name: 'a', type: 'string', format: 'time', description: 'd' }]))).toThrow(/format "time"/)
     expect(() => buildCategoryRegistry(raw([{ name: 'a', type: 'string', format: 'date', pattern: 'x', description: 'd' }]))).toThrow(/format.*pattern/)

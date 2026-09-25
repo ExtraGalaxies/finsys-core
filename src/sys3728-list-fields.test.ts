@@ -252,7 +252,7 @@ describe('SYS-3728 — the loader refuses a malformed list declaration', () => {
       schemaVersion: '1.0.0',
       categories: [
         {
-          id: 'x-cat', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x',
+          id: 'x-cat', displayName: 'X', description: 'x', canonicalTable: 'ihs_alt_data_x', egressClass: 'contributable',
           fields: [
             { name: 'label', type: 'string', description: 'd' },
             { name: 'role', type: 'string', kind: 'enum', description: 'd' },

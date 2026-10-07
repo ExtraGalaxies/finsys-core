@@ -100,12 +100,30 @@ jobs:
           //    consumer reads to learn what broke. 7.0.0 was about to publish
           //    over "## [Unreleased]", and the toolkit's had silently stopped
           //    three versions earlier.
+          const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+          // "## 1.2.3" or "## [1.2.3]", then whitespace or end of line. The
+          // lookahead keeps "## 1.2.3-rc.1" from counting as 1.2.3.
+          const changelogHeading = (v) =>
+            new RegExp(`^##\\s*(?:\\[${escapeRe(v)}\\]|${escapeRe(v)})(?=\\s|$)`, "m")
+          // Fail closed if the pattern above stops telling these apart.
+          for (const [v, line, expected] of [
+            ["9.8.0", "## [9.8.0] - 2026-10-07", true],
+            ["9.8.0", "## 9.8.0", true],
+            ["0.1.0", "## 0.1.0 (deprecated — broken tarball, missing dist/)", true],
+            ["9.8.0", "## [9x8y0]", false],
+            ["9.8.0", "## [9.8.0-rc.1]", false],
+            ["9.8.0", "## 9.8.0-rc.1", false],
+          ]) {
+            if (changelogHeading(v).test(line) !== expected) {
+              fail.push(`preflight self-test failed: ${v} vs "${line}" should be ${expected ? "accepted" : "rejected"}.`)
+            }
+          }
           if (!existsSync("CHANGELOG.md")) {
             fail.push(`no CHANGELOG.md. A public package needs one before it publishes.`)
           } else {
             const log = readFileSync("CHANGELOG.md", "utf8")
-            // Accepts "## 1.2.3", "## [1.2.3]", with or without a trailing date.
-            const has = new RegExp(`^##\\s*\\[?${version.replace(/\\./g, "\\\\.")}\\]?`, "m").test(log)
+            // Accepts "## 1.2.3" and "## [1.2.3]", optionally followed by a date or note.
+            const has = changelogHeading(version).test(log)
             if (!has) fail.push(`CHANGELOG.md has no entry for ${version}.`)
           }
 

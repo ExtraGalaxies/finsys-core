@@ -4,6 +4,57 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.8.0] - Unreleased
+
+_MINOR — a new data file, one constant, four functions, one enum and four types. Nothing
+existing changes: the 268 names exported by 9.7.0 are all still exported with
+the same declarations, and the six existing data files are byte-identical._
+
+### Added
+
+- **SYS-3840 — `LENDER_VISIBLE_ELIGIBLE`**, the form fields that may ever be
+  lender-visible on a bureau record, keyed by jurisdiction:
+  `{ [jurisdiction]: { version, fields } }`. It is loan terms only; identity
+  fields are not in it. A program chooses a subset of its jurisdiction's list,
+  and nothing outside the list may ever be chosen. Kept as one separate,
+  versioned list rather than an attribute on a form field, because a form
+  config accepts any key and an attribute could be stamped onto a custom
+  field. Data file `lender-visible-eligible.json`. Deep-frozen.
+- **List content in this release: `MY` at version 1, with no fields.** No
+  jurisdiction has any lender-visible loan terms until its list is assessed
+  and published in a later release. `VN` and `TH` are not declared.
+- **A jurisdiction is assessed if and only if the list declares it**, even
+  with no fields. `isLenderVisibilityAssessed(jurisdiction)` answers that;
+  `lenderVisibleEligibleFor(jurisdiction)` returns the list or null. `''`
+  and unknown codes are not assessed.
+- **An absent jurisdiction is NOT assessed in this API.** Elsewhere on the
+  jurisdiction axis a null or undefined jurisdiction means `MY`; here it does
+  not. A program's jurisdiction is required, so absence reaching these
+  functions is a caller bug, and it must not grant `MY`'s list or pass the
+  assessed check. All four functions take `jurisdiction: string`. Absence
+  gives null, false, a `missing_jurisdiction` refusal and `[]`.
+- **`checkLenderVisibleSubset(jurisdiction, fields)`** validates a program's
+  chosen subset. It refuses a missing or unassessed jurisdiction, a
+  non-array, and any entry that is not a string, not a base field (a custom
+  name), a document field, not in that jurisdiction's list, or a duplicate.
+  Every refused entry is named with a `LenderVisibleRefusal` reason. On
+  success it returns the fields sorted, with the list `version` they were
+  checked against.
+- **`narrowToLenderVisibleEligible(jurisdiction, fields)`** returns the
+  intersection with the list, deduped and sorted. It never throws and never
+  widens: a missing or unassessed jurisdiction, or a non-array, yields `[]`.
+  It also re-checks that each field is a base field and not a document field,
+  rather than trusting the list entry.
+- **Load-time self-check.** The list is validated when the package loads. An
+  entry that is not a base field, a document field, not a text, dropdown or
+  number field, a duplicate, or under a jurisdiction the registry does not
+  declare fails the import.
+- **Lookups use own properties only**, so a polluted `Object.prototype`
+  cannot make an undeclared jurisdiction assessed.
+- **Versioning.** A list's `version` bumps on every content change. Adding a
+  field is a minor release. Removing one is a major release, because stored
+  subsets that name it stop validating.
+
 ## [9.7.0] - 2026-09-25
 
 _MINOR — one required category attribute and three helpers. Every shipped

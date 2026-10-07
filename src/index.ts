@@ -75,6 +75,21 @@ export {
   type Jurisdiction,
   type JurisdictionCompatibility,
 } from "./jurisdiction.js";
+// The fields that may ever be lender-visible on a bureau record, per
+// jurisdiction. The loader and the table-taking variants stay module-only:
+// a caller-supplied table could widen the list.
+export {
+  LENDER_VISIBLE_ELIGIBLE,
+  LenderVisibleRefusal,
+  lenderVisibleEligibleFor,
+  isLenderVisibilityAssessed,
+  checkLenderVisibleSubset,
+  narrowToLenderVisibleEligible,
+  type LenderVisibleEligibleList,
+  type LenderVisibleEligibleTable,
+  type LenderVisibleRefusalDetail,
+  type LenderVisibleSubsetCheck,
+} from "./lender-visibility.js";
 export { default as FormField, BasicFormField, FileFormField, FieldType } from "./form-field.js";
 export type { FormFieldType, FormFieldInputType, FormFieldTypeDefinitions, DropdownOption, EditorValidator } from "./form-field.js";
 export { FormFieldCategory } from "./form-field-category.js";

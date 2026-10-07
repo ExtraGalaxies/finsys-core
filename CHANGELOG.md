@@ -25,21 +25,32 @@ the same declarations, and the six existing data files are byte-identical._
   and published in a later release. `VN` and `TH` are not declared.
 - **A jurisdiction is assessed if and only if the list declares it**, even
   with no fields. `isLenderVisibilityAssessed(jurisdiction)` answers that;
-  `lenderVisibleEligibleFor(jurisdiction)` returns the list or null. As
-  elsewhere on the jurisdiction axis, an absent jurisdiction means `MY`, while
-  `''` and unknown codes are not assessed.
+  `lenderVisibleEligibleFor(jurisdiction)` returns the list or null. `''`
+  and unknown codes are not assessed.
+- **An absent jurisdiction is NOT assessed in this API.** Elsewhere on the
+  jurisdiction axis a null or undefined jurisdiction means `MY`; here it does
+  not. A program's jurisdiction is required, so absence reaching these
+  functions is a caller bug, and it must not grant `MY`'s list or pass the
+  assessed check. All four functions take `jurisdiction: string`. Absence
+  gives null, false, a `missing_jurisdiction` refusal and `[]`.
 - **`checkLenderVisibleSubset(jurisdiction, fields)`** validates a program's
-  chosen subset. It refuses a non-array, an unassessed jurisdiction, and any
-  entry that is not a string, not a base field (a custom name), a document
-  field, not in that jurisdiction's list, or a duplicate. Every refused entry
-  is named with a `LenderVisibleRefusal` reason. On success it returns the
-  fields sorted, with the list `version` they were checked against.
+  chosen subset. It refuses a missing or unassessed jurisdiction, a
+  non-array, and any entry that is not a string, not a base field (a custom
+  name), a document field, not in that jurisdiction's list, or a duplicate.
+  Every refused entry is named with a `LenderVisibleRefusal` reason. On
+  success it returns the fields sorted, with the list `version` they were
+  checked against.
 - **`narrowToLenderVisibleEligible(jurisdiction, fields)`** returns the
   intersection with the list, deduped and sorted. It never throws and never
-  widens: an unassessed jurisdiction or a non-array yields `[]`.
+  widens: a missing or unassessed jurisdiction, or a non-array, yields `[]`.
+  It also re-checks that each field is a base field and not a document field,
+  rather than trusting the list entry.
 - **Load-time self-check.** The list is validated when the package loads. An
-  entry that is not a base field, a document field, a duplicate, or a
-  jurisdiction the registry does not declare fails the import.
+  entry that is not a base field, a document field, not a text, dropdown or
+  number field, a duplicate, or under a jurisdiction the registry does not
+  declare fails the import.
+- **Lookups use own properties only**, so a polluted `Object.prototype`
+  cannot make an undeclared jurisdiction assessed.
 - **Versioning.** A list's `version` bumps on every content change. Adding a
   field is a minor release. Removing one is a major release, because stored
   subsets that name it stop validating.

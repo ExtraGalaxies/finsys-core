@@ -43,11 +43,9 @@ describe('SYS-3840 shipped eligible list', () => {
     expect(shippedData).toEqual({ MY: { version: 1, fields: [] } })
   })
 
-  it('is assessed for MY, and for an absent jurisdiction (absence means Malaysia)', () => {
+  it('is assessed for MY', () => {
     expect(isLenderVisibilityAssessed('MY')).toBe(true)
-    expect(isLenderVisibilityAssessed(null)).toBe(true)
-    expect(isLenderVisibilityAssessed(undefined)).toBe(true)
-    expect(lenderVisibleEligibleFor(null)).toBe(LENDER_VISIBLE_ELIGIBLE.MY)
+    expect(lenderVisibleEligibleFor('MY')).toBe(LENDER_VISIBLE_ELIGIBLE.MY)
   })
 
   it('is NOT assessed for VN, TH, an empty string, a wrong case, or an unknown code', () => {
@@ -90,7 +88,6 @@ describe('SYS-3840 shipped eligible list', () => {
 describe('SYS-3840 checkLenderVisibleSubset — shipped list', () => {
   it('accepts an empty subset under MY, and reports the list version it was checked against', () => {
     expect(checkLenderVisibleSubset('MY', [])).toEqual({ ok: true, jurisdiction: 'MY', version: 1, fields: [] })
-    expect(checkLenderVisibleSubset(null, [])).toEqual({ ok: true, jurisdiction: 'MY', version: 1, fields: [] })
   })
 
   it('refuses a non-array', () => {
@@ -261,5 +258,72 @@ describe('SYS-3840 load-time self-check (buildLenderVisibleEligible)', () => {
     for (const entry of [null, [], 'x']) {
       expect(() => buildLenderVisibleEligible({ MY: entry })).toThrow(/must be an object of \{version, fields\}/)
     }
+  })
+})
+
+describe('SYS-3840 an absent jurisdiction fails closed (never resolves to MY)', () => {
+  // program.jurisdiction is NOT NULL, so absence here is a caller bug (a partial select, say).
+  const ABSENT = [null, undefined] as unknown as string[]
+  const populated = buildLenderVisibleEligible({ MY: { version: 2, fields: ['totalFinancing'] } })
+
+  it('is not assessed, and has no list', () => {
+    for (const j of ABSENT) {
+      expect([j, isLenderVisibilityAssessed(j)]).toEqual([j, false])
+      expect([j, lenderVisibleEligibleFor(j)]).toEqual([j, null])
+    }
+  })
+
+  it('is refused by the check with missing_jurisdiction, and narrows to []', () => {
+    for (const j of ABSENT) {
+      expect([j, reasons(checkLenderVisibleSubset(j, []))]).toEqual([j, [[undefined, LenderVisibleRefusal.MissingJurisdiction]]])
+      expect([j, narrowToLenderVisibleEligible(j, ['totalFinancing'])]).toEqual([j, []])
+    }
+  })
+
+  it('never yields MY fields once MY has some (pins the populated future)', () => {
+    for (const j of ABSENT) {
+      expect([j, reasons(checkLenderVisibleSubsetAgainst(populated, j, ['totalFinancing']))]).toEqual([
+        j,
+        [[undefined, LenderVisibleRefusal.MissingJurisdiction]],
+      ])
+      expect([j, narrowToLenderVisibleEligibleAgainst(populated, j, ['totalFinancing'])]).toEqual([j, []])
+    }
+    expect(narrowToLenderVisibleEligibleAgainst(populated, 'MY', ['totalFinancing'])).toEqual(['totalFinancing'])
+  })
+})
+
+describe('SYS-3840 the lookup ignores inherited properties', () => {
+  it('a polluted Object.prototype does not make an undeclared jurisdiction assessed', () => {
+    const proto = Object.prototype as Record<string, unknown>
+    proto.VN = { version: 1, fields: [DOC, 'myCustomField', 'totalFinancing'] }
+    try {
+      expect(isLenderVisibilityAssessed('VN')).toBe(false)
+      expect(lenderVisibleEligibleFor('VN')).toBe(null)
+      expect(reasons(checkLenderVisibleSubset('VN', ['totalFinancing']))).toEqual([[undefined, LenderVisibleRefusal.UnassessedJurisdiction]])
+      expect(narrowToLenderVisibleEligible('VN', [DOC, 'myCustomField', 'totalFinancing'])).toEqual([])
+    } finally {
+      delete proto.VN
+    }
+  })
+
+  it('narrow never returns a custom or document field, even from a table that lists one', () => {
+    // Unvalidated on purpose: narrow must not trust a table entry blindly.
+    const unvalidated = { MY: { version: 1, fields: [DOC, 'myCustomField', 'totalFinancing'] } }
+    expect(narrowToLenderVisibleEligibleAgainst(unvalidated, 'MY', [DOC, 'myCustomField', 'totalFinancing'])).toEqual(['totalFinancing'])
+  })
+})
+
+describe('SYS-3840 eligible entries are scalar (text, dropdown or number)', () => {
+  it('refuses a boolean base field at load', () => {
+    expect(() => buildLenderVisibleEligible({ MY: { version: 1, fields: ['isApplication'] } })).toThrow(
+      /isApplication.*not a text, dropdown or number field/,
+    )
+  })
+
+  it('accepts a text field and a dropdown field', () => {
+    expect(buildLenderVisibleEligible({ MY: { version: 1, fields: ['totalFinancing', 'facilityPurpose'] } }).MY!.fields).toEqual([
+      'totalFinancing',
+      'facilityPurpose',
+    ])
   })
 })

@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [9.8.0] - Unreleased
+## [9.8.0] - 2026-10-07
 
 _MINOR — a new data file, one constant, four functions, one enum and four types. Nothing
 existing changes: the 268 names exported by 9.7.0 are all still exported with

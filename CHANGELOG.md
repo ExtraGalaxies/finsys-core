@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [9.9.0] - Unreleased
+## [9.9.0] - 2026-10-11
 
 _MINOR — one canonical field and one migration-map entry. No export is added
 or removed. `CanonicalFieldNameLiteral` gains one member; a consumer holding

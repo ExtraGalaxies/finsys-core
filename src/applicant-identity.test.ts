@@ -2,8 +2,20 @@ import { describe, it, expect } from "vitest";
 import {
   ADAPTER_CATEGORY_IDS,
   categoriesAttestingFact,
+  categoryForField,
   categorySchemaOf,
 } from "./adapter-categories.js";
+import type { CanonicalFieldName } from "./adapter-categories.js";
+import { validateCanonicalFields } from "./canonical-validation.js";
+
+/**
+ * The published name of applicant-identity's id-type qualifier (SYS-3874).
+ * The one literal in the suite: everything else finds the field as the
+ * category's only fact-less field, so a rename is the registry entry, this
+ * pin, and a regenerate.
+ */
+const ID_TYPE_FIELD = "personIdTypeCode";
+const idTypeSpec = () => categorySchemaOf("applicant-identity").fields.find((f) => f.name === ID_TYPE_FIELD);
 
 /**
  * applicant-identity, the registry's first NON-DOCUMENT attestor.
@@ -26,24 +38,62 @@ describe("applicant-identity (SYS-3166)", () => {
     expect(schema.canonicalTable).toBe("ihs_alt_data_applicant_identity");
   });
 
-  it("declares exactly the four facts that are comparable across sources", () => {
+  it("declares exactly the four facts that are comparable across sources, and the id-type qualifier", () => {
     const names = categorySchemaOf("applicant-identity")
       .fields.map((f) => f.name)
       .sort();
-    expect(names).toEqual([
-      "personDateOfBirth",
-      "personIdNumber",
-      "personName",
-      "personNationality",
-    ]);
+    expect(names).toEqual(
+      ["personDateOfBirth", "personIdNumber", ID_TYPE_FIELD, "personName", "personNationality"].sort(),
+    );
   });
 
-  it("every field is an attestation — none is declared without a fact", () => {
+  it("every field but the id-type qualifier is an attestation", () => {
     // A field here without a `fact` would be a private column wearing a shared
-    // name: it would read as identity data and compare with nothing.
+    // name: it would read as identity data and compare with nothing. There is
+    // exactly one exception, the id-type qualifier: it qualifies personIdNumber
+    // and has nothing to agree with (SYS-3874, below). The generator and the
+    // other suites find the qualifier by this property, so it must stay unique.
+    const factless = categorySchemaOf("applicant-identity")
+      .fields.filter((f) => f.fact === undefined)
+      .map((f) => f.name);
+    expect(factless).toEqual([ID_TYPE_FIELD]);
     for (const field of categorySchemaOf("applicant-identity").fields) {
+      if (field.name === ID_TYPE_FIELD) continue;
       expect(field.fact, `${field.name} must declare a fact`).toBe(field.name);
     }
+  });
+
+  it("SYS-3874: the id-type qualifier is a free string with no fact and no enum", () => {
+    // It says which identification scheme personIdNumber is from, as the
+    // intake form codes it. No `kind: "enum"`: a form config carries its own
+    // choices, so a form-intake adapter cannot enumerate a closed set (the
+    // reasoning recorded on genderCode, raceCode and relatedPersonIdType).
+    // No `fact`: no other category declares an id type for the applicant —
+    // person-identity has none, and related-person's is a third party's.
+    const field = idTypeSpec();
+    expect(field, `${ID_TYPE_FIELD} must be declared`).toBeDefined();
+    expect(field!.type).toBe("string");
+    expect(field!.kind).toBeUndefined();
+    expect(field!.valueLabels).toBeUndefined();
+    expect(field!.fact).toBeUndefined();
+    expect(field!.legacyName).toBeUndefined();
+    expect(field!.description).toMatch(/personIdNumber/);
+    // Uniquely declared, so a bare name resolves to this category.
+    expect(categoryForField(ID_TYPE_FIELD as CanonicalFieldName)).toBe("applicant-identity");
+    expect(categoriesAttestingFact(ID_TYPE_FIELD)).toEqual([]);
+  });
+
+  it("SYS-3874: the id-type qualifier is at most 50 characters, the width of the column that stores it", () => {
+    // The host's column is varchar(50). Without the declaration the 256
+    // default applies, and a 51..256-character value would pass this
+    // validator and then fail the whole identity row at the database.
+    expect(idTypeSpec()!.maxLength).toBe(50);
+    const rules = (value: string) =>
+      validateCanonicalFields("applicant-identity", { [ID_TYPE_FIELD]: value }, { enumMembership: "skip" })
+        .violations.map((v) => v.rule);
+    expect(rules("M".repeat(50))).toEqual([]);
+    expect(rules("M".repeat(51))).toContain("max-length");
+    expect(rules("MK")).toEqual([]);
   });
 
   it("joins the existing attestors of each fact rather than replacing them", () => {

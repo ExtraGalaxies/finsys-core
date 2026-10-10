@@ -1762,6 +1762,12 @@
           "description": "IC or passport number as the applicant entered it. Attestation of the shared personIdNumber fact. Forms validate 12 digits with no separators, while the identity document attests it as printed and commonly hyphenated \u2014 so comparison must normalize before concluding disagreement."
         },
         {
+          "name": "personIdTypeCode",
+          "type": "string",
+          "maxLength": 50,
+          "description": "Which identification scheme personIdNumber is from, as the applicant selected it on the form — a code ('MK'), not a label, whose meaning is per-form. Qualifies personIdNumber and attests nothing on its own. Uniquely declared, so it needs no fact: person-identity declares no id type, and related-person's relatedPersonIdType describes a third party. NOT declared kind \"enum\": that promises a CLOSED label set, and the host enforces the promise by requiring every adapter producing the field to enumerate its labels in the manifest. A form-intake adapter cannot: a form config carries its OWN choices. Named `...Code` on the genderCode / raceCode precedent, so the bare id-type name stays free for a document-attested fact. At most 50 characters, the width of its column."
+        },
+        {
           "name": "personDateOfBirth",
           "type": "string",
           "fact": "personDateOfBirth",
@@ -2062,7 +2068,7 @@
         {
           "name": "vehicleModel",
           "type": "string",
-          "description": "Model of the vehicle offered as collateral. COLLECTED \u2014 by the finhero-auto lead-gen SPA, whose form spec is compiled into the SPA bundle and is therefore invisible to any query over FinHub's form_configs table. That second population is why this field is mapped and vehicleMake is not: measuring form_configs alone reports `modelOfVehicle` as collected by nobody, while the sim's `ihs` carries 8 rows of it. On the finhero-auto form the field is `visible: false` \u2014 a hidden input the page fills rather than a question the applicant answers. It is still an applicant-side statement submitted through the form save, so it is attested; the hidden-ness is a UX fact, not a provenance one.",
+          "description": "Model of the vehicle offered as collateral. COLLECTED \u2014 by an auto-finance lead-generation form, whose form spec is compiled into its page bundle and is therefore invisible to any query over FinHub's form_configs table. That second population is why this field is mapped and vehicleMake is not: measuring form_configs alone reports `modelOfVehicle` as collected by nobody, while the sim's `ihs` carries 8 rows of it. On that auto-finance form the field is `visible: false` \u2014 a hidden input the page fills rather than a question the applicant answers. It is still an applicant-side statement submitted through the form save, so it is attested; the hidden-ness is a UX fact, not a provenance one.",
           "legacyName": "modelOfVehicle"
         },
         {
@@ -2079,7 +2085,7 @@
         {
           "name": "vehicleConditionCode",
           "type": "string",
-          "description": "Condition of the vehicle as the applicant SELECTED IT FROM A DROPDOWN \u2014 a code, not a label. COLLECTED: 6 of the 60 FinHub form_configs plus the finhero-auto SPA, all seven carrying the same choice set today ('N', 'U', 'UN', 'UR', 'PR'), measured 2026-08-15. Named `...Code` on the genderCode / raceCode precedent, and for the same reason: a future document attestor (a JPJ registration card, a valuation report) would attest the printed condition TEXT, and fusing a per-form code with OCR'd prose puts a permanent false positive into the disagreement surface. When the two need comparing, the comparison belongs in a per-form code-to-label resolution, not in a shared field name. NOT declared kind \"enum\": that promises a CLOSED label set and obliges every producing adapter to enumerate its labels in its manifest. A form-intake adapter cannot honour that \u2014 the choice set lives in a form config a lender can edit, so the promise goes quietly false the first time someone adds a sixth condition. That the seven live forms agree today is precisely the kind of measurement that expires.",
+          "description": "Condition of the vehicle as the applicant SELECTED IT FROM A DROPDOWN \u2014 a code, not a label. COLLECTED: 6 of the 60 FinHub form_configs plus an auto-finance lead-generation form, all seven carrying the same choice set today ('N', 'U', 'UN', 'UR', 'PR'), measured 2026-08-15. Named `...Code` on the genderCode / raceCode precedent, and for the same reason: a future document attestor (a JPJ registration card, a valuation report) would attest the printed condition TEXT, and fusing a per-form code with OCR'd prose puts a permanent false positive into the disagreement surface. When the two need comparing, the comparison belongs in a per-form code-to-label resolution, not in a shared field name. NOT declared kind \"enum\": that promises a CLOSED label set and obliges every producing adapter to enumerate its labels in its manifest. A form-intake adapter cannot honour that \u2014 the choice set lives in a form config a lender can edit, so the promise goes quietly false the first time someone adds a sixth condition. That the seven live forms agree today is precisely the kind of measurement that expires.",
           "legacyName": "vehicleCondition"
         },
         {
@@ -2123,7 +2129,7 @@
           "name": "collateralPurchasePriceOnTheRoad",
           "type": "number",
           "kind": "money",
-          "description": "On-the-road purchase price of the collateral \u2014 the price including registration, road tax and insurance, which is the figure Malaysian motor financing is actually written against. COLLECTED, and the most widely collected field in this category: 6 of the 60 FinHub form_configs plus the finhero-auto SPA (where it is the loan calculator's primary input), 8 of 4,624 `ihs` rows, measured 2026-08-15. Spelled out rather than left as the acronym OTR so the contract is readable by a consumer who has never seen a Malaysian motor quote; the legacy flat column keeps its `purchasePriceOTR` spelling. kind \"money\" \u2014 and note the v2 form catalog already declares this same field kind \"money\", so the two vocabularies agree on it.",
+          "description": "On-the-road purchase price of the collateral \u2014 the price including registration, road tax and insurance, which is the figure Malaysian motor financing is actually written against. COLLECTED, and the most widely collected field in this category: 6 of the 60 FinHub form_configs plus an auto-finance lead-generation form (where it is the loan calculator's primary input), 8 of 4,624 `ihs` rows, measured 2026-08-15. Spelled out rather than left as the acronym OTR so the contract is readable by a consumer who has never seen a Malaysian motor quote; the legacy flat column keeps its `purchasePriceOTR` spelling. kind \"money\" \u2014 and note the v2 form catalog already declares this same field kind \"money\", so the two vocabularies agree on it.",
           "legacyName": "purchasePriceOTR"
         }
       ]

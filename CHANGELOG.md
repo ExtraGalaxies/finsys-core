@@ -4,6 +4,67 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.9.0] - Unreleased
+
+_MINOR — one canonical field and one migration-map entry. No export is added
+or removed. `CanonicalFieldNameLiteral` gains one member; a consumer holding
+an exhaustive record over that union must add it._
+
+### Added
+
+- **SYS-3874 — `applicant-identity.personIdTypeCode`** (`string`). Which
+  identification scheme `personIdNumber` is from, as the applicant selected it
+  on the intake form: a per-form code such as `MK`, not a label. It qualifies
+  `personIdNumber` and attests nothing on its own, so it declares no `fact`:
+  `person-identity` declares no id type, and `related-person`'s
+  `relatedPersonIdType` describes a third party. It declares no `kind: "enum"`,
+  for the reason recorded on `genderCode` and `raceCode`: a form config carries
+  its own choices, so a form-intake adapter cannot enumerate a closed set.
+  Named `...Code` on that same precedent: it holds a per-form dropdown code,
+  and the bare id-type name stays free for a future document-attested fact.
+  Sensitive by default, like the rest of the category. **`maxLength: 50`**,
+  the width of the column that stores it: a 51-character value is refused as
+  `max-length` by `validateCanonicalFields` / `validateAdapterExtraction`
+  rather than passing here and failing the whole identity row at the database.
+- **What a reader sees.** Wherever a view carries the field it renders under
+  its v1 name `idType`: `processIhsDetailsFromView` gains an "Id Type" row
+  (Personal Information, identical to the v1 flat path's row),
+  `instanceRowsFromView` an `idType` column on the applicant-identity row, and
+  `fieldProvenanceFromView` an `idType` entry when the envelope carries
+  provenance.
+
+### Upgrading
+
+- **A host that stores canonical fields needs a column for the new field
+  before it takes 9.9.0.** In finsys-api, `ihsCanonicalReadService`'s test that
+  every declared field resolves to a column fails until the
+  `ihs_alt_data_applicant_identity` table has one (`varchar(50)`), and the
+  applicant-identity storage mapper and form-intake manifest need the field to
+  write it.
+
+### Changed
+
+- **The v1 key `idType` is `mapped` to `applicant-identity.personIdTypeCode`**,
+  where it was `vocabulary-gap`. Its only previous match was
+  `related-person.relatedPersonIdType`, the wrong person. `flatRecordFromView`
+  now places `idType` from a view carrying the field, the same way it places
+  `idNumber` from `personIdNumber`, so a consumer reading the v1 shape through
+  the v2 bridge gets the value instead of an `unplaced` entry. On a view
+  without it, `idType` is still reported in `unplaced`, now with disposition
+  `mapped`. Map counts: `mapped` 673 → 674, `vocabulary-gap` 6 → 5.
+- The entry is hand-authored in `scripts/build-v1-migration-map.py`, because
+  the form-intake field map the generator reads does not map `idType` yet.
+  Once that manifest maps it, the hand entry can be dropped and the key
+  resolves through the field-map bridge.
+- **Map and registry prose names no customer, partner or marketplace, and
+  names a bureau only inside an identifier.** The
+  `reason` or `note` text of nine migration-map entries (`city`,
+  `companyWebsite`, `countryOfPermanentResident`, `pRIDNo` and the five
+  `*MonthlyInstallment` keys) and the descriptions of three
+  `applicant-collateral` fields now describe their sources generically. Every
+  entry's disposition, address and `via` is unchanged; `flatRecordFromView`'s
+  `unplaced` reason for those keys carries the new text.
+
 ## [9.8.0] - 2026-10-07
 
 _MINOR — a new data file, one constant, four functions, one enum and four types. Nothing

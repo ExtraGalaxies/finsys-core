@@ -27,7 +27,7 @@ import {
 } from './extraction-status.js'
 import { ExtractionJobStatus } from './extraction.js'
 import { v1KeyForAddress, v1MigrationKeys, v1Addresses, v1LegacyBaseNameOf } from './v1-migration-map.js'
-import { categoryFieldsOf } from './adapter-categories.js'
+import { categoryFieldsOf, categorySchemaOf } from './adapter-categories.js'
 import { getDocumentTypeGroups } from './document-types.js'
 import type { CanonicalView, CanonicalInstance } from './canonical-view.js'
 
@@ -1687,6 +1687,25 @@ describe('flatRecordFromView — the v1 flat record\'s shape, re-derived from a 
     const { record: out, unplaced } = flatRecordFromView(empty)
     expect(out).toEqual({})
     expect(unplaced.length).toBe(v1MigrationKeys().length)
+  })
+
+  it('(o) SYS-3874: idType is placed from the applicant-identity id-type qualifier, beside idNumber from personIdNumber (mutation: revert the map entry to vocabulary-gap -> idType unplaced)', () => {
+    // The qualifier is the category's one fact-less field; its name is pinned in applicant-identity.test.ts.
+    const idTypeField = categorySchemaOf('applicant-identity').fields.find((f) => f.fact === undefined)!.name
+    const v = view({
+      'applicant-identity': {
+        instances: [inst('default', { personIdNumber: '900101015678', [idTypeField]: 'MK' })],
+      },
+    })
+    const { record: out, unplaced } = flatRecordFromView(v)
+    expect(out['idNumber']).toBe('900101015678')
+    expect(out['idType']).toBe('MK')
+    expect(unplaced.find((u) => u.key === 'idType')).toBeUndefined()
+
+    // Absent on the view: reported, never silently dropped.
+    const { record: none, unplaced: missing } = flatRecordFromView(view({}))
+    expect('idType' in none).toBe(false)
+    expect(missing.find((u) => u.key === 'idType')).toMatchObject({ disposition: 'mapped' })
   })
 })
 

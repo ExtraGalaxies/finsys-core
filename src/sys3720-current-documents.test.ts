@@ -262,6 +262,27 @@ function statusAsAt940(r: ReturnType<typeof resolveExtractionStatusFromView>): u
   }
 }
 
+/**
+ * v1 keys whose migration-map entry changed after the 9.4.0 capture. Each
+ * one's `unplaced` entry in `flatRecordFromView` changes with the map, in
+ * every fixture. A REMAPPED key (its disposition changed) is dropped from the
+ * hashed flat record, and its placement is pinned where the change was made.
+ * A REWORDED key (only its reason or note text changed) stays, with `reason`
+ * blanked, so its key and disposition are still pinned.
+ */
+const KEYS_REMAPPED_SINCE_9_4_0 = ['idType'] // SYS-3874: vocabulary-gap -> mapped
+// SYS-3874: customer, partner and bureau names removed from the public map text.
+const KEYS_REWORDED_SINCE_9_4_0 = ['city', 'companyWebsite', 'countryOfPermanentResident', 'creditCardMonthlyInstallment', 'hirePurchaseMonthlyInstallment', 'housingLoanMonthlyInstallment', 'otherFinancingMonthlyInstallment', 'pRIDNo', 'personalLoanMonthlyInstallment']
+function withoutRemappedKeys(flat: ReturnType<typeof flatRecordFromView>): ReturnType<typeof flatRecordFromView> {
+  return {
+    ...flat,
+    record: Object.fromEntries(Object.entries(flat.record).filter(([k]) => !KEYS_REMAPPED_SINCE_9_4_0.includes(k))),
+    unplaced: flat.unplaced
+      .filter((u) => !KEYS_REMAPPED_SINCE_9_4_0.includes(u.key))
+      .map((u) => (KEYS_REWORDED_SINCE_9_4_0.includes(u.key) ? { ...u, reason: '' } : u)),
+  }
+}
+
 function outputs(v: CanonicalView): Record<string, unknown> {
   const intakeRows = v.categories['document-intake']!.instances
   return {
@@ -271,7 +292,7 @@ function outputs(v: CanonicalView): Record<string, unknown> {
     instanceRowsFromView: ['financial-statement', 'finxtract-bank-statement'].map((c) => instanceRowsFromView(v, assertAdapterCategory(c))),
     buildFileFieldTablesFromView: buildFileFieldTablesFromView(v),
     fieldProvenanceFromView: fieldProvenanceFromView(v),
-    flatRecordFromView: flatRecordFromView(v),
+    flatRecordFromView: withoutRemappedKeys(flatRecordFromView(v)),
   }
 }
 
@@ -425,6 +446,38 @@ const DIGESTS_AT_9_4_0: Record<string, Record<string, string>> = {
 }
 
 /**
+ * `flatRecordFromView` normalized by `withoutRemappedKeys`, per fixture.
+ * Captured by running this file's fixtures against 9.4.0 (d54e94b), not the
+ * new code; the whole-output digests from the same run reproduced the
+ * 9.4.0 values above, which is what proves the harness. These replace only
+ * the `flatRecordFromView` digest; every other 9.4.0 digest is compared as
+ * captured.
+ */
+const FLAT_RECORD_AT_9_4_0_WITHOUT_REMAPPED_KEYS: Record<string, string> = {
+  'control: three bank statements, one save, two extracted': 'b0e9cdc2676cc21b661a7c9b732b8cffd0bfb521980793cdc9b350a6fff19a62',
+  'control: two financial statements, hashed period rows': 'a0e891eb7d55d59838bed9f3acaf0ac060caddaadd9f19ee0e1167b872562892',
+  'control: bank legacy slots within the intake count': '709ffb23d9a98a513fb79fe3a618781de03004cf3bea0f597a80b26fd9662574',
+  'control: pre-writer subject, bank legacy slots and no intake': '164b6b8bf44b8a2e939bd556655a1572fd6ae43d712fb2d1ec5d72067f178c07',
+  'control: pre-writer subject, financial statement legacy:T1 only': 'c98e108a1ae19537534a1a1710fe27f11df7d72616d7461c6ad9e6e6fd6b513b',
+  'control: one save written in two UTC offsets is one instant': 'e905c0328f90342f224fcfff676e49cf0bb23c85d8f8a04d2a7aad1aded763bf',
+  'control: an intake row with no observedAt leaves its type unfiltered': '97786df4ded837732a9014528512ec18ddad558e2f9e2eae9a6b1c772773d7bb',
+  'SYS-3720: year=1 statement, one upload, legacy:T1 + legacy:T2': '23697805fecafc13fc8e33587d3b830b782bf9e5590196dd59ee79a108f98d05',
+  'SYS-3720: year=2 statement, one upload, legacy:T3 only': '2c63c1cdebe75e2bfa7b414842b7e9e89f399e6cf97f798664e097dae5447c6b',
+  'SYS-3720: two uploads, legacy:T1 + T2 + T3': 'ff3991af47dec110599627aec2d846b18efe6de20490ec20c1dd253dcaa400fc',
+  'SYS-3720: pre-writer subject, legacy:T1 + legacy:T2 and no intake': '56f66bf86afd70fc5b12b9dc08e06fc43d950c18631708bc30af1a88988d6d6d',
+  'SYS-3720: bank legacy slot past the intake count': '17ef7927fc0257bdb5489d306d2810659b7e373f68764d7551efce797a65621e',
+  'SYS-3721: financial statement replaced': '0dda299bb343de2d7fd3449e0099ac73b8b3828e5d90b524638b02929bf3529c',
+  'SYS-3721: first of three bank statements replaced': 'f813664e879b93c767904d18bb9c4445b2656cc1bb8c63d71311358cbae2de35',
+  'SYS-3721: replaced statement whose extraction was not purged': '066bc8b53342872f470b2df1baa3e749e888365d7eea473f28a6033a4b317e2e',
+}
+const BEFORE: Record<string, Record<string, string>> = Object.fromEntries(
+  Object.entries(DIGESTS_AT_9_4_0).map(([name, d]) => [
+    name,
+    { ...d, flatRecordFromView: FLAT_RECORD_AT_9_4_0_WITHOUT_REMAPPED_KEYS[name]! },
+  ]),
+)
+
+/**
  * The outputs each AFFECTED fixture moves, and why. Any fixture not listed
  * here is a control and must not move at all.
  */
@@ -453,7 +506,7 @@ const MOVES: Record<string, { outputs: string[]; why: string }> = {
 
 describe('SYS-3720/3721 — only the affected shapes move from 9.4.0', () => {
   const now = allDigests()
-  for (const [name, before] of Object.entries(DIGESTS_AT_9_4_0)) {
+  for (const [name, before] of Object.entries(BEFORE)) {
     const moves = MOVES[name]?.outputs ?? []
     it(`${name}: ${moves.length === 0 ? 'unchanged' : `moves ${moves.join(', ')}`}`, () => {
       const moved = Object.keys(before).filter((k) => before[k] !== now[name]![k])
@@ -462,6 +515,7 @@ describe('SYS-3720/3721 — only the affected shapes move from 9.4.0', () => {
   }
   it('every fixture was captured, and every listed move names a fixture', () => {
     expect(Object.keys(now).sort()).toEqual(Object.keys(DIGESTS_AT_9_4_0).sort())
+    expect(Object.keys(FLAT_RECORD_AT_9_4_0_WITHOUT_REMAPPED_KEYS).sort()).toEqual(Object.keys(DIGESTS_AT_9_4_0).sort())
     for (const name of Object.keys(MOVES)) expect(DIGESTS_AT_9_4_0).toHaveProperty([name])
   })
 })

@@ -102,20 +102,55 @@ const MOVED_BY_SYS3720: Record<string, string> = {
   buildDocumentRowsFromView: 'acf7c573a9ba81176c0f2333b39924745f9617dc97e86f6bbebed8456f2fe80c',
   resolveExtractionStatusFromView: 'edf07271c37efd8a28d7d91a4a1c0065d37c3b90a3705832d58ab8847b053f26',
 }
-const EXPECTED_DIGESTS = { ...GOLDEN_DIGESTS_AT_9_3_0, ...MOVED_BY_SYS3720 }
+
+/**
+ * SYS-3874 changed map entries after 9.3.0, and `flatRecordFromView`'s
+ * `unplaced` entries change with them:
+ * - `idType` moved from `vocabulary-gap` to `mapped`
+ *   (applicant-identity's id-type qualifier), so it is dropped from the hashed flat
+ *   record;
+ * - nine entries had only their reason or note text reworded (customer,
+ *   partner and bureau names removed from the public package), so they stay,
+ *   with `reason` blanked.
+ * The digest below is the 9.3.0 output under the same normalization: captured
+ * by running this file's fixture against 0618e34 (where the whole-output
+ * digest reproduced the 9.3.0 value above, proving the harness), not computed
+ * from the new code.
+ */
+const KEYS_REMAPPED_SINCE_9_3_0 = ['idType']
+const KEYS_REWORDED_SINCE_9_3_0 = ['city', 'companyWebsite', 'countryOfPermanentResident', 'creditCardMonthlyInstallment', 'hirePurchaseMonthlyInstallment', 'housingLoanMonthlyInstallment', 'otherFinancingMonthlyInstallment', 'pRIDNo', 'personalLoanMonthlyInstallment']
+const RECAPTURED_FOR_SYS3874: Record<string, string> = {
+  flatRecordFromView: 'ed3d172e25193f479748cc08bb83a6f464d69bfe488771dad759c94b82c3b143',
+}
+const EXPECTED_DIGESTS = { ...GOLDEN_DIGESTS_AT_9_3_0, ...MOVED_BY_SYS3720, ...RECAPTURED_FOR_SYS3874 }
+
+/**
+ * Fields a v1 category gained after 9.3.0. The fixture leaves them out, so it
+ * stays the 9.3.0 input. Their placement is pinned where they were added.
+ */
+const FIELDS_ADDED_SINCE_9_3_0: Record<string, string[]> = {
+  // SYS-3874: the id-type qualifier, applicant-identity's one fact-less field.
+  'applicant-identity': categorySchemaOf('applicant-identity')
+    .fields.filter((f) => f.fact === undefined)
+    .map((f) => f.name as string),
+}
 
 const NEW_DOCUMENT_TYPES = ['experianReports', 'managementAccounts']
 const NEW_GROUPS = ['credit_bureau_reports', 'management_accounts']
 /**
  * `flatRecordFromView` restricted to its v1 part: the record and `unplaced`
- * minus the two new document types' pointer keys. Everything else — every
+ * minus the two new document types' pointer keys and the keys remapped since
+ * 9.3.0, with the reworded keys' `reason` blanked. Everything else — every
  * other key, `ambiguous`, the instance sidecars — is hashed as it stands.
  */
 function withoutNewPointerKeys(flat: ReturnType<typeof flatRecordFromView>): ReturnType<typeof flatRecordFromView> {
+  const drop = [...NEW_DOCUMENT_TYPES, ...KEYS_REMAPPED_SINCE_9_3_0]
   return {
     ...flat,
-    record: Object.fromEntries(Object.entries(flat.record).filter(([k]) => !NEW_DOCUMENT_TYPES.includes(k))),
-    unplaced: flat.unplaced.filter((u) => !NEW_DOCUMENT_TYPES.includes(u.key)),
+    record: Object.fromEntries(Object.entries(flat.record).filter(([k]) => !drop.includes(k))),
+    unplaced: flat.unplaced
+      .filter((u) => !drop.includes(u.key))
+      .map((u) => (KEYS_REWORDED_SINCE_9_3_0.includes(u.key) ? { ...u, reason: '' } : u)),
   }
 }
 const keepV1Groups = <T,>(tables: Record<string, T>): Record<string, T> =>
@@ -129,7 +164,9 @@ const h = (c: string): string => c.repeat(64)
 /** A deterministic value for every field of a category, varied by `seed` so instances differ. */
 function valuesFor(category: string, seed: number): Record<string, unknown> {
   const out: Record<string, unknown> = {}
-  categorySchemaOf(assertAdapterCategory(category)).fields.forEach((spec, i) => {
+  const added = FIELDS_ADDED_SINCE_9_3_0[category] ?? []
+  const fields = categorySchemaOf(assertAdapterCategory(category)).fields.filter((f) => !added.includes(f.name as string))
+  fields.forEach((spec, i) => {
     const name = spec.name as string
     if (spec.type === 'number') out[name] = 1000 + seed * 100 + i * 7.5
     else if (spec.type === 'boolean') out[name] = (seed + i) % 2 === 0

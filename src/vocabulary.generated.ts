@@ -10,7 +10,7 @@
  * runtime miss — the registry's own lookups fail open by design, which is
  * exactly why a rename previously had to be found by hand.
  *
- * 26 categories · 425 canonical fields (51 lists) · 105 retired names
+ * 26 categories · 426 canonical fields (51 lists) · 105 retired names
  */
 
 /** Every category id the registry declares. */
@@ -355,6 +355,7 @@ export type CanonicalFieldNameLiteral =
   | "personDateOfBirth"
   | "personGender"
   | "personIdNumber"
+  | "personIdTypeCode"
   | "personName"
   | "personNationality"
   | "personPlaceOfBirth"

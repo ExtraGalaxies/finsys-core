@@ -448,7 +448,7 @@
     },
     "city": {
       "disposition": "retired",
-      "reason": "the bare key is unused, but the DATA is live: WooCommerce collects it at checkout and submits it as permanentcity. Retired key is not retired data.",
+      "reason": "the bare key is unused, but the DATA is live: an e-commerce plugin form collects it at checkout and submits it as permanentcity. Retired key is not retired data.",
       "via": "consumer-sweep"
     },
     "clientUserId": {
@@ -520,7 +520,7 @@
     },
     "companyWebsite": {
       "disposition": "retired",
-      "reason": "no consumer in six repos; absent from the core catalog entirely. The only hits are Mudah's DEALER account profile, a different context.",
+      "reason": "no consumer in six repos; absent from the core catalog entirely. The only hits are a marketplace's DEALER account profile, a different context.",
       "via": "consumer-sweep"
     },
     "computationMode": {
@@ -662,7 +662,7 @@
     },
     "countryOfPermanentResident": {
       "disposition": "retired",
-      "reason": "Mudah collects it and forwards it as nationality; the bare key is not what reaches finsys.",
+      "reason": "a marketplace integration collects it and forwards it as nationality; the bare key is not what reaches finsys.",
       "via": "consumer-sweep"
     },
     "createdAt": {
@@ -687,7 +687,7 @@
         "instanceKey": "creditCard"
       },
       "disposition": "mapped-pending-build",
-      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "note": "CCRIS-sourced, named in a cooperative-lending form spec and feeding DSR/NDI. An e-commerce plugin form submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from a credit-bureau report, manual entry or the credit reporting agency.",
       "via": "hand-authored"
     },
     "ctRatio": {
@@ -2733,7 +2733,7 @@
         "instanceKey": "hirePurchase"
       },
       "disposition": "mapped-pending-build",
-      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "note": "CCRIS-sourced, named in a cooperative-lending form spec and feeding DSR/NDI. An e-commerce plugin form submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from a credit-bureau report, manual entry or the credit reporting agency.",
       "via": "hand-authored"
     },
     "housingLoanMonthlyInstallment": {
@@ -2743,7 +2743,7 @@
         "instanceKey": "housingLoan"
       },
       "disposition": "mapped-pending-build",
-      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "note": "CCRIS-sourced, named in a cooperative-lending form spec and feeding DSR/NDI. An e-commerce plugin form submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from a credit-bureau report, manual entry or the credit reporting agency.",
       "via": "hand-authored"
     },
     "ic": {
@@ -2841,9 +2841,13 @@
       "via": "form-intake-fieldmap"
     },
     "idType": {
-      "disposition": "vocabulary-gap",
-      "reason": "FIVE consumers \u2014 Mudah and WooCommerce submit it, finhero-auto collects it as a typed dropdown driving idNumber consolidation, FinHub renders it, finsys-client renders it. Its only canonical match is related-person.relatedPersonIdType, which is the WRONG PERSON. No correct destination exists.",
-      "via": "consumer-sweep"
+      "address": {
+        "category": "applicant-identity",
+        "field": "personIdTypeCode"
+      },
+      "disposition": "mapped",
+      "note": "SYS-3874: mapped to applicant-identity.personIdTypeCode, the id-type code the applicant selected on the intake form, which the applicant-identity form-intake adapter attests. It qualifies the applicant's own idNumber (applicant-identity.personIdNumber). Not related-person.relatedPersonIdType: that is a third party's. Authored here rather than derived from a form-intake fieldMap, so the address does not depend on which finsys-api revision the generator reads.",
+      "via": "hand-authored"
     },
     "ihsId": {
       "disposition": "relocated",
@@ -4098,7 +4102,7 @@
         "instanceKey": "otherFinancing"
       },
       "disposition": "mapped-pending-build",
-      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "note": "CCRIS-sourced, named in a cooperative-lending form spec and feeding DSR/NDI. An e-commerce plugin form submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from a credit-bureau report, manual entry or the credit reporting agency.",
       "via": "hand-authored"
     },
     "otherIncomeT1": {
@@ -4127,7 +4131,7 @@
     },
     "pRIDNo": {
       "disposition": "vocabulary-gap",
-      "note": "as foreignPR \u2014 the PR identity number. applicant-identity.personIdNumber attests the primary ID; a second, differently-issued number needs its own field or an idType-qualified instance, which is the same gap idType has.",
+      "note": "as foreignPR \u2014 the PR identity number. applicant-identity.personIdNumber attests the primary ID, and applicant-identity's id-type field qualifies that one number (SYS-3874); a second, differently-issued number still needs its own field or an instance qualified by its own id type.",
       "via": "hand-authored"
     },
     "paymentReliabilityTier": {
@@ -4929,7 +4933,7 @@
         "instanceKey": "personalLoan"
       },
       "disposition": "mapped-pending-build",
-      "note": "CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. WooCommerce submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from CTOS, Experian, manual entry or FHD.",
+      "note": "CCRIS-sourced, named in a cooperative-lending form spec and feeding DSR/NDI. An e-commerce plugin form submits it today from installs we cannot update. The destination category has NO TABLE \u2014 this is an address, not a live one. Multi-attestor: the same obligation may arrive from a credit-bureau report, manual entry or the credit reporting agency.",
       "via": "hand-authored"
     },
     "phoneNumber": {

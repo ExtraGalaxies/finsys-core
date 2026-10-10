@@ -61,6 +61,15 @@ LEGACY_BY_CAT = {c['id']: {f['legacyName']: f['name'] for f in c.get('fields', [
 FACT_BY_CAT = {c['id']: {f['fact']: f['name'] for f in c.get('fields', []) if f.get('fact')}
                for c in cat_list}
 
+# SYS-3874: the applicant's id-type qualifier is the ONE applicant-identity
+# field that declares no fact. Derived rather than spelled, so its name lives
+# only in adapter-categories.json and a rename is that file plus a regenerate.
+_qualifiers = [f['name'] for c in cat_list if c['id'] == 'applicant-identity'
+               for f in c.get('fields', []) if not f.get('fact')]
+assert len(_qualifiers) == 1, \
+    f'applicant-identity must declare exactly one fact-less field (the id-type qualifier): {_qualifiers}'
+APPLICANT_ID_TYPE_FIELD = _qualifiers[0]
+
 owners = defaultdict(list)
 by_legacy = {}
 for c in cat_list:
@@ -316,7 +325,7 @@ SERVED_BY_APPLICATION_RECORD = served_by_application_record()
 SWEEP = {
     'companyWebsite': ('retired',
                        'no consumer in six repos; absent from the core catalog entirely. The only '
-                       'hits are Mudah\'s DEALER account profile, a different context.'),
+                       'hits are a marketplace\'s DEALER account profile, a different context.'),
     'noOfEmployees': ('vocabulary-gap',
                       'wanted as an SME signal (Kain) but 0 of 8,474 rows populated and no canonical '
                       'field of the right kind — subject-company.companySizeCode is a coded BAND, this '
@@ -333,22 +342,20 @@ SWEEP = {
                          'eight plausible financial-statement targets (CashAndBankBalances, CashAtBanks, '
                          'CashOnHand, CashAndCashEquivalents, ...) and no exact match. Which the extractor '
                          'populates is a question for the financial-statement owner, not a name lookup.'),
-    'idType': ('vocabulary-gap',
-               'FIVE consumers — Mudah and WooCommerce submit it, finhero-auto collects it as a typed '
-               'dropdown driving idNumber consolidation, FinHub renders it, finsys-client renders it. '
-               'Its only canonical match is related-person.relatedPersonIdType, which is the WRONG '
-               'PERSON. No correct destination exists.'),
+    # No 'idType' override sits here since SYS-3874: applicant-identity
+    # declares the applicant's id-type field, and the key is authored in
+    # HAND below.
     'clientUserId': ('relocated',
                      'SURFACE: GET /lender/applications/:ihsId, as customerUserId (PARTY_FIELDS). NOT retired: FinHub names it at Show.tsx:2039 as the rollout fallback '
                      '(customerUserId ?? clientUserId) building the Customer Profile link. Dropping the '
                      'finsys-api shim and leaving that fallback silently removes the button — the two '
                      'changes are coupled.'),
     'city': ('retired',
-             'the bare key is unused, but the DATA is live: WooCommerce collects it at checkout and '
+             'the bare key is unused, but the DATA is live: an e-commerce plugin form collects it at checkout and '
              'submits it as permanentcity. Retired key is not retired data.'),
     'postcode': ('retired', 'as city — collected and submitted as permanentpostcode.'),
     'countryOfPermanentResident': ('retired',
-                                   'Mudah collects it and forwards it as nationality; the bare key is '
+                                   'a marketplace integration collects it and forwards it as nationality; the bare key is '
                                    'not what reaches finsys.'),
     'lengthOfServiceYear': ('retired',
                             'already dead for display: finsys-client recomputes it from dateJoined '
@@ -357,7 +364,7 @@ SWEEP = {
 }
 
 # ---------------------------------------------------------------------------
-# The 19 the mechanical bridges cannot reach. Each disposition is authored
+# The 21 the mechanical bridges cannot reach. Each disposition is authored
 # against evidence, and every address still goes through address(), so a
 # hand-authored mistake is refused exactly like a generated one.
 #
@@ -419,6 +426,13 @@ HAND = {
                 'are what real submissions carry.'),
 
     # --- singles
+    'idType': ('mapped', ('applicant-identity', APPLICANT_ID_TYPE_FIELD, None),
+               f'SYS-3874: mapped to applicant-identity.{APPLICANT_ID_TYPE_FIELD}, the id-type code the applicant '
+               'selected on the intake form, which the applicant-identity form-intake adapter attests. It qualifies '
+               'the applicant\'s own idNumber (applicant-identity.personIdNumber). Not '
+               'related-person.relatedPersonIdType: that is a third party\'s. Authored here rather than derived '
+               'from a form-intake fieldMap, so the address does not depend on which finsys-api revision the '
+               'generator reads.'),
     'consents': ('relocated', None,
                  'SURFACE: GET /lender/applications/:ihsId. NOT the flat booleans — v1 emits the raw '
                  'consent EVENT ROWS (id, consentDefinitionId, consentDefinitionVersionId, ipAddress, '
@@ -454,9 +468,9 @@ HAND = {
                   'signal: no form, no consumer in six repos, 0 of 8,475 rows. Retire it only if nobody wants '
                   'the FACT — the fact itself is real and a CRA subject model may want it.'),
     'pRIDNo': ('vocabulary-gap', None,
-               'as foreignPR — the PR identity number. applicant-identity.personIdNumber attests the primary ID; '
-               'a second, differently-issued number needs its own field or an idType-qualified instance, which is '
-               'the same gap idType has.'),
+               'as foreignPR — the PR identity number. applicant-identity.personIdNumber attests the primary ID, '
+               'and applicant-identity\'s id-type field qualifies that one number (SYS-3874); a second, '
+               'differently-issued number still needs its own field or an instance qualified by its own id type.'),
     'companyBackground': ('vocabulary-gap', None,
                           'subject-company-form-v1 names it as one of three columns "collected by nothing at all", '
                           'and DELIBERATELY does not declare it — mapping it would mint an applicant attestation '
@@ -560,10 +574,11 @@ for key in sorted(v1.keys()):
                 'disposition': 'mapped-pending-build', 'via': 'hand-authored',
                 'address': address('applicant-obligations', 'obligationMonthlyInstallment',
                                    instance_key=OBLIGATIONS[base]),
-                'note': 'CCRIS-sourced, named in the CitaGlobal Angkasa spec and feeding DSR/NDI. '
-                        'WooCommerce submits it today from installs we cannot update. The destination '
-                        'category has NO TABLE — this is an address, not a live one. Multi-attestor: '
-                        'the same obligation may arrive from CTOS, Experian, manual entry or FHD.',
+                'note': 'CCRIS-sourced, named in a cooperative-lending form spec and feeding DSR/NDI. '
+                        'An e-commerce plugin form submits it today from installs we cannot update. The '
+                        'destination category has NO TABLE — this is an address, not a live one. '
+                        'Multi-attestor: the same obligation may arrive from a credit-bureau report, '
+                        'manual entry or the credit reporting agency.',
             }
         elif base in HAND:
             disp, addr, note = HAND[base]

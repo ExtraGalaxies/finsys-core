@@ -39,6 +39,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ADAPTER_CATEGORY_IDS,
   categoryFieldsOf,
+  categorySchemaOf,
   isAdapterCategory,
 } from './adapter-categories.js';
 import { getDocumentTypeGroups } from './document-types.js';
@@ -192,9 +193,53 @@ describe('v1 migration map', () => {
     // `currentAssetCash*` sits there and did not ride along (a separate
     // owner's call). Two NEW keys (the experianReports / managementAccounts
     // pointers) are also mapped, not moved — every other disposition's count
-    // is untouched.
-    expect(v1KeysByDisposition('mapped').length).toBe(673);
+    // is untouched. SYS-3874 moved `idType` from `vocabulary-gap` into
+    // `mapped` (673 -> 674).
+    expect(v1KeysByDisposition('mapped').length).toBe(674);
     expect(v1KeysByDisposition('needs-decision').length).toBe(11);
+  });
+
+  it('SYS-3874 — idType addresses the applicant-identity id-type qualifier, never the related person\'s id type', () => {
+    // idType was vocabulary-gap: its only canonical match was
+    // related-person.relatedPersonIdType, which qualifies a THIRD PARTY's
+    // number. applicant-identity now declares the qualifier of the applicant's
+    // own personIdNumber, and the key resolves there. The qualifier is found,
+    // not spelled: it is the category's one fact-less field (the registry
+    // suite pins its name).
+    const qualifier = categorySchemaOf('applicant-identity').fields.filter((f) => f.fact === undefined)
+    expect(qualifier.length).toBe(1)
+    expect(v1MigrationEntry('idType')!.disposition).toBe('mapped');
+    expect(v1Addresses('idType')).toEqual([{ category: 'applicant-identity', field: qualifier[0]!.name }]);
+    // The sibling it qualifies resolves to the same category.
+    expect(v1Addresses('idNumber')).toEqual([{ category: 'applicant-identity', field: 'personIdNumber' }]);
+    // The related person's own id type is untouched.
+    expect(v1Addresses('contactPersonIdType')).toEqual([{ category: 'related-person', field: 'relatedPersonIdType' }]);
+    // idType moved out of vocabulary-gap and into mapped, and nothing else moved.
+    expect(v1KeysByDisposition('vocabulary-gap')).not.toContain('idType');
+    expect(v1KeysByDisposition('vocabulary-gap').length).toBe(5);
+  });
+
+  it('SYS-3874 — the nine reworded texts are pinned verbatim', () => {
+    // A generic description can drift back toward a name, or lose the fact it
+    // carries, and stay green on every disposition test. Pinned exactly.
+    const OBLIGATION_NOTE =
+      'CCRIS-sourced, named in a cooperative-lending form spec and feeding DSR/NDI. An e-commerce plugin form submits it today from installs we cannot update. The destination category has NO TABLE — this is an address, not a live one. Multi-attestor: the same obligation may arrive from a credit-bureau report, manual entry or the credit reporting agency.'
+    const EXPECTED: Record<string, { reason?: string; note?: string }> = {
+      city: { reason: 'the bare key is unused, but the DATA is live: an e-commerce plugin form collects it at checkout and submits it as permanentcity. Retired key is not retired data.' },
+      companyWebsite: { reason: 'no consumer in six repos; absent from the core catalog entirely. The only hits are a marketplace\'s DEALER account profile, a different context.' },
+      countryOfPermanentResident: { reason: 'a marketplace integration collects it and forwards it as nationality; the bare key is not what reaches finsys.' },
+      pRIDNo: { note: 'as foreignPR — the PR identity number. applicant-identity.personIdNumber attests the primary ID, and applicant-identity\'s id-type field qualifies that one number (SYS-3874); a second, differently-issued number still needs its own field or an instance qualified by its own id type.' },
+      creditCardMonthlyInstallment: { note: OBLIGATION_NOTE },
+      hirePurchaseMonthlyInstallment: { note: OBLIGATION_NOTE },
+      housingLoanMonthlyInstallment: { note: OBLIGATION_NOTE },
+      otherFinancingMonthlyInstallment: { note: OBLIGATION_NOTE },
+      personalLoanMonthlyInstallment: { note: OBLIGATION_NOTE },
+    }
+    for (const [key, text] of Object.entries(EXPECTED)) {
+      const e = v1MigrationEntry(key)!
+      if (text.reason !== undefined) expect(e.reason, key).toBe(text.reason)
+      if (text.note !== undefined) expect(e.note, key).toBe(text.note)
+    }
   });
 
   it('SYS-3570 — the four tangibleAssets keys address the declared field, and currentAssetCash is NOT dragged along with them', () => {

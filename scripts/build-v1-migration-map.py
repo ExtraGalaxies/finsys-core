@@ -427,11 +427,12 @@ HAND = {
 
     # --- singles
     'idType': ('mapped', ('applicant-identity', APPLICANT_ID_TYPE_FIELD, None),
-               'SYS-3874: the qualifier of the applicant\'s own idNumber (applicant-identity.personIdNumber), '
-               'as the intake form codes it. Not related-person.relatedPersonIdType: that is a third party\'s. '
-               'Authored here because the form-intake fieldMap read from finsys-api origin/main does not map '
-               'idType yet; once that manifest maps it to the applicant-identity id-type field, this entry can be '
-               'dropped and the key resolves through the fieldMap bridge.'),
+               f'SYS-3874: mapped to applicant-identity.{APPLICANT_ID_TYPE_FIELD}, the id-type code the applicant '
+               'selected on the intake form, which the applicant-identity form-intake adapter attests. It qualifies '
+               'the applicant\'s own idNumber (applicant-identity.personIdNumber). Not '
+               'related-person.relatedPersonIdType: that is a third party\'s. Authored here rather than derived '
+               'from a form-intake fieldMap, so the address does not depend on which finsys-api revision the '
+               'generator reads.'),
     'consents': ('relocated', None,
                  'SURFACE: GET /lender/applications/:ihsId. NOT the flat booleans — v1 emits the raw '
                  'consent EVENT ROWS (id, consentDefinitionId, consentDefinitionVersionId, ipAddress, '

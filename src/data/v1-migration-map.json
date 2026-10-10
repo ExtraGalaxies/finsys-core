@@ -2846,7 +2846,7 @@
         "field": "personIdTypeCode"
       },
       "disposition": "mapped",
-      "note": "SYS-3874: the qualifier of the applicant's own idNumber (applicant-identity.personIdNumber), as the intake form codes it. Not related-person.relatedPersonIdType: that is a third party's. Authored here because the form-intake fieldMap read from finsys-api origin/main does not map idType yet; once that manifest maps it to the applicant-identity id-type field, this entry can be dropped and the key resolves through the fieldMap bridge.",
+      "note": "SYS-3874: mapped to applicant-identity.personIdTypeCode, the id-type code the applicant selected on the intake form, which the applicant-identity form-intake adapter attests. It qualifies the applicant's own idNumber (applicant-identity.personIdNumber). Not related-person.relatedPersonIdType: that is a third party's. Authored here rather than derived from a form-intake fieldMap, so the address does not depend on which finsys-api revision the generator reads.",
       "via": "hand-authored"
     },
     "ihsId": {

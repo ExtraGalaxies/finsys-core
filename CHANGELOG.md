@@ -36,11 +36,11 @@ an exhaustive record over that union must add it._
 ### Upgrading
 
 - **A host that stores canonical fields needs a column for the new field
-  before it takes 9.9.0.** In finsys-api, `ihsCanonicalReadService`'s test that
-  every declared field resolves to a column fails until the
-  `ihs_alt_data_applicant_identity` table has one (`varchar(50)`), and the
-  applicant-identity storage mapper and form-intake manifest need the field to
-  write it.
+  when it takes 9.9.0.** Without one, finsys-api's `ihsCanonicalReadService`
+  test that every declared field resolves to a column fails. finsys-api's
+  SYS-3874 change supplies it: a `varchar(50)` column on
+  `ihs_alt_data_applicant_identity`, the storage mapper entry, and the
+  applicant-identity form-intake manifest mapping `idType` to the field.
 
 ### Changed
 
@@ -52,10 +52,10 @@ an exhaustive record over that union must add it._
   the v2 bridge gets the value instead of an `unplaced` entry. On a view
   without it, `idType` is still reported in `unplaced`, now with disposition
   `mapped`. Map counts: `mapped` 673 → 674, `vocabulary-gap` 6 → 5.
-- The entry is hand-authored in `scripts/build-v1-migration-map.py`, because
-  the form-intake field map the generator reads does not map `idType` yet.
-  Once that manifest maps it, the hand entry can be dropped and the key
-  resolves through the field-map bridge.
+- The entry is hand-authored in `scripts/build-v1-migration-map.py`, so the
+  address does not depend on which finsys-api revision the generator reads.
+  The applicant-identity form-intake adapter attests the field from the
+  form's `idType`.
 - **Map and registry prose names no customer, partner or marketplace, and
   names a bureau only inside an identifier.** The
   `reason` or `note` text of nine migration-map entries (`city`,

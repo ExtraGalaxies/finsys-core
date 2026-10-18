@@ -34,7 +34,7 @@ describe('SYS-3739 egressClass', () => {
   it('every shipped category declares a valid egressClass in the data file', () => {
     const cats = (categoriesData as { categories: Array<{ id: string; egressClass?: unknown }> }).categories
     for (const c of cats) {
-      expect([c.id, c.egressClass]).toEqual([c.id, expect.stringMatching(/^(contributable|processor-only)$/)])
+      expect([c.id, c.egressClass]).toEqual([c.id, expect.stringMatching(/^(contributable|processor-only|deal)$/)])
     }
   })
 
@@ -50,9 +50,9 @@ describe('SYS-3739 egressClass', () => {
     expect(processorOnlyCategories()).toContain('credit-bureau-report')
   })
 
-  it('every other shipped category is contributable', () => {
+  it('every other shipped category is contributable (applicant-collateral is deal: sys3799-deal-egress-class.test.ts)', () => {
     for (const c of allCategories()) {
-      if (c.id === 'credit-bureau-report') continue
+      if (c.id === 'credit-bureau-report' || c.id === 'applicant-collateral') continue
       expect([c.id, c.egressClass]).toEqual([c.id, 'contributable'])
     }
   })

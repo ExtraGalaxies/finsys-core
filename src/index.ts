@@ -349,6 +349,8 @@ export {
   egressClassOf,
   isProcessorOnlyCategory,
   processorOnlyCategories,
+  isNeverEgressCategory,
+  neverEgressCategories,
 } from './adapter-categories.js'
 
 export type {

@@ -4,6 +4,39 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.10.0] - Unreleased
+
+_MINOR. One data change and two added exports. `CategoryEgressClass` gains a
+third member, `"deal"`; a consumer holding an exhaustive switch or record over
+that union must add it._
+
+### Changed
+
+- **SYS-3799: `applicant-collateral` is `egressClass: "deal"`**, where it was
+  `contributable`. Collateral is a term of the financing asked for, not a fact
+  about the subject, so no credit reporting agency may receive it. No field and
+  no other category changes: the diff to `adapter-categories.json` is that one
+  value and one closing sentence in the category's description.
+
+### Added
+
+- **`"deal"` in `CategoryEgressClass` and `CATEGORY_EGRESS_CLASSES`.** It sits
+  beside `processor-only`: both are never releasable to a bureau, for different
+  reasons. The loader accepts it.
+- **`neverEgressCategories()` and `isNeverEgressCategory(id)`**: every declared
+  category whose class is not `contributable`. Written as "not contributable",
+  so a class added later is barred until someone decides otherwise.
+
+### Upgrading
+
+- **`processorOnlyCategories()` and `isProcessorOnlyCategory()` are unchanged
+  and do NOT include `applicant-collateral`.** A host that builds its bureau
+  egress ceiling from either of them still admits the category, so a
+  deployment config could release it. Build the ceiling from
+  `neverEgressCategories()` / `isNeverEgressCategory()` instead. finsys-api's
+  SYS-3799 change does that on both tenants: SI's egress policy, its boot
+  guard, and the bureau's receiver, approval and assembly checks.
+
 ## [9.9.0] - 2026-10-11
 
 _MINOR — one canonical field and one migration-map entry. No export is added

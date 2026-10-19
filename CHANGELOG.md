@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [9.10.0] - Unreleased
+## [9.10.0] - 2026-10-19
 
 _MINOR. One data change and two added exports. `CategoryEgressClass` gains a
 third member, `"deal"`; a consumer holding an exhaustive switch or record over

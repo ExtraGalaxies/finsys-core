@@ -398,7 +398,10 @@ export interface CategorySchema {
    * Whether a credit reporting agency may ever receive this category.
    * `processor-only` data was obtained while acting as a processor for someone
    * else (a bureau report a lender bought), so it is never releasable to a
-   * bureau. Required, so no category ships without that decision.
+   * bureau. `deal` data describes the financing asked for rather than the
+   * subject (collateral, for one), so it is never releasable to a bureau
+   * either. Only `contributable` is. Required, so no category ships without
+   * that decision.
    */
   readonly egressClass: CategoryEgressClass;
   /** See `CategoryInstanceColumns`. Absent for every periodized category. */
@@ -431,13 +434,23 @@ export interface CategorySchema {
 }
 
 /** See `CategorySchema.egressClass`. */
-export type CategoryEgressClass = "contributable" | "processor-only";
+export type CategoryEgressClass = "contributable" | "processor-only" | "deal";
 
 /** Every value `CategorySchema.egressClass` may take. */
 export const CATEGORY_EGRESS_CLASSES: ReadonlyArray<CategoryEgressClass> = Object.freeze([
   "contributable",
   "processor-only",
+  "deal",
 ]);
+
+/**
+ * SYS-3799: true for every egress class a bureau may never receive. Written as
+ * "not contributable", so a class added later is barred until someone decides
+ * otherwise.
+ */
+export function isNeverEgressClass(klass: CategoryEgressClass): boolean {
+  return klass !== "contributable";
+}
 
 /** See `CategorySchema.requiredAnyOf`. */
 export interface CategoryRequirement {
@@ -1505,6 +1518,10 @@ const PROCESSOR_ONLY: ReadonlyArray<AdapterCategory> = Object.freeze(
   registry.all.filter((c) => c.egressClass === "processor-only").map((c) => c.id),
 );
 
+const NEVER_EGRESS: ReadonlyArray<AdapterCategory> = Object.freeze(
+  registry.all.filter((c) => isNeverEgressClass(c.egressClass)).map((c) => c.id),
+);
+
 /**
  * Every category id declared by this version of finsys-core, in
  * data-file order. The runtime equivalent of the old hardcoded union —
@@ -1606,6 +1623,25 @@ export function isProcessorOnlyCategory(id: string): boolean {
  */
 export function processorOnlyCategories(): ReadonlyArray<AdapterCategory> {
   return PROCESSOR_ONLY;
+}
+
+/**
+ * SYS-3799: true for a declared category no bureau may ever receive, whatever
+ * its reason (`processor-only`, `deal`, or a class added later). False for an
+ * id this version does not declare, as `isProcessorOnlyCategory` is.
+ */
+export function isNeverEgressCategory(id: string): boolean {
+  const klass = egressClassOf(id);
+  return klass !== null && isNeverEgressClass(klass);
+}
+
+/**
+ * SYS-3799: every declared category no bureau may ever receive, in data-file
+ * order. A superset of `processorOnlyCategories()`; this is the set an egress
+ * ceiling should be built from.
+ */
+export function neverEgressCategories(): ReadonlyArray<AdapterCategory> {
+  return NEVER_EGRESS;
 }
 
 /**

@@ -376,7 +376,7 @@ interface StringRules {
   maxLength?: number
   pattern?: string
   jurisdictionPatterns?: Readonly<Partial<Record<string, string>>>
-  format?: 'date' | 'year'
+  format?: 'date' | 'year' | 'datetime'
   mayBeFuture?: true
 }
 
@@ -433,8 +433,9 @@ function isCalendarDate(value: string): boolean {
   return d <= days
 }
 
-function isCalendarValue(value: string, format: 'date' | 'year'): boolean {
+function isCalendarValue(value: string, format: 'date' | 'year' | 'datetime'): boolean {
   if (format === 'year') return ISO_YEAR.test(value) && Number(value) >= 1
+  if (format === 'datetime') return isInstant(value)
   return isCalendarDate(value)
 }
 
@@ -456,9 +457,12 @@ function dateCeiling(now: Date, future: boolean): string {
 }
 
 /** A calendar-valid date or year, within [DATE_FLOOR, ceiling]. ISO text compares in date order. */
-function isPlausibleDate(value: string, format: 'date' | 'year', ceiling: string): boolean {
+function isPlausibleDate(value: string, format: 'date' | 'year' | 'datetime', ceiling: string): boolean {
   if (format === 'year') return value >= DATE_FLOOR.slice(0, 4) && value <= ceiling.slice(0, 4)
-  return value >= DATE_FLOOR && value <= ceiling
+  // An instant is bounded by its own calendar day, as written: the ceiling is
+  // already the clock's UTC day plus one, which covers every offset ahead of UTC.
+  const day = format === 'datetime' ? value.slice(0, 10) : value
+  return day >= DATE_FLOOR && day <= ceiling
 }
 
 function contextOf(opts: ValidationOptions): Context {

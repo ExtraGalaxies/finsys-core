@@ -119,7 +119,7 @@ export interface ListItemSpec {
   /** As on a field — a per-jurisdiction full-match regex (a national id column). */
   readonly jurisdictionPatterns?: Readonly<Partial<Record<Jurisdiction, string>>>;
   /** As on a field — an ISO calendar format, bounded (see `CanonicalFieldSpec.format`). */
-  readonly format?: "date" | "year";
+  readonly format?: "date" | "year" | "datetime";
   /** As on a field — the date may lie in the future (see `CanonicalFieldSpec.mayBeFuture`). */
   readonly mayBeFuture?: true;
 }
@@ -191,11 +191,15 @@ export interface CanonicalFieldSpec {
   readonly maxItems?: number;
   /**
    * A calendar format the writer provably normalizes to — `"date"`
-   * (ISO YYYY-MM-DD, a real date, year 0001–9999) or `"year"` (YYYY, 0001–
-   * 9999). Checked by arithmetic, not by a pattern: a pattern proves the
-   * shape of 2026-02-30, not that the day exists.
+   * (ISO YYYY-MM-DD, a real date, year 0001–9999), `"year"` (YYYY, 0001–
+   * 9999) or `"datetime"` (an ISO 8601 instant WITH an offset, such as
+   * 2026-08-14T15:42:00+08:00 or ...Z: a real date, hour 00–23, minute and
+   * second 00–59, offset within ±14:00; its calendar day is bounded like a
+   * `date`). Checked by arithmetic, not by a pattern: a pattern proves the
+   * shape of 2026-02-30, not that the day exists. A `datetime` is not a
+   * `date`: `notAfter` and `periodFields` still take `date` fields only.
    */
-  readonly format?: "date" | "year";
+  readonly format?: "date" | "year" | "datetime";
   /**
    * A dated value is PLAUSIBLE, not merely calendar-valid: never
    * before 1900-01-01 and, by default, never after the validator's clock
@@ -638,11 +642,11 @@ function validateFormat(
   at: string,
   type: string,
   c: { format?: unknown; mayBeFuture?: unknown; pattern?: unknown; jurisdictionPatterns?: unknown },
-): { format?: "date" | "year"; mayBeFuture?: true } {
+): { format?: "date" | "year" | "datetime"; mayBeFuture?: true } {
   if (c.format !== undefined) {
     if (type !== "string") throw new Error(`${at} declares a format, but only a string has one (it is ${type})`);
-    if (c.format !== "date" && c.format !== "year") {
-      throw new Error(`${at} declares format "${String(c.format)}" — expected "date" or "year"`);
+    if (c.format !== "date" && c.format !== "year" && c.format !== "datetime") {
+      throw new Error(`${at} declares format "${String(c.format)}" — expected "date", "year" or "datetime"`);
     }
     if (c.pattern !== undefined || c.jurisdictionPatterns !== undefined) {
       throw new Error(`${at} declares a format AND a pattern — a format is its own, stricter pattern`);
@@ -653,7 +657,7 @@ function validateFormat(
     if (c.format === undefined) throw new Error(`${at} declares mayBeFuture without a format — only a dated value has a future`);
   }
   return {
-    ...(c.format !== undefined ? { format: c.format as "date" | "year" } : {}),
+    ...(c.format !== undefined ? { format: c.format as "date" | "year" | "datetime" } : {}),
     ...(c.mayBeFuture === true ? { mayBeFuture: true as const } : {}),
   };
 }

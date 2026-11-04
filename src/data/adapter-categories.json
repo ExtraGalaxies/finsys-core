@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.7.0",
+  "schemaVersion": "1.8.0",
   "categories": [
     {
       "id": "telco-carrier",
@@ -3697,6 +3697,185 @@
             { "name": "amountAsPrinted", "displayName": "Amount (as printed)", "type": "string" }
           ],
           "description": "JSON-encoded list of the account lines the statement prints under owners' or partners' drawings and dividends, for this period: one entry per account with its code (when printed), its term as printed, and its amount."
+        }
+      ]
+    },
+    {
+      "id": "invoice",
+      "displayName": "Sales Invoice (Accounting)",
+      "description": "One sales invoice a seller has issued, as an accounting platform holds it, with its standing in MyInvois, the Malaysian e-invoice system. MULTI-instance: one instance per invoice, keyed on the platform's invoice id. Carries the dates, the amounts (before tax, tax, with tax, after credit and refund notes, still unpaid), the settlement status and the e-invoice facts a receivable is judged on. Invoice-level value names follow the MyInvois (UBL 2.1) names (issueDate, dueDate, taxExclusiveAmount, taxAmount, taxInclusiveAmount). The buyer and the seller are their own categories (invoice-buyer, invoice-seller). Vendor-agnostic: any accounting platform that exposes invoices maps its data to this field set.",
+      "canonicalTable": "ihs_alt_data_invoice",
+      "egressClass": "contributable",
+      "requiredAnyOf": [
+        {
+          "anyOf": [
+            "platformInvoiceId",
+            "myInvoisUuid"
+          ],
+          "identity": true
+        }
+      ],
+      "fields": [
+        {
+          "name": "platformInvoiceId",
+          "type": "string",
+          "maxLength": 128,
+          "description": "The accounting platform's own identifier for this invoice, as the platform issues it. Stable across syncs, so it is the key an invoice is recognized by when it has no MyInvois UUID (an invoice never sent to MyInvois): together with the seller's registration number it identifies the invoice. Not the printed invoice number, which a seller can reuse or edit."
+        },
+        {
+          "name": "invoiceNumber",
+          "type": "string",
+          "maxLength": 128,
+          "description": "The invoice number as printed on the invoice. Free text chosen by the seller, so it identifies nothing on its own."
+        },
+        {
+          "name": "issueDate",
+          "type": "string",
+          "format": "date",
+          "notAfter": "dueDate",
+          "description": "The date the invoice was issued, ISO YYYY-MM-DD. Named as the MyInvois (UBL 2.1) invoice-level value is named. Never later than the due date, and never in the future."
+        },
+        {
+          "name": "dueDate",
+          "type": "string",
+          "format": "date",
+          "mayBeFuture": true,
+          "description": "The date payment falls due, ISO YYYY-MM-DD, as the invoice states it. Named as the MyInvois (UBL 2.1) invoice-level value is named. An open invoice is normally due ahead, so this field may lie in the future."
+        },
+        {
+          "name": "paymentTermsDays",
+          "type": "number",
+          "unit": "days",
+          "range": [
+            0,
+            3650
+          ],
+          "description": "The payment terms the invoice states, in whole days from the issue date (30 for 'Net 30'). Stated by the platform, not derived from the two dates."
+        },
+        {
+          "name": "invoiceCurrency",
+          "type": "string",
+          "kind": "currency",
+          "description": "The ISO 4217 currency every amount on this invoice is denominated in. One currency per invoice, so it is a field of the invoice rather than a property of each amount."
+        },
+        {
+          "name": "taxExclusiveAmount",
+          "type": "number",
+          "kind": "money",
+          "description": "The invoice total before tax. Named as the MyInvois (UBL 2.1) invoice-level value is named. The denomination is the invoice's own currency, carried by invoiceCurrency."
+        },
+        {
+          "name": "taxAmount",
+          "type": "number",
+          "kind": "money",
+          "description": "The tax charged on the invoice, in total. Named as the MyInvois (UBL 2.1) invoice-level value is named. taxType says which tax it is. The denomination is the invoice's own currency, carried by invoiceCurrency."
+        },
+        {
+          "name": "taxType",
+          "type": "string",
+          "maxLength": 32,
+          "description": "Which tax taxAmount is, as the platform states it (for example SST). Free text for now: the closed set is deferred until it is checked against the MyInvois tax-type list, because refusing a real tax type would refuse the whole invoice."
+        },
+        {
+          "name": "taxInclusiveAmount",
+          "type": "number",
+          "kind": "money",
+          "description": "The invoice total with tax, before any credit or refund note. Named as the MyInvois (UBL 2.1) invoice-level value is named. The denomination is the invoice's own currency, carried by invoiceCurrency."
+        },
+        {
+          "name": "amountAfterCreditNotes",
+          "type": "number",
+          "kind": "money",
+          "description": "The invoice total with tax, less every credit note and refund note issued against it. The amount the seller can still be paid in total, which is not the amount still unpaid: payments are not deducted here (see outstandingAmount). The denomination is the invoice's own currency, carried by invoiceCurrency."
+        },
+        {
+          "name": "outstandingAmount",
+          "type": "number",
+          "kind": "money",
+          "description": "The amount still unpaid on the invoice: what is owed after credit and refund notes, receipts allocated to it and contra entries. The denomination is the invoice's own currency, carried by invoiceCurrency."
+        },
+        {
+          "name": "allocatedReceiptsAmount",
+          "type": "number",
+          "kind": "money",
+          "description": "The total of customer receipts the platform has allocated to this invoice. The denomination is the invoice's own currency, carried by invoiceCurrency."
+        },
+        {
+          "name": "contraAmount",
+          "type": "number",
+          "kind": "money",
+          "description": "The total set off against this invoice by contra entries (the buyer is also a supplier and the two balances were netted). The denomination is the invoice's own currency, carried by invoiceCurrency."
+        },
+        {
+          "name": "settlementStatus",
+          "type": "string",
+          "pattern": "open|part_paid|paid",
+          "description": "How much of the invoice has been paid: open (nothing), part_paid (some) or paid (all of it). A closed set the writer maps the platform's own states onto; the exported InvoiceSettlementStatus enum is the same set."
+        },
+        {
+          "name": "myInvoisStatus",
+          "type": "string",
+          "pattern": "not_submitted|pending|valid|rejected",
+          "description": "Where the invoice stands with MyInvois, the Malaysian e-invoice system: not_submitted (a plain invoice, never sent), pending (sent, no answer yet), valid (validated) or rejected. A closed set the writer maps the platform's own states onto; the exported MyInvoisStatus enum is the same set."
+        },
+        {
+          "name": "myInvoisUuid",
+          "type": "string",
+          "maxLength": 64,
+          "description": "The unique identifier MyInvois assigned when it validated the invoice. Absent on an invoice that was never validated. Its exact format is not pinned here until it is checked against the MyInvois SDK, so only its length and its text rules are held."
+        },
+        {
+          "name": "myInvoisValidatedAt",
+          "type": "string",
+          "format": "datetime",
+          "description": "The moment MyInvois validated the invoice, as an ISO 8601 instant with an offset (2026-08-14T15:42:00+08:00 or ...Z). Present only for a validated e-invoice. It is the only basis for stating when the window to cancel a validated e-invoice closes."
+        },
+        {
+          "name": "cancelled",
+          "type": "boolean",
+          "description": "Whether the invoice has been cancelled (voided) on the platform or in MyInvois. A cancelled invoice is not a receivable."
+        }
+      ]
+    },
+    {
+      "id": "invoice-buyer",
+      "displayName": "Invoice Buyer (Accounting)",
+      "description": "The buyer an invoice was issued to, as the seller's accounting platform holds the customer: its stable master-data id and its TIN. MULTI-instance: one instance per buyer, keyed on the platform's customer id. Every field name starts with buyer, so a value about the buyer is never confused with one about the seller.",
+      "canonicalTable": "ihs_alt_data_invoice_buyer",
+      "egressClass": "contributable",
+      "fields": [
+        {
+          "name": "buyerMasterDataId",
+          "type": "string",
+          "maxLength": 128,
+          "description": "The accounting platform's stable identifier for the buyer's customer record (its master data). Present when the buyer exists as a customer record the seller maintains; absent for a one-off or free-typed buyer. Stable across invoices, so the same buyer is recognized over time."
+        },
+        {
+          "name": "buyerTin",
+          "type": "string",
+          "maxLength": 20,
+          "description": "The buyer's Tax Identification Number (TIN) as the platform holds it. Held to length and text rules only: the exact formats are not pinned here, so a real TIN is never refused for its shape. A buyer with no TIN is still recorded; whether that is acceptable is a decision for the caller."
+        }
+      ]
+    },
+    {
+      "id": "invoice-seller",
+      "displayName": "Invoice Seller (Accounting)",
+      "description": "The seller that issued the invoices: its TIN and its SSM registration number, as the accounting platform holds the company. Single-instance per company file. Every field name starts with seller, so a value about the seller is never confused with one about the buyer.",
+      "canonicalTable": "ihs_alt_data_invoice_seller",
+      "egressClass": "contributable",
+      "fields": [
+        {
+          "name": "sellerTin",
+          "type": "string",
+          "maxLength": 20,
+          "description": "The seller's Tax Identification Number (TIN) as the platform holds it. Held to length and text rules only."
+        },
+        {
+          "name": "sellerSsmNumber",
+          "type": "string",
+          "maxLength": 30,
+          "description": "The seller's company registration number with SSM (Suruhanjaya Syarikat Malaysia) as the platform holds it, either printed form. Held to length and text rules only, like company-registration's companyRegNo."
         }
       ]
     }

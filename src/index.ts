@@ -194,6 +194,9 @@ export {
   isFailureIhsStatus,
 } from './ihs-status.js'
 
+// The closed sets of the `invoice` category (receivable listing intake)
+export { MyInvoisStatus, InvoiceSettlementStatus } from './invoice-listing.js'
+
 // Extraction status
 export {
   resolveExtractionStatus,

@@ -113,6 +113,9 @@ describe('SYS-3728 — every field has an enforceable declaration', () => {
       'credit-bureau-report.subjectProvidedIcPassportNo=IDENT',
       'credit-bureau-report.subjectProvidedNewIcNo=IDENT',
       'management-account.mgmtStatementsRead=BS|PL|BS,PL',
+      // SYS-3995: two closed sets the writer maps a platform's own states onto.
+      'invoice.settlementStatus=open|part_paid|paid',
+      'invoice.myInvoisStatus=not_submitted|pending|valid|rejected',
     ])
     const itemPatterns = fields.flatMap(({ f }) => (f.items ?? []).filter((i) => i.pattern !== undefined).map((i) => `${f.name}.${i.name}=${i.pattern === IDENT ? 'IDENT' : i.pattern === REG ? 'REG' : i.pattern}`))
     expect(itemPatterns.sort()).toEqual([
@@ -127,6 +130,7 @@ describe('SYS-3728 — every field has an enforceable declaration', () => {
     expect(withFormat).toEqual([
       'credit-bureau-report.reportOrderDate=date', 'credit-bureau-report.corporationIncorporationDate=date',
       'management-account.mgmtPeriodEnd=date+future', 'management-account.mgmtPeriodStart=date', 'management-account.mgmtPeriodYear=year+future',
+      'invoice.issueDate=date', 'invoice.dueDate=date+future', 'invoice.myInvoisValidatedAt=datetime',
     ])
     expect(spec(MA, 'mgmtPeriodStart').notAfter).toBe('mgmtPeriodEnd')
     expect(categorySchemaOf(MA).periodFields).toEqual({ start: 'mgmtPeriodStart', end: 'mgmtPeriodEnd', year: 'mgmtPeriodYear' })
@@ -154,7 +158,7 @@ describe('SYS-3728 — every field has an enforceable declaration', () => {
 
   it('currency-bearing fields are kind "currency", one per category at most', () => {
     const cur = fields.filter(({ f }) => f.kind === 'currency').map(({ c, f }) => `${c}.${f.name}`)
-    expect(cur).toEqual(['financial-statement.currency', 'management-account.mgmtCurrency'])
+    expect(cur).toEqual(['financial-statement.currency', 'management-account.mgmtCurrency', 'invoice.invoiceCurrency'])
     expect(spec(MA, 'mgmtCurrency').description).toMatch(/ISO 4217 code; normalized from the printed form/)
   })
 

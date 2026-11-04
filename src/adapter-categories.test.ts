@@ -1283,7 +1283,7 @@ describe("monetary fields and the closed unit set", () => {
     // this number changes, that is either a new money field (raise it
     // deliberately) or a regression.
     //
-    // The 178 breaks down as: applicant-income's grossPay and netPay
+    // The first 178 break down as: applicant-income's grossPay and netPay
     // (co-attesting the payslip's); applicant-collateral's
     // collateralMarketValue and collateralPurchasePriceOnTheRoad, plus
     // applicant-obligations' obligationMonthlyInstallment (three fields
@@ -1295,7 +1295,11 @@ describe("monetary fields and the closed unit set", () => {
     // limit totals) plus management-account's 18 (its 17 printed totals plus
     // the host-computed revenue total — its line-item categories are JSON
     // lists, not money).
-    expect(money.length).toBe(178);
+    //
+    // SYS-3995 added 7 (the invoice's taxExclusiveAmount, taxAmount,
+    // taxInclusiveAmount, amountAfterCreditNotes, outstandingAmount,
+    // allocatedReceiptsAmount and contraAmount), making 185.
+    expect(money.length).toBe(185);
     for (const { cat, f } of money) {
       expect(f.type, `${cat}.${f.name} type`).toBe("number");
       expect(f.unit, `${cat}.${f.name} unit`).toBeUndefined();

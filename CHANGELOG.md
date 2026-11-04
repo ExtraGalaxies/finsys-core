@@ -17,8 +17,8 @@ exhaustive switch over that union must add it. `CanonicalFieldNameLiteral` and
 - **SYS-3995: the categories a receivable listing is taken in on**, all
   `egressClass: "contributable"` and all sensitive (no field opts out):
   - **`invoice`** (`ihs_alt_data_invoice`), one instance per invoice:
-    `platformInvoiceId`, `invoiceNumber`, `issueDate`, `dueDate`,
-    `paymentTermsDays`, `invoiceCurrency` (kind `currency`),
+    `platformInvoiceId`, `buyerMasterDataId`, `invoiceNumber`, `issueDate`, `dueDate`,
+    `paymentTermsDays` (`unit: "count"`: whole days, a fraction is refused), `invoiceCurrency` (kind `currency`),
     `taxExclusiveAmount`, `taxAmount`, `taxType`, `taxInclusiveAmount`,
     `amountAfterCreditNotes`, `outstandingAmount`, `allocatedReceiptsAmount`,
     `contraAmount` (all money), `settlementStatus`, `myInvoisStatus`,
@@ -27,7 +27,12 @@ exhaustive switch over that union must add it. `CanonicalFieldNameLiteral` and
     `issueDate` is not after `dueDate` (`date-order`). The invoice-level value
     names are the MyInvois (UBL 2.1) names.
   - **`invoice-buyer`** (`ihs_alt_data_invoice_buyer`): `buyerMasterDataId`,
-    `buyerTin`.
+    `buyerTin`. The `invoice-buyer` instance is keyed on `buyerMasterDataId`,
+    and `invoice` declares the same field (a shared fact, identical
+    constraints) as the join from an invoice to its buyer. It is optional in
+    core: a one-off buyer has no master record, and intake refuses an invoice
+    without it where a buyer-level view needs one. Because the name is shared,
+    `categoryForField("buyerMasterDataId")` answers `null`.
   - **`invoice-seller`** (`ihs_alt_data_invoice_seller`): `sellerTin`,
     `sellerSsmNumber`.
   Every name is role-prefixed or invoice-specific, so none collides with an
@@ -35,7 +40,10 @@ exhaustive switch over that union must add it. `CanonicalFieldNameLiteral` and
   Amounts follow the registry's money convention: major units, at most two
   decimals, denominated by `invoiceCurrency`. A money field cannot declare a
   range, so the registry does not refuse a negative amount; a caller that needs
-  a positive one checks it.
+  a positive one checks it. Likewise core does not tie `myInvoisStatus` to
+  `myInvoisUuid` or `myInvoisValidatedAt`, and does not refuse an
+  `outstandingAmount` above the invoice total: those are intake's checks (the
+  gate module and the listing route).
 - **`MyInvoisStatus` and `InvoiceSettlementStatus` enums**, exported. They are
   the closed sets of `myInvoisStatus` (`not_submitted`, `pending`, `valid`,
   `rejected`) and `settlementStatus` (`open`, `part_paid`, `paid`). The data

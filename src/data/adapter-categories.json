@@ -3723,6 +3723,13 @@
           "description": "The accounting platform's own identifier for this invoice, as the platform issues it. Stable across syncs, so it is the key an invoice is recognized by when it has no MyInvois UUID (an invoice never sent to MyInvois): together with the seller's registration number it identifies the invoice. Not the printed invoice number, which a seller can reuse or edit."
         },
         {
+          "name": "buyerMasterDataId",
+          "type": "string",
+          "fact": "buyerMasterDataId",
+          "maxLength": 128,
+          "description": "The accounting platform's stable identifier for the customer record of the buyer this invoice was issued to (its master data): the join from an invoice to its invoice-buyer instance, which is keyed on this same id. Optional: an invoice to a one-off or free-typed buyer has no master record and carries none. Core does not require it; the listing intake that needs a buyer-level view refuses an invoice without it."
+        },
+        {
           "name": "invoiceNumber",
           "type": "string",
           "maxLength": 128,
@@ -3745,12 +3752,12 @@
         {
           "name": "paymentTermsDays",
           "type": "number",
-          "unit": "days",
+          "unit": "count",
           "range": [
             0,
             3650
           ],
-          "description": "The payment terms the invoice states, in whole days from the issue date (30 for 'Net 30'). Stated by the platform, not derived from the two dates."
+          "description": "The payment terms the invoice states, in whole days from the issue date (30 for 'Net 30'); a count, so a fraction is refused. Stated by the platform, not derived from the two dates."
         },
         {
           "name": "invoiceCurrency",
@@ -3847,8 +3854,9 @@
         {
           "name": "buyerMasterDataId",
           "type": "string",
+          "fact": "buyerMasterDataId",
           "maxLength": 128,
-          "description": "The accounting platform's stable identifier for the buyer's customer record (its master data). Present when the buyer exists as a customer record the seller maintains; absent for a one-off or free-typed buyer. Stable across invoices, so the same buyer is recognized over time."
+          "description": "The accounting platform's stable identifier for the buyer's customer record (its master data). Present when the buyer exists as a customer record the seller maintains; absent for a one-off or free-typed buyer. Stable across invoices, so the same buyer is recognized over time. This is the key the invoice-buyer instance is keyed on, and the same field on an invoice names its buyer."
         },
         {
           "name": "buyerTin",

@@ -142,10 +142,11 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 | Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
 | `platformInvoiceId` | string |  |  | The accounting platform's own identifier for this invoice, as the platform issues it. Stable across syncs, so it is the key an invoice is recognized by when it has no MyInvois UUID (an invoice never sent to MyInvois): together with the seller's registration number it identifies the invoice. Not the printed invoice number, which a seller can reuse or edit. |
+| `buyerMasterDataId` | string |  |  | The accounting platform's stable identifier for the customer record of the buyer this invoice was issued to (its master data): the join from an invoice to its invoice-buyer instance, which is keyed on this same id. Optional: an invoice to a one-off or free-typed buyer has no master record and carries none. Core does not require it; the listing intake that needs a buyer-level view refuses an invoice without it. |
 | `invoiceNumber` | string |  |  | The invoice number as printed on the invoice. Free text chosen by the seller, so it identifies nothing on its own. |
 | `issueDate` | string | format date |  | The date the invoice was issued, ISO YYYY-MM-DD. Named as the MyInvois (UBL 2.1) invoice-level value is named. Never later than the due date, and never in the future. |
 | `dueDate` | string | format date (may be future) |  | The date payment falls due, ISO YYYY-MM-DD, as the invoice states it. Named as the MyInvois (UBL 2.1) invoice-level value is named. An open invoice is normally due ahead, so this field may lie in the future. |
-| `paymentTermsDays` | number | days | 0..3650 | The payment terms the invoice states, in whole days from the issue date (30 for 'Net 30'). Stated by the platform, not derived from the two dates. |
+| `paymentTermsDays` | number | count | 0..3650 | The payment terms the invoice states, in whole days from the issue date (30 for 'Net 30'); a count, so a fraction is refused. Stated by the platform, not derived from the two dates. |
 | `invoiceCurrency` | string | currency |  | The ISO 4217 currency every amount on this invoice is denominated in. One currency per invoice, so it is a field of the invoice rather than a property of each amount. |
 | `taxExclusiveAmount` | number | money |  | The invoice total before tax. Named as the MyInvois (UBL 2.1) invoice-level value is named. The denomination is the invoice's own currency, carried by invoiceCurrency. |
 | `taxAmount` | number | money |  | The tax charged on the invoice, in total. Named as the MyInvois (UBL 2.1) invoice-level value is named. taxType says which tax it is. The denomination is the invoice's own currency, carried by invoiceCurrency. |
@@ -161,7 +162,7 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 | `myInvoisValidatedAt` | string | format datetime |  | The moment MyInvois validated the invoice, as an ISO 8601 instant with an offset (2026-08-14T15:42:00+08:00 or ...Z). Present only for a validated e-invoice. It is the only basis for stating when the window to cancel a validated e-invoice closes. |
 | `cancelled` | boolean |  |  | Whether the invoice has been cancelled (voided) on the platform or in MyInvois. A cancelled invoice is not a receivable. |
 
-**Multi-instance notes**: one instance per invoice, keyed on the platform's invoice id; an instance carries `platformInvoiceId` or `myInvoisUuid` (`missing-identity` otherwise). Amounts are major units (90000 is RM 90,000), at most two decimals, in `invoiceCurrency`. The sign of an amount is not constrained by the registry: a money field cannot declare a range, so a caller that needs a positive amount checks it.
+**Multi-instance notes**: one instance per invoice, keyed on the platform's invoice id; an instance carries `platformInvoiceId` or `myInvoisUuid` (`missing-identity` otherwise). Amounts are major units (90000 is RM 90,000), at most two decimals, in `invoiceCurrency`. The sign of an amount is not constrained by the registry: a money field cannot declare a range, so a caller that needs a positive amount checks it. Core also does not tie `myInvoisStatus` to `myInvoisUuid` and `myInvoisValidatedAt` (a `valid` invoice without a UUID, or a UUID on a `not_submitted` one, passes), does not refuse a negative amount, and does not refuse an `outstandingAmount` above the invoice total: those are intake's checks (the gate module and the listing route), not the registry's. `buyerMasterDataId` joins the invoice to its `invoice-buyer` instance, which is keyed on that same id; it is optional in core (a one-off buyer may lack it), and intake refuses an invoice without it where it needs a buyer-level view.
 
 ---
 
@@ -175,10 +176,10 @@ If you need a field that isn't in any category here, talk to FinHero about addin
 
 | Field | Type | Unit / kind | Range | Description |
 |---|---|---|---|---|
-| `buyerMasterDataId` | string |  |  | The accounting platform's stable identifier for the buyer's customer record (its master data). Present when the buyer exists as a customer record the seller maintains; absent for a one-off or free-typed buyer. Stable across invoices, so the same buyer is recognized over time. |
+| `buyerMasterDataId` | string |  |  | The accounting platform's stable identifier for the buyer's customer record (its master data). Present when the buyer exists as a customer record the seller maintains; absent for a one-off or free-typed buyer. Stable across invoices, so the same buyer is recognized over time. This is the key the invoice-buyer instance is keyed on, and the same field on an invoice names its buyer. |
 | `buyerTin` | string |  |  | The buyer's Tax Identification Number (TIN) as the platform holds it. Held to length and text rules only: the exact formats are not pinned here, so a real TIN is never refused for its shape. A buyer with no TIN is still recorded; whether that is acceptable is a decision for the caller. |
 
-**Multi-instance notes**: one instance per buyer, keyed on the platform's customer id. A buyer with no `buyerTin` is a valid record; the caller decides whether it is acceptable.
+**Multi-instance notes**: one instance per buyer, keyed on the platform's customer id, which is `buyerMasterDataId`: the same field on an `invoice` names the buyer it was issued to (a shared fact, one declaration in both categories). A buyer with no `buyerTin` is a valid record; the caller decides whether it is acceptable.
 
 ---
 

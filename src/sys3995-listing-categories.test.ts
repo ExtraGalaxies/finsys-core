@@ -95,6 +95,7 @@ describe('SYS-3995 the three categories are declared', () => {
       categorySchemaOf(id).fields.map((f) => `${f.name}:${f.type}${f.kind ? ':' + f.kind : ''}${f.format ? ':' + f.format : ''}`)
     expect(shape(INVOICE)).toEqual([
       'platformInvoiceId:string',
+      'buyerMasterDataId:string',
       'invoiceNumber:string',
       'issueDate:string:date',
       'dueDate:string:date',
@@ -118,8 +119,8 @@ describe('SYS-3995 the three categories are declared', () => {
     expect(shape(SELLER)).toEqual(['sellerTin:string', 'sellerSsmNumber:string'])
   })
 
-  it('paymentTermsDays is declared in days', () => {
-    expect(spec(INVOICE, 'paymentTermsDays').unit).toBe('days')
+  it('paymentTermsDays is declared as a count: whole days, a non-negative integer', () => {
+    expect(spec(INVOICE, 'paymentTermsDays').unit).toBe('count')
   })
 
   it('every field is sensitive (the default): none opts out', () => {
@@ -133,7 +134,8 @@ describe('SYS-3995 the three categories are declared', () => {
     for (const id of [INVOICE, BUYER, SELLER]) {
       for (const f of categorySchemaOf(id).fields) {
         expect(trade.has(f.name), f.name).toBe(false)
-        expect(categoryForField(f.name), f.name).toBe(id)
+        // buyerMasterDataId is the one shared fact: the invoice carries the join key to its buyer.
+        expect(categoryForField(f.name), f.name).toBe(f.name === 'buyerMasterDataId' ? null : id)
       }
     }
     // The names core already owns keep their category.
@@ -261,6 +263,10 @@ describe('SYS-3995 a real record validates; every defect is refused', () => {
     expect(fieldRules(INVOICE, { paymentTermsDays: 3650 })).toEqual([])
     expect(fieldRules(INVOICE, { paymentTermsDays: -1 })).toEqual(['out-of-range'])
     expect(fieldRules(INVOICE, { paymentTermsDays: 3651 })).toEqual(['out-of-range'])
+    // Whole days: a fraction is refused, however small.
+    expect(fieldRules(INVOICE, { paymentTermsDays: 1.5 })).toEqual(['not-an-integer'])
+    expect(fieldRules(INVOICE, { paymentTermsDays: 30.0000001 })).toEqual(['not-an-integer'])
+    expect(fieldRules(INVOICE, { paymentTermsDays: 30 })).toEqual([])
     expect(rules(validateFieldValue(spec(INVOICE, 'paymentTermsDays'), Number.NaN))).toEqual(['non-finite-number'])
     expect(rules(validateFieldValue(spec(INVOICE, 'paymentTermsDays'), Infinity))).toEqual(['non-finite-number'])
   })
@@ -295,6 +301,9 @@ describe('SYS-3995 a real record validates; every defect is refused', () => {
     expect(at('2026-08-14 15:42:00+08:00')).toEqual(['invalid-date'])
     expect(at('2026-08-14T25:00:00Z')).toEqual(['invalid-date'])
     expect(at('2026-08-14T23:60:00Z')).toEqual(['invalid-date'])
+    expect(at('2026-08-14T12:00:59Z')).toEqual([])
+    expect(at('2026-08-14T12:00:61Z')).toEqual(['invalid-date'])
+    expect(at('2026-08-14T12:00:99+08:00')).toEqual(['invalid-date'])
     expect(at('2026-02-30T10:00:00Z')).toEqual(['invalid-date'])
     expect(at('2026-08-14T10:00:00+15:00')).toEqual(['invalid-date'])
     // The ceiling is the clock's UTC day plus one (2026-09-25): that whole day is allowed, the next is not.
@@ -332,6 +341,19 @@ describe('SYS-3995 a real record validates; every defect is refused', () => {
     expect(extractionRules(BUYER, { instanceKey: 'k', values: { buyerTin: 'C2584563200' } })).toEqual([])
     expect(extractionRules(SELLER, { instanceKey: 'k', values: {} })).toEqual(['empty-instance'])
     expect(extractionRules(SELLER, { instanceKey: 'k', values: { sellerSsmNumber: '202101023456' } })).toEqual([])
+  })
+
+  it('the invoice carries its buyer\'s master-data id, the join key to invoice-buyer: optional, held to the same rules', () => {
+    expect(spec(INVOICE, 'buyerMasterDataId')).toMatchObject({ type: 'string', maxLength: 128 })
+    expect(spec(INVOICE, 'buyerMasterDataId').maxLength).toBe(spec(BUYER, 'buyerMasterDataId').maxLength)
+    expect(spec(INVOICE, 'buyerMasterDataId').fact).toBe(spec(BUYER, 'buyerMasterDataId').fact)
+    expect(fieldRules(INVOICE, { buyerMasterDataId: 'contact-9912' })).toEqual([])
+    expect(fieldRules(INVOICE, { buyerMasterDataId: 'x'.repeat(129) })).toEqual(['max-length'])
+    expect(fieldRules(INVOICE, { buyerMasterDataId: 'N/A' })).toEqual(['placeholder'])
+    // Optional: an invoice to a one-off buyer without a master record is valid.
+    expect(validInvoice()).not.toHaveProperty('buyerMasterDataId')
+    expect(extractionRules(INVOICE, { instanceKey: 'inv-0847', values: validInvoice() })).toEqual([])
+    expect(extractionRules(INVOICE, { instanceKey: 'inv-0847', values: { ...validInvoice(), buyerMasterDataId: 'contact-9912' } })).toEqual([])
   })
 
   it('a buyer with no TIN is still a valid record (the listing gate refuses it, not the write)', () => {

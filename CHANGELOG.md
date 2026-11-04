@@ -4,6 +4,69 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.11.0] - 2026-11-04
+
+_MINOR. Three categories, two enums and one new `format`. No existing field,
+category or export changes. `CanonicalFieldSpec.format` and
+`ListItemSpec.format` gain a third member, `"datetime"`; a consumer holding an
+exhaustive switch over that union must add it. `CanonicalFieldNameLiteral` and
+`AdapterCategoryId` gain members, as they do with every new field._
+
+### Added
+
+- **SYS-3995: the categories a receivable listing is taken in on**, all
+  `egressClass: "contributable"` and all sensitive (no field opts out):
+  - **`invoice`** (`ihs_alt_data_invoice`), one instance per invoice:
+    `platformInvoiceId`, `buyerMasterDataId`, `invoiceNumber`, `issueDate`, `dueDate`,
+    `paymentTermsDays` (`unit: "count"`: whole days, a fraction is refused), `invoiceCurrency` (kind `currency`),
+    `taxExclusiveAmount`, `taxAmount`, `taxType`, `taxInclusiveAmount`,
+    `amountAfterCreditNotes`, `outstandingAmount`, `allocatedReceiptsAmount`,
+    `contraAmount` (all money), `settlementStatus`, `myInvoisStatus`,
+    `myInvoisUuid`, `myInvoisValidatedAt` and `cancelled`. An instance carries
+    `platformInvoiceId` or `myInvoisUuid` (`missing-identity` otherwise).
+    `issueDate` is not after `dueDate` (`date-order`). The invoice-level value
+    names are the MyInvois (UBL 2.1) names.
+  - **`invoice-buyer`** (`ihs_alt_data_invoice_buyer`): `buyerMasterDataId`,
+    `buyerTin`. The `invoice-buyer` instance is keyed on `buyerMasterDataId`,
+    and `invoice` declares the same field (a shared fact, identical
+    constraints) as the join from an invoice to its buyer. It is optional in
+    core: a one-off buyer has no master record, and intake refuses an invoice
+    without it where a buyer-level view needs one. Because the name is shared,
+    `categoryForField("buyerMasterDataId")` answers `null`.
+  - **`invoice-seller`** (`ihs_alt_data_invoice_seller`): `sellerTin`,
+    `sellerSsmNumber`.
+  Every name is role-prefixed or invoice-specific, so none collides with an
+  existing field and none restates a quantity `trade-credit` already names.
+  Amounts follow the registry's money convention: major units, at most two
+  decimals, denominated by `invoiceCurrency`. A money field cannot declare a
+  range, so the registry does not refuse a negative amount; a caller that needs
+  a positive one checks it. Likewise core does not tie `myInvoisStatus` to
+  `myInvoisUuid` or `myInvoisValidatedAt`, and does not refuse an
+  `outstandingAmount` above the invoice total: those are intake's checks (the
+  gate module and the listing route).
+- **`MyInvoisStatus` and `InvoiceSettlementStatus` enums**, exported. They are
+  the closed sets of `myInvoisStatus` (`not_submitted`, `pending`, `valid`,
+  `rejected`) and `settlementStatus` (`open`, `part_paid`, `paid`). The data
+  declares each set as a full-match `pattern`, so the registry itself refuses
+  any other label at write; a test pins each enum to its pattern.
+- **`format: "datetime"`**, for a string that is an ISO 8601 instant with an
+  offset (`2026-08-14T15:42:00+08:00`, `...Z`). Checked by arithmetic like
+  `date`: a real day, hour 00-23, minute and second 00-59, offset within
+  +-14:00 (`invalid-date`), and its calendar day is bounded by the same floor
+  and ceiling as a date (`implausible-date`). `mayBeFuture` applies. It is
+  refused beside a `pattern`, as `date` is, and `notAfter` and `periodFields`
+  still take `date` fields only. `adapter-categories.json` `schemaVersion` is
+  1.8.0.
+
+### Upgrading
+
+- **A host that persists a category needs a canonical table for it.** The
+  three tables above do not exist until finsys-api adds them; this release
+  only declares the vocabulary.
+- **No existing writer, reader or fixture is affected.** No existing category
+  declares `format: "datetime"`, so every earlier value validates exactly as
+  before.
+
 ## [9.10.0] - 2026-10-19
 
 _MINOR. One data change and two added exports. `CategoryEgressClass` gains a

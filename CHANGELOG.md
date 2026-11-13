@@ -4,6 +4,60 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.11.0] - Unreleased
+
+_MINOR. `evaluateExpression` no longer compiles JavaScript. The signature and
+the grammar every known form config uses are unchanged; what is dropped is
+JavaScript the old evaluator only ran by accident (see "Upgrading")._
+
+### Changed
+
+- **`evaluateExpression` is eval-free.** The old implementation
+  rewrote the expression into JavaScript and ran it through the `Function`
+  constructor, which forced every host page to allow `'unsafe-eval'` in its
+  Content-Security-Policy and meant any JavaScript in a `visibleIf` string ran
+  with access to globals. It is now a tokenizer, a recursive-descent parser and
+  a tree-walking evaluator in `src/expression.ts`, and the package source
+  contains no `eval` or `Function` constructor. A test asserts that, and a
+  differential test holds the new evaluator to a verbatim copy of the old one
+  across every known `visibleIf` expression and a range of data values
+  (missing, `null`, strings vs numbers, arrays, empty arrays).
+- **Semantics kept.** `{field}` reads the data object (missing is `undefined`);
+  a lone `=` is `==`, which is LOOSE equality (`'5' = 5` is true); `==`, `!=`,
+  `===`, `!==`, `< > <= >=`, `+ - * / %`, `! && ||` (short-circuiting, returning
+  an operand as JavaScript does), parentheses, number/string/boolean/`null`/
+  `undefined`/array literals, and `anyof`, `allof`, `contains`, `notcontains`
+  (case-insensitive, same exact shapes as before: whitespace on both sides of
+  the word, and for `contains` / `notcontains` a non-empty single-quoted string
+  with no escaped quote). Legacy octal numbers (`010` is 8) and string escapes
+  (`'\101'` is `A`) read as they did in sloppy-mode JavaScript. A malformed
+  expression, or one that throws while evaluating (for example
+  `{n} contains 'x'` where `n` is a number), is `false`. The result is coerced
+  with `!!`.
+
+### Upgrading
+
+- **JavaScript outside that grammar now evaluates to `false`.** The old code
+  accepted any JavaScript that survived its string rewrite. No known form
+  config uses any, but if your application lets people type free-form
+  `visibleIf` expressions, check the stored strings for property access or
+  method calls (`{a}.length > 0`, `{a}.includes('x')`), ternaries, `??`,
+  bitwise operators, `typeof`, `this`, globals, the comma operator
+  (`{a}, {b}`), array holes (`[,'a']`, `[1,,2]`) and numeric separators
+  (`1_000`) before bumping.
+- **`and`, `or`, `not`, `empty`, `notempty` and `<>` were never supported and
+  still are not.** They were a JavaScript syntax error, so the field stayed
+  hidden, and it still does. A field gated on `{name} notempty` has never been
+  visible through this evaluator. Making them work would reveal fields that
+  are hidden today, so it is not done here.
+- **Small, deliberate differences** (all are inputs the old string rewrite got
+  wrong): text inside a string literal is no longer rewritten (`{a} = 'x=y'`
+  compares with `x=y`, not `x==y`, and `'{b}'` is the text `{b}`); `anyof` /
+  `allof` arrays may contain `{field}` references and `]` inside strings;
+  `{field}` reads only the data object's own properties (`{constructor}` is no
+  longer `Object`); and a bare `{}` is a parse error rather than an empty
+  object literal.
+
 ## [9.10.0] - 2026-10-19
 
 _MINOR. One data change and two added exports. `CategoryEgressClass` gains a

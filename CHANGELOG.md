@@ -4,7 +4,7 @@ All notable changes to `@finsys/core` are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [9.11.0] - Unreleased
+## [9.11.0] - 2026-11-13
 
 _MINOR. `evaluateExpression` no longer compiles JavaScript. The signature and
 the grammar every known form config uses are unchanged; what is dropped is

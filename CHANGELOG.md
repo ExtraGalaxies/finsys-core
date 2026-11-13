@@ -22,6 +22,22 @@ JavaScript the old evaluator only ran by accident (see "Upgrading")._
   differential test holds the new evaluator to a verbatim copy of the old one
   across every known `visibleIf` expression and a range of data values
   (missing, `null`, strings vs numbers, arrays, empty arrays).
+- **Importing the package no longer generates code.** `src/validator.ts` built
+  its Ajv instance, and registered the form schema, when the module loaded, and
+  Ajv compiles schemas with `new Function`, so every page that imported
+  `@finsys/core` needed `'unsafe-eval'` whether or not it validated anything.
+  The instance is now built on the first `validateFormConfig()` call. A test
+  imports the built package, ESM and CJS, under
+  `node --disallow-code-generation-from-strings` (which makes `eval` and
+  `new Function` throw, as a Content-Security-Policy without `'unsafe-eval'`
+  does) and calls `evaluateExpression`, `generateRHFSchema` with a `visibleIf`
+  field, `groupFieldsByCategory`, `getDocumentTypeGroups`,
+  `resolveDisplayCurrency`, `formatDocumentSize`, `isJurisdiction` and
+  `getDocDisplayNames`.
+  **`validateFormConfig()` itself still compiles a schema at runtime**, so a
+  browser page that calls it still needs `'unsafe-eval'`; it is meant for
+  server-side config validation. Importing the package and every other export
+  does not.
 - **Semantics kept.** `{field}` reads the data object (missing is `undefined`);
   a lone `=` is `==`, which is LOOSE equality (`'5' = 5` is true); `==`, `!=`,
   `===`, `!==`, `< > <= >=`, `+ - * / %`, `! && ||` (short-circuiting, returning

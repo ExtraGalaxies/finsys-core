@@ -20,14 +20,28 @@ import unifiedFormSchema from "./schema/unified-form.schema.json" with { type: "
 
 // Interop for Ajv which can be exported differently in ESM/CJS
 const Ajv = (AjvModule as any).default || AjvModule;
-const ajv = new Ajv({ allErrors: true, strict: false });
-
 // Interop for ajv-formats
 const addFormatsFn = (addFormats as any).default || addFormats;
-addFormatsFn(ajv);
 
-// Register the unified schema
-ajv.addSchema(unifiedFormSchema, "unified-form.schema.json");
+const SCHEMA_KEY = "unified-form.schema.json";
+
+let cachedAjv: any;
+
+/**
+ * Ajv compiles schemas into JavaScript with the Function constructor, and registering a
+ * schema compiles the meta-schema. Building the instance at module load would
+ * run that for every page that merely imports this package, so it happens on
+ * the first `validateFormConfig` call instead.
+ */
+function getAjv(): any {
+  if (!cachedAjv) {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    addFormatsFn(ajv);
+    ajv.addSchema(unifiedFormSchema, SCHEMA_KEY);
+    cachedAjv = ajv;
+  }
+  return cachedAjv;
+}
 
 export interface ValidationResult {
   valid: boolean;
@@ -36,10 +50,15 @@ export interface ValidationResult {
 }
 
 /**
- * Validates a unified form-config.json object against its schema
+ * Validates a unified form-config.json object against its schema.
+ *
+ * The first call builds an Ajv instance, which generates code with the
+ * Function constructor: a browser page that calls this needs `'unsafe-eval'` in its
+ * Content-Security-Policy. Importing the package, and every other export, does
+ * not.
  */
 export function validateFormConfig(data: unknown): ValidationResult {
-  const validate = ajv.getSchema("unified-form.schema.json");
+  const validate = getAjv().getSchema(SCHEMA_KEY);
   if (!validate) {
     return { valid: false, message: "Could not load unified form schema" };
   }

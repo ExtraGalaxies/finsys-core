@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { evaluateParsed } from "./expression.js";
+
 /**
  * Utility functions for @finsys/core
  */
@@ -33,66 +35,25 @@ export function getPastYearLabel(yearsAgo: number): string {
 /**
  * Evaluate a SurveyJS-style expression against a data object.
  * e.g. "{totalFinancing} > 50000"
- * 
- * NOTE: This is a simplified evaluator that replaces {key} with data[key] access.
- * It does not support complex SurveyJS functions like age() or complicated nested paths unless handled by JS.
+ *
+ * Supports `{field}` references, `= == != === !==`, `< > <= >=`, `+ - * / %`,
+ * `! && ||`, parentheses, number/string/boolean/null literals, array literals,
+ * and the `anyof`, `allof`, `contains` and `notcontains` operators. A lone `=`
+ * is LOOSE equality (`==`). See ./expression.ts for the exact grammar.
+ *
+ * Evaluation is eval-free (tokenizer + parser + tree walk), so it is safe under
+ * a CSP without `'unsafe-eval'`, and an expression cannot reach anything but
+ * the `{field}` values of `data`. An empty expression is visible (`true`); an
+ * expression that is malformed, uses unsupported syntax, or throws while
+ * evaluating is `false`.
  */
 export function evaluateExpression(expression: string, data: any): boolean {
   if (!expression) return true;
-  
+  if (typeof expression !== 'string') return false;
+
   try {
-    // 1. Replace {variable} with this['variable'] safely
-    let jsExpression = expression.replace(/\{([^}]+)\}/g, (_, key) => {
-      // Clean key if needed (trim)
-      return `this['${key.trim()}']`;
-    });
-
-    // 2. Map SurveyJS comparison operators to JS operators FIRST
-    //    (before array operator transforms inject JS code containing '=' assignments)
-    // Replace single '=' with '==' if it's not already '==' or '!=' or '>=' or '<='
-    jsExpression = jsExpression.replace(/(?<![<>!=])=(?![=])/g, '==');
-
-    // 3. Map SurveyJS array operators to JS equivalents
-    //    These run AFTER the '=' transform so their generated JS won't be mangled.
-
-    //    "anyof" → value is one of the items in the array
-    //    e.g. this['employmentType'] anyof ['01','08','09']
-    //      → (['01','08','09']).includes(this['employmentType'])
-    jsExpression = jsExpression.replace(
-      /(this\['[^']+'\])\s+anyof\s+(\[[^\]]+\])/gi,
-      (_, ref, arr) => `(${arr}).includes(${ref})`
-    );
-
-    //    "allof" → value (expected to be an array) contains all items
-    //    e.g. this['skills'] allof ['a','b']
-    //      → ['a','b'].every(item => (this['skills'] || []).includes(item))
-    //    Arrow functions inherit `this` from enclosing scope (the new Function call),
-    //    so this works correctly with Function.call(data).
-    jsExpression = jsExpression.replace(
-      /(this\['[^']+'\])\s+allof\s+(\[[^\]]+\])/gi,
-      (_, ref, arr) => `${arr}.every(item => (${ref} || []).includes(item))`
-    );
-
-    //    "contains" → string/array contains value
-    //    e.g. this['roles'] contains 'admin'
-    //    Uses || [] fallback to handle both string and array values correctly.
-    //    (|| '' would stringify arrays causing false positives)
-    jsExpression = jsExpression.replace(
-      /(this\['[^']+'\])\s+contains\s+'([^']+)'/gi,
-      (_, ref, val) => `(${ref} || []).includes('${val}')`
-    );
-
-    //    "notcontains" → string/array does not contain value
-    jsExpression = jsExpression.replace(
-      /(this\['[^']+'\])\s+notcontains\s+'([^']+)'/gi,
-      (_, ref, val) => `!(${ref} || []).includes('${val}')`
-    );
-
-    // 4. Execute with Function, binding 'data' as 'this'
-    const func = new Function(`return ${jsExpression};`);
-    return !!func.call(data || {});
-  } catch (e) {
-    // console.warn(`Failed to evaluate expression: "${expression}"`, e);
+    return !!evaluateParsed(expression, data);
+  } catch {
     return false;
   }
 }

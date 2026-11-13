@@ -184,7 +184,9 @@ Validates a form config object against the unified form JSON schema. Returns `{ 
 
 ### `evaluateExpression(expression: string, data: any): boolean`
 
-Evaluates a SurveyJS-style expression (e.g., `{fieldName} > 100`) against a data object.
+Evaluates a SurveyJS-style expression (e.g., `{fieldName} > 100`) against a data object. An empty expression is `true`; a malformed or unsupported one is `false`.
+
+Supported: `{field}` references; `=` / `==` (both loose, JavaScript `==`), `!=`, `===`, `!==`; `<`, `>`, `<=`, `>=`; `+ - * / %`; `!`, `&&`, `||`; parentheses; number, `'string'`, `"string"`, `true`, `false`, `null`, `undefined` and `[array]` literals; and `{field} anyof [...]`, `{field} allof [...]`, `{field} contains '...'`, `{field} notcontains '...'` (the operator words are case-insensitive). The SurveyJS words `and`, `or`, `not`, `empty`, `notempty` and the operator `<>` are not supported and make the expression `false`.
 
 ### `resolvePageFields(page: PageConfig, fields: Record<string, FieldData>): ResolvedField[]`
 
@@ -236,7 +238,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ### Expression Evaluation
 
-The `evaluateExpression()` function uses `new Function()` internally to evaluate SurveyJS-style visibility expressions. Expression strings **must come from trusted, developer-authored sources** (e.g., your own form configuration files). Never pass untrusted or user-supplied strings as expressions, as this could allow arbitrary code execution.
+`evaluateExpression()` parses and evaluates the expression itself (a tokenizer, a recursive-descent parser and a tree walk). It never builds JavaScript source, and it does not call `eval` or the `Function` constructor, so a page that uses it needs no `'unsafe-eval'` in its Content-Security-Policy. An expression can read only the `{field}` values of the data object it is given; it cannot call functions, reach globals or assign. Anything outside the grammar in the `evaluateExpression` section above evaluates to `false`.
+
+### Content-Security-Policy
+
+Importing `@finsys/core` and calling its runtime exports (`evaluateExpression`, `generateRHFSchema`, `groupFieldsByCategory`, `getDocumentTypeGroups`, `resolveDisplayCurrency` and the rest) does not use `eval` or `new Function`, so a page needs no `'unsafe-eval'` for them. The one exception is `validateFormConfig()`: it compiles the form schema with Ajv at runtime, which generates code with `new Function`. A browser page that calls it needs `'unsafe-eval'`; call it server-side instead. The Ajv instance is built on the first call, not when the package is imported.
 
 ## Disclaimer
 
